@@ -2,15 +2,12 @@ import xarray as xr
 import numpy as np
 
 
-def concat_nd_grid(obj_grid, concat_dims=None, **kwargs):
+def concat_nd(obj_grid, concat_dims=None, **kwargs):
     """
     Concatenates a structured ndarray of xarray Datasets along multiple dimensions.
 
     Parameters
     ----------
-    dataset_grid : numpy.array
-        N-dimensional numpy object array containing datasets in the shape they
-        are to be concatenated.
     obj_grid : numpy array of Dataset and DataArray objects
         N-dimensional numpy object array containing xarray objects in the shape they
         are to be concatenated. Each object is expected to
@@ -39,12 +36,14 @@ def concat_nd_grid(obj_grid, concat_dims=None, **kwargs):
     xarray.open_mfdataset
     """
 
+    print(obj_grid)
+
     # Check inputs
     if any(obj_grid.shape) > 1:
         raise xr.MergeError('The logical grid of datasets should not have any unit-length '
                             'dimensions, but is of shape ' + str(obj_grid.shape))
     if any([not (isinstance(ds, xr.Dataset) or isinstance(ds, xr.Dataset)) for ds in obj_grid.flat]):
-        raise xr.MergeError('obj_grid contains at least one elements that is neither a Dataset or Dataarray.')
+        raise xr.MergeError('obj_grid contains at least one element that is neither a Dataset or Dataarray.')
     if len(concat_dims) != obj_grid.ndim:
         raise xr.MergeError('List of dimensions along which to concatenate is incompatible '
                             'with the given array of dataset objects. Lengths: '
@@ -54,12 +53,12 @@ def concat_nd_grid(obj_grid, concat_dims=None, **kwargs):
     # Start with last axis and finish with axis=0
     # TODO check that python actually does loops in this way (i.e. overwrites dataset_grid)
     for axis in reversed(range(obj_grid.ndim)):
-        dataset_grid = np.apply_along_axis(xr.concat, axis, arr=obj_grid,
-                                           dim=concat_dims[axis], **kwargs)
+        obj_grid = np.apply_along_axis(xr.concat, axis, arr=obj_grid,
+                                       dim=concat_dims[axis], **kwargs)
 
-    # Dataset_grid should now only contain one object
+    # Grid should now only contain one xarray object
     if obj_grid.shape == ():
-        return obj_grid.values
+        return obj_grid.item
     else:
         raise xr.MergeError('Multidimensional concatenation failed: '
                             'result has shape ' + str(obj_grid.shape))
