@@ -36,8 +36,6 @@ def concat_nd(obj_grid, concat_dims=None, **kwargs):
     xarray.open_mfdataset
     """
 
-    print(obj_grid)
-
     # Check inputs
     if any(obj_grid.shape) > 1:
         raise xr.MergeError('The logical grid of datasets should not have any unit-length '

@@ -18,17 +18,16 @@ class TestConcatND:
         assert False
 
     def test_concat_1d(self):
-        # drop the third dimension to keep things relatively understandable
         data = create_test_data()
-        #for k in list(data.variables):
-        #    if 'dim3' in data[k].dims:
-        #        del data[k]
 
         split_data = [data.isel(dim1=slice(3)),
                       data.isel(dim1=slice(3, None))]
 
-        #print(split_data)
-        split_data_grid = np.array(split_data, dtype='object')
+        print(split_data)
+        split_data_grid = np.empty(shape=(2), dtype=np.object)
+
+        split_data_grid[0] = split_data[0]
+        split_data_grid[1] = split_data[1]
 
         print(split_data_grid)
         reconstructed = concat_nd(split_data_grid, ['dim1'])
