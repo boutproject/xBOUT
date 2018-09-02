@@ -23,7 +23,8 @@ class BoutDataset:
         if log_file is True:
             # Read in important info from the log file
             # Especially the git commit hashes of the executables used
-            bout_version, bout_git_commit_hash, module_git_commit_hash = read_log_file(datapath)
+            log, bout_version, bout_git_commit_hash, module_git_commit_hash = read_log_file(datapath)
+            self.log = log
             self.bout_version = bout_version
             self.bout_git_commit = bout_git_commit_hash
             self.module_git_commit = module_git_commit_hash
@@ -33,6 +34,14 @@ class BoutDataset:
 
     def name(self):
         return self.run_name
+
+    def __str__(self):
+        info = 'BoutDataset ' + self.run_name + '\n'
+        info += 'Contains:\n'
+        info += self.ds
+        info += self.options
+        info += self.log
+        return info
 
     def __getitem__(self, var):
         if var not in self.ds.vars:
