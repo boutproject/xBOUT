@@ -64,12 +64,16 @@ class BoutDataset:
     def options(self):
         return self.options
 
-    def save(self, savepath='.', filetype='netcdf4'):
+    def save(self, savepath='.', filetype='netcdf4', variables=None):
         # Save data variables
         from dask.diagnostics import ProgressBar
         with ProgressBar():
             # Should give it a descriptive filename (using the run name?)
-            self.ds.to_netcdf(path=savepath, engine=filetype, compute=True)
+            if variables is None:
+                # Save all variables
+                self.ds.to_netcdf(path=savepath, engine=filetype, compute=True)
+            else:
+                self.ds[variables].to_netcdf(path=savepath, engine=filetype, compute=True)
 
         # How do I store other data? In the attributes dict?
         # Convert Ben's options class to a (flattened) nested dictionary then store it in ds.attrs?
