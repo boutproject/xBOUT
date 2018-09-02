@@ -1,11 +1,13 @@
 from xarray import Dataset
 
+from boutdata.data import BoutOptionsFile
+
 from xcollect.collect import collect
 
 
 class BoutDataset:
     """
-    Contains the BOUT output variables in the form of an xarray.Dataset, and optionally the input file as a dictionary.
+    Contains the BOUT output variables in the form of an xarray.Dataset, and optionally the input file.
     """
 
     def __init__(self, datapath='.', chunks={}, input_file=False, run_name=None, log_file=False):
@@ -17,8 +19,8 @@ class BoutDataset:
         self.run_name = run_name
 
         if input_file is True:
-            # Load that using Ben's classes
-            self.options = get_options_file(datapath)
+            # Load options from input file using Ben's classes
+            self.options = BoutOptionsFile(datapath + 'BOUT.inp')
 
         if log_file is True:
             # Read in important info from the log file
@@ -36,12 +38,13 @@ class BoutDataset:
         return self.run_name
 
     def __str__(self):
-        info = 'BoutDataset ' + self.run_name + '\n'
-        info += 'Contains:\n'
-        info += self.ds
-        info += self.options
-        info += self.log
-        return info
+        text = 'BoutDataset ' + self.run_name + '\n'
+        text += 'Contains:\n'
+        text += self.ds.__str__
+        text += 'With options:\n'
+        text += self.options.__str__
+        text += self.log
+        return text
 
     def __getitem__(self, var):
         if var not in self.ds.vars:
@@ -69,6 +72,7 @@ class BoutDataset:
             self.ds.to_netcdf(path=savepath, engine=filetype, compute=True)
 
         # How do I store other data? In the attributes dict?
+        # Convert Ben's options class to a (flattened) nested dictionary then store it in ds.attrs?
         return
 
     def create_restart(self, savepath='.'):
