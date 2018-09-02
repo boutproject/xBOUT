@@ -61,3 +61,9 @@ class BoutDataset:
 
         # How do I store other data? In the attributes dict?
         return
+
+    def create_restart(self, savepath='.'):
+        # Write out final timestep as a set of netCDF BOUT.restart files
+        # Would need to specify the processor division
+        # Is this even possible without saving the ghost cells? Can they be recreated?
+        return
