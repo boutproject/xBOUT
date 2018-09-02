@@ -1,4 +1,5 @@
-from xarray import Dataset
+from xarray import Dataset, save_mfdataset
+from dask.diagnostics import ProgressBar
 
 from boutdata.data import BoutOptionsFile
 
@@ -66,7 +67,6 @@ class BoutDataset:
 
     def save(self, savepath='.', filetype='netcdf4', variables=None):
         # Save data variables
-        from dask.diagnostics import ProgressBar
         with ProgressBar():
             # Should give it a descriptive filename (using the run name?)
             if variables is None:
@@ -79,8 +79,19 @@ class BoutDataset:
         # Convert Ben's options class to a (flattened) nested dictionary then store it in ds.attrs?
         return
 
-    def create_restart(self, savepath='.'):
-        # Write out final timestep as a set of netCDF BOUT.restart files
-        # Would need to specify the processor division
+    def create_restart(self, savepath='.', nxpe, nype):
+        """
+        Write out final timestep as a set of netCDF BOUT.restart files. Processor decomposition must be specified.
+
+        Parameters
+        ----------
+        savepath : str
+        nxpe : int
+        nype : int
+        """
+
         # Is this even possible without saving the ghost cells? Can they be recreated?
+        restart_datasets, paths = split_into_restarts(self.ds, savepath, nxpe, nype)
+        with ProgressBar():
+            save_mfdataset(restart_datasets, paths, compute=True)
         return
