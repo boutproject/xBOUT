@@ -44,11 +44,13 @@ def collect(varname, path='.', prefix='BOUT.dmp.', yguards=False, xguards=True,
     var_da : dataarray containing collected variable
     """
 
-    filepaths, datasets = open_all_dump_files(path, prefix, chunks=chunks)
+    filepaths, datasets = _open_all_dump_files(path, prefix, chunks=chunks)
 
-    ds_grid, concat_dims = organise_dump_files(filepaths, datasets)
+    ds_grid, concat_dims = _organise_dump_files(filepaths, datasets)
 
-    ds_grid = trim_guard_cells(ds_grid, concat_dims, yguards, xguards)
+    ds_grid = _trim(ds_grid, concat_dims,
+                    guards={'x': mxg, 'y': myg}, ghosts={'x': mxg, 'y': myg},
+                    keep_guards={'x': xguards, 'y': yguards})
 
     ds = concat_nd(ds_grid, concat_dims=concat_dims, data_vars='minimal')
 
@@ -98,12 +100,12 @@ def _organise_dump_files(filepaths, datasets):
     nxpe, nype = _read_parallelisation(filepaths[0])
 
     # This is where our knowledge of how BOUT does its parallelization is actually used
-    ds_grid, concat_dims = _construct_ds_grid(filepaths, datasets, nxpe, nype)
+    ds_grid, concat_dims = _construct_bout_ds_grid(filepaths, datasets, nxpe, nype)
 
     return ds_grid, concat_dims
 
 
-def _construct_ds_grid(filepaths, datasets, nxpe, nype):
+def _construct_bout_ds_grid(filepaths, datasets, nxpe, nype):
     # For now assume that there is no splitting along t, and that all files are in current dir
     # Generalise later
     prefix = './BOUT.dmp.'
@@ -114,7 +116,7 @@ def _construct_ds_grid(filepaths, datasets, nxpe, nype):
     if nxpe > 0:
         concat_dims.append('y')
 
-    dataset_piece = dict(zip(filepaths, datasets))
+    dataset_pieces = dict(zip(filepaths, datasets))
 
     # BOUT names files as num = nxpe*i + j
     # So use this knowledge to arrange files in the right shape for concatenation
@@ -123,6 +125,38 @@ def _construct_ds_grid(filepaths, datasets, nxpe, nype):
         for j in range(nype):
             file_num = (i + nxpe * j)
             filename = prefix + str(file_num) + '.nc'
-            ds_grid[i, j] = dataset_piece[filename]
+            ds_grid[i, j] = dataset_pieces[filename]
 
     return ds_grid.squeeze(), concat_dims
+
+
+def _trim(ds_grid, concat_dims, guards, ghosts, keep_guards):
+    """
+    Trims all ghost and guard cells off each dataset in ds_grid to prepare for concatenation.
+    """
+    for index, ds in np.ndenumerate(ds_grid):
+        # Determine how many cells to trim off each dimension
+        lower, upper = {}, {}
+        for dim in concat_dims:
+            lower[dim] = ghosts[dim]
+            upper[dim] = -ghosts[dim]
+
+            # If ds is at edge of grid trim guard cells instead of ghost cells
+            dim_axis = concat_dims.index(dim)
+            dim_max = ds_grid.shape[dim_axis]
+            if keep_guards[dim]:
+                if index[dim_axis] == 0:
+                    lower[dim] = None
+                if index[dim_axis] == dim_max:
+                    upper[dim] = None
+            else:
+                if index[dim_axis] == 0:
+                    lower[dim] = guards[dim]
+                if index[dim_axis] == dim_max:
+                    upper[dim] = -guards[dim]
+
+        # Actually trim the dataset in-place
+        selection = {dim: slice(lower[dim], upper[dim], None) for dim in ds.dims}
+        ds_grid[index] = ds.isel(**selection)
+
+    return ds_grid

@@ -50,6 +50,8 @@ def concat_nd(obj_grid, concat_dims=None, **kwargs):
     # Combine datasets along one dimension at a time
     # Start with last axis and finish with axis=0
     # TODO check that python actually does loops in this way (i.e. overwrites dataset_grid)
+    # TODO check that mutating the obj_grid on every step this plays well with dask -
+    # see http://dask.pydata.org/en/latest/delayed-best-practices.html#don-t-mutate-inputs
     for axis in reversed(range(obj_grid.ndim)):
         obj_grid = np.apply_along_axis(xr.concat, axis, arr=obj_grid,
                                        dim=concat_dims[axis], **kwargs)
