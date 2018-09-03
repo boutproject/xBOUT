@@ -66,7 +66,7 @@ def collect(varname, path='.', prefix='BOUT.dmp.', yguards=False, xguards=True,
         return var_da.values
 
 
-def open_all_dump_files(path, prefix, chunks):
+def _open_all_dump_files(path, prefix, chunks):
 
     filetype = determine_format(file)
 
@@ -80,7 +80,7 @@ def open_all_dump_files(path, prefix, chunks):
     return filepaths, datasets
 
 
-def organise_dump_files(filepaths, datasets):
+def _organise_dump_files(filepaths, datasets):
     """
     Arrange BOUT dump files into numpy ndarray structure which specifies the way they should be concatenated together.
 
@@ -95,9 +95,34 @@ def organise_dump_files(filepaths, datasets):
     concat_dims : list of str
     """
 
-    nxpe, nype = read_parallelisation(filepaths[0])
+    nxpe, nype = _read_parallelisation(filepaths[0])
 
     # This is where our knowledge of how BOUT does its parallelization is actually used
-    ds_grid, concat_dims = construct_ds_grid(filepaths, datasets, nxpe, nype)
+    ds_grid, concat_dims = _construct_ds_grid(filepaths, datasets, nxpe, nype)
 
     return ds_grid, concat_dims
+
+
+def _construct_ds_grid(filepaths, datasets, nxpe, nype):
+    # For now assume that there is no splitting along t, and that all files are in current dir
+    # Generalise later
+    prefix = './BOUT.dmp.'
+
+    concat_dims = []
+    if nxpe > 0:
+        concat_dims.append('x')
+    if nxpe > 0:
+        concat_dims.append('y')
+
+    dataset_piece = dict(zip(filepaths, datasets))
+
+    # BOUT names files as num = nxpe*i + j
+    # So use this knowledge to arrange files in the right shape for concatenation
+    ds_grid = np.empty((nxpe, nype), dtype='object')
+    for i in range(nxpe):
+        for j in range(nype):
+            file_num = (i + nxpe * j)
+            filename = prefix + str(file_num) + '.nc'
+            ds_grid[i, j] = dataset_piece[filename]
+
+    return ds_grid.squeeze(), concat_dims
