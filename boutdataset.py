@@ -14,13 +14,19 @@ class BoutDataset:
     """
 
     def __init__(self, datapath='.', chunks={}, input_file=False, run_name=None, log_file=False, info=True):
+
+        # Load data variables
+        # Should we just load whole dataset here?
         self.datapath = datapath
         self.chunks = {}
-        # Should we just load whole dataset here?
         ds = open_mfdataset(datapath, chunks)
-
         # self.data is an xarray Dataset, self.metadata is a dict
         self.data, self.metadata = _strip_metadata(ds)
+        if info:
+            print('Read in data:\n')
+            print(self.data)
+            print('Read in metadata:\n')
+            print(self.metadata)
 
         self.run_name = run_name
 
