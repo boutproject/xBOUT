@@ -88,7 +88,7 @@ class BoutDataset:
     def __repr__(self):
         return 'boutdata.BoutDataset(', {}, ',', {}, ')'.format(self.datapath, )
 
-    def save(self, savepath='.', filetype='netcdf4', variables=None):
+    def save(self, savepath='.', filetype='netcdf4', variables=None, save_dtype=None):
         """
         Save data variables.
 
@@ -104,6 +104,9 @@ class BoutDataset:
             to_save = self.data
         else:
             to_save = self.data[variables]
+
+        if save_dtype is not None:
+            to_save = to_save.astype(save_dtype)
 
         # Store the metadata in the attributes dictionary rather than as data variables in the dataset
         to_save.attrs['metadata'] = self.metadata
