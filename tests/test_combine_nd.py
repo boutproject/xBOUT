@@ -1,10 +1,12 @@
-import os
-
 import numpy as np
 import pytest
 import xarray.tests as xrt
 from xarray import Dataset, open_mfdataset, concat
 from xarray.tests.test_dataset import create_test_data
+from xarray.core.merge import MergeError
+
+import os
+import glob
 
 from xcollect.concatenate import _concat_nd
 
@@ -92,9 +94,10 @@ class TestConcatND:
         reconstructed = _concat_nd(split_data_grid, concat_dims=['dim1', 'dim2'], data_vars=['minimal'] * 2)
         xrt.assert_identical(data, reconstructed)
 
-    @pytest.mark.xfail(reason='Not yet implemented')
-    def test_concat_bad_args(self):
-        pass
+    def test_concat_wrong_size_grid(self):
+        grid = np.array([['a', 'b']])
+        with pytest.raises(MergeError):
+            _concat_nd(grid)
 
     def test_concat_new_dim(self):
         data1 = create_test_data(seed=1)
@@ -109,14 +112,26 @@ class TestConcatND:
 
         xrt.assert_identical(expected, reconstructed)
 
-    @pytest.mark.xfail(reason='Not yet implemented')
     def test_concat_mixed_dims(self):
-        pass
+        data1 = create_test_data(seed=1)
+        data2 = create_test_data(seed=2)
+
+        split_data = [[{'key': data1.isel(dim1=slice(3))},
+                       {'key': data2.isel(dim1=slice(3))}],
+                      [{'key': data1.isel(dim1=slice(3, None))},
+                       {'key': data2.isel(dim1=slice(3, None))}]]
+        split_data_grid = np.array(split_data, dtype=np.object)
+
+        reconstructed = _concat_nd(split_data_grid, concat_dims=['dim1', 'run'], data_vars=['minimal', 'all'])
+        expected = concat([data1, data2], dim='run', data_vars='all')
+        xrt.assert_identical(expected, reconstructed)
 
 
 class TestOpenMFDatasetND:
     @pytest.mark.xfail(reason='Not yet implemented all the way up to open_mfdataset().')
-    def motivating_test(self):
+    def test_motivating_test(self):
+        """This is the failing test which motivated issue https://github.com/pydata/xarray/issues/2159"""
+
         # Create 4 datasets containing sections of contiguous (x,y) data
         for i, x in enumerate([1, 3]):
             for j, y in enumerate([10, 40]):
@@ -133,8 +148,5 @@ class TestOpenMFDatasetND:
                                 coords={'x': [1, 2, 3, 4],
                                         'y': [10, 20, 30, 40, 50, 60]})
 
+        os.remove(glob.glob('ds.*.nc'))
         xrt.assert_equal(expected, actual)
-
-        os.remove('ds.*.nc')
-
-        assert False
