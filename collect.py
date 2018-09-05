@@ -12,7 +12,7 @@ import os
 import sys
 import glob
 
-from xcollect.concatenate import concat_nd
+from xcollect.concatenate import _concat_nd
 
 
 def collect(varname, path='.', prefix='BOUT.dmp.', yguards=False, xguards=True,
