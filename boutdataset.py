@@ -18,9 +18,9 @@ class BoutDataset:
         # Load data variables
         # Should we just load whole dataset here?
         self.datapath = datapath
-        self.chunks = {}
-        ds = open_mfdataset(datapath, chunks)
-        # self.data is an xarray Dataset, self.metadata is a dict
+        self.chunks = chunks
+        ds = collect(var='all', path=datapath, chunks=chunks, info=info)
+
         self.data, self.metadata = _strip_metadata(ds)
         if info:
             print('Read in data:\n')
@@ -51,8 +51,6 @@ class BoutDataset:
 
     def data(self):
         """Return the xarray.Dataset containing all data variables."""
-        # Somehow find out all the variables to read from the datafiles
-        # Then load them all before returning entire dataset
         return self.data
 
     def metadata(self):
@@ -67,11 +65,7 @@ class BoutDataset:
         return self.run_name
 
     def __getitem__(self, var):
-        if var not in self.data.vars:
-            # Collect and return the variable as a DataArray
-            var_da = collect(var, path=self.datapath, chunks=self.chunks, lazy=True)
-            self.data[var] = var_da
-            return var_da
+        return self.data[var]
 
     def __setitem__(self, key, value):
         self.data[key] = value
@@ -88,7 +82,7 @@ class BoutDataset:
     def __repr__(self):
         return 'boutdata.BoutDataset(', {}, ',', {}, ')'.format(self.datapath, )
 
-    def save(self, savepath='.', filetype='netcdf4', variables=None, save_dtype=None):
+    def save(self, savepath='.', filetype='NETCDF4', variables=None, save_dtype=None):
         """
         Save data variables.
 
@@ -120,7 +114,7 @@ class BoutDataset:
             # Should give it a descriptive filename (using the run name?)
             if variables is None:
                 # Save all variables
-                to_save.to_netcdf(path=savepath, engine=filetype, compute=True)
+                to_save.to_netcdf(path=savepath, format=filetype, compute=True)
             else:
                 to_save.data[variables].to_netcdf(path=savepath, engine=filetype, compute=True)
 
