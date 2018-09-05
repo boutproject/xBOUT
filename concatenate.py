@@ -62,6 +62,9 @@ def _concat_nd(obj_grid, concat_dims=None, data_vars=None, **kwargs):
         raise TypeError('obj_grid contains at least one element that is not a dictionary.')
     if any([not (isinstance(ds['key'], Dataset) or isinstance(ds['key'], DataArray)) for ds in obj_grid.flat]):
         raise TypeError('obj_grid contains at least one element that is neither a Dataset or Dataarray.')
+    if obj_grid.shape == ():
+        # Cover case of no concatenation needed
+        return obj_grid.item()['key']
     if len(concat_dims) != obj_grid.ndim:
         raise MergeError('List of dimensions along which to concatenate is incompatible '
                             'with the given array of dataset objects. Respective lengths: '
@@ -74,12 +77,12 @@ def _concat_nd(obj_grid, concat_dims=None, data_vars=None, **kwargs):
                             + str(len(data_vars)) + ', ' + str(obj_grid.ndim))
 
     # Combine datasets along one dimension at a time,
-    # Have to start with last axis and finish with axis=0 otherwise axes will disappear as they are looped over
+    # Have to start with last axis and finish with axis=0 otherwise axes will disappear before the loop reaches them
     for axis in reversed(range(obj_grid.ndim)):
         obj_grid = np.apply_along_axis(_concat_dicts, axis, arr=obj_grid,
                                        dim=concat_dims[axis], data_vars=data_vars[axis], **kwargs)
 
-    # Grid should now only contain one xarray object
+    # Grid should now only contain one dict which contains the concatenated xarray object
     return obj_grid.item()['key']
 
 

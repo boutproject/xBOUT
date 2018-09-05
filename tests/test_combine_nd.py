@@ -30,6 +30,12 @@ class TestNumpyContainingXarray:
 
 
 class TestConcatND:
+    def test_no_concat_needed(self):
+        data = create_test_data()
+        data_grid = np.array({'key': data}, dtype=np.object)
+        actual = _concat_nd(data_grid)
+        xrt.assert_equal(data, actual)
+
     def test_concat_1d(self):
         data = create_test_data()
 
