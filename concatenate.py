@@ -15,7 +15,7 @@ def _concat_nd(obj_grid, concat_dims=None, data_vars=None, **kwargs):
     obj_grid : numpy array of Dataset and DataArray objects
         N-dimensional numpy object array containing xarray objects in the shape they
         are to be concatenated. Each object is expected to
-        consist of variables and coordinates with matching shapes except for
+        consist of variables and coordinates with matching shapes except for possibly
         along the concatenated dimension.
     concat_dims : list of str or DataArray or pandas.Index
         Names of the dimensions to concatenate along. Each dimension in this argument
@@ -39,6 +39,8 @@ def _concat_nd(obj_grid, concat_dims=None, data_vars=None, **kwargs):
           * list of str: The listed data variables will be concatenated, in
             addition to the 'minimal' data variables.
         If objects are DataArrays, data_vars must be 'all'.
+        Each element in the list is for a different concatenation dimension.
+        Will default to the default for xarray.concat()
     **kwargs : optional
         Additional arguments passed on to xarray.concat().
 
@@ -55,13 +57,12 @@ def _concat_nd(obj_grid, concat_dims=None, data_vars=None, **kwargs):
 
     # Check inputs
     if any(dim == 1 for dim in obj_grid.shape):
-        print('Should be raising an error...')
         raise MergeError('The logical grid of datasets should not have any unit-length '
                             'dimensions, but is of shape ' + str(obj_grid.shape))
     if any([not (isinstance(obj, dict)) for obj in obj_grid.flat]):
         raise TypeError('obj_grid contains at least one element that is not a dictionary.')
     if any([not (isinstance(ds['key'], Dataset) or isinstance(ds['key'], DataArray)) for ds in obj_grid.flat]):
-        raise TypeError('obj_grid contains at least one element that is neither a Dataset or Dataarray.')
+        raise TypeError('obj_grid contains at least one element that contains neither a Dataset nor a Dataarray.')
     if obj_grid.shape == ():
         # Cover case of no concatenation needed
         return obj_grid.item()['key']

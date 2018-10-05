@@ -1,4 +1,4 @@
-from xarray import open_mfdataset, save_mfdataset
+from xarray import save_mfdataset
 from dask.diagnostics import ProgressBar
 from numpy import asscalar
 from pprint import pprint
@@ -8,18 +8,22 @@ from boutdata.data import BoutOptionsFile
 from xcollect.collect import collect
 
 
+# TODO can I make instances of this class return the data attribute when called?
+# so that I could do things like concat(boutdatasets)
+
 class BoutDataset:
     """
     Contains the BOUT output variables in the form of an xarray.Dataset, and optionally the input file.
     """
 
-    def __init__(self, datapath='.', chunks={}, input_file=False, run_name=None, log_file=False, info=True):
+    def __init__(self, datapath='.', prefix='BOUT.dmp', slices=None, chunks={}, input_file=False, run_name=None, log_file=False, info=True):
 
         # Load data variables
         # Should we just load whole dataset here?
         self.datapath = datapath
+        self.prefix = 'BOUT.dmp'
         self.chunks = chunks
-        ds = collect(var='all', path=datapath, chunks=chunks, info=info)
+        ds = collect(vars='all', path=datapath, prefix=prefix, slices=slices, chunks=chunks, info=info)
 
         self.data, self.metadata = _strip_metadata(ds)
         if info:
@@ -74,13 +78,16 @@ class BoutDataset:
         text = 'BoutDataset ' + self.run_name + '\n'
         text += 'Contains:\n'
         text += self.data.__str__
-        text += 'With options:\n'
-        text += self.options.__str__
+        text += 'with metadata'
+        text += self.metadata.__str__
+        if self.options:
+            text += 'and options:\n'
+            text += self.options.__str__
         text += self.log
         return text
 
     def __repr__(self):
-        return 'boutdata.BoutDataset(', {}, ',', {}, ')'.format(self.datapath, )
+        return 'boutdata.BoutDataset(', {}, ',', {}, ')'.format(self.datapath, self.prefix)
 
     def save(self, savepath='.', filetype='NETCDF4', variables=None, save_dtype=None):
         """

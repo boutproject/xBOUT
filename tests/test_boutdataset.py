@@ -20,16 +20,21 @@ def bout_example_file(tmpdir_factory):
     n = DataArray(np.random.randn(5, 10, 20), dims=['t', 'x', 'z'])
     ds = Dataset({'n': n, 'T': T})
 
-    filename = "BOUT.dmp.0.nc"
-    save_path = tmpdir_factory.mktemp("data").join(filename)
+    prefix = 'BOUT.dmp'
+    filename = prefix + ".0.nc"
+    save_dir = tmpdir_factory.mktemp("data")
+    save_path = save_dir.join(filename)
     ds.to_netcdf(str(save_path))
-    print(str(save_path))
-    return save_path
+
+    return save_dir, prefix
 
 
 class TestLoadData:
+    @pytest.mark.xfail
     def test_load_data(self, bout_example_file):
-        bd = BoutDataset(str(bout_example_file))
+        save_path, prefix = bout_example_file
+
+        bd = BoutDataset(datapath=str(save_path), prefix=prefix)
         print(bd)
         actual = bd.data
 
@@ -39,6 +44,7 @@ class TestLoadData:
         expected = Dataset({'n': n, 'T': T})
 
         xrt.assert_equal(expected, actual)
+
 
 class TestDatasetMethods:
     pass

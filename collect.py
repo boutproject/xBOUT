@@ -3,21 +3,22 @@ Contains an xarray + dask reimplementation of the BOUT++ collect function.
 
 Original found at https://github.com/boutproject/BOUT-dev/blob/master/tools/pylib/boutdata/collect.py .
 This version should be much faster (works in parallel), and more scalable (dask chunks limit memory usage).
+Although it would be relatively simple to alter this to maintain backwards compatibility for all input arguments,
+we choose not to do so.
 """
 
 import xarray as xr
 import numpy as np
 
 import os
-import sys
 import glob
 
 from xcollect.concatenate import _concat_nd
 
 
-def collect(var, xind=None, yind=None, zind=None, tind=None,
-            path='./', prefix='BOUT.dmp.', yguards=False, xguards=True,
-            info=True, strict=False, chunks={}):
+def collect(vars='all', path='./', prefix='BOUT.dmp.',
+            slices={}, yguards=False, xguards=False,
+            info=True, chunks={}):
     """
     Collect a variable from a set of BOUT++ output files.
 
@@ -25,34 +26,35 @@ def collect(var, xind=None, yind=None, zind=None, tind=None,
 
     Parameters
     ----------
-    var : str
+    var : str, optional
         Data variable to be collected. If one of the variables in the files then returns the data
-        values as a numpy ndarray as collect used to do. If 'all' then returns view to all data as
-        an xarray.Dataset, which is chunked using dask.
-    path : str
-    prefix : str
-    xguards : bool
+        values as an xarray.DataArray. If 'all' then returns view to all data as an xarray.DataSet.
+    path : str, optional
+    prefix : str, optional
+    slices : dict, optional
+        Slices to return from all data variables. Using xarray this slicing can always be done later though.
+        Should be a dictionary of slice objects, with dimension names as keys,
+        e.g. {'t': slice(100,None,None), 'x': 20}
+    xguards : bool, optional
         Choice whether or not to keep domain guard cells in the x-direction.
-    yguards : bool
+    yguards : bool, optional
         Choice whether or not to keep domain guard cells in the y-direction.
     info : bool, optional
     strict : bool, optional
-    chunks : dict
+    chunks : dict, optional
         Dask chunks to split arrays into. Default is to load each dump file as one chunk.
 
     Returns
     -------
     ds : xarray.Dataset
-        View to dataset containing all data variables in files
-    or
-    var : np.ndarray
-        Contains collected variable
+        View to dataset containing all data variables requested
     """
 
-    # TODO implement optional arguments info & strict
+    # TODO implement optional argument info
 
     filepaths, datasets = _open_all_dump_files(path, prefix, chunks=chunks)
 
+    # Open just one file to read processor splitting
     ds = xr.open_dataset(filepaths[0])
     nxpe, nype = ds['NXPE'], ds['NYPE']
     mxg, myg = ds['MXG'], ds['MYG']
@@ -65,16 +67,11 @@ def collect(var, xind=None, yind=None, zind=None, tind=None,
 
     ds = _concat_nd(ds_grid, concat_dims=concat_dims, data_vars=['minimal']*len(concat_dims))
 
-    if var == 'all':
-        # Utilise xarray's lazy loading capabilities by returning a DataArray view to the data values.
-        # Should always use this option except for when old scripts are expecting an eager numpy array.
-        return ds
+    # Utilise xarray's lazy loading capabilities by returning a DataSet/DataArray view to the data values.
+    if vars == 'all':
+        return ds.isel(**slices)
     else:
-        # For backwards compatibility, return only the numpy array of data values
-        # This will immediately load entire array into memory
-        var_da = ds[var]
-        var_da = _take_slice(var_da, xind, yind, zind, tind)
-        return var_da.values
+        return ds[vars].isel(**slices)
 
 
 def _open_all_dump_files(path, prefix, chunks={}):
@@ -82,17 +79,16 @@ def _open_all_dump_files(path, prefix, chunks={}):
 
     file_list_nc = glob.glob(os.path.join(path, prefix + ".*nc"))
     file_list_h5 = glob.glob(os.path.join(path, prefix + ".*hdf5"))
-    if file_list_nc != [] and file_list_h5 != []:
-        raise IOError("Error: Both NetCDF and HDF5 files are present: do not know which to read.")
-    elif file_list_h5 != []:
+    if file_list_nc and file_list_h5:
+        raise IOError("Both NetCDF and HDF5 files are present: do not know which to read.")
+    elif file_list_h5:
         filetype = 'h5netcdf'
         file_list = file_list_h5
-    else:
+    elif file_list_nc:
         filetype = 'netcdf4'
         file_list = file_list_nc
-
-    if file_list == []:
-        raise IOError("ERROR: No data files found in path {0}".format(path))
+    else:
+        raise IOError("No data files found in path {0}".format(path))
 
     filepaths = sorted(file_list)
 
@@ -156,24 +152,10 @@ def _trim(ds_grid, concat_dims, guards, ghosts, keep_guards):
                 if index[dim_axis] == dim_max:
                     upper[dim] = -guards[dim]
 
-        # Actually trim the dataset in-place
+        # Selection to use to trim the dataset
         selection = {dim: slice(lower[dim], upper[dim], None) for dim in ds.dims}
 
         # Insert back, contained in a dict
         ds_grid[index] = {'key': ds.isel(**selection)}
 
     return ds_grid
-
-
-def _take_slice(da, xind=None, yind=None, zind=None, tind=None):
-    """Just for backwards compatibility"""
-    selection = {}
-    if xind is not None:
-        selection['x'] = slice(xind[0], xind[1])
-    if yind is not None:
-        selection['y'] = slice(yind[0], yind[1])
-    if zind is not None:
-        selection['z'] = slice(zind[0], zind[1])
-    if tind is not None:
-        selection['t'] = slice(tind[0], tind[1])
-    return da.isel(**selection)

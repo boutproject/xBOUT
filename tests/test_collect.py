@@ -57,8 +57,15 @@ def create_bout_ds(seed=0):
 
 
 class TestOpeningFiles:
-    def test_open_single_file(self):
-        pass
+    def test_open_single_file(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        actual_filepath, actual_dataset = _open_all_dump_files(path, 'BOUT.dmp', chunks=None)
+
+        expected_dataset, expected_filename = create_bout_ds_list('BOUT.dmp', nxpe=1, nype=1, nt=1)
+
+        actual_filename = os.path.split(actual_filepath[0])[-1]
+        assert expected_filename[0] == actual_filename
+        xrt.assert_equal(expected_dataset[0], actual_dataset[0])
 
     def test_open_x_parallelized_files(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1)
@@ -96,10 +103,31 @@ class TestFileOrganisation:
 
 
 class TestTrim:
-    pass
+    def test_no_trim(self):
+        pass
+
+    def test_trim_ghosts(self):
+        pass
+
+    def trim_guards(self):
+        pass
 
 
 class TestCollectData:
-    pass
+    @pytest.xfail(reason='NotYetImplemented')
+    def test_collect_from_single_file(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        actual = collect(vars='all', path=path)
+        expected = create_bout_ds()
+        xrt.assert_equal(actual, expected)
 
+    @pytest.xfail(reason='NotYetImplemented')
+    def test_collect_single_variables(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        actual = collect(vars='n', path=path)
+        expected = create_bout_ds()
+        xrt.assert_equal(actual, expected['n'])
+
+    def test_collect_multiple_files(self, tmpdir_factory):
+        pass
 
