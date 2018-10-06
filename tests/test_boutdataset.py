@@ -46,7 +46,13 @@ class TestLoadData:
         xrt.assert_equal(expected, actual)
 
 
-class TestDatasetMethods:
+class TestXarrayBehaviour:
+    """Set of tests to check that BoutDatasets behave similarly to xarray Datasets."""
+    def test_concat(self):
+        pass
+
+
+class TestBoutDatasetMethods:
     pass
 
 

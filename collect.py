@@ -99,6 +99,10 @@ def _open_all_dump_files(path, prefix, chunks={}):
 
 
 def _organise_files(filepaths, datasets, prefix, nxpe, nype):
+    """
+    Arranges given files into an ndarray so they can be concatenated.
+    """
+
     # This is where our knowledge of how BOUT does its parallelization is actually used
 
     # For now assume that there is no splitting along t, and that all files are in current dir

@@ -99,7 +99,20 @@ class TestOpeningFiles:
 
 
 class TestFileOrganisation:
-    pass
+    def test_organise_x_parallelized_files(self):
+        pass
+
+    def test_organise_y_parallelized_files(self):
+        pass
+
+    def test_organise_xy_parallelized_files(self):
+        pass
+
+    def test_organise_t_parallelized_files(self):
+        pass
+
+    def test_organise_xyt_parallelized_files(self):
+        pass
 
 
 class TestTrim:

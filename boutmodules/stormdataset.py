@@ -13,6 +13,8 @@ class StormDataset(BoutDataset):
         # Calculate normalisations of quantities from parameters
         self.ds = self._calc_norms()
 
+    # TODO reimplement normalisations using @property
+
     def _calc_params(self):
         """
         Calculates physical parameters (e.g. collisionality) from the options in the input file.
@@ -36,3 +38,6 @@ class StormDataset(BoutDataset):
 
         normed_ds = add_normalisations(self.ds, self.options)
         return normed_ds
+
+    # This is where module-specific methods would go
+    # For example maybe elm-pb would have a .elm_growth_rate() method?
