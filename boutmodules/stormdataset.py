@@ -1,6 +1,7 @@
 from xcollect.boutdataset import BoutDataset
 
 from wake import add_plasma_params, add_normalisations
+from units import convert_units
 
 
 class StormDataset(BoutDataset):
@@ -10,10 +11,11 @@ class StormDataset(BoutDataset):
         # Calculate plasma parameters from options file
         self.params = self._calc_params()
 
-        # Calculate normalisations of quantities from parameters
-        self.ds = self._calc_norms()
+        # Calculate normalisations of data variables from parameters
+        self._norms = self._calc_norms()
 
-    # TODO reimplement normalisations using @property
+        # Set default normalisation state of data
+        self._normalisation = 'computational'
 
     def _calc_params(self):
         """
@@ -38,6 +40,10 @@ class StormDataset(BoutDataset):
 
         normed_ds = add_normalisations(self.ds, self.options)
         return normed_ds
+
+    def renormalise(self, desired_normalisation):
+        self.data = convert_units(self.data, desired_normalisation)
+        return self
 
     # This is where module-specific methods would go
     # For example maybe elm-pb would have a .elm_growth_rate() method?
