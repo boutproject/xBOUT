@@ -5,18 +5,18 @@ from xarray import Dataset, DataArray
 import xarray.testing as xrt
 import numpy as np
 
-from xcollect.collect import collect, _open_all_dump_files
+from xcollect.collect import collect, _open_all_dump_files, _organise_files
 
 
 @pytest.fixture(scope='session')
-def bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', nxpe=4, nype=2, nt=2):
+def bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', nxpe=4, nype=2, nt=2, syn_data_type='random'):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
     """
 
     save_dir = tmpdir_factory.mktemp("data")
 
-    ds_list, file_list = create_bout_ds_list(prefix, nxpe, nype, nt)
+    ds_list, file_list = create_bout_ds_list(prefix, nxpe, nype, nt, syn_data_type=syn_data_type)
 
     for ds, file_name in zip(ds_list, file_list):
         ds.to_netcdf(str(save_dir.join(str(file_name))))
@@ -24,7 +24,7 @@ def bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', nxpe=4, nype=2, nt
     return str(save_dir)
 
 
-def create_bout_ds_list(prefix, nxpe, nype, nt):
+def create_bout_ds_list(prefix, nxpe, nype, nt=1, syn_data_type='random'):
     """
     Mocks up a set of BOUT-like datasets.
 
@@ -38,7 +38,7 @@ def create_bout_ds_list(prefix, nxpe, nype, nt):
             num = (i + nxpe * j)
             filename = prefix + "." + str(num) + ".nc"
             file_list.append(filename)
-            ds_list.append(create_bout_ds(seed=num))
+            ds_list.append(create_bout_ds(syn_data_type, num))
 
     # Sort this in order of num to remove any BOUT-specific structure
     ds_list_sorted = [ds for filename, ds in sorted(zip(file_list, ds_list))]
@@ -47,11 +47,25 @@ def create_bout_ds_list(prefix, nxpe, nype, nt):
     return ds_list_sorted, file_list_sorted
 
 
-def create_bout_ds(seed=0):
-    np.random.seed(seed=seed)
+def create_bout_ds(syn_data_type='random', num=0):
+    shape = (2, 4, 6)
 
-    T = DataArray(np.random.randn(2, 4, 6), dims=['t', 'x', 'z'])
-    n = DataArray(np.random.randn(2, 4, 6), dims=['t', 'x', 'z'])
+    if syn_data_type is 'random':
+        # Each dataset contains the same random noise
+        np.random.seed(seed=0)
+        data = np.random.randn(*shape)
+    elif syn_data_type is 'linear':
+        # Variables increase linearly across entire domain
+        #data =
+        pass
+    elif syn_data_type is 'stepped':
+        # Each dataset contains a different number depending on the filename
+        data = np.ones(shape) * num
+    else:
+        raise ValueError('Not a recognised choice of type of synthetic bout data.')
+
+    T = DataArray(data, dims=['t', 'x', 'z'])
+    n = DataArray(data, dims=['t', 'x', 'z'])
     ds = Dataset({'n': n, 'T': T})
     return ds
 
@@ -99,8 +113,16 @@ class TestOpeningFiles:
 
 
 class TestFileOrganisation:
-    def test_organise_x_parallelized_files(self):
-        pass
+    def test_organise_x_parallelized_files(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1, syn_data_type='linear')
+        prefix = 'BOUT.dmp'
+        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=4, nype=1)
+
+        print(ds_grid)
+        assert ds_grid.shape == (4,)
+        # check datasets are in the right order somehow
+        assert False
 
     def test_organise_y_parallelized_files(self):
         pass
@@ -127,14 +149,14 @@ class TestTrim:
 
 
 class TestCollectData:
-    @pytest.xfail(reason='NotYetImplemented')
+    @pytest.mark.xfail(reason='NotYetImplemented')
     def test_collect_from_single_file(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual = collect(vars='all', path=path)
         expected = create_bout_ds()
         xrt.assert_equal(actual, expected)
 
-    @pytest.xfail(reason='NotYetImplemented')
+    @pytest.mark.xfail(reason='NotYetImplemented')
     def test_collect_single_variables(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual = collect(vars='n', path=path)

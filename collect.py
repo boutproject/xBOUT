@@ -115,6 +115,8 @@ def _organise_files(filepaths, datasets, prefix, nxpe, nype):
         concat_dims.append('y')
 
     dataset_pieces = dict(zip(filepaths, datasets))
+    # TODO replace this kind of manipulation using the python path library?
+    filestem = filepaths[0].rsplit('/', 1)[0]
 
     # BOUT names files as num = nxpe*i + j
     # So use this knowledge to arrange files in the right shape for concatenation
@@ -122,7 +124,7 @@ def _organise_files(filepaths, datasets, prefix, nxpe, nype):
     for i in range(nxpe):
         for j in range(nype):
             file_num = (i + nxpe * j)
-            filename = prefix + str(file_num) + '.nc'
+            filename = filestem + '/' + prefix + '.' + str(file_num) + '.nc'
             ds_grid[i, j] = {'key': dataset_pieces[filename]}
 
     return ds_grid.squeeze(), concat_dims
