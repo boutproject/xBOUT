@@ -19,7 +19,8 @@ class BoutDataset:
 
     # TODO a BoutDataarray class which uses the register_dataarray_accessor??
 
-    def __init__(self, datapath='.', prefix='BOUT.dmp', slices=None, chunks={}, input_file=False, run_name=None, log_file=False, info=True):
+    def __init__(self, datapath='.', prefix='BOUT.dmp', slices={}, chunks={},
+                 input_file=False, run_name=None, log_file=False, info=True):
 
         # Load data variables
         # Should we just load whole dataset here?
@@ -29,12 +30,15 @@ class BoutDataset:
 
         self.data, self.metadata = _strip_metadata(ds)
         if info:
-            print('Read in data:\n')
+            print('Read in BOUT data:')
             print(self.data)
-            print('Read in metadata:\n')
+            print('Read in BOUT metadata:')
             print(self.metadata)
 
-        self.run_name = run_name
+        if run_name:
+            self.run_name = run_name
+        else:
+            self.run_name = datapath
 
         if input_file is True:
             # Load options from input file using Ben's classes
@@ -42,6 +46,8 @@ class BoutDataset:
             if info:
                 print('Read in options:\n')
                 pprint(self.options.as_dict())
+        else:
+            self.options = None
 
         # TODO This is where you would load the grid file as a separate object
         # (Ideally using xgcm but could also just store the grid.nc file as another dataset)
@@ -55,12 +61,12 @@ class BoutDataset:
 
         text = 'BoutDataset ' + self.run_name + '\n'
         text += 'Contains:\n'
-        text += self.data.__str__
+        text += self.data.__str__()
         text += 'with metadata'
-        text += self.metadata.__str__
+        text += self.metadata.__str__()
         if self.options:
             text += 'and options:\n'
-            text += self.options.__str__
+            text += self.options.__str__()
         return text
 
     def __repr__(self):
