@@ -39,7 +39,7 @@ def create_bout_ds_list(prefix, nxpe, nype, nt=1, syn_data_type='random'):
             num = (i + nxpe * j)
             filename = prefix + "." + str(num) + ".nc"
             file_list.append(filename)
-            ds_list.append(create_bout_ds(syn_data_type, num))
+            ds_list.append(create_bout_ds(syn_data_type, num, nxpe=nxpe, nype=nype))
 
     # Sort this in order of num to remove any BOUT-specific structure
     ds_list_sorted = [ds for filename, ds in sorted(zip(file_list, ds_list))]
@@ -57,7 +57,7 @@ def assert_dataset_grids_equal(ds_grid1, ds_grid2):
         xrt.assert_equal(ds1, ds2)
 
 
-def create_bout_ds(syn_data_type='random', num=0):
+def create_bout_ds(syn_data_type='random', num=0, nxpe=1, nype=1):
     shape = (2, 4, 6)
 
     if syn_data_type is 'random':
@@ -76,6 +76,12 @@ def create_bout_ds(syn_data_type='random', num=0):
     T = DataArray(data, dims=['t', 'x', 'z'])
     n = DataArray(data, dims=['t', 'x', 'z'])
     ds = Dataset({'n': n, 'T': T})
+
+    ds['NXPE'] = nxpe
+    ds['NYPE'] = nype
+    ds['MXG'] = 0
+    ds['MYG'] = 0
+
     return ds
 
 
@@ -189,14 +195,12 @@ class TestTrim:
 
 
 class TestCollectData:
-    @pytest.mark.xfail(reason='NotYetImplemented')
     def test_collect_from_single_file(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual = collect(vars='all', path=path)
         expected = create_bout_ds()
         xrt.assert_equal(actual, expected)
 
-    @pytest.mark.xfail(reason='NotYetImplemented')
     def test_collect_single_variables(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual = collect(vars='n', path=path)

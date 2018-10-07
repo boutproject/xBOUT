@@ -16,7 +16,7 @@ import glob
 from xcollect.concatenate import _concat_nd
 
 
-def collect(vars='all', path='./', prefix='BOUT.dmp.',
+def collect(vars='all', path='./', prefix='BOUT.dmp',
             slices={}, yguards=False, xguards=False,
             info=True, chunks={}):
     """
@@ -56,8 +56,8 @@ def collect(vars='all', path='./', prefix='BOUT.dmp.',
 
     # Open just one file to read processor splitting
     ds = xr.open_dataset(filepaths[0])
-    nxpe, nype = ds['NXPE'], ds['NYPE']
-    mxg, myg = ds['MXG'], ds['MYG']
+    nxpe, nype = ds['NXPE'].values, ds['NYPE'].values
+    mxg, myg = ds['MXG'].values, ds['MYG'].values
 
     ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix, nxpe, nype)
 
