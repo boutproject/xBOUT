@@ -6,7 +6,7 @@ import xarray.testing as xrt
 import numpy as np
 import numpy.testing as npt
 
-from xcollect.collect import collect, _open_all_dump_files, _organise_files
+from xcollect.collect import collect, _open_all_dump_files, _organise_files, _trim
 
 
 @pytest.fixture(scope='session')
@@ -46,6 +46,15 @@ def create_bout_ds_list(prefix, nxpe, nype, nt=1, syn_data_type='random'):
     file_list_sorted = [filename for filename, ds in sorted(zip(file_list, ds_list))]
 
     return ds_list_sorted, file_list_sorted
+
+
+def assert_dataset_grids_equal(ds_grid1, ds_grid2):
+    assert ds_grid1.shape == ds_grid2.shape
+
+    for index, ds_dict1 in np.ndenumerate(ds_grid1):
+        ds1 = ds_dict1['key']
+        ds2 = ds_grid2[index]['key']
+        xrt.assert_equal(ds1, ds2)
 
 
 def create_bout_ds(syn_data_type='random', num=0):
@@ -162,8 +171,15 @@ class TestFileOrganisation:
 
 
 class TestTrim:
-    def test_no_trim(self):
-        pass
+    def test_no_trim(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=6, nype=3, nt=1, syn_data_type='stepped')
+        prefix = 'BOUT.dmp'
+        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=3)
+
+        not_trimmed = _trim(ds_grid, concat_dims=['x', 'y'],
+                            guards={'x': 0, 'y':0}, ghosts={'x': 0, 'y': 0}, keep_guards={'x': False, 'y': False})
+        assert_dataset_grids_equal(not_trimmed, ds_grid)
 
     def test_trim_ghosts(self):
         pass
