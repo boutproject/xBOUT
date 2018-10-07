@@ -131,6 +131,7 @@ class BoutDataset:
         return
 
     # TODO BOUT-specific plotting functionality would be implemented as methods here, e.g. ds.bout.plot_poloidal
+    # TODO Could trial a 2D surface plotting method here
     # TODO Could also prototype animated plotting methods here
 
 

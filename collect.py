@@ -109,9 +109,9 @@ def _organise_files(filepaths, datasets, prefix, nxpe, nype):
     # TODO Generalise to deal with extra splitting along t later
 
     concat_dims = []
-    if nxpe > 0:
+    if nxpe > 1:
         concat_dims.append('x')
-    if nxpe > 0:
+    if nype > 1:
         concat_dims.append('y')
 
     dataset_pieces = dict(zip(filepaths, datasets))

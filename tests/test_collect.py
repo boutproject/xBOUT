@@ -4,6 +4,7 @@ import os
 from xarray import Dataset, DataArray
 import xarray.testing as xrt
 import numpy as np
+import numpy.testing as npt
 
 from xcollect.collect import collect, _open_all_dump_files, _organise_files
 
@@ -56,8 +57,7 @@ def create_bout_ds(syn_data_type='random', num=0):
         data = np.random.randn(*shape)
     elif syn_data_type is 'linear':
         # Variables increase linearly across entire domain
-        #data =
-        pass
+        raise NotImplementedError
     elif syn_data_type is 'stepped':
         # Each dataset contains a different number depending on the filename
         data = np.ones(shape) * num
@@ -114,21 +114,45 @@ class TestOpeningFiles:
 
 class TestFileOrganisation:
     def test_organise_x_parallelized_files(self, tmpdir_factory):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1, syn_data_type='linear')
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1, syn_data_type='stepped')
         prefix = 'BOUT.dmp'
         filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
         ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=4, nype=1)
-
-        print(ds_grid)
         assert ds_grid.shape == (4,)
-        # check datasets are in the right order somehow
-        assert False
+        assert concat_dims == ['x']
 
-    def test_organise_y_parallelized_files(self):
-        pass
+        # check datasets are in the right order
+        contents = [np.unique(ds_dict['key']['n'].values) for ds_dict in ds_grid]
+        expected = [np.array([i]) for i in range(4)]
+        assert contents == expected
 
-    def test_organise_xy_parallelized_files(self):
-        pass
+    def test_organise_y_parallelized_files(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=5, nt=1, syn_data_type='stepped')
+        prefix = 'BOUT.dmp'
+        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=1, nype=5)
+        assert ds_grid.shape == (5,)
+        assert concat_dims == ['y']
+
+        # check datasets are in the right order
+        contents = [np.unique(ds_dict['key']['n'].values) for ds_dict in ds_grid]
+        expected = [np.array([i]) for i in range(5)]
+        assert contents == expected
+
+    def test_organise_xy_parallelized_files(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=6, nype=3, nt=1, syn_data_type='stepped')
+        prefix = 'BOUT.dmp'
+        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=3)
+        assert ds_grid.shape == (6,3)
+        assert concat_dims == ['x', 'y']
+
+        # check datasets are in the right order
+        contents = np.empty(ds_grid.shape)
+        for index, ds_dict in np.ndenumerate(ds_grid):
+            contents[index] = np.unique(ds_dict['key']['n'].values)
+        expected = np.array([[i+6*j for j in range(3)] for i in range(6)])
+        npt.assert_equal(contents, expected)
 
     def test_organise_t_parallelized_files(self):
         pass
