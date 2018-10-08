@@ -1,4 +1,4 @@
-from xarray import save_mfdataset
+from xarray import register_dataset_accessor, save_mfdataset
 from dask.diagnostics import ProgressBar
 from numpy import asscalar
 from pprint import pprint
@@ -8,31 +8,37 @@ from boutdata.data import BoutOptionsFile
 from xcollect.collect import collect
 
 
-# TODO can I make instances of this class return the data attribute when called?
-# so that I could do things like concat(boutdatasets)
-
+@register_dataset_accessor('bout')
 class BoutDataset:
     """
     Contains the BOUT output variables in the form of an xarray.Dataset, and optionally the input file.
+
+    Standard xarray methods and attributes are accessed as if the BoutDataset were just an instance of an xarray.Dataset.
+    BOUT-specific methods and attributes are accessed via the bout accessor, e.g. ds.bout.options returns a BoutOptionsFile instance.
     """
 
-    def __init__(self, datapath='.', prefix='BOUT.dmp', slices=None, chunks={}, input_file=False, run_name=None, log_file=False, info=True):
+    # TODO a BoutDataarray class which uses the register_dataarray_accessor??
+
+    def __init__(self, datapath='.', prefix='BOUT.dmp', slices={}, chunks={},
+                 input_file=False, run_name=None, log_file=False, info=True):
 
         # Load data variables
         # Should we just load whole dataset here?
         self.datapath = datapath
-        self.prefix = 'BOUT.dmp'
-        self.chunks = chunks
+        self.prefix = prefix
         ds = collect(vars='all', path=datapath, prefix=prefix, slices=slices, chunks=chunks, info=info)
 
         self.data, self.metadata = _strip_metadata(ds)
         if info:
-            print('Read in data:\n')
+            print('Read in BOUT data:')
             print(self.data)
-            print('Read in metadata:\n')
+            print('Read in BOUT metadata:')
             print(self.metadata)
 
-        self.run_name = run_name
+        if run_name:
+            self.run_name = run_name
+        else:
+            self.run_name = datapath
 
         if input_file is True:
             # Load options from input file using Ben's classes
@@ -40,50 +46,27 @@ class BoutDataset:
             if info:
                 print('Read in options:\n')
                 pprint(self.options.as_dict())
+        else:
+            self.options = None
 
-        if log_file is True:
-            # Read in important info from the log file
-            # Especially the git commit hashes of the executables used
-            log, bout_version, bout_git_commit_hash, module_git_commit_hash = read_log_file(datapath)
-            self.log = log
-            self.bout_version = bout_version
-            self.bout_git_commit = bout_git_commit_hash
-            self.module_git_commit = module_git_commit_hash
-
-        # This is where you would load the grid file as a separate object
+        # TODO This is where you would load the grid file as a separate object
         # (Ideally using xgcm but could also just store the grid.nc file as another dataset)
 
-    def data(self):
-        """Return the xarray.Dataset containing all data variables."""
-        return self.data
-
-    def metadata(self):
-        """Return dictionary containing simulation metadata (non-data information like nype)."""
-        return self.metadata
-
-    def options(self):
-        """Return boutdata.BoutOptionsFile instance containing all options specified in the BOUT.inp file."""
-        return self.options
-
-    def name(self):
-        return self.run_name
-
-    def __getitem__(self, var):
-        return self.data[var]
-
-    def __setitem__(self, key, value):
-        self.data[key] = value
-
     def __str__(self):
+        """
+        String represenation of the BoutDataset.
+
+        Accessed by print(ds.bout)
+        """
+
         text = 'BoutDataset ' + self.run_name + '\n'
         text += 'Contains:\n'
-        text += self.data.__str__
+        text += self.data.__str__()
         text += 'with metadata'
-        text += self.metadata.__str__
+        text += self.metadata.__str__()
         if self.options:
             text += 'and options:\n'
-            text += self.options.__str__
-        text += self.log
+            text += self.options.__str__()
         return text
 
     def __repr__(self):
@@ -152,6 +135,10 @@ class BoutDataset:
         with ProgressBar():
             save_mfdataset(restart_datasets, paths, compute=True)
         return
+
+    # TODO BOUT-specific plotting functionality would be implemented as methods here, e.g. ds.bout.plot_poloidal
+    # TODO Could trial a 2D surface plotting method here
+    # TODO Could also prototype animated plotting methods here
 
 
 def _strip_metadata(ds):

@@ -4,6 +4,7 @@ from xarray import Dataset, DataArray
 import xarray.testing as xrt
 import numpy as np
 
+from test_collect import bout_xyt_example_files, create_bout_ds
 from xcollect.boutdataset import BoutDataset
 
 
@@ -18,6 +19,9 @@ def bout_example_file(tmpdir_factory):
     np.random.seed(seed=0)
     T = DataArray(np.random.randn(5, 10, 20), dims=['t', 'x', 'z'])
     n = DataArray(np.random.randn(5, 10, 20), dims=['t', 'x', 'z'])
+
+    #ds
+
     ds = Dataset({'n': n, 'T': T})
 
     prefix = 'BOUT.dmp'
@@ -45,8 +49,20 @@ class TestLoadData:
 
         xrt.assert_equal(expected, actual)
 
+    def test_load_from_single_file(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        actual = BoutDataset(datapath=path).data.compute()
+        expected = create_bout_ds().drop(['NXPE', 'NYPE', 'MXG', 'MYG'])
+        xrt.assert_equal(actual, expected)
 
-class TestDatasetMethods:
+
+class TestXarrayBehaviour:
+    """Set of tests to check that BoutDatasets behave similarly to xarray Datasets."""
+    def test_concat(self):
+        pass
+
+
+class TestBoutDatasetMethods:
     pass
 
 

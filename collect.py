@@ -16,7 +16,7 @@ import glob
 from xcollect.concatenate import _concat_nd
 
 
-def collect(vars='all', path='./', prefix='BOUT.dmp.',
+def collect(vars='all', path='./', prefix='BOUT.dmp',
             slices={}, yguards=False, xguards=False,
             info=True, chunks={}):
     """
@@ -56,8 +56,8 @@ def collect(vars='all', path='./', prefix='BOUT.dmp.',
 
     # Open just one file to read processor splitting
     ds = xr.open_dataset(filepaths[0])
-    nxpe, nype = ds['NXPE'], ds['NYPE']
-    mxg, myg = ds['MXG'], ds['MYG']
+    nxpe, nype = ds['NXPE'].values, ds['NYPE'].values
+    mxg, myg = ds['MXG'].values, ds['MYG'].values
 
     ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix, nxpe, nype)
 
@@ -99,18 +99,24 @@ def _open_all_dump_files(path, prefix, chunks={}):
 
 
 def _organise_files(filepaths, datasets, prefix, nxpe, nype):
+    """
+    Arranges given files into an ndarray so they can be concatenated.
+    """
+
     # This is where our knowledge of how BOUT does its parallelization is actually used
 
     # For now assume that there is no splitting along t, and that all files are in current dir
     # TODO Generalise to deal with extra splitting along t later
 
     concat_dims = []
-    if nxpe > 0:
+    if nxpe > 1:
         concat_dims.append('x')
-    if nxpe > 0:
+    if nype > 1:
         concat_dims.append('y')
 
     dataset_pieces = dict(zip(filepaths, datasets))
+    # TODO replace this kind of manipulation using the python path library?
+    filestem = filepaths[0].rsplit('/', 1)[0]
 
     # BOUT names files as num = nxpe*i + j
     # So use this knowledge to arrange files in the right shape for concatenation
@@ -118,7 +124,7 @@ def _organise_files(filepaths, datasets, prefix, nxpe, nype):
     for i in range(nxpe):
         for j in range(nype):
             file_num = (i + nxpe * j)
-            filename = prefix + str(file_num) + '.nc'
+            filename = filestem + '/' + prefix + '.' + str(file_num) + '.nc'
             ds_grid[i, j] = {'key': dataset_pieces[filename]}
 
     return ds_grid.squeeze(), concat_dims
@@ -128,34 +134,39 @@ def _trim(ds_grid, concat_dims, guards, ghosts, keep_guards):
     """
     Trims all ghost and guard cells off each dataset in ds_grid to prepare for concatenation.
     """
-    for index, ds_dict in np.ndenumerate(ds_grid):
-        # Unpack the dataset from the dict holding it
-        ds = ds_dict['key']
 
-        # Determine how many cells to trim off each dimension
-        lower, upper = {}, {}
-        for dim in concat_dims:
-            lower[dim] = ghosts[dim]
-            upper[dim] = -ghosts[dim]
+    if not any(v > 0 for v in guards.values()) and not any(v > 0 for v in ghosts.values()):
+        # Check that some kind of trimming is actually necessary
+        return ds_grid
+    else:
+        for index, ds_dict in np.ndenumerate(ds_grid):
+            # Unpack the dataset from the dict holding it
+            ds = ds_dict['key']
 
-            # If ds is at edge of grid trim guard cells instead of ghost cells
-            dim_axis = concat_dims.index(dim)
-            dim_max = ds_grid.shape[dim_axis]
-            if keep_guards[dim]:
-                if index[dim_axis] == 0:
-                    lower[dim] = None
-                if index[dim_axis] == dim_max:
-                    upper[dim] = None
-            else:
-                if index[dim_axis] == 0:
-                    lower[dim] = guards[dim]
-                if index[dim_axis] == dim_max:
-                    upper[dim] = -guards[dim]
+            # Determine how many cells to trim off each dimension
+            lower, upper = {}, {}
+            for dim in concat_dims:
+                lower[dim] = ghosts[dim]
+                upper[dim] = -ghosts[dim]
 
-        # Selection to use to trim the dataset
-        selection = {dim: slice(lower[dim], upper[dim], None) for dim in ds.dims}
+                # If ds is at edge of grid trim guard cells instead of ghost cells
+                dim_axis = concat_dims.index(dim)
+                dim_max = ds_grid.shape[dim_axis]
+                if keep_guards[dim]:
+                    if index[dim_axis] == 0:
+                        lower[dim] = None
+                    if index[dim_axis] == dim_max:
+                        upper[dim] = None
+                else:
+                    if index[dim_axis] == 0:
+                        lower[dim] = guards[dim]
+                    if index[dim_axis] == dim_max:
+                        upper[dim] = -guards[dim]
 
-        # Insert back, contained in a dict
-        ds_grid[index] = {'key': ds.isel(**selection)}
+            # Selection to use to trim the dataset
+            selection = {dim: slice(lower[dim], upper[dim], None) for dim in ds.dims}
 
-    return ds_grid
+            # Insert back, contained in a dict
+            ds_grid[index] = {'key': ds.isel(**selection)}
+
+        return ds_grid
