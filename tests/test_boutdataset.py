@@ -1,6 +1,6 @@
 import pytest
 
-from xarray import Dataset, DataArray
+from xarray import Dataset, DataArray, concat
 import xarray.testing as xrt
 import numpy as np
 
@@ -58,8 +58,22 @@ class TestLoadData:
 
 class TestXarrayBehaviour:
     """Set of tests to check that BoutDatasets behave similarly to xarray Datasets."""
-    def test_concat(self):
-        pass
+
+    @pytest.mark.xfail
+    def test_concat(self, tmpdir_factory):
+        path1 = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
+        bd1 = BoutDataset(datapath=path1)
+        path2 = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
+        bd2 = BoutDataset(datapath=path1)
+        print(concat([bd1, bd2], dim='run'))
+
+    @pytest.mark.xfail
+    def test_isel(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        bd = BoutDataset(datapath=path)
+        actual = bd.isel(x=slice(None,None,2))
+        expected = bd.bout.data.isel(x=slice(None,None,2))
+        xrt.assert_equal(actual, expected)
 
 
 class TestBoutDatasetMethods:
