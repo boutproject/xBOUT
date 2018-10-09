@@ -1,27 +1,33 @@
-from xcollect.boutdataset import BoutDataset
+from xarray import register_dataset_accessor
+
+from xcollect.boutdataset import BoutAccessor
 
 from wake import add_plasma_params, add_normalisations
 from units import convert_units
 
 
-class StormDataset(BoutDataset):
+@register_dataset_accessor('storm')
+class StormAccessor(BoutAccessor):
     """
     Class specifically for holding data from a simulation using the STORM module for BOUT++.
 
     Implements methods for normalising the data with STORM-specific normalisation constants.
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, ds_object):
+        super().__init__(ds_object)
 
         # Calculate plasma parameters from options file
-        self.params = self._calc_params()
+        #self.params = self._calc_params()
 
         # Calculate normalisations of data variables from parameters
-        self._norms = self._calc_norms()
+#        self._norms = self._calc_norms()
 
         # Set default normalisation state of data
         self.normalisation = 'computational'
+
+    def print_options(self):
+        print(self.extra_data)
 
     def _calc_params(self):
         """

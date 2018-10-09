@@ -13,7 +13,7 @@ def load_boutdataset(datapath='.', prefix='BOUT.dmp', slices={}, chunks={},
 
     ds = collect(vars='all', path=datapath, prefix=prefix, slices=slices, chunks=chunks, info=info)
 
-    return BoutDataset(ds)
+    return ds
 
 
 @register_dataset_accessor('bout')
@@ -59,9 +59,11 @@ class BoutAccessor(object):
         # # TODO This is where you would load the grid file as a separate object
         # # (Ideally using xgcm but could also just store the grid.nc file as another dataset)
 
-
     def test_method(self):
         print('Test successful!')
+
+    def set_extra_data(self, extra_data):
+        self.extra_data = extra_data
 
     def __str__(self):
         """

@@ -8,6 +8,8 @@ from test_collect import bout_xyt_example_files, create_bout_ds
 from xcollect.boutdataset import BoutAccessor, load_boutdataset
 from xcollect.collect import collect
 
+from xcollect.boutmodules.stormdataset import StormAccessor
+
 
 @pytest.fixture(scope='session')
 def bout_example_file(tmpdir_factory):
@@ -80,14 +82,53 @@ class TestXarrayBehaviour:
 class TestBoutDatasetMethods:
     def test_test_method(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        #bd = load_boutdataset(datapath=path)
-        ds = collect(path=path)
+        ds = load_boutdataset(datapath=path)
+        #ds = collect(path=path)
         #bd = BoutAccessor(ds)
         print(ds)
-        ds.bout.test_method()
-        print(ds.bout.metadata)
+        #ds.bout.test_method()
+        #print(ds.bout.options)
+        #print(ds.bout.metadata)
         print(ds.isel(t=-1))
+
+        #ds.bout.set_extra_data('stored')
+        ds.bout.extra_data = 'stored'
+
+        print(ds.bout.extra_data)
+
+
+class TestStormDataset:
+    def test_storm_dataset(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        ds = load_boutdataset(datapath=path)
+        print(ds.storm.normalisation)
+
         assert False
+
+    def test_storm_dataset_inheritance(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        ds = load_boutdataset(datapath=path)
+        ds.storm.set_extra_data('options')
+        print(ds.storm.extra_data)
+
+        assert False
+
+    def test_object_permanence(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        ds = load_boutdataset(datapath=path)
+
+        ds.storm.extra_info = 'options'
+        new_ds = ds.isel(t=-1)
+        print(new_ds.storm.extra_info)
+
+        assert False
+
+    def test_dataset_duck_typing(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        ds = load_boutdataset(datapath=path)
+
+        result = concat([ds.bout, ds.bout])
+        print(result)
 
 
 class TestLoadInputFile:
