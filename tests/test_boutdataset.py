@@ -5,7 +5,8 @@ import xarray.testing as xrt
 import numpy as np
 
 from test_collect import bout_xyt_example_files, create_bout_ds
-from xcollect.boutdataset import BoutDataset
+from xcollect.boutdataset import BoutAccessor, load_boutdataset
+from xcollect.collect import collect
 
 
 @pytest.fixture(scope='session')
@@ -77,7 +78,16 @@ class TestXarrayBehaviour:
 
 
 class TestBoutDatasetMethods:
-    pass
+    def test_test_method(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        #bd = load_boutdataset(datapath=path)
+        ds = collect(path=path)
+        #bd = BoutAccessor(ds)
+        print(ds)
+        ds.bout.test_method()
+        print(ds.bout.metadata)
+        print(ds.isel(t=-1))
+        assert False
 
 
 class TestLoadInputFile:

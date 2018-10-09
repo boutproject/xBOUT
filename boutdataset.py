@@ -8,8 +8,16 @@ from boutdata.data import BoutOptionsFile
 from xcollect.collect import collect
 
 
+def load_boutdataset(datapath='.', prefix='BOUT.dmp', slices={}, chunks={},
+                     input_file=False, run_name=None, log_file=False, info=True):
+
+    ds = collect(vars='all', path=datapath, prefix=prefix, slices=slices, chunks=chunks, info=info)
+
+    return BoutDataset(ds)
+
+
 @register_dataset_accessor('bout')
-class BoutDataset:
+class BoutAccessor(object):
     """
     Contains the BOUT output variables in the form of an xarray.Dataset, and optionally the input file.
 
@@ -19,38 +27,41 @@ class BoutDataset:
 
     # TODO a BoutDataarray class which uses the register_dataarray_accessor??
 
-    def __init__(self, datapath='.', prefix='BOUT.dmp', slices={}, chunks={},
-                 input_file=False, run_name=None, log_file=False, info=True):
+    def __init__(self, ds_object):
 
-        # Load data variables
-        # Should we just load whole dataset here?
-        self.datapath = datapath
-        self.prefix = prefix
-        ds = collect(vars='all', path=datapath, prefix=prefix, slices=slices, chunks=chunks, info=info)
+        # # Load data variables
+        # # Should we just load whole dataset here?
+        # self.datapath = datapath
+        # self.prefix = prefix
 
-        self.data, self.metadata = _strip_metadata(ds)
-        if info:
-            print('Read in BOUT data:')
-            print(self.data)
-            print('Read in BOUT metadata:')
-            print(self.metadata)
+        self.data, self.metadata = _strip_metadata(ds_object)
+        self.options = None
+        # if info:
+        #     print('Read in BOUT data:')
+        #     print(self.data)
+        #     print('Read in BOUT metadata:')
+        #     print(self.metadata)
+        #
+        # if run_name:
+        #     self.run_name = run_name
+        # else:
+        #     self.run_name = datapath
+        #
+        # if input_file is True:
+        #     # Load options from input file using Ben's classes
+        #     self.options = BoutOptionsFile(datapath + 'BOUT.inp')
+        #     if info:
+        #         print('Read in options:\n')
+        #         pprint(self.options.as_dict())
+        # else:
+        #     self.options = None
+        #
+        # # TODO This is where you would load the grid file as a separate object
+        # # (Ideally using xgcm but could also just store the grid.nc file as another dataset)
 
-        if run_name:
-            self.run_name = run_name
-        else:
-            self.run_name = datapath
 
-        if input_file is True:
-            # Load options from input file using Ben's classes
-            self.options = BoutOptionsFile(datapath + 'BOUT.inp')
-            if info:
-                print('Read in options:\n')
-                pprint(self.options.as_dict())
-        else:
-            self.options = None
-
-        # TODO This is where you would load the grid file as a separate object
-        # (Ideally using xgcm but could also just store the grid.nc file as another dataset)
+    def test_method(self):
+        print('Test successful!')
 
     def __str__(self):
         """
@@ -59,7 +70,7 @@ class BoutDataset:
         Accessed by print(ds.bout)
         """
 
-        text = 'BoutDataset ' + self.run_name + '\n'
+        text = 'BoutDataset\n'
         text += 'Contains:\n'
         text += self.data.__str__()
         text += 'with metadata'
@@ -69,8 +80,8 @@ class BoutDataset:
             text += self.options.__str__()
         return text
 
-    def __repr__(self):
-        return 'boutdata.BoutDataset(', {}, ',', {}, ')'.format(self.datapath, self.prefix)
+    #def __repr__(self):
+    #    return 'boutdata.BoutDataset(', {}, ',', {}, ')'.format(self.datapath, self.prefix)
 
     def save(self, savepath='.', filetype='NETCDF4', variables=None, save_dtype=None):
         """
