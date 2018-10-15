@@ -1,4 +1,5 @@
-from xarray import register_dataset_accessor, save_mfdataset
+from xarray import register_dataset_accessor, save_mfdataset, set_options
+
 from dask.diagnostics import ProgressBar
 from numpy import asscalar
 from pprint import pprint
@@ -29,15 +30,29 @@ def open_boutdataset(datapath='.', prefix='BOUT.dmp', slices={}, chunks={},
     ds : xarray.Dataset
     """
 
+    # Set all attrs to survive all mathematical operations (see https://github.com/pydata/xarray/pull/2482)
+    try:
+        set_options(keep_attrs=True)
+    except ValueError:
+        print('For dataset attributes to be permanent you need to be using the development version of xarray '
+              '- the branch keep_attrs_global, found at https://github.com/pydata/xarray/TomNicholas:keep_attrs_global')
+
+    # Gather pointers to all numerical data from BOUT++ output files
     ds_all = collect(vars='all', path=datapath, prefix=prefix, slices=slices, chunks=chunks, info=info)
     ds, metadata = _strip_metadata(ds_all)
     ds.attrs['metadata'] = metadata
 
-    options = BoutOptionsFile(inputfilepath)
+    if inputfilepath:
+        # Use Ben's options class to store all input file options
+        options = BoutOptionsFile(inputfilepath)
+    else:
+        options = None
     ds.attrs['options'] = options
 
     # TODO This is where you would load the grid file as a separate object
     # (Ideally using xgcm but could also just store the grid.nc file as another dataset)
+
+    # TODO read and store git commit hashes from output files
 
     if run_name:
         ds.name = run_name
@@ -56,51 +71,25 @@ def open_boutdataset(datapath='.', prefix='BOUT.dmp', slices={}, chunks={},
 @register_dataset_accessor('bout')
 class BoutAccessor(object):
     """
-    Contains the BOUT output variables in the form of an xarray.Dataset, and optionally the input file.
+    Contains BOUT-specific methods to use on BOUT++ datasets opened using open_boutdataset.
 
-    Standard xarray methods and attributes are accessed as if the BoutDataset were just an instance of an xarray.Dataset.
-    BOUT-specific methods and attributes are accessed via the bout accessor, e.g. ds.bout.options returns a BoutOptionsFile instance.
+    These BOUT-specific methods and attributes are accessed via the bout accessor, e.g. ds.bout.options returns a
+    BoutOptionsFile instance.
     """
 
     # TODO a BoutDataarray class which uses the register_dataarray_accessor??
 
-    def __init__(self, ds_object):
+    def __init__(self, ds):
 
         # # Load data variables
         # # Should we just load whole dataset here?
         # self.datapath = datapath
         # self.prefix = prefix
 
-        self.data, self.metadata = _strip_metadata(ds_object)
-        self.options = None
-        # if info:
-        #     print('Read in BOUT data:')
-        #     print(self.data)
-        #     print('Read in BOUT metadata:')
-        #     print(self.metadata)
-        #
-        # if run_name:
-        #     self.run_name = run_name
-        # else:
-        #     self.run_name = datapath
-        #
-        # if input_file is True:
-        #     # Load options from input file using Ben's classes
-        #     self.options = BoutOptionsFile(datapath + 'BOUT.inp')
-        #     if info:
-        #         print('Read in options:\n')
-        #         pprint(self.options.as_dict())
-        # else:
-        #     self.options = None
-        #
-        # # TODO This is where you would load the grid file as a separate object
-        # # (Ideally using xgcm but could also just store the grid.nc file as another dataset)
+        self.data = ds
+        self.metadata = ds.attrs['metadata']
+        self.options = ds.attrs['options']
 
-    def test_method(self):
-        print('Test successful!')
-
-    def set_extra_data(self, extra_data):
-        self.extra_data = extra_data
 
     def __str__(self):
         """
@@ -166,7 +155,7 @@ class BoutAccessor(object):
 
         If processor decomposition is not specified then data will be saved used the decomposition it had when loaded.
 
-        Parameters
+            Parameters
         ----------
         savepath : str
         nxpe : int

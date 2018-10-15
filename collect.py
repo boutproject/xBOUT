@@ -164,7 +164,7 @@ def _trim(ds_grid, concat_dims, guards, ghosts, keep_guards):
                         upper[dim] = -guards[dim]
 
             # Selection to use to trim the dataset
-            selection = {dim: slice(lower[dim], upper[dim], None) for dim in ds.dims}
+            selection = {dim: slice(lower[dim], upper[dim], None) for dim in concat_dims}
 
             # Insert back, contained in a dict
             ds_grid[index] = {'key': ds.isel(**selection)}
