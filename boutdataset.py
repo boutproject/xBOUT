@@ -8,10 +8,47 @@ from boutdata.data import BoutOptionsFile
 from xcollect.collect import collect
 
 
-def load_boutdataset(datapath='.', prefix='BOUT.dmp', slices={}, chunks={},
-                     input_file=False, run_name=None, log_file=False, info=True):
+def open_boutdataset(datapath='.', prefix='BOUT.dmp', slices={}, chunks={},
+                     inputfilepath='.', gridfilepath=None, run_name=None, info=True):
+    """
+    Load a dataset from a set of BOUT output files, including the input options file.
 
-    ds = collect(vars='all', path=datapath, prefix=prefix, slices=slices, chunks=chunks, info=info)
+    Parameters
+    ----------
+    datapath : str, optional
+    prefix : str, optional
+    slices : slice object, optional
+    chunks : dict, optional
+    inputfilepath : str, optional
+    gridfilepath : str, optional
+    run_name : str, optional
+    info : bool, optional
+
+    Returns
+    -------
+    ds : xarray.Dataset
+    """
+
+    ds_all = collect(vars='all', path=datapath, prefix=prefix, slices=slices, chunks=chunks, info=info)
+    ds, metadata = _strip_metadata(ds_all)
+    ds.attrs['metadata'] = metadata
+
+    options = BoutOptionsFile(inputfilepath)
+    ds.attrs['options'] = options
+
+    # TODO This is where you would load the grid file as a separate object
+    # (Ideally using xgcm but could also just store the grid.nc file as another dataset)
+
+    if run_name:
+        ds.name = run_name
+
+    if info:
+        print('Read in BOUT data:')
+        print(ds)
+        print('Read in BOUT metadata:')
+        print(metadata)
+        print('Read in BOUT options:')
+        print(options)
 
     return ds
 
