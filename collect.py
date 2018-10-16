@@ -154,8 +154,16 @@ def _trim(ds_grid, concat_dims, guards, ghosts, keep_guards):
             # Determine how many cells to trim off each dimension
             lower, upper = {}, {}
             for dim in concat_dims:
-                lower[dim] = ghosts[dim]
-                upper[dim] = -ghosts[dim]
+
+                # Trime off ghost cells
+                ghost = ghosts.get(dim, None)
+                # This allows for no ghost cells to be specified as either ghosts = {'x': 0} or ghosts = {'x': None}
+                if ghost == 0:
+                    lower[dim] = None
+                    upper[dim] = None
+                else:
+                    lower[dim] = ghost
+                    upper[dim] = -ghost
 
                 # If ds is at edge of grid trim guard cells instead of ghost cells
                 if keep_guards[dim] is not None:  # This check is for unit testing/debugging purposes
@@ -164,12 +172,12 @@ def _trim(ds_grid, concat_dims, guards, ghosts, keep_guards):
                     if keep_guards[dim]:
                         if index[dim_axis] == 0:
                             lower[dim] = None
-                        if index[dim_axis] == dim_max:
+                        if index[dim_axis] == dim_max-1:
                             upper[dim] = None
                     else:
                         if index[dim_axis] == 0:
                             lower[dim] = guards[dim]
-                        if index[dim_axis] == dim_max:
+                        if index[dim_axis] == dim_max-1:
                             upper[dim] = -guards[dim]
 
             # Selection to use to trim the dataset

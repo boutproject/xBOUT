@@ -63,13 +63,13 @@ class TestXarrayBehaviour:
     (With the accessor approach these should pass trivially now.)
     """
 
-
     def test_concat(self, tmpdir_factory):
         path1 = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
         bd1 = open_boutdataset(datapath=path1, inputfilepath=None)
         path2 = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
-        bd2 = open_boutdataset(datapath=path1, inputfilepath=None)
-        print(concat([bd1, bd2], dim='run'))
+        bd2 = open_boutdataset(datapath=path2, inputfilepath=None)
+        result = concat([bd1, bd2], dim='run')
+        assert result.dims == {**bd1.dims, 'run': 2}
 
     def test_isel(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
