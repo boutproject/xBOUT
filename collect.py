@@ -169,16 +169,17 @@ def _trim(ds_grid, concat_dims, guards, ghosts, keep_guards):
                 if keep_guards[dim] is not None:  # This check is for unit testing/debugging purposes
                     dim_axis = concat_dims.index(dim)
                     dim_max = ds_grid.shape[dim_axis]
-                    if keep_guards[dim]:
+                    if not keep_guards[dim] and guards[dim] > 0:
+                        if index[dim_axis] == 0:
+                            lower[dim] = guards[dim]
+                        if index[dim_axis] == dim_max - 1:
+                            upper[dim] = -guards[dim]
+                    else:
                         if index[dim_axis] == 0:
                             lower[dim] = None
                         if index[dim_axis] == dim_max-1:
                             upper[dim] = None
-                    else:
-                        if index[dim_axis] == 0:
-                            lower[dim] = guards[dim]
-                        if index[dim_axis] == dim_max-1:
-                            upper[dim] = -guards[dim]
+
 
             # Selection to use to trim the dataset
             selection = {dim: slice(lower[dim], upper[dim], None) for dim in concat_dims}
