@@ -10,14 +10,16 @@ from xcollect.collect import collect, _open_all_dump_files, _organise_files, _tr
 
 
 @pytest.fixture(scope='session')
-def bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', nxpe=4, nype=2, nt=2, syn_data_type='random'):
+def bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,1,6),
+                           nxpe=4, nype=2, nt=2, ghosts={}, syn_data_type='random'):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
     """
 
     save_dir = tmpdir_factory.mktemp("data")
 
-    ds_list, file_list = create_bout_ds_list(prefix, nxpe, nype, nt, syn_data_type=syn_data_type)
+    ds_list, file_list = create_bout_ds_list(prefix=prefix, lengths=lengths, nxpe=nxpe, nype=nype, nt=nt,
+                                             ghosts=ghosts, syn_data_type=syn_data_type)
 
     for ds, file_name in zip(ds_list, file_list):
         ds.to_netcdf(str(save_dir.join(str(file_name))))
@@ -25,7 +27,7 @@ def bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', nxpe=4, nype=2, nt
     return str(save_dir)
 
 
-def create_bout_ds_list(prefix, nxpe, nype, nt=1, syn_data_type='random'):
+def create_bout_ds_list(prefix, lengths=(2,4,1,6), nxpe=4, nype=2, nt=1, ghosts={}, syn_data_type='random'):
     """
     Mocks up a set of BOUT-like datasets.
 
@@ -39,7 +41,15 @@ def create_bout_ds_list(prefix, nxpe, nype, nt=1, syn_data_type='random'):
             num = (i + nxpe * j)
             filename = prefix + "." + str(num) + ".nc"
             file_list.append(filename)
-            ds_list.append(create_bout_ds(syn_data_type, num, nxpe=nxpe, nype=nype))
+
+            # Include ghost cells
+            # TODO include guard cells
+            upper_bndry_cells = {dim: ghosts.get(dim) for dim in ghosts.keys()}
+            lower_bndry_cells = {dim: ghosts.get(dim) for dim in ghosts.keys()}
+
+            ds = create_bout_ds(syn_data_type=syn_data_type, num=num, lengths=lengths, nxpe=nxpe, nype=nype,
+                                upper_bndry_cells=upper_bndry_cells, lower_bndry_cells=lower_bndry_cells)
+            ds_list.append(ds)
 
     # Sort this in order of num to remove any BOUT-specific structure
     ds_list_sorted = [ds for filename, ds in sorted(zip(file_list, ds_list))]
@@ -57,9 +67,18 @@ def assert_dataset_grids_equal(ds_grid1, ds_grid2):
         xrt.assert_equal(ds1, ds2)
 
 
-def create_bout_ds(syn_data_type='random', num=0, nxpe=1, nype=1):
-    shape = (2, 4, 6)
+def create_bout_ds(syn_data_type='random', lengths=(2,4,1,6), num=0, nxpe=1, nype=1,
+                   upper_bndry_cells={}, lower_bndry_cells={}):
 
+    # Set the shape of the data in this dataset
+    x_length, y_length, z_length, t_length = lengths
+    x_length += upper_bndry_cells.get('x', 0) + lower_bndry_cells.get('x', 0)
+    y_length += upper_bndry_cells.get('y', 0) + lower_bndry_cells.get('y', 0)
+    z_length += upper_bndry_cells.get('z', 0) + lower_bndry_cells.get('z', 0)
+    t_length += upper_bndry_cells.get('t', 0) + lower_bndry_cells.get('t', 0)
+    shape = (x_length, y_length, z_length, t_length)
+
+    # Fill with some kind of synthetic data
     if syn_data_type is 'random':
         # Each dataset contains the same random noise
         np.random.seed(seed=0)
@@ -73,10 +92,11 @@ def create_bout_ds(syn_data_type='random', num=0, nxpe=1, nype=1):
     else:
         raise ValueError('Not a recognised choice of type of synthetic bout data.')
 
-    T = DataArray(data, dims=['t', 'x', 'z'])
-    n = DataArray(data, dims=['t', 'x', 'z'])
-    ds = Dataset({'n': n, 'T': T})
+    T = DataArray(data, dims=['x', 'y', 'z', 't'])
+    n = DataArray(data, dims=['x', 'y', 'z', 't'])
+    ds = Dataset({'n': n, 'T': T}).squeeze()
 
+    # Include the metadata about parallelization which collect requires
     ds['NXPE'] = nxpe
     ds['NYPE'] = nype
     ds['MXG'] = 0
@@ -184,11 +204,29 @@ class TestTrim:
         ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=3)
 
         not_trimmed = _trim(ds_grid, concat_dims=['x', 'y'],
-                            guards={'x': 0, 'y':0}, ghosts={'x': 0, 'y': 0}, keep_guards={'x': False, 'y': False})
+                            guards={'x': 0, 'y': 0}, ghosts={'x': 0, 'y': 0}, keep_guards={'x': None, 'y': None})
         assert_dataset_grids_equal(not_trimmed, ds_grid)
 
-    def test_trim_ghosts(self):
-        pass
+    def test_trim_ghosts(self, tmpdir_factory):
+        # Create data to trim
+        prefix = 'BOUT.dmp'
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(6,10,1,6), nxpe=6, nype=3, nt=1, ghosts={'x': 2, 'y': 3},
+                                      syn_data_type='stepped')
+
+        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=3)
+
+        # Trim data
+        trimmed = _trim(ds_grid, concat_dims=['x', 'y'],
+                        guards={'x': 0, 'y': 0}, ghosts={'x': 2, 'y': 3}, keep_guards={'x': None, 'y': None})
+
+        # Create data that is already the size it should be after trimming, to compare to
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2,4,1,6), nxpe=6, nype=3, nt=1, ghosts={'x': 2, 'y': 3},
+                                      syn_data_type='stepped')
+        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
+        expected, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=3)
+
+        assert_dataset_grids_equal(trimmed, expected)
 
     def trim_guards(self):
         pass

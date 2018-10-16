@@ -51,6 +51,7 @@ def collect(vars='all', path='./', prefix='BOUT.dmp',
     """
 
     # TODO implement optional argument info
+    # TODO change the path/prefix system to use a glob
 
     filepaths, datasets = _open_all_dump_files(path, prefix, chunks=chunks)
 
@@ -133,12 +134,19 @@ def _organise_files(filepaths, datasets, prefix, nxpe, nype):
 def _trim(ds_grid, concat_dims, guards, ghosts, keep_guards):
     """
     Trims all ghost and guard cells off each dataset in ds_grid to prepare for concatenation.
+
+    Returns a new grid of datasets instead of trimming in-place, as lazy loading should mean this is cheap.
     """
 
     if not any(v > 0 for v in guards.values()) and not any(v > 0 for v in ghosts.values()):
         # Check that some kind of trimming is actually necessary
+        print('No trimming was needed')
         return ds_grid
     else:
+        # Create new numpy array to insert results into
+        return_ds_grid = np.empty_like(ds_grid)
+
+        # Loop over all datasets in grid
         for index, ds_dict in np.ndenumerate(ds_grid):
             # Unpack the dataset from the dict holding it
             ds = ds_dict['key']
@@ -150,23 +158,24 @@ def _trim(ds_grid, concat_dims, guards, ghosts, keep_guards):
                 upper[dim] = -ghosts[dim]
 
                 # If ds is at edge of grid trim guard cells instead of ghost cells
-                dim_axis = concat_dims.index(dim)
-                dim_max = ds_grid.shape[dim_axis]
-                if keep_guards[dim]:
-                    if index[dim_axis] == 0:
-                        lower[dim] = None
-                    if index[dim_axis] == dim_max:
-                        upper[dim] = None
-                else:
-                    if index[dim_axis] == 0:
-                        lower[dim] = guards[dim]
-                    if index[dim_axis] == dim_max:
-                        upper[dim] = -guards[dim]
+                if keep_guards[dim] is not None:  # This check is for unit testing/debugging purposes
+                    dim_axis = concat_dims.index(dim)
+                    dim_max = ds_grid.shape[dim_axis]
+                    if keep_guards[dim]:
+                        if index[dim_axis] == 0:
+                            lower[dim] = None
+                        if index[dim_axis] == dim_max:
+                            upper[dim] = None
+                    else:
+                        if index[dim_axis] == 0:
+                            lower[dim] = guards[dim]
+                        if index[dim_axis] == dim_max:
+                            upper[dim] = -guards[dim]
 
             # Selection to use to trim the dataset
             selection = {dim: slice(lower[dim], upper[dim], None) for dim in concat_dims}
 
-            # Insert back, contained in a dict
-            ds_grid[index] = {'key': ds.isel(**selection)}
+            # Insert into new dataset grid, contained in a dict
+            return_ds_grid[index] = {'key': ds.isel(**selection)}
 
-        return ds_grid
+        return return_ds_grid
