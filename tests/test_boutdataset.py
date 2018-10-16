@@ -4,9 +4,14 @@ from xarray import Dataset, DataArray, concat
 import xarray.testing as xrt
 import numpy as np
 
+from boutdata.data import BoutOptionsFile, BoutOptions
+
 from xcollect.tests.test_collect import bout_xyt_example_files, create_bout_ds
 from xcollect.boutdataset import BoutAccessor, open_boutdataset
 from xcollect.collect import collect
+
+
+EXAMPLE_OPTIONS_FILE_PATH = './tests/data/options/BOUT.inp'
 
 
 @pytest.fixture(scope='session')
@@ -98,7 +103,15 @@ class TestBoutDatasetMethods:
 
 
 class TestLoadInputFile:
-    pass
+    def test_load_options(self):
+        options = BoutOptionsFile(EXAMPLE_OPTIONS_FILE_PATH)
+        assert isinstance(options, BoutOptions)
+        # TODO Check it contains the same text
+
+    def test_load_options_in_dataset(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        ds = open_boutdataset(datapath=path, inputfilepath=EXAMPLE_OPTIONS_FILE_PATH)
+        assert isinstance(ds.options, BoutOptions)
 
 
 class TestLoadLogFile:
