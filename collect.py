@@ -12,13 +12,14 @@ import numpy as np
 
 import os
 import glob
+from pathlib import Path
 
 from xcollect.concatenate import _concat_nd
 
 
 # TODO account for BOUT++ output files potentially containing attributes which we want to keep
 
-def collect(vars='all', path='./', prefix='BOUT.dmp',
+def collect(vars='all', datapath='./BOUT.dmp.*.nc',
             slices={}, yguards=False, xguards=False,
             info=True, chunks={}):
     """
@@ -55,7 +56,9 @@ def collect(vars='all', path='./', prefix='BOUT.dmp',
     # TODO implement optional argument info
     # TODO change the path/prefix system to use a glob
 
-    filepaths, datasets = _open_all_dump_files(path, prefix, chunks=chunks)
+    path = Path(datapath)
+
+    filepaths, datasets = _open_all_dump_files(path, chunks=chunks)
 
     # Open just one file to read processor splitting
     ds = xr.open_dataset(filepaths[0])
@@ -78,28 +81,45 @@ def collect(vars='all', path='./', prefix='BOUT.dmp',
         return ds[vars].isel(**slices)
 
 
-def _open_all_dump_files(path, prefix, chunks={}):
+def _open_all_dump_files(path, chunks={}):
     """Determines filetypes and opens all dump files."""
 
-    file_list_nc = glob.glob(os.path.join(path, prefix + ".*nc"))
-    file_list_h5 = glob.glob(os.path.join(path, prefix + ".*hdf5"))
-    if file_list_nc and file_list_h5:
-        raise IOError("Both NetCDF and HDF5 files are present: do not know which to read.")
-    elif file_list_h5:
-        filetype = 'h5netcdf'
-        file_list = file_list_h5
-    elif file_list_nc:
-        filetype = 'netcdf4'
-        file_list = file_list_nc
-    else:
-        raise IOError("No data files found in path {0}".format(path))
+    filetype = _check_filetype(path)
 
-    filepaths = sorted(file_list)
+    filepaths = _expand_wildcards(path)
 
     # Default chunks={} is for each file to be one chunk
     datasets = [xr.open_dataset(file, engine=filetype, chunks=chunks) for file in filepaths]
 
     return filepaths, datasets
+
+
+def _check_filetype(path):
+
+    if path.suffix == '.nc':
+        filetype = 'netcdf4'
+    elif path.suffix == '.h5netcdf':
+        filetype = 'h5netcdf'
+    else:
+        raise IOError('Do not know how to read the supplied file extension: ' + path.suffix)
+
+    return filetype
+
+
+def _expand_wildcards(path):
+    """Return list of filepaths matching wildcard"""
+
+    # Find first parent directory which does not contain a wildcard
+    base_dir = next(parent for parent in path.parents if '*' not in str(parent))
+
+    # Find path relative to parent
+    search_pattern = str(path.relative_to(base_dir))
+
+    # Search this relative path from the parent directory for all files matching user input
+    filepaths = list(base_dir.glob(search_pattern))
+
+    # Sort before returning
+    return sorted(filepaths, key=lambda filepath: str(filepath))
 
 
 def _organise_files(filepaths, datasets, prefix, nxpe, nype):

@@ -1,12 +1,13 @@
 import pytest
 import os
+from pathlib import Path
 
 from xarray import Dataset, DataArray
 import xarray.testing as xrt
 import numpy as np
 import numpy.testing as npt
 
-from xcollect.collect import collect, _open_all_dump_files, _organise_files, _trim
+from xcollect.collect import collect, _check_filetype, _expand_wildcards, _open_all_dump_files, _organise_files, _trim
 
 
 @pytest.fixture(scope='session')
@@ -115,10 +116,64 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,1,6), num=0, nxpe=1, nyp
     return ds
 
 
+def test_check_extensions(tmpdir):
+    files_dir = tmpdir.mkdir("data")
+    example_nc_file = files_dir.join('example.nc')
+    example_nc_file.write("content_nc")
+
+    filetype = _check_filetype(Path(str(example_nc_file)))
+    assert filetype == 'netcdf4'
+
+    example_hdf5_file = files_dir.join('example.h5netcdf')
+    example_hdf5_file.write("content_hdf5")
+
+    filetype = _check_filetype(Path(str(example_hdf5_file)))
+    assert filetype == 'h5netcdf'
+
+    example_invalid_file = files_dir.join('example.txt')
+    example_hdf5_file.write("content_txt")
+
+    with pytest.raises(IOError):
+        filetype = _check_filetype(Path(str(example_invalid_file)))
+
+
+class TestPathHandling:
+    def test_glob_expansion_single(self, tmpdir):
+        files_dir = tmpdir.mkdir("data")
+        example_file = files_dir.join('example.0.nc')
+        example_file.write("content")
+
+        path = Path(str(example_file))
+        filepaths = _expand_wildcards(path)
+        assert filepaths[0] == Path(str(example_file))
+
+        path = Path(str(files_dir.join('example.*.nc')))
+        filepaths = _expand_wildcards(path)
+        assert filepaths[0] == Path(str(example_file))
+
+    @pytest.mark.parametrize("ii, jj", [(1, 1), (1, 4), (3, 1), (5, 3), (12, 1),
+                                        (1, 12), (121, 2), (3, 111)])
+    def test_glob_expansion_both(self, tmpdir, ii, jj):
+        files_dir = tmpdir.mkdir("data")
+        filepaths = []
+        for i in range(ii):
+            example_run_dir = files_dir.mkdir('run' + str(i))
+            for j in range(jj):
+                example_file = example_run_dir.join('example.' + str(j) + '.nc')
+                example_file.write("content")
+                filepaths.append(Path(str(example_file)))
+        expected_filepaths = sorted(filepaths, key=lambda filepath: str(filepath))
+
+        path = Path(str(files_dir.join('run*/example.*.nc')))
+        actual_filepaths = _expand_wildcards(path)
+
+        assert actual_filepaths == expected_filepaths
+
+
 class TestOpeningFiles:
     def test_open_single_file(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        actual_filepath, actual_dataset = _open_all_dump_files(path, 'BOUT.dmp', chunks=None)
+        actual_filepath, actual_dataset = _open_all_dump_files(path=Path(path + '/BOUT.dmp.*.nc'), chunks=None)
 
         expected_dataset, expected_filename = create_bout_ds_list('BOUT.dmp', nxpe=1, nype=1, nt=1)
 

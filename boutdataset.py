@@ -9,7 +9,7 @@ from boutdata.data import BoutOptionsFile
 from xcollect.collect import collect
 
 
-def open_boutdataset(datapath='.', prefix='BOUT.dmp', slices={}, chunks={},
+def open_boutdataset(datapath='./BOUT.dmp.*.nc', slices={}, chunks={},
                      inputfilepath='.', gridfilepath=None, run_name=None, info=True):
     """
     Load a dataset from a set of BOUT output files, including the input options file.
@@ -38,7 +38,7 @@ def open_boutdataset(datapath='.', prefix='BOUT.dmp', slices={}, chunks={},
               '- the branch keep_attrs_global, found at https://github.com/pydata/xarray/TomNicholas:keep_attrs_global')
 
     # Gather pointers to all numerical data from BOUT++ output files
-    ds_all = collect(vars='all', path=datapath, prefix=prefix, slices=slices, chunks=chunks, info=info)
+    ds_all = collect(vars='all', filepaths=datapath, slices=slices, chunks=chunks, info=info)
     ds, metadata = _strip_metadata(ds_all)
     ds.attrs['metadata'] = metadata
 
