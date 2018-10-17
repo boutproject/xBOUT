@@ -19,7 +19,7 @@ def bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,1,6),
     save_dir = tmpdir_factory.mktemp("data")
 
     ds_list, file_list = create_bout_ds_list(prefix=prefix, lengths=lengths, nxpe=nxpe, nype=nype, nt=nt,
-                                             ghosts=ghosts, syn_data_type=syn_data_type)
+                                             ghosts=ghosts, guards=guards, syn_data_type=syn_data_type)
 
     for ds, file_name in zip(ds_list, file_list):
         ds.to_netcdf(str(save_dir.join(str(file_name))))
@@ -55,7 +55,7 @@ def create_bout_ds_list(prefix, lengths=(2,4,1,6), nxpe=4, nype=2, nt=1, ghosts=
                         upper_bndry_cells[dim] = guards[dim]
 
             ds = create_bout_ds(syn_data_type=syn_data_type, num=num, lengths=lengths, nxpe=nxpe, nype=nype,
-                                upper_bndry_cells=upper_bndry_cells, lower_bndry_cells=lower_bndry_cells)
+                                upper_bndry_cells=upper_bndry_cells, lower_bndry_cells=lower_bndry_cells, guards=guards)
             ds_list.append(ds)
 
     # Sort this in order of num to remove any BOUT-specific structure
@@ -78,7 +78,7 @@ def assert_dataset_grids_equal(ds_grid1, ds_grid2):
 
 
 def create_bout_ds(syn_data_type='random', lengths=(2,4,1,6), num=0, nxpe=1, nype=1,
-                   upper_bndry_cells={}, lower_bndry_cells={}):
+                   upper_bndry_cells={}, lower_bndry_cells={}, guards={}):
 
     # Set the shape of the data in this dataset
     x_length, y_length, z_length, t_length = lengths
@@ -109,8 +109,8 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,1,6), num=0, nxpe=1, nyp
     # Include the metadata about parallelization which collect requires
     ds['NXPE'] = nxpe
     ds['NYPE'] = nype
-    ds['MXG'] = 0
-    ds['MYG'] = 0
+    ds['MXG'] = guards.get('x', 0)
+    ds['MYG'] = guards.get('y', 0)
 
     return ds
 
@@ -290,16 +290,44 @@ class TestTrim:
 
 
         # Create data that is already the size it should be after trimming, to compare to
+        # Same size because no ghost cells and we're keeping the guard cells
         path = bout_xyt_example_files(tmpdir_factory, lengths=lengths, nxpe=6, nype=1, nt=1,
+                                      syn_data_type='stepped')
+        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=1)
+        ds_grid[0]['key'] = ds_grid[0]['key'].isel(**{'x': slice(1, None, None)})
+        ds_grid[5]['key'] = ds_grid[5]['key'].isel(**{'x': slice(None, -1, None)})
+        expected = ds_grid
+
+        assert_dataset_grids_equal(trimmed, expected)
+
+    def test_trim_ghosts_and_guards(self, tmpdir_factory):
+        # Create data to trim
+        prefix = 'BOUT.dmp'
+        guards = {'x': 3}
+        keep_guards = {'x': False}
+        ghosts = {'x': 2, 'y': 0}
+        lengths = (6, 8, 1, 6)
+
+        path = bout_xyt_example_files(tmpdir_factory, lengths=lengths, nxpe=6, nype=1, nt=1,
+                                      ghosts=ghosts, guards=guards,
+                                      syn_data_type='stepped')
+
+        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=1)
+
+        # Trim data
+        trimmed = _trim(ds_grid, concat_dims=['x'],
+                        guards=guards, ghosts=ghosts, keep_guards=keep_guards)
+
+        # Create data that is already the size it should be after trimming, to compare to
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(4, 8, 1, 6), nxpe=6, nype=1, nt=1,
                                       syn_data_type='stepped')
         filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
         ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=1)
         expected = ds_grid
 
         assert_dataset_grids_equal(trimmed, expected)
-
-    def trim_ghosts_and_guards(self):
-        pass
 
 
 class TestCollectData:
@@ -316,4 +344,21 @@ class TestCollectData:
         xrt.assert_equal(actual, expected['n'])
 
     def test_collect_multiple_files(self, tmpdir_factory):
-        pass
+        # Create data to trim
+        prefix = 'BOUT.dmp'
+        guards = {'x': 2, 'y': 0}
+        keep_guards = {'x': False, 'y': True}
+        ghosts = {'x': 2, 'y': 0}
+        lengths = (6, 8, 10, 6)  # remember these are lengths before any guard or ghost cells are added!
+        nxpe = 6
+        nype = 1
+
+        path = bout_xyt_example_files(tmpdir_factory, lengths=lengths, nxpe=nxpe, nype=nype, nt=1,
+                                      ghosts=ghosts, guards=guards,
+                                      syn_data_type='stepped')
+
+        actual = collect(path=path, prefix=prefix,
+                         xguards=keep_guards['x'], yguards=keep_guards['y'])
+
+        assert actual.dims == {'x': lengths[0]*nxpe, 'y': lengths[1]*nype,
+                               'z': lengths[2], 't': lengths[3]}

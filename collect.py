@@ -16,6 +16,8 @@ import glob
 from xcollect.concatenate import _concat_nd
 
 
+# TODO account for BOUT++ output files potentially containing attributes which we want to keep
+
 def collect(vars='all', path='./', prefix='BOUT.dmp',
             slices={}, yguards=False, xguards=False,
             info=True, chunks={}):
@@ -62,8 +64,9 @@ def collect(vars='all', path='./', prefix='BOUT.dmp',
 
     ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix, nxpe, nype)
 
+    # TODO work out how to get numbers of guard cells in each dimension from output files
     ds_grid = _trim(ds_grid, concat_dims,
-                    guards={'x': mxg, 'y': myg}, ghosts={'x': mxg, 'y': myg},
+                    guards={'x': 2, 'y': 0}, ghosts={'x': mxg, 'y': myg},
                     keep_guards={'x': xguards, 'y': yguards})
 
     ds = _concat_nd(ds_grid, concat_dims=concat_dims, data_vars=['minimal']*len(concat_dims))
@@ -151,40 +154,48 @@ def _trim(ds_grid, concat_dims, guards, ghosts, keep_guards):
             # Unpack the dataset from the dict holding it
             ds = ds_dict['key']
 
-            # Determine how many cells to trim off each dimension
-            lower, upper = {}, {}
-            for dim in concat_dims:
-
-                # Trime off ghost cells
-                ghost = ghosts.get(dim, None)
-                # This allows for no ghost cells to be specified as either ghosts = {'x': 0} or ghosts = {'x': None}
-                if ghost == 0:
-                    lower[dim] = None
-                    upper[dim] = None
-                else:
-                    lower[dim] = ghost
-                    upper[dim] = -ghost
-
-                # If ds is at edge of grid trim guard cells instead of ghost cells
-                if keep_guards[dim] is not None:  # This check is for unit testing/debugging purposes
-                    dim_axis = concat_dims.index(dim)
-                    dim_max = ds_grid.shape[dim_axis]
-                    if not keep_guards[dim] and guards[dim] > 0:
-                        if index[dim_axis] == 0:
-                            lower[dim] = guards[dim]
-                        if index[dim_axis] == dim_max - 1:
-                            upper[dim] = -guards[dim]
-                    else:
-                        if index[dim_axis] == 0:
-                            lower[dim] = None
-                        if index[dim_axis] == dim_max-1:
-                            upper[dim] = None
-
-
-            # Selection to use to trim the dataset
-            selection = {dim: slice(lower[dim], upper[dim], None) for dim in concat_dims}
+            trimmed_ds = _trim_single_ds(index, ds, concat_dims, ds_grid.shape,
+                                         guards, ghosts, keep_guards)
 
             # Insert into new dataset grid, contained in a dict
-            return_ds_grid[index] = {'key': ds.isel(**selection)}
+            return_ds_grid[index] = {'key': trimmed_ds}
 
         return return_ds_grid
+
+
+def _trim_single_ds(index, ds, concat_dims, ds_grid_shape, guards, ghosts, keep_guards):
+
+    # Determine how many cells to trim off each dimension
+    lower, upper = {}, {}
+    for dim in concat_dims:
+
+        # Trime off ghost cells
+        ghost = ghosts.get(dim, None)
+        # This allows for no ghost cells to be specified as either ghosts = {'x': 0} or ghosts = {'x': None}
+        if ghost == 0:
+            lower[dim] = None
+            upper[dim] = None
+        else:
+            lower[dim] = ghost
+            upper[dim] = -ghost
+
+        # If ds is at edge of grid trim guard cells instead of ghost cells
+        if keep_guards[dim] is not None:  # This check is for unit testing/debugging purposes
+            dim_axis = concat_dims.index(dim)
+            dim_max = ds_grid_shape[dim_axis]
+            if not keep_guards[dim] and guards[dim] > 0:
+                if index[dim_axis] == 0:
+                    lower[dim] = guards[dim]
+                if index[dim_axis] == dim_max - 1:
+                    upper[dim] = -guards[dim]
+            else:
+                if index[dim_axis] == 0:
+                    lower[dim] = None
+                if index[dim_axis] == dim_max - 1:
+                    upper[dim] = None
+
+    # Selection to use to trim the dataset
+    selection = {dim: slice(lower[dim], upper[dim], None) for dim in concat_dims}
+
+    # Return trimmed subset as a new object
+    return ds.isel(**selection)
