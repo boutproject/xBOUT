@@ -18,7 +18,7 @@ replace the current `boutdata.collect`, which is slow and scales poorly.
 The data from a BOUT++ run can then be loaded with just
 
 ```python
-bd = BoutDataset('./data_dir/')
+bd = open_boutdataset('./data_dir/BOUT.dmp.*.nc')
 
 ds = bd.data
 options = bd.options

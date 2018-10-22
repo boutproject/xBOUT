@@ -1,6 +1,8 @@
 import pytest
 import os
+import shutil
 from pathlib import Path
+import re
 
 from xarray import Dataset, DataArray
 import xarray.testing as xrt
@@ -12,9 +14,11 @@ from xcollect.collect import collect, _check_filetype, _expand_wildcards, _open_
 
 @pytest.fixture(scope='session')
 def bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,1,6),
-                           nxpe=4, nype=2, nt=2, ghosts={}, guards={}, syn_data_type='random'):
+                           nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
+
+    Deletes the temporary directory once that test is done.
     """
 
     save_dir = tmpdir_factory.mktemp("data")
@@ -25,7 +29,22 @@ def bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,1,6),
     for ds, file_name in zip(ds_list, file_list):
         ds.to_netcdf(str(save_dir.join(str(file_name))))
 
-    return str(save_dir)
+    # Return a glob-like path to all files created, which has all file numbers replaced with a single asterix
+    # We have to limit the number of numbers replaced and reverse the path so that the tests don't get confused by
+    # persistent tempoarary directories (which are also designated by different numbers)
+    path = str(save_dir.join(str(file_list[-1])))
+    count = 1
+    if nt > 1:
+        count += 1
+    glob_pattern = (re.sub('\d+', '*', path[::-1], count=count))[::-1]
+    return glob_pattern
+
+    #try:
+    #yield glob_pattern
+    # finally:
+    #     # Clean up temporary directories
+    #     print('Cleaning up after myself ')
+    #     shutil.rmtree(save_dir)
 
 
 def create_bout_ds_list(prefix, lengths=(2,4,1,6), nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
@@ -173,34 +192,35 @@ class TestPathHandling:
 class TestOpeningFiles:
     def test_open_single_file(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        actual_filepath, actual_dataset = _open_all_dump_files(path=Path(path + '/BOUT.dmp.*.nc'), chunks=None)
+        actual_filepath, actual_dataset = _open_all_dump_files(path=Path(path), chunks=None)
 
         expected_dataset, expected_filename = create_bout_ds_list('BOUT.dmp', nxpe=1, nype=1, nt=1)
 
-        actual_filename = os.path.split(actual_filepath[0])[-1]
+        actual_filename = actual_filepath[0].parts[-1]
         assert expected_filename[0] == actual_filename
         xrt.assert_equal(expected_dataset[0], actual_dataset[0])
 
     def test_open_x_parallelized_files(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1)
-        actual_filepaths, actual_datasets = _open_all_dump_files(path, 'BOUT.dmp', chunks=None)
+        actual_filepaths, actual_datasets = _open_all_dump_files(path=Path(path), chunks=None)
 
         expected_datasets, expected_filepaths = create_bout_ds_list('BOUT.dmp', nxpe=4, nype=1, nt=1)
 
+        assert len(expected_filepaths) == len(actual_filepaths)
         for expected, actual in zip(expected_filepaths, actual_filepaths):
-            actual_filename = os.path.split(actual)[-1]
+            actual_filename = actual.parts[-1]
             assert expected == actual_filename
         for expected, actual in zip(expected_datasets, actual_datasets):
             xrt.assert_equal(expected, actual)
 
     def test_open_xy_parallelized_files(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1)
-        actual_filepaths, actual_datasets = _open_all_dump_files(path, 'BOUT.dmp', chunks=None)
+        actual_filepaths, actual_datasets = _open_all_dump_files(path=Path(path), chunks=None)
 
         expected_datasets, expected_filepaths = create_bout_ds_list('BOUT.dmp', nxpe=4, nype=3, nt=1)
 
         for expected, actual in zip(expected_filepaths, actual_filepaths):
-            actual_filename = os.path.split(actual)[-1]
+            actual_filename = actual.parts[-1]
             assert expected == actual_filename
         for expected, actual in zip(expected_datasets, actual_datasets):
             xrt.assert_equal(expected, actual)
@@ -215,9 +235,8 @@ class TestOpeningFiles:
 class TestFileOrganisation:
     def test_organise_x_parallelized_files(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1, syn_data_type='stepped')
-        prefix = 'BOUT.dmp'
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=4, nype=1)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=4, nype=1)
         assert ds_grid.shape == (4,)
         assert concat_dims == ['x']
 
@@ -229,8 +248,8 @@ class TestFileOrganisation:
     def test_organise_y_parallelized_files(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=5, nt=1, syn_data_type='stepped')
         prefix = 'BOUT.dmp'
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=1, nype=5)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=1, nype=5)
         assert ds_grid.shape == (5,)
         assert concat_dims == ['y']
 
@@ -242,8 +261,8 @@ class TestFileOrganisation:
     def test_organise_xy_parallelized_files(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=6, nype=3, nt=1, syn_data_type='stepped')
         prefix = 'BOUT.dmp'
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=3)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=6, nype=3)
         assert ds_grid.shape == (6,3)
         assert concat_dims == ['x', 'y']
 
@@ -265,8 +284,8 @@ class TestTrim:
     def test_no_trim(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=6, nype=3, nt=1, syn_data_type='stepped')
         prefix = 'BOUT.dmp'
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=3)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=6, nype=3)
 
         not_trimmed = _trim(ds_grid, concat_dims=['x', 'y'],
                             guards={'x': 0, 'y': 0}, ghosts={'x': 0, 'y': 0}, keep_guards={'x': None, 'y': None})
@@ -278,8 +297,8 @@ class TestTrim:
         path = bout_xyt_example_files(tmpdir_factory, lengths=(6,10,1,6), nxpe=6, nype=3, nt=1, ghosts={'x': 2, 'y': 3},
                                       syn_data_type='stepped')
 
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=3)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=6, nype=3)
 
         # Trim data
         trimmed = _trim(ds_grid, concat_dims=['x', 'y'],
@@ -288,8 +307,8 @@ class TestTrim:
         # Create data that is already the size it should be after trimming, to compare to
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2,4,1,6), nxpe=6, nype=3, nt=1, ghosts={'x': 2, 'y': 3},
                                       syn_data_type='stepped')
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        expected, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=3)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        expected, concat_dims = _organise_files(filepaths, datasets, nxpe=6, nype=3)
 
         assert_dataset_grids_equal(trimmed, expected)
 
@@ -305,8 +324,8 @@ class TestTrim:
                                       ghosts=ghosts, guards=guards,
                                       syn_data_type='stepped')
 
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=1)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=6, nype=1)
 
         # Trim data
         trimmed = _trim(ds_grid, concat_dims=['x'],
@@ -316,8 +335,8 @@ class TestTrim:
         # Create data that is already the size it should be after trimming, to compare to
         path = bout_xyt_example_files(tmpdir_factory, lengths=lengths, nxpe=6, nype=1, nt=1,
                                       syn_data_type='stepped')
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=1)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=6, nype=1)
         ds_grid[0]['key'] = ds_grid[0]['key'].isel(**{'x': slice(2, None, None)})
         ds_grid[5]['key'] = ds_grid[5]['key'].isel(**{'x': slice(None, -2, None)})
         expected = ds_grid
@@ -336,8 +355,8 @@ class TestTrim:
                                       ghosts=ghosts, guards=guards,
                                       syn_data_type='stepped')
 
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=1)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=6, nype=1)
 
         # Trim data
         trimmed = _trim(ds_grid, concat_dims=['x'],
@@ -348,8 +367,8 @@ class TestTrim:
         # Same size because no ghost cells and we're keeping the guard cells
         path = bout_xyt_example_files(tmpdir_factory, lengths=lengths, nxpe=6, nype=1, nt=1,
                                       syn_data_type='stepped')
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=1)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=6, nype=1)
         ds_grid[0]['key'] = ds_grid[0]['key'].isel(**{'x': slice(1, None, None)})
         ds_grid[5]['key'] = ds_grid[5]['key'].isel(**{'x': slice(None, -1, None)})
         expected = ds_grid
@@ -368,8 +387,8 @@ class TestTrim:
                                       ghosts=ghosts, guards=guards,
                                       syn_data_type='stepped')
 
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=1)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=6, nype=1)
 
         # Trim data
         trimmed = _trim(ds_grid, concat_dims=['x'],
@@ -378,8 +397,8 @@ class TestTrim:
         # Create data that is already the size it should be after trimming, to compare to
         path = bout_xyt_example_files(tmpdir_factory, lengths=(4, 8, 1, 6), nxpe=6, nype=1, nt=1,
                                       syn_data_type='stepped')
-        filepaths, datasets = _open_all_dump_files(path, prefix=prefix, chunks=None)
-        ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix=prefix, nxpe=6, nype=1)
+        filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
+        ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=6, nype=1)
         expected = ds_grid
 
         assert_dataset_grids_equal(trimmed, expected)
@@ -388,13 +407,13 @@ class TestTrim:
 class TestCollectData:
     def test_collect_from_single_file(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        actual = collect(vars='all', path=path)
+        actual = collect(vars='all', datapath=path)
         expected = create_bout_ds()
         xrt.assert_equal(actual, expected)
 
     def test_collect_single_variables(self, tmpdir_factory):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        actual = collect(vars='n', path=path)
+        actual = collect(vars='n', datapath=path)
         expected = create_bout_ds()
         xrt.assert_equal(actual, expected['n'])
 
@@ -412,8 +431,7 @@ class TestCollectData:
                                       ghosts=ghosts, guards=guards,
                                       syn_data_type='stepped')
 
-        actual = collect(path=path, prefix=prefix,
-                         xguards=keep_guards['x'], yguards=keep_guards['y'])
+        actual = collect(datapath=path, xguards=keep_guards['x'], yguards=keep_guards['y'])
 
         assert actual.dims == {'x': lengths[0]*nxpe, 'y': lengths[1]*nype,
                                'z': lengths[2], 't': lengths[3]}

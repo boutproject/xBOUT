@@ -38,7 +38,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', slices={}, chunks={},
               '- the branch keep_attrs_global, found at https://github.com/pydata/xarray/TomNicholas:keep_attrs_global')
 
     # Gather pointers to all numerical data from BOUT++ output files
-    ds_all = collect(vars='all', filepaths=datapath, slices=slices, chunks=chunks, info=info)
+    ds_all = collect(vars='all', datapath=datapath, slices=slices, chunks=chunks, info=info)
     ds, metadata = _strip_metadata(ds_all)
     ds.attrs['metadata'] = metadata
 

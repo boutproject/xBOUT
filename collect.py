@@ -10,8 +10,7 @@ we choose not to do so.
 import xarray as xr
 import numpy as np
 
-import os
-import glob
+import re
 from pathlib import Path
 
 from xcollect.concatenate import _concat_nd
@@ -61,11 +60,11 @@ def collect(vars='all', datapath='./BOUT.dmp.*.nc',
     filepaths, datasets = _open_all_dump_files(path, chunks=chunks)
 
     # Open just one file to read processor splitting
-    ds = xr.open_dataset(filepaths[0])
+    ds = xr.open_dataset(str(filepaths[0]))
     nxpe, nype = ds['NXPE'].values, ds['NYPE'].values
     mxg, myg = ds['MXG'].values, ds['MYG'].values
 
-    ds_grid, concat_dims = _organise_files(filepaths, datasets, prefix, nxpe, nype)
+    ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe, nype)
 
     # TODO work out how to get numbers of guard cells in each dimension from output files
     ds_grid = _trim(ds_grid, concat_dims,
@@ -95,7 +94,6 @@ def _open_all_dump_files(path, chunks={}):
 
 
 def _check_filetype(path):
-
     if path.suffix == '.nc':
         filetype = 'netcdf4'
     elif path.suffix == '.h5netcdf':
@@ -118,11 +116,11 @@ def _expand_wildcards(path):
     # Search this relative path from the parent directory for all files matching user input
     filepaths = list(base_dir.glob(search_pattern))
 
-    # Sort before returning
+    # Sort by numbers in filepath before returning
     return sorted(filepaths, key=lambda filepath: str(filepath))
 
 
-def _organise_files(filepaths, datasets, prefix, nxpe, nype):
+def _organise_files(filepaths, datasets, nxpe, nype):
     """
     Arranges given files into an ndarray so they can be concatenated.
     """
@@ -139,8 +137,6 @@ def _organise_files(filepaths, datasets, prefix, nxpe, nype):
         concat_dims.append('y')
 
     dataset_pieces = dict(zip(filepaths, datasets))
-    # TODO replace this kind of manipulation using the python path library?
-    filestem = filepaths[0].rsplit('/', 1)[0]
 
     # BOUT names files as num = nxpe*i + j
     # So use this knowledge to arrange files in the right shape for concatenation
@@ -148,7 +144,7 @@ def _organise_files(filepaths, datasets, prefix, nxpe, nype):
     for i in range(nxpe):
         for j in range(nype):
             file_num = (i + nxpe * j)
-            filename = filestem + '/' + prefix + '.' + str(file_num) + '.nc'
+            filename = Path(filepaths[0].parent / re.sub('\d+', str(file_num), filepaths[0].name))
             ds_grid[i, j] = {'key': dataset_pieces[filename]}
 
     return ds_grid.squeeze(), concat_dims

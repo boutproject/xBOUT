@@ -37,15 +37,14 @@ def bout_example_file(tmpdir_factory):
     save_path = save_dir.join(filename)
     ds.to_netcdf(str(save_path))
 
-    return save_dir, prefix
+    return save_path
 
 
 class TestLoadData:
     def test_load_data(self, bout_example_file):
-        save_path, prefix = bout_example_file
+        save_path = bout_example_file
 
-        bd = open_boutdataset(datapath=str(save_path), prefix=prefix, inputfilepath=None)
-        print(bd)
+        bd = open_boutdataset(datapath=str(save_path), inputfilepath=None)
         actual = bd
 
         np.random.seed(seed=0)
