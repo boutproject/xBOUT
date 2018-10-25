@@ -1,6 +1,6 @@
-from xcollect.boutdataset import BoutDataset
+from xcollect.boutdataset import open_boutdataset
+from combine import combine_boutdata
 
+ds = open_boutdataset(datapath='./BOUT.dmp.*.nc')
 
-ds = BoutDataset(datapath='.')
-
-ds.bout.save(savepath='.', variables=['n', 'phi', 'T'])
+ds.bout.save(savepath='.')
