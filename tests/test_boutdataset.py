@@ -1,8 +1,10 @@
 import pytest
 
-from xarray import Dataset, DataArray, concat
+from xarray import Dataset, DataArray, concat, open_dataset, open_mfdataset
 import xarray.testing as xrt
 import numpy as np
+from pathlib import Path
+
 
 from boutdata.data import BoutOptionsFile, BoutOptions
 
@@ -113,12 +115,64 @@ class TestLoadInputFile:
         assert isinstance(ds.options, BoutOptions)
 
 
+@pytest.mark.skip
 class TestLoadLogFile:
     pass
 
 
 class TestSave:
-    pass
+    def test_save_all(self, tmpdir_factory):
+        # Create data
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=5, nt=1)
+
+        # Load it as a boutdataset
+        original = open_boutdataset(datapath=path, inputfilepath=None)
+
+        # Save it to a netCDF file
+        savepath = str(Path(path).parent) + 'temp_boutdata.nc'
+        original.bout.save(savepath=savepath)
+
+        # Load it again using bare xarray
+        recovered = open_dataset(savepath)
+
+        # Compare
+        xrt.assert_equal(original, recovered)
+
+    @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
+    def test_save_dtype(self, tmpdir_factory, save_dtype):
+
+        # Create data
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+
+        # Load it as a boutdataset
+        original = open_boutdataset(datapath=path, inputfilepath=None)
+
+        # Save it to a netCDF file
+        savepath = str(Path(path).parent) + 'temp_boutdata.nc'
+        original.bout.save(savepath=savepath, save_dtype=np.dtype(save_dtype))
+
+        # Load it again using bare xarray
+        recovered = open_dataset(savepath)
+
+        assert recovered['n'].values.dtype == np.dtype(save_dtype)
+
+    def test_save_separate_variables(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1)
+
+        # Load it as a boutdataset
+        original = open_boutdataset(datapath=path, inputfilepath=None)
+
+        # Save it to a netCDF file
+        savepath = str(Path(path).parent) + '/temp_boutdata.nc'
+        original.bout.save(savepath=savepath, separate_vars=True)
+
+        for var in ['n', 'T']:
+            # Load it again using bare xarray
+            savepath = str(Path(path).parent) + '/temp_boutdata_' + var + '.nc'
+            recovered = open_dataset(savepath)
+
+            # Compare
+            xrt.assert_equal(recovered[var], original[var])
 
 
 class TestSaveRestart:

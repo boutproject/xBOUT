@@ -1,6 +1,4 @@
 import pytest
-import os
-import shutil
 from pathlib import Path
 import re
 
@@ -435,3 +433,11 @@ class TestCollectData:
 
         assert actual.dims == {'x': lengths[0]*nxpe, 'y': lengths[1]*nype,
                                'z': lengths[2], 't': lengths[3]}
+
+    @pytest.mark.skip
+    def test_against_open_mfdataset(self):
+        pass
+
+    @pytest.mark.skip
+    def test_without_glob(self):
+        pass

@@ -1,8 +1,9 @@
-from xarray import register_dataset_accessor, save_mfdataset, set_options
+from xarray import register_dataset_accessor, save_mfdataset, set_options, merge
 
 from dask.diagnostics import ProgressBar
 from numpy import asscalar
 from pprint import pprint
+from pathlib import Path
 
 from boutdata.data import BoutOptionsFile
 
@@ -90,7 +91,6 @@ class BoutAccessor(object):
         self.metadata = ds.attrs['metadata']
         self.options = ds.attrs['options']
 
-
     def __str__(self):
         """
         String represenation of the BoutDataset.
@@ -111,15 +111,20 @@ class BoutAccessor(object):
     #def __repr__(self):
     #    return 'boutdata.BoutDataset(', {}, ',', {}, ')'.format(self.datapath, self.prefix)
 
-    def save(self, savepath='.', filetype='NETCDF4', variables=None, save_dtype=None):
+    def save(self, savepath='./boutdata.nc', filetype='NETCDF4', variables=None, save_dtype=None, separate_vars=False):
         """
-        Save data variables.
+        Save data variables to a netCDF file.
 
         Parameters
         ----------
-        savepath : str
-        filetype : str
-        variables : list of str
+        savepath : str, optional
+        filetype : str, optional
+        variables : list of str, optional
+            Variables from the dataset to save. Default is to save all of them.
+        separate_vars: bool, optional
+            If this is true then every variable which depends on time will be saved into a different output file.
+            The files are labelled by the name of the variable. Variables which don't depend on time will be present in
+            every output file.
         """
 
         if variables is None:
@@ -128,24 +133,44 @@ class BoutAccessor(object):
         else:
             to_save = self.data[variables]
 
+        if savepath is None:
+            raise ValueError('Must provide a path to which to save the data.')
+
         if save_dtype is not None:
             to_save = to_save.astype(save_dtype)
 
-        # Store the metadata in the attributes dictionary rather than as data variables in the dataset
-        to_save.attrs['metadata'] = self.metadata
-
         # TODO How should I store other data? In the attributes dict?
         # TODO Convert Ben's options class to a (flattened) nested dictionary then store it in ds.attrs?
+        if self.options is None:
+            to_save.attrs = {}
+        else:
+            # Store the metadata in the attributes dictionary rather than as data variables in the dataset
+            to_save.attrs['metadata'] = self.metadata
 
-        # Save data to a single file
-        # TODO option to save each variable to a different netCDF file?
-        with ProgressBar():
-            # Should give it a descriptive filename (using the run name?)
-            if variables is None:
-                # Save all variables
+        if separate_vars:
+            # Save each time-dependent variable to a different netCDF file
+
+            # Determine which variables are time-dependent
+            time_dependent_vars, time_independent_vars = _find_time_dependent_vars(to_save)
+
+            print('Will save the variables ' + str(time_dependent_vars) + ' separately')
+
+            # Save each one to separate file
+            with ProgressBar():
+                for var in time_dependent_vars:
+                    #print(to_save[var])
+                    #print(to_save[time_dependent_vars])
+                    single_var_ds = merge([to_save[var], to_save[time_independent_vars]])
+                    path = Path(savepath)
+                    #print(path)
+                    #print(path.stem)
+                    var_savepath = str(path.parent / path.stem) + '_' + str(var) + path.suffix
+                    #print(var_savepath)
+                    single_var_ds.to_netcdf(path=str(var_savepath), format=filetype, compute=True)
+        else:
+            # Save data to a single file
+            with ProgressBar():
                 to_save.to_netcdf(path=savepath, format=filetype, compute=True)
-            else:
-                to_save.data[variables].to_netcdf(path=savepath, engine=filetype, compute=True)
 
         return
 
@@ -178,6 +203,13 @@ class BoutAccessor(object):
     # TODO BOUT-specific plotting functionality would be implemented as methods here, e.g. ds.bout.plot_poloidal
     # TODO Could trial a 2D surface plotting method here
     # TODO Could also prototype animated plotting methods here
+
+
+def _find_time_dependent_vars(data):
+    variables = data.data_vars
+    evolving_vars = set(var for var in variables if 't' in data[var].dims)
+    time_independent_vars = set(variables) - set(evolving_vars)
+    return list(evolving_vars), list(time_independent_vars)
 
 
 def _strip_metadata(ds):

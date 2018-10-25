@@ -63,15 +63,19 @@ def collect(vars='all', datapath='./BOUT.dmp.*.nc',
     ds = xr.open_dataset(str(filepaths[0]))
     nxpe, nype = ds['NXPE'].values, ds['NYPE'].values
     mxg, myg = ds['MXG'].values, ds['MYG'].values
+    # TODO check that BOUT doesn't ever set the number of guards to be different to the number of ghosts
+    mxguards, myguards = mxg, myg
 
     ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe, nype)
 
     # TODO work out how to get numbers of guard cells in each dimension from output files
     ds_grid = _trim(ds_grid, concat_dims,
-                    guards={'x': 2, 'y': 0}, ghosts={'x': mxg, 'y': myg},
+                    guards={'x': mxguards, 'y': myguards}, ghosts={'x': mxg, 'y': myg},
                     keep_guards={'x': xguards, 'y': yguards})
 
     ds = _concat_nd(ds_grid, concat_dims=concat_dims, data_vars=['minimal']*len(concat_dims))
+
+    # TODO Check that none of the chunk sizes are zero!
 
     # Utilise xarray's lazy loading capabilities by returning a DataSet/DataArray view to the data values.
     if vars == 'all':
