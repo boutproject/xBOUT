@@ -13,8 +13,7 @@ from combine import combine_boutdata
 
 def new_collect():
     ds = open_boutdataset(datapath='./BOUT.dmp.*.nc')
-    ds.drop(['logn', 'logT', 'uE'])
-    ds.bout.save(savepath='.', save_dtype='float32')
+    ds.bout.save(save_dtype='float32', separate_vars=True)
 
 
 def old_collect():
@@ -25,8 +24,8 @@ def old_collect():
                      save_grid=False, save_dtype='float32')
 
 
-t_new = Timer(new_collect()).timeit(number=1)
-t_old = Timer(old_collect()).timeit(number=1)
+t_new = Timer(new_collect).timeit(number=1)
+t_old = Timer(old_collect).timeit(number=1)
 
 print('New collect took ' + t_new)
 print('Old collect took ' + t_old)

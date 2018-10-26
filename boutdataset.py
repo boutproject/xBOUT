@@ -171,6 +171,7 @@ class BoutAccessor(object):
                     single_var_ds.to_netcdf(path=str(var_savepath), format=filetype, compute=True)
         else:
             # Save data to a single file
+            print('Saving data...')
             with ProgressBar():
                 to_save.to_netcdf(path=savepath, format=filetype, compute=True)
 
