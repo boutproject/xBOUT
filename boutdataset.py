@@ -11,7 +11,7 @@ from xcollect.collect import collect
 
 
 def open_boutdataset(datapath='./BOUT.dmp.*.nc', slices={}, chunks={},
-                     inputfilepath='.', gridfilepath=None, run_name=None, info=True):
+                     inputfilepath=None, gridfilepath=None, run_name=None, info=True):
     """
     Load a dataset from a set of BOUT output files, including the input options file.
 
@@ -133,6 +133,8 @@ class BoutAccessor(object):
         else:
             to_save = self.data[variables]
 
+        if savepath is './boutdata.nc':
+            print('Will save data into the current working directory, named as boutdata_[var].nc')
         if savepath is None:
             raise ValueError('Must provide a path to which to save the data.')
 
@@ -156,16 +158,16 @@ class BoutAccessor(object):
             print('Will save the variables ' + str(time_dependent_vars) + ' separately')
 
             # Save each one to separate file
-            with ProgressBar():
-                for var in time_dependent_vars:
-                    #print(to_save[var])
-                    #print(to_save[time_dependent_vars])
-                    single_var_ds = merge([to_save[var], to_save[time_independent_vars]])
-                    path = Path(savepath)
-                    #print(path)
-                    #print(path.stem)
-                    var_savepath = str(path.parent / path.stem) + '_' + str(var) + path.suffix
-                    #print(var_savepath)
+            for var in time_dependent_vars:
+                # Group variables so that there is only one time-dependent variable saved in each file
+                time_independent_data = [to_save[time_ind_var] for time_ind_var in time_independent_vars]
+                single_var_ds = merge([to_save[var], *time_independent_data])
+
+                # Include the name of the variable in the name of the saved file
+                path = Path(savepath)
+                var_savepath = str(path.parent / path.stem) + '_' + str(var) + path.suffix
+                print('Saving ' + var + ' data...')
+                with ProgressBar():
                     single_var_ds.to_netcdf(path=str(var_savepath), format=filetype, compute=True)
         else:
             # Save data to a single file
@@ -206,9 +208,8 @@ class BoutAccessor(object):
 
 
 def _find_time_dependent_vars(data):
-    variables = data.data_vars
-    evolving_vars = set(var for var in variables if 't' in data[var].dims)
-    time_independent_vars = set(variables) - set(evolving_vars)
+    evolving_vars = set(var for var in data.data_vars if 't' in data[var].dims)
+    time_independent_vars = set(data.data_vars) - set(evolving_vars)
     return list(evolving_vars), list(time_independent_vars)
 
 
