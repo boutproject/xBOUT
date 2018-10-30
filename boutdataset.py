@@ -10,6 +10,15 @@ from boutdata.data import BoutOptionsFile
 from xcollect.collect import collect
 
 
+# Set all attrs to survive all mathematical operations (see https://github.com/pydata/xarray/pull/2482)
+# This code should run whenever any function from this module is imported
+try:
+    set_options(keep_attrs=True)
+except ValueError:
+    print('For dataset attributes to be permanent you need to be using the development version of xarray '
+          '- found at https://github.com/pydata/xarray/')
+
+
 def open_boutdataset(datapath='./BOUT.dmp.*.nc', slices={}, chunks={},
                      inputfilepath=None, gridfilepath=None, run_name=None, info=True):
     """
@@ -30,13 +39,6 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', slices={}, chunks={},
     -------
     ds : xarray.Dataset
     """
-
-    # Set all attrs to survive all mathematical operations (see https://github.com/pydata/xarray/pull/2482)
-    try:
-        set_options(keep_attrs=True)
-    except ValueError:
-        print('For dataset attributes to be permanent you need to be using the development version of xarray '
-              '- the branch keep_attrs_global, found at https://github.com/pydata/xarray/TomNicholas:keep_attrs_global')
 
     # Gather pointers to all numerical data from BOUT++ output files
     ds_all = collect(vars='all', datapath=datapath, slices=slices, chunks=chunks, info=info)
@@ -177,7 +179,7 @@ class BoutAccessor(object):
 
         return
 
-    def save_restart(self, savepath='.', nxpe=None, nype=None, original_decomp=False):
+    def to_restart(self, savepath='.', nxpe=None, nype=None, original_decomp=False):
         """
         Write out final timestep as a set of netCDF BOUT.restart files.
 
