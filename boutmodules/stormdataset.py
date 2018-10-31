@@ -29,6 +29,9 @@ class StormAccessor(BoutAccessor):
     def print_options(self):
         print(self.extra_data)
 
+    # TODO as BOUT v4.2 can now write attributes to the output NetCDF files
+    # would it be better to calculate all normalisations within the BOUT++ module itself?
+
     def _calc_params(self):
         """
         Calculates physical parameters (e.g. collisionality) from the options in the input file.
