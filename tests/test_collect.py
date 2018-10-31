@@ -1,4 +1,5 @@
 import pytest
+import warnings
 from pathlib import Path
 import re
 
@@ -228,6 +229,11 @@ class TestOpeningFiles:
 
     def test_open_xyt_parallelized_files(self):
         pass
+
+    def test_warn_on_opening_many_files(self, tmpdir_factory):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=12, nype=14, nt=1)
+        with pytest.warns(UserWarning):
+            filepaths, datasets = _open_all_dump_files(path=Path(path), chunks=None)
 
 
 class TestFileOrganisation:
