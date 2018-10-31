@@ -14,7 +14,7 @@ import re
 from warnings import warn
 from pathlib import Path
 
-from xcollect.concatenate import _concat_nd
+from .concatenate import _concat_nd
 
 
 # TODO account for BOUT++ output files potentially containing attributes which we want to keep

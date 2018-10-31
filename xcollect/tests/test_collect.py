@@ -12,8 +12,12 @@ from xcollect.collect import collect, _check_filetype, _expand_wildcards, _open_
 
 
 @pytest.fixture(scope='session')
-def bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,1,6),
-                           nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
+def bout_xyt_example_files(tmpdir_factory):
+    return _bout_xyt_example_files
+
+
+def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,1,6),
+                            nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
 
@@ -35,15 +39,8 @@ def bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,1,6),
     count = 1
     if nt > 1:
         count += 1
-    glob_pattern = (re.sub('\d+', '*', path[::-1], count=count))[::-1]
+    glob_pattern = (re.sub(r'\d+', '*', path[::-1], count=count))[::-1]
     return glob_pattern
-
-    #try:
-    #yield glob_pattern
-    # finally:
-    #     # Clean up temporary directories
-    #     print('Cleaning up after myself ')
-    #     shutil.rmtree(save_dir)
 
 
 def create_bout_ds_list(prefix, lengths=(2,4,1,6), nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
@@ -189,7 +186,7 @@ class TestPathHandling:
 
 
 class TestOpeningFiles:
-    def test_open_single_file(self, tmpdir_factory):
+    def test_open_single_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual_filepath, actual_dataset = _open_all_dump_files(path=Path(path), chunks=None)
 
@@ -199,7 +196,7 @@ class TestOpeningFiles:
         assert expected_filename[0] == actual_filename
         xrt.assert_equal(expected_dataset[0], actual_dataset[0])
 
-    def test_open_x_parallelized_files(self, tmpdir_factory):
+    def test_open_x_parallelized_files(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1)
         actual_filepaths, actual_datasets = _open_all_dump_files(path=Path(path), chunks=None)
 
@@ -212,7 +209,7 @@ class TestOpeningFiles:
         for expected, actual in zip(expected_datasets, actual_datasets):
             xrt.assert_equal(expected, actual)
 
-    def test_open_xy_parallelized_files(self, tmpdir_factory):
+    def test_open_xy_parallelized_files(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1)
         actual_filepaths, actual_datasets = _open_all_dump_files(path=Path(path), chunks=None)
 
@@ -230,14 +227,14 @@ class TestOpeningFiles:
     def test_open_xyt_parallelized_files(self):
         pass
 
-    def test_warn_on_opening_many_files(self, tmpdir_factory):
+    def test_warn_on_opening_many_files(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=12, nype=14, nt=1)
         with pytest.warns(UserWarning):
             filepaths, datasets = _open_all_dump_files(path=Path(path), chunks=None)
 
 
 class TestFileOrganisation:
-    def test_organise_x_parallelized_files(self, tmpdir_factory):
+    def test_organise_x_parallelized_files(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1, syn_data_type='stepped')
         filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
         ds_grid, concat_dims = _organise_files(filepaths, datasets, nxpe=4, nype=1)
@@ -249,7 +246,7 @@ class TestFileOrganisation:
         expected = [np.array([i]) for i in range(4)]
         assert contents == expected
 
-    def test_organise_y_parallelized_files(self, tmpdir_factory):
+    def test_organise_y_parallelized_files(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=5, nt=1, syn_data_type='stepped')
         prefix = 'BOUT.dmp'
         filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
@@ -262,7 +259,7 @@ class TestFileOrganisation:
         expected = [np.array([i]) for i in range(5)]
         assert contents == expected
 
-    def test_organise_xy_parallelized_files(self, tmpdir_factory):
+    def test_organise_xy_parallelized_files(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=6, nype=3, nt=1, syn_data_type='stepped')
         prefix = 'BOUT.dmp'
         filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
@@ -285,7 +282,7 @@ class TestFileOrganisation:
 
 
 class TestTrim:
-    def test_no_trim(self, tmpdir_factory):
+    def test_no_trim(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=6, nype=3, nt=1, syn_data_type='stepped')
         prefix = 'BOUT.dmp'
         filepaths, datasets = _open_all_dump_files(Path(path), chunks=None)
@@ -295,7 +292,7 @@ class TestTrim:
                             guards={'x': 0, 'y': 0}, ghosts={'x': 0, 'y': 0}, keep_guards={'x': None, 'y': None})
         assert_dataset_grids_equal(not_trimmed, ds_grid)
 
-    def test_trim_ghosts(self, tmpdir_factory):
+    def test_trim_ghosts(self, tmpdir_factory, bout_xyt_example_files):
         # Create data to trim
         prefix = 'BOUT.dmp'
         path = bout_xyt_example_files(tmpdir_factory, lengths=(6,10,1,6), nxpe=6, nype=3, nt=1, ghosts={'x': 2, 'y': 3},
@@ -316,7 +313,7 @@ class TestTrim:
 
         assert_dataset_grids_equal(trimmed, expected)
 
-    def test_trim_guards(self, tmpdir_factory):
+    def test_trim_guards(self, tmpdir_factory, bout_xyt_example_files):
         # Create data to trim
         prefix = 'BOUT.dmp'
         guards = {'x': 2}
@@ -347,7 +344,7 @@ class TestTrim:
 
         assert_dataset_grids_equal(trimmed, expected)
 
-    def test_keep_guards(self, tmpdir_factory):
+    def test_keep_guards(self, tmpdir_factory, bout_xyt_example_files):
         # Create data to trim
         prefix = 'BOUT.dmp'
         guards = {'x': 2}
@@ -379,7 +376,7 @@ class TestTrim:
 
         assert_dataset_grids_equal(trimmed, expected)
 
-    def test_trim_ghosts_and_guards(self, tmpdir_factory):
+    def test_trim_ghosts_and_guards(self, tmpdir_factory, bout_xyt_example_files):
         # Create data to trim
         prefix = 'BOUT.dmp'
         guards = {'x': 3}
@@ -409,19 +406,19 @@ class TestTrim:
 
 
 class TestCollectData:
-    def test_collect_from_single_file(self, tmpdir_factory):
+    def test_collect_from_single_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual = collect(vars='all', datapath=path)
         expected = create_bout_ds()
         xrt.assert_equal(actual, expected)
 
-    def test_collect_single_variables(self, tmpdir_factory):
+    def test_collect_single_variables(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual = collect(vars='n', datapath=path)
         expected = create_bout_ds()
         xrt.assert_equal(actual, expected['n'])
 
-    def test_collect_multiple_files(self, tmpdir_factory):
+    def test_collect_multiple_files(self, tmpdir_factory, bout_xyt_example_files):
         # Create data to trim
         prefix = 'BOUT.dmp'
         guards = {'x': 2, 'y': 0}

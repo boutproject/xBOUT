@@ -13,7 +13,7 @@ from xcollect.boutdataset import BoutAccessor, open_boutdataset
 from xcollect.collect import collect
 
 
-EXAMPLE_OPTIONS_FILE_PATH = './tests/data/options/BOUT.inp'
+EXAMPLE_OPTIONS_FILE_PATH = './xcollect/tests/data/options/BOUT.inp'
 
 
 @pytest.fixture(scope='session')
@@ -56,7 +56,7 @@ class TestLoadData:
 
         xrt.assert_equal(expected, actual)
 
-    def test_load_from_single_file(self, tmpdir_factory):
+    def test_load_from_single_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual = open_boutdataset(datapath=path, inputfilepath=None).compute()
         expected = create_bout_ds().drop(['NXPE', 'NYPE', 'MXG', 'MYG'])
@@ -69,7 +69,7 @@ class TestXarrayBehaviour:
     (With the accessor approach these should pass trivially now.)
     """
 
-    def test_concat(self, tmpdir_factory):
+    def test_concat(self, tmpdir_factory, bout_xyt_example_files):
         path1 = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
         bd1 = open_boutdataset(datapath=path1, inputfilepath=None)
         path2 = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
@@ -77,7 +77,7 @@ class TestXarrayBehaviour:
         result = concat([bd1, bd2], dim='run')
         assert result.dims == {**bd1.dims, 'run': 2}
 
-    def test_isel(self, tmpdir_factory):
+    def test_isel(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         bd = open_boutdataset(datapath=path, inputfilepath=None)
         actual = bd.isel(x=slice(None,None,2))
@@ -86,7 +86,8 @@ class TestXarrayBehaviour:
 
 
 class TestBoutDatasetMethods:
-    def test_test_method(self, tmpdir_factory):
+    @pytest.mark.skip
+    def test_test_method(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         ds = open_boutdataset(datapath=path, inputfilepath=None)
         #ds = collect(path=path)
@@ -109,7 +110,7 @@ class TestLoadInputFile:
         assert isinstance(options, BoutOptions)
         # TODO Check it contains the same text
 
-    def test_load_options_in_dataset(self, tmpdir_factory):
+    def test_load_options_in_dataset(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         ds = open_boutdataset(datapath=path, inputfilepath=EXAMPLE_OPTIONS_FILE_PATH)
         assert isinstance(ds.options, BoutOptions)
@@ -121,7 +122,7 @@ class TestLoadLogFile:
 
 
 class TestSave:
-    def test_save_all(self, tmpdir_factory):
+    def test_save_all(self, tmpdir_factory, bout_xyt_example_files):
         # Create data
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=5, nt=1)
 
@@ -139,7 +140,7 @@ class TestSave:
         xrt.assert_equal(original, recovered)
 
     @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
-    def test_save_dtype(self, tmpdir_factory, save_dtype):
+    def test_save_dtype(self, tmpdir_factory, bout_xyt_example_files, save_dtype):
 
         # Create data
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
@@ -156,7 +157,7 @@ class TestSave:
 
         assert recovered['n'].values.dtype == np.dtype(save_dtype)
 
-    def test_save_separate_variables(self, tmpdir_factory):
+    def test_save_separate_variables(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1)
 
         # Load it as a boutdataset

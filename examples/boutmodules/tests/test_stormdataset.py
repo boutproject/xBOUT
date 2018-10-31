@@ -1,14 +1,13 @@
 import pytest
-from xarray import concat
 
-from xcollect.tests.test_collect import bout_xyt_example_files, create_bout_ds
+from xarray import concat
 from xcollect.boutdataset import open_boutdataset
-from xcollect.boutmodules.stormdataset import StormAccessor
+from xcollect.tests.test_collect import bout_xyt_example_files
 
 
 class TestStormDataset:
     @pytest.mark.xfail
-    def test_storm_dataset(self, tmpdir_factory):
+    def test_storm_dataset(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         ds = open_boutdataset(datapath=path, inputfilepath=None)
         print(ds.storm.normalisation)
@@ -16,7 +15,7 @@ class TestStormDataset:
         assert False
 
     @pytest.mark.xfail
-    def test_storm_dataset_inheritance(self, tmpdir_factory):
+    def test_storm_dataset_inheritance(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         ds = open_boutdataset(datapath=path, inputfilepath=None)
         ds.storm.set_extra_data('options')
@@ -25,7 +24,7 @@ class TestStormDataset:
         assert False
 
     @pytest.mark.xfail
-    def test_object_permanence(self, tmpdir_factory):
+    def test_object_permanence(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         ds = open_boutdataset(datapath=path, inputfilepath=None)
 
@@ -36,7 +35,7 @@ class TestStormDataset:
         assert False
 
     @pytest.mark.xfail
-    def test_dataset_duck_typing(self, tmpdir_factory):
+    def test_dataset_duck_typing(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         ds = open_boutdataset(datapath=path, inputfilepath=None)
 

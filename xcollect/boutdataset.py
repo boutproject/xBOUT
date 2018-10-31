@@ -5,9 +5,9 @@ from numpy import asscalar
 from pprint import pprint
 from pathlib import Path
 
-from boutdata.data import BoutOptionsFile
+from boutdata import BoutOptionsFile
 
-from xcollect.collect import collect
+from .collect import collect
 
 
 # This code should run whenever any function from this module is imported
