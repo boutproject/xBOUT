@@ -10,13 +10,18 @@ from boutdata.data import BoutOptionsFile
 from xcollect.collect import collect
 
 
-# Set all attrs to survive all mathematical operations (see https://github.com/pydata/xarray/pull/2482)
 # This code should run whenever any function from this module is imported
+# Set all attrs to survive all mathematical operations (see https://github.com/pydata/xarray/pull/2482)
 try:
     set_options(keep_attrs=True)
 except ValueError:
     print('For dataset attributes to be permanent you need to be using the development version of xarray '
           '- found at https://github.com/pydata/xarray/')
+try:
+    set_options(file_cache_maxsize=256)
+except ValueError:
+    print('For open and closing of netCDF file correctly you need to be using  the development version of'
+          ' xarray - found at https://github.com/pydata/xarray/')
 
 
 def open_boutdataset(datapath='./BOUT.dmp.*.nc', slices={}, chunks={},
