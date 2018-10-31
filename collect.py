@@ -11,6 +11,7 @@ import xarray as xr
 import numpy as np
 
 import re
+from warnings import warn
 from pathlib import Path
 
 from xcollect.concatenate import _concat_nd
@@ -90,6 +91,12 @@ def _open_all_dump_files(path, chunks={}):
     filetype = _check_filetype(path)
 
     filepaths = _expand_wildcards(path)
+
+    if len(filepaths) > 128:
+        warn("Trying to open a large number of files - setting xarray's `file_cache_maxsize` global option to "
+             + str(len(filepaths)) + " to accommodate this. Recommend using `xr.set_options(file_cache_maxsize=NUM)`"
+             + " to explicitly set this to a large enough value.", UserWarning)
+        xr.set_options(file_cache_maxsize=len(filepaths))
 
     # Default chunks={} is for each file to be one chunk
     datasets = [xr.open_dataset(file, engine=filetype, chunks=chunks) for file in filepaths]
