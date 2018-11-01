@@ -444,3 +444,9 @@ class TestCollectData:
     @pytest.mark.skip
     def test_without_glob(self):
         pass
+
+
+@pytest.mark.skip
+class TestAgainstOldCollect():
+    def setup(self):
+        from boutdata import collect as old_collect
