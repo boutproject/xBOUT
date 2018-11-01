@@ -134,7 +134,7 @@ class TestConcatND:
 
 
 class TestOpenMFDatasetND:
-    @pytest.mark.xfail(reason='Not yet implemented all the way up to open_mfdataset().')
+    @pytest.mark.skip(reason='Not yet implemented all the way up to open_mfdataset().')
     def test_motivating_test(self):
         """This is the failing test which motivated issue https://github.com/pydata/xarray/issues/2159"""
 
