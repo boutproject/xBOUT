@@ -5,7 +5,7 @@ from numpy import asscalar
 from pprint import pprint
 from pathlib import Path
 
-from boutdata import BoutOptionsFile
+from boutdata.data import BoutOptionsFile
 
 from .collect import collect
 
