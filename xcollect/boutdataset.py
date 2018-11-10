@@ -5,7 +5,7 @@ from numpy import asscalar
 from pprint import pprint
 from pathlib import Path
 
-from boutdata import BoutOptionsFile
+from boutdata.data import BoutOptionsFile
 
 from .collect import collect
 
@@ -20,7 +20,7 @@ except ValueError:
 try:
     set_options(file_cache_maxsize=256)
 except ValueError:
-    print('For open and closing of netCDF file correctly you need to be using  the development version of'
+    print('For open and closing of netCDF files correctly you need to be using the development version of'
           ' xarray - found at https://github.com/pydata/xarray/')
 
 
