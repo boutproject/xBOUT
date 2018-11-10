@@ -71,7 +71,8 @@ def create_bout_ds_list(prefix, lengths=(2,4,1,6), nxpe=4, nype=2, nt=1, ghosts=
                         upper_bndry_cells[dim] = guards[dim]
 
             ds = create_bout_ds(syn_data_type=syn_data_type, num=num, lengths=lengths, nxpe=nxpe, nype=nype,
-                                upper_bndry_cells=upper_bndry_cells, lower_bndry_cells=lower_bndry_cells, guards=guards)
+                                upper_bndry_cells=upper_bndry_cells, lower_bndry_cells=lower_bndry_cells,
+                                guards=guards, ghosts=ghosts)
             ds_list.append(ds)
 
     # Sort this in order of num to remove any BOUT-specific structure
@@ -94,7 +95,7 @@ def assert_dataset_grids_equal(ds_grid1, ds_grid2):
 
 
 def create_bout_ds(syn_data_type='random', lengths=(2,4,1,6), num=0, nxpe=1, nype=1,
-                   upper_bndry_cells={}, lower_bndry_cells={}, guards={}):
+                   upper_bndry_cells={}, lower_bndry_cells={}, guards={}, ghosts={}):
 
     # Set the shape of the data in this dataset
     x_length, y_length, z_length, t_length = lengths
@@ -127,6 +128,13 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,1,6), num=0, nxpe=1, nyp
     ds['NYPE'] = nype
     ds['MXG'] = guards.get('x', 0)
     ds['MYG'] = guards.get('y', 0)
+
+    ds['nx'] = x_length
+
+    # Needed for old version of collect, not sure what this means?
+    ds['MXSUB'] = ghosts.get('x', 0)
+    ds['MYSUB'] = ghosts.get('y', 0)
+    ds['MZ'] = z_length
 
     return ds
 
@@ -446,7 +454,18 @@ class TestCollectData:
         pass
 
 
-@pytest.mark.skip
+#@pytest.mark.skip
 class TestAgainstOldCollect():
-    def setup(self):
+    # TODO consolidate these into the TestCollectData class?
+
+    def test_collect_single_file(self, tmpdir_factory, bout_xyt_example_files):
         from boutdata import collect as old_collect
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2,4,8,6), nxpe=1, nype=1, nt=1)
+        dir_path = Path(path).parent
+        print(dir_path)
+        actual_ds = collect(vars='all', datapath=path)
+        expected_n = old_collect('n', path=str(dir_path))
+        npt.assert_equal(actual_ds['n'].values, expected_n)
+
+
+

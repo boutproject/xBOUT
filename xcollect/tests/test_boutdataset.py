@@ -59,7 +59,7 @@ class TestLoadData:
     def test_load_from_single_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual = open_boutdataset(datapath=path, inputfilepath=None).compute()
-        expected = create_bout_ds().drop(['NXPE', 'NYPE', 'MXG', 'MYG'])
+        expected = create_bout_ds().drop(['NXPE', 'NYPE', 'MXG', 'MYG', 'MXSUB', 'MYSUB', 'MZ'])
         xrt.assert_equal(actual, expected)
 
 

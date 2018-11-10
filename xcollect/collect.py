@@ -101,6 +101,8 @@ def _open_all_dump_files(path, chunks={}):
     # Default chunks={} is for each file to be one chunk
     datasets = [xr.open_dataset(file, engine=filetype, chunks=chunks) for file in filepaths]
 
+    # TODO check we actually found some data!!
+
     return filepaths, datasets
 
 
