@@ -1,7 +1,6 @@
 
 from warnings import warn
 from pathlib import Path
-from itertools import zip_longest
 
 from numpy import asscalar
 import xarray
@@ -15,10 +14,9 @@ def _auto_open_mfboutdataset(datapath, chunks, info):
     # Open just one file to read processor splitting
     nxpe, nype, mxg, myg = _read_splitting(filepaths[0])
 
-    # TODO Special case needed for case of just one dump file?
-
     paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
+    # TODO Special case needed for case of just one dump file?
     ds = xarray.open_mfdataset(paths_grid, concat_dims=concat_dims,
                                engine=filetype, chunks=chunks,
                                infer_order_from_coords=False)
@@ -93,83 +91,38 @@ def _read_splitting(filepath):
     return nxpe, nype, mxg, myg
 
 
-def _old_arrange_for_concatenation(filepaths, nxpe=1, nype=1):
-    """
-    Arrange filepaths into a nested list-of-lists which represents their
-    ordering across different processors and consecutive simulation runs.
-
-    Filepaths must be a sorted list.
-    """
-
-    nprocs = nxpe * nype
-
-    runs = _grouper(filepaths, nprocs)
-
-    path_grid = []
-    for run in runs:
-        run_paths = []
-
-        xrows = _grouper(run, nxpe)
-
-        run_paths.append([xrows])
-
-        path_grid.append([run_paths])
-
-    concat_dims = []
-    if nxpe > 1:
-        concat_dims.append('x')
-    if nype > 1:
-        concat_dims.append('y')
-    if len(filepaths) > nprocs:
-        concat_dims.append('t')
-
-    return path_grid, concat_dims
-
-
 def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     """
     Arrange filepaths into a nested list-of-lists which represents their
     ordering across different processors and consecutive simulation runs.
 
-    Filepaths must be a sorted list.
+    Filepaths must be a sorted list. Uses the fact that BOUT's output files are
+    named as num = nxpe*i + j, and assumes that any consectutive simulation
+    runs are in directories which when sorted will be in the correct order
+    (e.g. /run0/*, /run1/*,  ...).
     """
 
     nprocs = nxpe * nype
+    n_runs = int(len(filepaths) / nprocs)
+    if len(filepaths) % nprocs != 0:
+        raise ValueError
 
-    path_grid = [[[yrow for yrow in chunks(xcol, nype)]
-                        for xcol in chunks(run, nxpe)]
-                        for run in chunks(filepaths, nprocs)]
-
-    print(path_grid)
-
-#    path_grid = list(chunks(filepaths, nprocs))
+    # Create list of lists of filepaths, so that xarray knows how they should
+    # be concatenated by xarray.open_mfdataset()
+    paths = iter(filepaths)
+    paths_grid = [[[next(paths) for x in range(nxpe)]
+                                for y in range(nype)]
+                                for t in range(n_runs)]
 
     concat_dims = []
-    if len(filepaths) > nprocs:
-        concat_dims.append('t')
     if nxpe > 1:
         concat_dims.append('x')
     if nype > 1:
         concat_dims.append('y')
+    if len(filepaths) > nprocs:
+        concat_dims.append('t')
 
-    return path_grid, concat_dims
-
-
-def chunks(l, n):
-    """Yield successive n-sized chunks from l."""
-    for i in range(0, len(l), n):
-        yield l[i:i + n]
-
-
-def _grouper(iterable, n, fillvalue=None):
-    """
-    Collect data from an iterable into fixed-length chunks or blocks.
-    Adapted from an itertools recipe.
-    """
-    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
-    args = [iter(iterable)] * n
-    print(args)
-    return zip_longest(*args, fillvalue=fillvalue)
+    return paths_grid, concat_dims
 
 
 def _trim(ds, ghosts=None, proc_splitting=None, guards=None, keep_guards=True):
