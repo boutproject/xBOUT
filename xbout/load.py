@@ -8,7 +8,6 @@ import xarray
 
 def _auto_open_mfboutdataset(datapath, chunks, info):
     path = Path(datapath)
-
     filepaths, filetype = _expand_filepaths(path)
 
     # Open just one file to read processor splitting
@@ -54,8 +53,8 @@ def _check_filetype(path):
     elif path.suffix == '.h5netcdf':
         filetype = 'h5netcdf'
     else:
-        raise IOError(
-            'Do not know how to read the supplied file extension: ' + path.suffix)
+        raise IOError("Do not know how to read the supplied file extension: "
+                      "{}".format(path.suffix))
 
     return filetype
 
@@ -85,7 +84,7 @@ def _read_splitting(filepath):
     nxpe, nype = ds['NXPE'].values, ds['NYPE'].values
     mxg, myg = ds['MXG'].values, ds['MYG'].values
 
-    # Avoid opening this file twice
+    # Avoid trying to open this file twice
     ds.close()
 
     return nxpe, nype, mxg, myg
@@ -105,7 +104,11 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     nprocs = nxpe * nype
     n_runs = int(len(filepaths) / nprocs)
     if len(filepaths) % nprocs != 0:
-        raise ValueError
+        raise ValueError("Each run directory does not contain an equal number"
+                         "of output files. If the parallelization scheme of "
+                         "your simulation changed partway-through, then please"
+                         "load each directory separately and concatenate them"
+                         "along the time dimension with xarray.concat().")
 
     # Create list of lists of filepaths, so that xarray knows how they should
     # be concatenated by xarray.open_mfdataset()
@@ -174,7 +177,8 @@ def _strip_metadata(ds):
 
     # Find only the scalar variables
     variables = list(ds.variables)
-    scalar_vars = [var for var in variables if not any(dim in ['t', 'x', 'y', 'z'] for dim in ds[var].dims)]
+    scalar_vars = [var for var in variables
+                   if not any(dim in ['t', 'x', 'y', 'z'] for dim in ds[var].dims)]
 
     # Save metadata as a dictionary
     metadata_vals = [asscalar(ds[var].values) for var in scalar_vars]

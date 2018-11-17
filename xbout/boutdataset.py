@@ -7,7 +7,7 @@ from pathlib import Path
 
 from boutdata.data import BoutOptionsFile
 
-from .loadbout import _auto_open_mfboutdataset
+from .load import _auto_open_mfboutdataset
 
 
 # This code should run whenever any function from this module is imported

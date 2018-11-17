@@ -9,7 +9,7 @@ def read(fname):
 
 
 setup(
-    name="xcollect",
+    name="xBOUT",
     version="0.1",
     url="https://github.com/TomNicholas/xcollect",
     author="Thomas Nicholas",
