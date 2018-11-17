@@ -23,7 +23,7 @@ def collect(vars='all', datapath='./BOUT.dmp.*.nc',
             slices={}, yguards=False, xguards=False,
             info=True, chunks={}):
     """
-    Collect a variable from a set of BOUT++ output files.
+    Collects variables from a set of BOUT++ output files.
 
     Uses xarray + dask to load data lazily, parallelize operation and limit memory usage.
 
@@ -101,7 +101,9 @@ def _open_all_dump_files(path, chunks={}):
     # Default chunks={} is for each file to be one chunk
     datasets = [xr.open_dataset(file, engine=filetype, chunks=chunks) for file in filepaths]
 
-    # TODO check we actually found some data!!
+    if not datasets:
+        raise IOError("Did not find any data, check there are files matching"
+                      "the path {}".format(str(path)))
 
     return filepaths, datasets
 
@@ -163,33 +165,47 @@ def _organise_files(filepaths, datasets, nxpe, nype):
     return ds_grid.squeeze(), concat_dims
 
 
-def _trim(ds_grid, concat_dims, guards, ghosts, keep_guards):
+def _trim(ds, ghosts=None, proc_splitting=None, guards=None, keep_guards=True):
     """
-    Trims all ghost and guard cells off each dataset in ds_grid to prepare for concatenation.
+    Trims all ghost and guard cells off the combined dataset produced by
+    `open_mfdataset()`.
 
-    Returns a new grid of datasets instead of trimming in-place, as lazy loading should mean this is cheap.
+    Parameters
+    ----------
+    ghosts : dict, optional
+
+    proc_splitting : dict, optional
+
+    guards : dict, optional
+
+    keep_guards : dict, optional
+
     """
 
-    if not any(v > 0 for v in guards.values()) and not any(v > 0 for v in ghosts.values()):
-        # Check that some kind of trimming is actually necessary
-        print('No trimming was needed')
-        return ds_grid
-    else:
-        # Create new numpy array to insert results into
-        return_ds_grid = np.empty_like(ds_grid)
+    for dim in ds.dims:
+        # Optionally remove any guard cells
+        if not keep_guards.get(dim, default=True) or not keep_guards:
+            if isinstance(guards[dim], tuple):
+                lower_guards, upper_guards = guards[dim]
+            elif isinstance(guards[dim], int):
+                lower_guards, upper_guards = guards[dim], guards[dim]
+            elif not guards[dim]:
+                lower_guards, upper_guards = ghosts[dim], ghosts[dim]
+            else:
+                raise ValueError("guards[{}] is neither an integer nor a tuple"
+                                 " of integers".format(dim))
+        else:
 
-        # Loop over all datasets in grid
-        for index, ds_dict in np.ndenumerate(ds_grid):
-            # Unpack the dataset from the dict holding it
-            ds = ds_dict['key']
 
-            trimmed_ds = _trim_single_ds(index, ds, concat_dims, ds_grid.shape,
-                                         guards, ghosts, keep_guards)
+        proc_length =
 
-            # Insert into new dataset grid, contained in a dict
-            return_ds_grid[index] = {'key': trimmed_ds}
+            # Remove any ghost cells
 
-        return return_ds_grid
+
+
+
+    trimmed_ds = ds.isel(**selection)
+    return trimmed_ds
 
 
 def _trim_single_ds(index, ds, concat_dims, ds_grid_shape, guards, ghosts, keep_guards):

@@ -23,6 +23,8 @@ except ValueError:
     print('For open and closing of netCDF files correctly you need to be using the development version of'
           ' xarray - found at https://github.com/pydata/xarray/')
 
+# TODO somehow check that we have access to the latest version of auto_combine
+
 
 def open_boutdataset(datapath='./BOUT.dmp.*.nc', slices={}, chunks={},
                      inputfilepath=None, gridfilepath=None, run_name=None, info=True):
@@ -46,7 +48,8 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', slices={}, chunks={},
     """
 
     # Gather pointers to all numerical data from BOUT++ output files
-    ds_all = collect(vars='all', datapath=datapath, slices=slices, chunks=chunks, info=info)
+    ds_all = collect(vars='all', datapath=datapath, slices=slices,
+                     chunks=chunks, info=info)
     ds, metadata = _strip_metadata(ds_all)
     ds.attrs['metadata'] = metadata
 
