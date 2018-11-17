@@ -165,49 +165,6 @@ def _organise_files(filepaths, datasets, nxpe, nype):
     return ds_grid.squeeze(), concat_dims
 
 
-def _trim(ds, ghosts=None, proc_splitting=None, guards=None, keep_guards=True):
-    """
-    Trims all ghost and guard cells off the combined dataset produced by
-    `open_mfdataset()`.
-
-    Parameters
-    ----------
-    ghosts : dict, optional
-
-    proc_splitting : dict, optional
-
-    guards : dict, optional
-
-    keep_guards : dict, optional
-
-    """
-
-    for dim in ds.dims:
-        # Optionally remove any guard cells
-        if not keep_guards.get(dim, default=True) or not keep_guards:
-            if isinstance(guards[dim], tuple):
-                lower_guards, upper_guards = guards[dim]
-            elif isinstance(guards[dim], int):
-                lower_guards, upper_guards = guards[dim], guards[dim]
-            elif not guards[dim]:
-                lower_guards, upper_guards = ghosts[dim], ghosts[dim]
-            else:
-                raise ValueError("guards[{}] is neither an integer nor a tuple"
-                                 " of integers".format(dim))
-        else:
-
-
-        proc_length =
-
-            # Remove any ghost cells
-
-
-
-
-    trimmed_ds = ds.isel(**selection)
-    return trimmed_ds
-
-
 def _trim_single_ds(index, ds, concat_dims, ds_grid_shape, guards, ghosts, keep_guards):
 
     # Determine how many cells to trim off each dimension

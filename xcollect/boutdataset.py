@@ -1,13 +1,13 @@
 from xarray import register_dataset_accessor, save_mfdataset, set_options, merge
 
 from dask.diagnostics import ProgressBar
-from numpy import asscalar
+
 from pprint import pprint
 from pathlib import Path
 
 from boutdata.data import BoutOptionsFile
 
-from .collect import collect
+from .loadbout import _auto_open_mfboutdataset
 
 
 # This code should run whenever any function from this module is imported
@@ -26,8 +26,9 @@ except ValueError:
 # TODO somehow check that we have access to the latest version of auto_combine
 
 
-def open_boutdataset(datapath='./BOUT.dmp.*.nc', slices={}, chunks={},
-                     inputfilepath=None, gridfilepath=None, run_name=None, info=True):
+def open_boutdataset(datapath='./BOUT.dmp.*.nc', chunks={},
+                     inputfilepath=None, gridfilepath=None,
+                     run_name=None, info=True):
     """
     Load a dataset from a set of BOUT output files, including the input options file.
 
@@ -48,9 +49,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', slices={}, chunks={},
     """
 
     # Gather pointers to all numerical data from BOUT++ output files
-    ds_all = collect(vars='all', datapath=datapath, slices=slices,
-                     chunks=chunks, info=info)
-    ds, metadata = _strip_metadata(ds_all)
+    ds, metadata = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks, info=info)
     ds.attrs['metadata'] = metadata
 
     if inputfilepath:
@@ -222,21 +221,3 @@ def _find_time_dependent_vars(data):
     evolving_vars = set(var for var in data.data_vars if 't' in data[var].dims)
     time_independent_vars = set(data.data_vars) - set(evolving_vars)
     return list(evolving_vars), list(time_independent_vars)
-
-
-def _strip_metadata(ds):
-    """
-    Extract the metadata (nxpe, myg etc.) from the Dataset.
-
-    Assumes that all scalar variables are metadata, not physical data!
-    """
-
-    # Find only the scalar variables
-    variables = list(ds.variables)
-    scalar_vars = [var for var in variables if not any(dim in ['t', 'x', 'y', 'z'] for dim in ds[var].dims)]
-
-    # Save metadata as a dictionary
-    metadata_vals = [asscalar(ds[var].values) for var in scalar_vars]
-    metadata = dict(zip(scalar_vars, metadata_vals))
-
-    return ds.drop(scalar_vars), metadata
