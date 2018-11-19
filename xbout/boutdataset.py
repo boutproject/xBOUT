@@ -11,17 +11,20 @@ from .load import _auto_open_mfboutdataset
 
 
 # This code should run whenever any function from this module is imported
-# Set all attrs to survive all mathematical operations (see https://github.com/pydata/xarray/pull/2482)
+# Set all attrs to survive all mathematical operations
+# (see https://github.com/pydata/xarray/pull/2482)
 try:
     set_options(keep_attrs=True)
 except ValueError:
-    print('For dataset attributes to be permanent you need to be using the development version of xarray '
-          '- found at https://github.com/pydata/xarray/')
+    raise ImportError("For dataset attributes to be permanent you need to be "
+                      "using the development version of xarray - found at "
+                      "https://github.com/pydata/xarray/")
 try:
     set_options(file_cache_maxsize=256)
 except ValueError:
-    print('For open and closing of netCDF files correctly you need to be using the development version of'
-          ' xarray - found at https://github.com/pydata/xarray/')
+    raise ImportError("For open and closing of netCDF files correctly you need"
+                      " to be using the development version of xarray - found"
+                      " at https://github.com/pydata/xarray/")
 
 # TODO somehow check that we have access to the latest version of auto_combine
 
@@ -47,6 +50,8 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', chunks={},
     -------
     ds : xarray.Dataset
     """
+
+    # TODO handle possibility that we are loading a previously saved (and trimmed dataset)
 
     # Gather pointers to all numerical data from BOUT++ output files
     ds, metadata = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks, info=info)
