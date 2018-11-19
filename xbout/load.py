@@ -1,17 +1,16 @@
-
 from warnings import warn
 from pathlib import Path
 
-from numpy import asscalar
+import numpy as np
 import xarray
 
 
-def _auto_open_mfboutdataset(datapath, chunks, info):
+def _auto_open_mfboutdataset(datapath, chunks, info, keep_guards=True):
     path = Path(datapath)
     filepaths, filetype = _expand_filepaths(path)
 
     # Open just one file to read processor splitting
-    nxpe, nype, mxg, myg = _read_splitting(filepaths[0])
+    nxpe, nype, mxg, myg, mxsub, mysub = _read_splitting(filepaths[0])
 
     paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
@@ -23,8 +22,9 @@ def _auto_open_mfboutdataset(datapath, chunks, info):
     ds, metadata = _strip_metadata(ds)
 
     trimmed_ds = _trim(ds, ghosts={'x': mxg, 'y': myg},
-                    proc_splitting={'x': nxpe, 'y': nype},
-                    guards={'x': mxg, 'y': myg}, keep_guards=True)
+                       proc_data_sizes={'x': mxsub, 'y': mysub},
+                       proc_splitting={'x': nxpe, 'y': nype},
+                       guards={'x': mxg, 'y': myg}, keep_guards=keep_guards)
 
     return trimmed_ds, metadata
 
@@ -83,11 +83,12 @@ def _read_splitting(filepath):
 
     nxpe, nype = ds['NXPE'].values, ds['NYPE'].values
     mxg, myg = ds['MXG'].values, ds['MYG'].values
+    mxsub, mysub = ds['MXSUB'].values, ds['MYSUB'].values
 
     # Avoid trying to open this file twice
     ds.close()
 
-    return nxpe, nype, mxg, myg
+    return nxpe, nype, mxg, myg, mxsub, mysub
 
 
 def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
@@ -97,7 +98,7 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
 
     Filepaths must be a sorted list. Uses the fact that BOUT's output files are
     named as num = nxpe*i + j, and assumes that any consectutive simulation
-    runs are in directories which when sorted will be in the correct order
+    runs are in directories which when sorted are in the correct order
     (e.g. /run0/*, /run1/*,  ...).
     """
 
@@ -112,6 +113,8 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
 
     # Create list of lists of filepaths, so that xarray knows how they should
     # be concatenated by xarray.open_mfdataset()
+    # Only possible with this Pull Request to xarray
+    # https://github.com/pydata/xarray/pull/2553
     paths = iter(filepaths)
     paths_grid = [[[next(paths) for x in range(nxpe)]
                                 for y in range(nype)]
@@ -128,7 +131,8 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     return paths_grid, concat_dims
 
 
-def _trim(ds, ghosts=None, proc_splitting=None, guards=None, keep_guards=True):
+def _trim(ds, ghosts={}, proc_splitting={}, proc_data_sizes={},
+          guards={}, keep_guards=True):
     """
     Trims all ghost and guard cells off the combined dataset produced by
     `open_mfdataset()`.
@@ -145,25 +149,20 @@ def _trim(ds, ghosts=None, proc_splitting=None, guards=None, keep_guards=True):
 
     """
 
+    # TODO generalise this function to handle guard cells being optional
+    if not keep_guards or guards != {}:
+        raise NotImplementedError
+
+    selection = {}
     for dim in ds.dims:
-        # Optionally remove any guard cells
-        if not keep_guards.get(dim, default=True) or not keep_guards:
-            if isinstance(guards[dim], tuple):
-                lower_guards, upper_guards = guards[dim]
-            elif isinstance(guards[dim], int):
-                lower_guards, upper_guards = guards[dim], guards[dim]
-            elif not guards[dim]:
-                lower_guards, upper_guards = ghosts[dim], ghosts[dim]
-            else:
-                raise ValueError("guards[{}] is neither an integer nor a tuple"
-                                 " of integers".format(dim))
-        else:
-            ...
+        if ghosts.get(dim, False):
+            single_proc_mask = [False]*ghosts[dim] \
+                               + [True]*proc_data_sizes[dim] \
+                               + [False]*ghosts[dim]
 
-        #proc_length =
+            selection[dim] = np.tile(np.array(single_proc_mask),
+                                     reps=proc_splitting[dim])
 
-        # Remove any ghost cells
-    selection = None
     trimmed_ds = ds.isel(**selection)
     return trimmed_ds
 
@@ -181,7 +180,7 @@ def _strip_metadata(ds):
                    if not any(dim in ['t', 'x', 'y', 'z'] for dim in ds[var].dims)]
 
     # Save metadata as a dictionary
-    metadata_vals = [asscalar(ds[var].values) for var in scalar_vars]
+    metadata_vals = [np.asscalar(ds[var].values) for var in scalar_vars]
     metadata = dict(zip(scalar_vars, metadata_vals))
 
     return ds.drop(scalar_vars), metadata

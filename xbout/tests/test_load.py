@@ -2,9 +2,13 @@ from pathlib import Path
 
 import pytest
 
+import numpy as np
 
-from xcollect.load import _check_filetype, _expand_wildcards, \
-    _arrange_for_concatenation
+from xarray.tests.test_dataset import create_test_data
+import xarray.testing as xrt
+
+from xbout.load import _check_filetype, _expand_wildcards, \
+    _arrange_for_concatenation, _trim
 
 
 def test_check_extensions(tmpdir):
@@ -143,3 +147,21 @@ class TestArrange:
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(paths, nxpe=3, nype=2)
         assert expected_path_grid == actual_path_grid
         assert actual_concat_dims == ['x', 'y', 't']
+
+
+class TestTrim:
+    def test_no_trim(self):
+        ds = create_test_data(0)
+        actual = _trim(ds)
+        xrt.assert_equal(actual, ds)
+
+    def test_trim(self):
+        ds = create_test_data(0)
+        actual = _trim(ds, ghosts={'time': 2}, proc_splitting={'time': 4},
+                       proc_data_sizes={'time': 1})
+        selection = {'time': np.array([False, False, True, False, False,
+                                       False, False, True, False, False,
+                                       False, False, True, False, False,
+                                       False, False, True, False, False,])}
+        expected = ds.isel(**selection)
+        xrt.assert_equal(expected, actual)
