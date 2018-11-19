@@ -16,6 +16,7 @@ def _auto_open_mfboutdataset(datapath, chunks, info, keep_guards=True):
 
     # TODO Special case needed for case of just one dump file?
     ds = xarray.open_mfdataset(paths_grid, concat_dims=concat_dims,
+                               data_vars='minimal',
                                engine=filetype, chunks=chunks,
                                infer_order_from_coords=False)
 
@@ -121,12 +122,19 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
                                 for t in range(n_runs)]
 
     concat_dims = []
-    if nxpe > 1:
-        concat_dims.append('x')
-    if nype > 1:
-        concat_dims.append('y')
     if len(filepaths) > nprocs:
         concat_dims.append('t')
+    else:
+        paths_grid = paths_grid[0]
+    if nype > 1:
+        concat_dims.append('y')
+    else:
+        paths_grid = paths_grid[0]
+    if nxpe > 1:
+        concat_dims.append('x')
+    else:
+        paths_grid = paths_grid[0]
+    print(paths_grid)
 
     return paths_grid, concat_dims
 
@@ -150,7 +158,7 @@ def _trim(ds, ghosts={}, proc_splitting={}, proc_data_sizes={},
     """
 
     # TODO generalise this function to handle guard cells being optional
-    if not keep_guards or guards != {}:
+    if not keep_guards:
         raise NotImplementedError
 
     selection = {}
