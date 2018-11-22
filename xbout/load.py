@@ -4,6 +4,8 @@ from pathlib import Path
 import numpy as np
 import xarray
 
+from natsort import natsorted
+
 
 def _auto_open_mfboutdataset(datapath, chunks, info, keep_guards=True):
     path = Path(datapath)
@@ -73,7 +75,9 @@ def _expand_wildcards(path):
     filepaths = list(base_dir.glob(search_pattern))
 
     # Sort by numbers in filepath before returning
-    return sorted(filepaths, key=lambda filepath: str(filepath))
+    # Use "natural" sort to avoid lexicographic ordering of numbers
+    # e.g. ['0', '1', '10', '11', etc.]
+    return natsorted(filepaths, key=lambda filepath: str(filepath))
 
 
 def _read_splitting(filepath):
@@ -121,20 +125,15 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
                                 for y in range(nype)]
                                 for t in range(n_runs)]
 
-    concat_dims = []
+    # Dimensions along which no concatenation is needed are still present as
+    # single-element lists, so need to concatenation along dim=None for those
+    concat_dims = [None, None, None]
     if len(filepaths) > nprocs:
-        concat_dims.append('t')
-    else:
-        paths_grid = paths_grid[0]
+        concat_dims[0] = 't'
     if nype > 1:
-        concat_dims.append('y')
-    else:
-        paths_grid = paths_grid[0]
+        concat_dims[1] = 'y'
     if nxpe > 1:
-        concat_dims.append('x')
-    else:
-        paths_grid = paths_grid[0]
-    print(paths_grid)
+        concat_dims[2] = 'x'
 
     return paths_grid, concat_dims
 
