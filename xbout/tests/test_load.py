@@ -149,6 +149,27 @@ class TestArrange:
         assert actual_concat_dims == ['x', 'y', 't']
 
 
+@pytest.mark.skip
+class TestCombine:
+    def test_single_file(self):
+        ...
+
+    def test_combine_along_x(self):
+        ...
+
+    def test_combine_along_y(self):
+        ...
+
+    def test_combine_along_t(self):
+        ...
+
+    def test_combine_along_xy(self):
+        ...
+
+    def test_combine_along_tx(self):
+        ...
+
+
 class TestTrim:
     def test_no_trim(self):
         ds = create_test_data(0)
