@@ -4,36 +4,35 @@ from pathlib import Path
 import numpy as np
 import xarray
 
+from functools import partial
+
 from natsort import natsorted
 
 
 def _auto_open_mfboutdataset(datapath, chunks, info, keep_guards=True):
-    path = Path(datapath)
-    filepaths, filetype = _expand_filepaths(path)
+    filepaths, filetype = _expand_filepaths(datapath)
 
     # Open just one file to read processor splitting
     nxpe, nype, mxg, myg, mxsub, mysub = _read_splitting(filepaths[0])
 
     paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
+    _preprocess = partial(_trim, ghosts={'x': mxg, 'y': myg})
+
     # TODO Special case needed for case of just one dump file?
     ds = xarray.open_mfdataset(paths_grid, concat_dims=concat_dims,
-                               data_vars='minimal',
+                               data_vars='minimal', preprocess=_preprocess,
                                engine=filetype, chunks=chunks,
                                infer_order_from_coords=False)
 
     ds, metadata = _strip_metadata(ds)
 
-    trimmed_ds = _trim(ds, ghosts={'x': mxg, 'y': myg},
-                       proc_data_sizes={'x': mxsub, 'y': mysub},
-                       proc_splitting={'x': nxpe, 'y': nype},
-                       guards={'x': mxg, 'y': myg}, keep_guards=keep_guards)
-
-    return trimmed_ds, metadata
+    return ds, metadata
 
 
-def _expand_filepaths(path):
+def _expand_filepaths(datapath):
     """Determines filetypes and opens all dump files."""
+    path = Path(datapath)
 
     filetype = _check_filetype(path)
 
@@ -138,22 +137,16 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     return paths_grid, concat_dims
 
 
-def _trim(ds, ghosts={}, proc_splitting={}, proc_data_sizes={},
-          guards={}, keep_guards=True):
+def _trim(ds, ghosts={}, keep_guards=True):
     """
-    Trims all ghost and guard cells off the combined dataset produced by
-    `open_mfdataset()`.
+    Trims all ghost and guard cells off a single dataset read from a single
+    BOUT dump file, to prepare for concatenation.
 
     Parameters
     ----------
     ghosts : dict, optional
-
-    proc_splitting : dict, optional
-
     guards : dict, optional
-
     keep_guards : dict, optional
-
     """
 
     # TODO generalise this function to handle guard cells being optional
@@ -163,12 +156,7 @@ def _trim(ds, ghosts={}, proc_splitting={}, proc_data_sizes={},
     selection = {}
     for dim in ds.dims:
         if ghosts.get(dim, False):
-            single_proc_mask = [False]*ghosts[dim] \
-                               + [True]*proc_data_sizes[dim] \
-                               + [False]*ghosts[dim]
-
-            selection[dim] = np.tile(np.array(single_proc_mask),
-                                     reps=proc_splitting[dim])
+            selection[dim] = slice(ghosts[dim], -ghosts[dim])
 
     trimmed_ds = ds.isel(**selection)
     return trimmed_ds
