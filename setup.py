@@ -11,7 +11,7 @@ def read(fname):
 setup(
     name="xBOUT",
     version="0.1",
-    url="https://github.com/TomNicholas/xcollect",
+    url="https://github.com/TomNicholas/xBOUT",
     author="Thomas Nicholas",
     author_email="thomas.nicholas@york.ac.uk",
     description='Collect data from BOUT++ runs in python using xarray',
