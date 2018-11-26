@@ -219,7 +219,46 @@ class BoutAccessor(object):
 
     # TODO BOUT-specific plotting functionality would be implemented as methods here, e.g. ds.bout.plot_poloidal
     # TODO Could trial a 2D surface plotting method here
-    # TODO Could also prototype animated plotting methods here
+
+    def animate(self, var, animate_over='t', x='x', y='y', sep_pos=None,
+                aspect='auto', fps=10, save_as=None, writer='imagemagick',
+                **kwargs):
+        """
+        Plots a color plot which is animated with time over the specified
+        coordinate.
+
+        Currently only supports 2D+1 data, which it plots with xarray's
+        wrapping of matplotlib's imshow.
+
+        Parameters
+        ----------
+        var : str
+            Variable to plot
+        animate_over : str, optional
+            Coordinate over which to animate
+        x : str, optional
+        y : str, optional
+        sep_x : int, optional
+            Radial position of the separatrix as an integer
+        save_as: str, optional
+            Filename to give to the resulting gif
+        fps : int, optional
+        aspect : {'auto', 'equal'} or int, optional
+            Method for choosing aspect ratio of 2D plot. 'auto' uses the number
+             of grid points, 'equal' uses
+        kwargs : dict, optional
+            Additional keyword arguments are passed on to the plotting function
+            (e.g. imshow for 2D plots).
+        """
+
+        # TODO implement this as a method on a BOUT DataArray accessor instead
+        # so that the var argument is not needed
+
+        from .animate import _animated_plot
+
+        _animated_plot(self.data, var, animate_over=animate_over,
+                       x=x, y=y, sep_pos=sep_pos, aspect=aspect, fps=fps,
+                       save_as=save_as, writer=writer, **kwargs)
 
 
 def _find_time_dependent_vars(data):
