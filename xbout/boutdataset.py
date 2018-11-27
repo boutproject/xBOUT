@@ -259,7 +259,7 @@ class BoutAccessor(object):
                        save_as=save_as, writer=writer, **kwargs)
 
     def animatplot(self, var, animate_over='t', x='x', y='y', animate=True,
-                   fps=10, save_as=None, sep_pos=None, **kwargs):
+                   fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
 
         import animatplot as amp
         import numpy as np
@@ -312,9 +312,10 @@ class BoutAccessor(object):
         if not save_as:
             save_as = "{}_over_{}".format(variable, animate_over)
 
-        fig, ax = plt.subplots()
+        if not ax:
+            fig, ax = plt.subplots()
 
-        imshow_block = amp.blocks.Imshow(images, axis=ax, vmin=min, vmax=max,
+        imshow_block = amp.blocks.Imshow(images, vmin=min, vmax=max, axis=ax,
                                          **kwargs)
 
         if animate:
