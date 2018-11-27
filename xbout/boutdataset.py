@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from xarray import register_dataset_accessor, save_mfdataset, set_options, merge
+from xarray import register_dataset_accessor, save_mfdataset, set_options, \
+    merge
 from dask.diagnostics import ProgressBar
 
 from boutdata.data import BoutOptionsFile
@@ -49,19 +50,19 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', chunks={},
     ds : xarray.Dataset
     """
 
-    # TODO handle possibility that we are loading a previously saved (and trimmed dataset)
+    # TODO handle possibility that we are loading a previously saved (and trimmed) dataset
 
     # Gather pointers to all numerical data from BOUT++ output files
     ds, metadata = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
                                             info=info)
-    ds.attrs['metadata'] = metadata
+    ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
 
     if inputfilepath:
         # Use Ben's options class to store all input file options
         options = BoutOptionsFile(inputfilepath)
     else:
         options = None
-    ds.attrs['options'] = options
+    ds = _set_attrs_on_all_vars(ds, 'options', options)
 
     # TODO This is where you would load the grid file as a separate object
     # (Ideally using xgcm but could also just store the grid.nc file as another dataset)
@@ -79,6 +80,13 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', chunks={},
         print('Read in BOUT options:')
         print(options)
 
+    return ds
+
+
+def _set_attrs_on_all_vars(ds, key, attr_data):
+    ds.attrs[key] = attr_data
+    for da in ds.values():
+        da.attrs[key] = attr_data
     return ds
 
 

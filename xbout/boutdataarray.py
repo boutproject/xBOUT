@@ -21,20 +21,14 @@ class BoutDataArrayAccessor(object):
         # self.prefix = prefix
 
         self.data = da
-        if 'metadata' in da.attrs.keys():
-            self.metadata = da.attrs['metadata']
-        else:
-            self.metadata = None
-        if 'options' in da.attrs.keys():
-            self.options = da.attrs['options']
-        else:
-            self.options = None
+        self.metadata = da.attrs['metadata']
+        self.options = da.attrs['options']
 
     def __str__(self):
         """
-        String represenation of the BoutDataset.
+        String represenation of the BoutDataArray.
 
-        Accessed by print(ds.bout)
+        Accessed by print(da.bout)
         """
 
         text = 'BoutArray\n'
