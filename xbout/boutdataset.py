@@ -251,14 +251,69 @@ class BoutAccessor(object):
             (e.g. imshow for 2D plots).
         """
 
-        # TODO implement this as a method on a BOUT DataArray accessor instead
-        # so that the var argument is not needed
 
         from .animate import _animated_plot
 
         _animated_plot(self.data, var, animate_over=animate_over,
                        x=x, y=y, sep_pos=sep_pos, aspect=aspect, fps=fps,
                        save_as=save_as, writer=writer, **kwargs)
+
+    def animatplot(self, var, animate_over='t', x='x', y='y', animate=True,
+                   fps=10, save_as=None, sep_pos=None, **kwargs):
+
+        import animatplot as amp
+        import numpy as np
+
+        # TODO implement this as a method on a BOUT DataArray accessor instead
+        # so that the var argument is not needed
+        data = self.data[var]
+
+        # TODO add a colorbar
+        # TODO add a title
+
+        variable = data.name
+        n_dims = len(data.dims)
+        if n_dims == 3:
+            print("{} data passed has {} dimensions - will use "
+                  "xarray.plot.imshow()".format(variable, str(n_dims)))
+        else:
+            raise ValueError(
+                "Data passed has an unsupported number of dimensions "
+                "({})".format(str(n_dims)))
+
+        # Check plot is the right orientation
+        y_read, x_read = data.isel(**{animate_over: 0}).dims
+        if (x_read is x) & (y_read is y):
+            transpose = False
+        elif (x_read is y) & (y_read is x):
+            transpose = True
+        else:
+            raise ValueError
+
+        # Construct data to plot
+        images = []
+        for i in np.arange(data.sizes[animate_over]):
+            frame_data = data.isel(**{animate_over: i})
+            if transpose:
+                frame_data = frame_data.T
+
+            # Load values eagerly otherwise for some reason the plotting takes
+            # 100's of times longer - for some reason animatplot does not deal
+            # well with dask arrays!
+            images.append(frame_data.values)
+
+        if not save_as:
+            save_as = "{}_over_{}".format(variable, animate_over)
+
+        block = amp.blocks.Imshow(images, **kwargs)
+
+        if animate:
+            anim = amp.Animation([block])
+
+            anim.controls()
+            anim.save_gif(save_as)
+
+        return block
 
 
 def _find_time_dependent_vars(data):
