@@ -4,7 +4,7 @@ from .plotting.animate import animate_imshow
 
 
 @register_dataarray_accessor('bout')
-class BoutAccessor(object):
+class BoutDataArrayAccessor(object):
     """
     Contains BOUT-specific methods to use on BOUT++ dataarrays opened by
     selecting a variable from a BOUT++ dataset.
@@ -21,8 +21,14 @@ class BoutAccessor(object):
         # self.prefix = prefix
 
         self.data = da
-        self.metadata = da.attrs['metadata']
-        self.options = da.attrs['options']
+        if 'metadata' in da.attrs.keys():
+            self.metadata = da.attrs['metadata']
+        else:
+            self.metadata = None
+        if 'options' in da.attrs.keys():
+            self.options = da.attrs['options']
+        else:
+            self.options = None
 
     def __str__(self):
         """
@@ -41,7 +47,7 @@ class BoutAccessor(object):
             text += self.options.__str__()
         return text
 
-    def animate(self, var, animate_over='t', x='x', y='y', animate=True,
+    def animate(self, animate_over='t', x='x', y='y', animate=True,
                 fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
         """
         Plots a color plot which is animated with time over the specified
@@ -52,8 +58,6 @@ class BoutAccessor(object):
 
         Parameters
         ----------
-        var : str
-            Variable to plot
         animate_over : str, optional
             Dimension over which to animate
         x : str, optional
@@ -75,10 +79,7 @@ class BoutAccessor(object):
             (e.g. imshow for 2D plots).
         """
 
-        # TODO implement this as a method on a BOUT DataArray accessor instead
-        # so that the var argument is not needed
-        data = self.data[var]
-
+        data = self.data
         variable = data.name
         n_dims = len(data.dims)
         if n_dims == 3:

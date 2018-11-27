@@ -83,7 +83,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', chunks={},
 
 
 @register_dataset_accessor('bout')
-class BoutAccessor(object):
+class BoutDatasetAccessor(object):
     """
     Contains BOUT-specific methods to use on BOUT++ datasets opened using
     `open_boutdataset()`.
