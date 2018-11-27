@@ -284,7 +284,7 @@ class BoutAccessor(object):
                 "({})".format(str(n_dims)))
 
         # Check plot is the right orientation
-        y_read, x_read = data.isel(**{animate_over: 0}).dims
+        t_read, y_read, x_read = data.dims
         if (x_read is x) & (y_read is y):
             transpose = False
         elif (x_read is y) & (y_read is x):
@@ -294,20 +294,28 @@ class BoutAccessor(object):
                              .format(x, y))
 
         # Construct data to plot
-        images = []
-        for i in np.arange(data.sizes[animate_over]):
-            frame_data = data.isel(**{animate_over: i})
-            if transpose:
-                frame_data = frame_data.T
+        # images = []
+        # for i in np.arange(data.sizes[animate_over]):
+        #     frame_data = data.isel(**{animate_over: i})
+        #     if transpose:
+        #         frame_data = frame_data.T
+        #
+        #     # Load values eagerly otherwise for some reason the plotting takes
+        #     # 100's of times longer - for some reason animatplot does not deal
+        #     # well with dask arrays!
+        #     images.append(frame_data.values)
 
-            # Load values eagerly otherwise for some reason the plotting takes
-            # 100's of times longer - for some reason animatplot does not deal
-            # well with dask arrays!
-            images.append(frame_data.values)
+        if transpose:
+            data = data.transpose(animate_over, y, x)
+
+        # Load values eagerly otherwise for some reason the plotting takes
+        # 100's of times longer - for some reason animatplot does not deal
+        # well with dask arrays!
+        image_data = data.values
 
         # Determine max and min values across entire data series
-        max = np.max([np.max(frame_data) for frame_data in images])
-        min = np.min([np.min(frame_data) for frame_data in images])
+        max = np.max(image_data)
+        min = np.min(image_data)
 
         if not save_as:
             save_as = "{}_over_{}".format(variable, animate_over)
@@ -315,8 +323,8 @@ class BoutAccessor(object):
         if not ax:
             fig, ax = plt.subplots()
 
-        imshow_block = amp.blocks.Imshow(images, vmin=min, vmax=max, axis=ax,
-                                         **kwargs)
+        imshow_block = amp.blocks.Imshow(image_data, vmin=min, vmax=max,
+                                         axis=ax, origin='lower', **kwargs)
 
         if animate:
             anim = amp.Animation([imshow_block])
