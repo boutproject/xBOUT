@@ -263,12 +263,14 @@ class BoutAccessor(object):
 
         import animatplot as amp
         import numpy as np
+        import matplotlib.pyplot as plt
 
         # TODO implement this as a method on a BOUT DataArray accessor instead
         # so that the var argument is not needed
         data = self.data[var]
 
         # TODO add a colorbar
+        # TODO add axis labels
         # TODO add a title
 
         variable = data.name
@@ -288,7 +290,8 @@ class BoutAccessor(object):
         elif (x_read is y) & (y_read is x):
             transpose = True
         else:
-            raise ValueError
+            raise ValueError("Dimensions {} or {} are not present in the data"
+                             .format(x, y))
 
         # Construct data to plot
         images = []
@@ -302,18 +305,31 @@ class BoutAccessor(object):
             # well with dask arrays!
             images.append(frame_data.values)
 
+        # Determine max and min values across entire data series
+        max = np.max([np.max(frame_data) for frame_data in images])
+        min = np.min([np.min(frame_data) for frame_data in images])
+
         if not save_as:
             save_as = "{}_over_{}".format(variable, animate_over)
 
-        block = amp.blocks.Imshow(images, **kwargs)
+        fig, ax = plt.subplots()
+
+        imshow_block = amp.blocks.Imshow(images, axis=ax, vmin=min, vmax=max,
+                                         **kwargs)
 
         if animate:
-            anim = amp.Animation([block])
+            anim = amp.Animation([imshow_block])
 
+        # Add title and axis labels
+        ax.set_title("{} variation over {}".format(variable, animate_over))
+        ax.set_xlabel(x)
+        ax.set_ylabel(y)
+
+        if animate:
             anim.controls()
             anim.save_gif(save_as)
 
-        return block
+        return imshow_block
 
 
 def _find_time_dependent_vars(data):
