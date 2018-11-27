@@ -1,14 +1,12 @@
-from xarray import register_dataset_accessor, save_mfdataset, set_options, merge
-
-from dask.diagnostics import ProgressBar
-
-from pprint import pprint
 from pathlib import Path
-import warnings
+
+from xarray import register_dataset_accessor, save_mfdataset, set_options, merge
+from dask.diagnostics import ProgressBar
 
 from boutdata.data import BoutOptionsFile
 
 from .load import _auto_open_mfboutdataset
+from .plotting.animate import animate_imshow
 
 
 # This code should run whenever any function from this module is imported
@@ -221,9 +219,8 @@ class BoutAccessor(object):
     # TODO BOUT-specific plotting functionality would be implemented as methods here, e.g. ds.bout.plot_poloidal
     # TODO Could trial a 2D surface plotting method here
 
-    def animate(self, var, animate_over='t', x='x', y='y', sep_pos=None,
-                aspect='auto', fps=10, save_as=None, writer='imagemagick',
-                **kwargs):
+    def animate(self, var, animate_over='t', x='x', y='y', animate=True,
+                fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
         """
         Plots a color plot which is animated with time over the specified
         coordinate.
@@ -236,35 +233,25 @@ class BoutAccessor(object):
         var : str
             Variable to plot
         animate_over : str, optional
-            Coordinate over which to animate
+            Dimension over which to animate
         x : str, optional
+            Dimension to use on the x axis, default is 'x'
         y : str, optional
-        sep_x : int, optional
-            Radial position of the separatrix as an integer
-        save_as: str, optional
-            Filename to give to the resulting gif
+            Dimension to use on the y axis, default is 'y'
+        sep_pos : int, optional
+            Radial position at which to plot the separatrix
         fps : int, optional
-        aspect : {'auto', 'equal'} or int, optional
-            Method for choosing aspect ratio of 2D plot. 'auto' uses the number
-             of grid points, 'equal' uses
+            Frames per second of resulting gif
+        save_as : str, optional
+            Filename to give to the resulting gif
+        sep_pos : int, optional
+            Position along the 'x' dimension to plot the separatrix
+        ax : matplotlib.pyplot.axes object, optional
+            Axis on which to plot the gif
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (e.g. imshow for 2D plots).
         """
-
-
-        from .animate import _animated_plot
-
-        _animated_plot(self.data, var, animate_over=animate_over,
-                       x=x, y=y, sep_pos=sep_pos, aspect=aspect, fps=fps,
-                       save_as=save_as, writer=writer, **kwargs)
-
-    def animatplot(self, var, animate_over='t', x='x', y='y', animate=True,
-                   fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
-
-        import animatplot as amp
-        import numpy as np
-        import matplotlib.pyplot as plt
 
         # TODO implement this as a method on a BOUT DataArray accessor instead
         # so that the var argument is not needed
@@ -275,96 +262,18 @@ class BoutAccessor(object):
         if n_dims == 3:
             print("{} data passed has {} dimensions - will use "
                   "xarray.plot.imshow()".format(variable, str(n_dims)))
+            imshow_block = animate_imshow(data=data, animate_over=animate_over,
+                                          x=x, y=y, sep_pos=sep_pos,
+                                          animate=animate, fps=fps,
+                                          save_as=save_as, ax=ax, **kwargs)
+            return imshow_block
         else:
             raise ValueError(
                 "Data passed has an unsupported number of dimensions "
                 "({})".format(str(n_dims)))
-
-        # Check plot is the right orientation
-        t_read, y_read, x_read = data.dims
-        if (x_read is x) & (y_read is y):
-            pass
-        elif (x_read is y) & (y_read is x):
-            data = data.transpose(animate_over, y, x)
-        else:
-            raise ValueError("Dimensions {} or {} are not present in the data"
-                             .format(x, y))
-
-        # Load values eagerly otherwise for some reason the plotting takes
-        # 100's of times longer - for some reason animatplot does not deal
-        # well with dask arrays!
-        image_data = data.values
-
-        # Determine max and min values across entire data series
-        max = np.max(image_data)
-        min = np.min(image_data)
-
-        if not save_as:
-            save_as = "{}_over_{}".format(variable, animate_over)
-
-        if not ax:
-            fig, ax = plt.subplots()
-
-        imshow_block = amp.blocks.Imshow(image_data, vmin=min, vmax=max,
-                                         axis=ax, origin='lower', **kwargs)
-
-        cbar = plt.colorbar(imshow_block.im, ax=ax)
-        cbar.ax.set_ylabel(variable)
-
-        timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
-
-        if animate:
-            anim = amp.Animation([imshow_block], timeline)
-
-        # Add title and axis labels
-        ax.set_title("{} variation over {}".format(variable, animate_over))
-        ax.set_xlabel(x)
-        ax.set_ylabel(y)
-
-        # Plot separatrix
-        if sep_pos:
-            ax = plot_separatrix(data, sep_pos, ax)
-
-        if animate:
-            anim.controls(timeline_slider_args={'time_label': animate_over})
-            anim.save_gif(save_as)
-
-        return imshow_block
 
 
 def _find_time_dependent_vars(data):
     evolving_vars = set(var for var in data.data_vars if 't' in data[var].dims)
     time_independent_vars = set(data.data_vars) - set(evolving_vars)
     return list(evolving_vars), list(time_independent_vars)
-
-
-def plot_separatrix(da, sep_pos, ax, radial_coord='x'):
-    """
-    Plots the separatrix as a black dotted line.
-
-    Should plot in the correct place regardless of the choice of coordinates
-    for the plot axes, and the type of plot. sep_x needs to be supplied as the
-    integer index of the grid point location of the separatrix.
-    """
-
-    # TODO Maybe use a decorator to do this for any type of plot?
-
-    # 2D domain needs to intersect the separatrix plane to be able to plot it
-    dims = da.dims
-    if radial_coord not in dims:
-
-        warnings.warn("Cannot plot separatrix as domain does not cross "
-                      "separatrix, as it does not have a radial dimension",
-                      Warning)
-        return
-
-    else:
-        # Determine the separatrix position in terms of the radial coordinate
-        # being used in the plot
-        x_coord_vals = da.coords[radial_coord].values
-        sep_x_pos = x_coord_vals[sep_pos]
-
-        # Plot a vertical line at that location on the plot
-        ax.axvline(x=sep_x_pos, linewidth=2, color="black", linestyle='--')
-
-        return ax
