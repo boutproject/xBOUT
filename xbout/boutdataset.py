@@ -269,8 +269,6 @@ class BoutAccessor(object):
         # so that the var argument is not needed
         data = self.data[var]
 
-        # TODO add a colorbar
-
         variable = data.name
         n_dims = len(data.dims)
         if n_dims == 3:
@@ -308,6 +306,9 @@ class BoutAccessor(object):
 
         imshow_block = amp.blocks.Imshow(image_data, vmin=min, vmax=max,
                                          axis=ax, origin='lower', **kwargs)
+
+        cbar = plt.colorbar(imshow_block.im, ax=ax)
+        cbar.ax.set_ylabel(variable, rotation=0)
 
         timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
 
