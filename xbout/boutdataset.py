@@ -270,8 +270,6 @@ class BoutAccessor(object):
         data = self.data[var]
 
         # TODO add a colorbar
-        # TODO add axis labels
-        # TODO add a title
 
         variable = data.name
         n_dims = len(data.dims)
@@ -286,27 +284,12 @@ class BoutAccessor(object):
         # Check plot is the right orientation
         t_read, y_read, x_read = data.dims
         if (x_read is x) & (y_read is y):
-            transpose = False
+            pass
         elif (x_read is y) & (y_read is x):
-            transpose = True
+            data = data.transpose(animate_over, y, x)
         else:
             raise ValueError("Dimensions {} or {} are not present in the data"
                              .format(x, y))
-
-        # Construct data to plot
-        # images = []
-        # for i in np.arange(data.sizes[animate_over]):
-        #     frame_data = data.isel(**{animate_over: i})
-        #     if transpose:
-        #         frame_data = frame_data.T
-        #
-        #     # Load values eagerly otherwise for some reason the plotting takes
-        #     # 100's of times longer - for some reason animatplot does not deal
-        #     # well with dask arrays!
-        #     images.append(frame_data.values)
-
-        if transpose:
-            data = data.transpose(animate_over, y, x)
 
         # Load values eagerly otherwise for some reason the plotting takes
         # 100's of times longer - for some reason animatplot does not deal
@@ -326,8 +309,10 @@ class BoutAccessor(object):
         imshow_block = amp.blocks.Imshow(image_data, vmin=min, vmax=max,
                                          axis=ax, origin='lower', **kwargs)
 
+        timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
+
         if animate:
-            anim = amp.Animation([imshow_block])
+            anim = amp.Animation([imshow_block], timeline)
 
         # Add title and axis labels
         ax.set_title("{} variation over {}".format(variable, animate_over))
@@ -335,7 +320,7 @@ class BoutAccessor(object):
         ax.set_ylabel(y)
 
         if animate:
-            anim.controls()
+            anim.controls(timeline_slider_args={'time_label': animate_over})
             anim.save_gif(save_as)
 
         return imshow_block
