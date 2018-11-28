@@ -1,7 +1,9 @@
 from pathlib import Path
+from pprint import pformat
+from textwrap import indent
 
-from xarray import register_dataset_accessor, save_mfdataset, set_options, \
-    merge
+from xarray import Dataset, DataArray, register_dataset_accessor, \
+    save_mfdataset, set_options, merge
 from dask.diagnostics import ProgressBar
 
 from boutdata.data import BoutOptionsFile
@@ -28,8 +30,8 @@ except ValueError:
 # TODO somehow check that we have access to the latest version of auto_combine
 
 
-def open_boutdataset(datapath='./BOUT.dmp.*.nc', chunks={},
-                     inputfilepath=None, gridfilepath=None,
+def open_boutdataset(datapath='./BOUT.dmp.*.nc',
+                     inputfilepath=None, gridfilepath=None, chunks={},
                      run_name=None, info=True):
     """
     Load a dataset from a set of BOUT output files, including the input options file.
@@ -72,13 +74,10 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', chunks={},
     if run_name:
         ds.name = run_name
 
-    if info:
-        print('Read in BOUT data:')
-        print(ds)
-        print('Read in BOUT metadata:')
-        print(metadata)
-        print('Read in BOUT options:')
-        print(options)
+    if info is 'terse':
+        print("Read in dataset from {}".format(str(Path(datapath))))
+    elif info:
+        print("Read in:\n{}".format(ds.bout))
 
     return ds
 
@@ -91,7 +90,7 @@ def _set_attrs_on_all_vars(ds, key, attr_data):
 
 
 @register_dataset_accessor('bout')
-class BoutDatasetAccessor(object):
+class BoutDatasetAccessor:
     """
     Contains BOUT-specific methods to use on BOUT++ datasets opened using
     `open_boutdataset()`.
@@ -113,19 +112,17 @@ class BoutDatasetAccessor(object):
 
     def __str__(self):
         """
-        String represenation of the BoutDataset.
+        String representation of the BoutDataset.
 
         Accessed by print(ds.bout)
         """
-
-        text = 'BoutDataset\n'
-        text += 'Contains:\n'
-        text += self.data.__str__()
-        text += 'with metadata'
-        text += self.metadata.__str__()
+        text = "<xbout.BoutDataset>\n" + \
+               "Contains:\n{}\n".format(str(self.data)) + \
+               "Metadata:\n{}\n".format(pformat(self.metadata,
+                                                indent=4, compact=True))
         if self.options:
-            text += 'and options:\n'
-            text += self.options.__str__()
+            text += "Options:\n{}".format(pformat(self.options.as_dict(),
+                                                  indent=4, compact=True))
         return text
 
     #def __repr__(self):

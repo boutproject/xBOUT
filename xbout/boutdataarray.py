@@ -1,10 +1,12 @@
+from pprint import pformat
+
 from xarray import register_dataarray_accessor
 
 from .plotting.animate import animate_imshow
 
 
 @register_dataarray_accessor('bout')
-class BoutDataArrayAccessor(object):
+class BoutDataArrayAccessor:
     """
     Contains BOUT-specific methods to use on BOUT++ dataarrays opened by
     selecting a variable from a BOUT++ dataset.
@@ -26,19 +28,18 @@ class BoutDataArrayAccessor(object):
 
     def __str__(self):
         """
-        String represenation of the BoutDataArray.
+        String representation of the BoutDataArray.
 
         Accessed by print(da.bout)
         """
 
-        text = 'BoutArray\n'
-        text += 'Contains:\n'
-        text += self.data.__str__()
-        text += 'with metadata'
-        text += self.metadata.__str__()
+        text = "<xbout.BoutDataArray>\n" + \
+               "Contains:\n{}\n".format(str(self.data)) + \
+               "Metadata:\n{}".format(pformat(self.metadata,
+                                              indent=4, compact=True))
         if self.options:
-            text += 'and options:\n'
-            text += self.options.__str__()
+            text += "Options:\n{}".format(pformat(self.options.as_dict(),
+                                                  indent=4, compact=True))
         return text
 
     def animate(self, animate_over='t', x='x', y='y', animate=True,
