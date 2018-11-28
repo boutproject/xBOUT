@@ -87,3 +87,11 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
         anim.save_gif(save_as)
 
     return imshow_block
+
+
+def animate_line(data, animate_over='t', x='x', y='y', animate=True,
+                 fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
+    variable = data.name
+
+    t_read, x_read = data.dims
+    raise NotImplementedError

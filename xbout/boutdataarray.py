@@ -2,7 +2,7 @@ from pprint import pformat
 
 from xarray import register_dataarray_accessor
 
-from .plotting.animate import animate_imshow
+from .plotting.animate import animate_imshow, animate_line
 
 
 @register_dataarray_accessor('bout')
@@ -42,8 +42,8 @@ class BoutDataArrayAccessor:
                                                   indent=4, compact=True))
         return text
 
-    def animate(self, animate_over='t', x='x', y='y', animate=True,
-                fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
+    def animate2D(self, animate_over='t', x='x', y='y', animate=True,
+                  fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
         """
         Plots a color plot which is animated with time over the specified
         coordinate.
@@ -79,7 +79,7 @@ class BoutDataArrayAccessor:
         n_dims = len(data.dims)
         if n_dims == 3:
             print("{} data passed has {} dimensions - will use "
-                  "xarray.plot.imshow()".format(variable, str(n_dims)))
+                  "animatplot.blocks.Imshow()".format(variable, str(n_dims)))
             imshow_block = animate_imshow(data=data, animate_over=animate_over,
                                           x=x, y=y, sep_pos=sep_pos,
                                           animate=animate, fps=fps,
@@ -89,6 +89,21 @@ class BoutDataArrayAccessor:
             raise ValueError(
                 "Data passed has an unsupported number of dimensions "
                 "({})".format(str(n_dims)))
+
+    def animate1D(self, animate_over='t', x='x', y='y', animate=True,
+                 fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
+        data = self.data
+        variable = data.name
+        n_dims = len(data.dims)
+
+        if n_dims == 2:
+            print("{} data passed has {} dimensions - will use "
+                  "animatplot.blocks.Line()".format(variable, str(n_dims)))
+            line_block = animate_line(data=data, animate_over=animate_over,
+                                      x=x, y=y, sep_pos=sep_pos,
+                                      animate=animate, fps=fps,
+                                      save_as=save_as, ax=ax, **kwargs)
+            return line_block
 
     # TODO BOUT-specific plotting functionality would be implemented as methods here, e.g. ds.bout.plot_poloidal
     # TODO Could trial a 2D surface plotting method here
