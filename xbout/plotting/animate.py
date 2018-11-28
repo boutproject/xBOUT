@@ -7,7 +7,8 @@ from .utils import plot_separatrix
 
 
 def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
-                   fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
+                   vmin='min', vmax='max', fps=10, save_as=None,
+                   sep_pos=None, ax=None, **kwargs):
     """
     Plots a color plot which is animated with time over the specified
     coordinate.
@@ -24,6 +25,12 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
         Dimension to use on the x axis, default is 'x'
     y : str, optional
         Dimension to use on the y axis, default is 'y'
+    vmin : float, optional
+        Minimum value to use for colorbar. Default is to use minimum value of
+        data across whole timeseries.
+    vmax : float, optional
+        Maximum value to use for colorbar. Default is to use maximum value of
+        data across whole timeseries.
     sep_pos : int, optional
         Radial position at which to plot the separatrix
     save_as: str, optional
@@ -52,10 +59,10 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
     # well with dask arrays!
     image_data = data.values
 
-    # Determine max and min values across entire data series
-    if 'vmax' not in kwargs.keys():
+    # If not specified, determine max and min values across entire data series
+    if vmax is 'max':
         vmax = np.max(image_data)
-    if 'vmin' not in kwargs.keys():
+    if vmin is 'min':
         vmin = np.min(image_data)
 
     if not ax:

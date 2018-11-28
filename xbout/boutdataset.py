@@ -1,8 +1,7 @@
 from pathlib import Path
 from pprint import pformat
-from textwrap import indent
 
-from xarray import Dataset, DataArray, register_dataset_accessor, \
+from xarray import register_dataset_accessor, \
     save_mfdataset, set_options, merge
 from dask.diagnostics import ProgressBar
 
