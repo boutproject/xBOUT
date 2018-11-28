@@ -60,7 +60,7 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
         fig, ax = plt.subplots()
 
     imshow_block = amp.blocks.Imshow(image_data, vmin=min, vmax=max,
-                                     axis=ax, origin='lower', **kwargs)
+                                     ax=ax, origin='lower', **kwargs)
 
     timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
 
@@ -80,7 +80,7 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
         ax = plot_separatrix(data, sep_pos, ax)
 
     if animate:
-        anim.controls(timeline_slider_args={'time_label': animate_over})
+        anim.controls(timeline_slider_args={'text': animate_over})
 
         if not save_as:
             save_as = "{}_over_{}".format(variable, animate_over)
