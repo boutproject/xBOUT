@@ -53,13 +53,15 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
     image_data = data.values
 
     # Determine max and min values across entire data series
-    max = np.max(image_data)
-    min = np.min(image_data)
+    if 'vmax' not in kwargs.keys():
+        vmax = np.max(image_data)
+    if 'vmin' not in kwargs.keys():
+        vmin = np.min(image_data)
 
     if not ax:
         fig, ax = plt.subplots()
 
-    imshow_block = amp.blocks.Imshow(image_data, vmin=min, vmax=max,
+    imshow_block = amp.blocks.Imshow(image_data, vmin=vmin, vmax=vmax,
                                      ax=ax, origin='lower', **kwargs)
 
     timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
