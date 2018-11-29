@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from natsort import natsorted
+
 import pytest
 
 import numpy as np
@@ -57,7 +59,8 @@ class TestPathHandling:
                 example_file = example_run_dir.join('example.' + str(j) + '.nc')
                 example_file.write("content")
                 filepaths.append(Path(str(example_file)))
-        expected_filepaths = sorted(filepaths, key=lambda filepath: str(filepath))
+        expected_filepaths = natsorted(filepaths,
+                                       key=lambda filepath: str(filepath))
 
         path = Path(str(files_dir.join('run*/example.*.nc')))
         actual_filepaths = _expand_wildcards(path)
@@ -89,7 +92,7 @@ class TestArrange:
         expected_path_grid = [[['./run0/BOUT.dmp.0.nc']]]
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(paths, nxpe=1, nype=1)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == []
+        assert actual_concat_dims == [None, None, None]
 
     def test_arrange_along_x(self, create_filepaths):
         paths = create_filepaths(nxpe=3, nype=1, nt=1)
@@ -98,7 +101,7 @@ class TestArrange:
                                 './run0/BOUT.dmp.2.nc']]]
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(paths, nxpe=3, nype=1)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['x']
+        assert actual_concat_dims == [None, None, 'x']
 
     def test_arrange_along_y(self, create_filepaths):
         paths = create_filepaths(nxpe=1, nype=3, nt=1)
@@ -108,7 +111,7 @@ class TestArrange:
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(
             paths, nxpe=1, nype=3)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['y']
+        assert actual_concat_dims == [None, 'y', None]
 
     def test_arrange_along_t(self, create_filepaths):
         paths = create_filepaths(nxpe=1, nype=1, nt=3)
@@ -118,7 +121,7 @@ class TestArrange:
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(
             paths, nxpe=1, nype=1)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['t']
+        assert actual_concat_dims == ['t', None, None]
 
     def test_arrange_along_xy(self, create_filepaths):
         paths = create_filepaths(nxpe=3, nype=2, nt=1)
@@ -127,7 +130,7 @@ class TestArrange:
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(
             paths, nxpe=3, nype=2)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['x', 'y']
+        assert actual_concat_dims == [None, 'y', 'x']
 
     def test_arrange_along_xt(self, create_filepaths):
         paths = create_filepaths(nxpe=3, nype=1, nt=2)
@@ -136,7 +139,7 @@ class TestArrange:
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(
             paths, nxpe=3, nype=1)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['x', 't']
+        assert actual_concat_dims == ['t', None, 'x']
 
     def test_arrange_along_xyt(self, create_filepaths):
         paths = create_filepaths(nxpe=3, nype=2, nt=2)
@@ -146,7 +149,7 @@ class TestArrange:
                                ['./run1/BOUT.dmp.3.nc', './run1/BOUT.dmp.4.nc', './run1/BOUT.dmp.5.nc']]]
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(paths, nxpe=3, nype=2)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['x', 'y', 't']
+        assert actual_concat_dims == ['t', 'y', 'x']
 
 
 @pytest.mark.skip
@@ -176,13 +179,9 @@ class TestTrim:
         actual = _trim(ds)
         xrt.assert_equal(actual, ds)
 
-    def test_trim(self):
+    def test_trim_ghosts(self):
         ds = create_test_data(0)
-        actual = _trim(ds, ghosts={'time': 2}, proc_splitting={'time': 4},
-                       proc_data_sizes={'time': 1})
-        selection = {'time': np.array([False, False, True, False, False,
-                                       False, False, True, False, False,
-                                       False, False, True, False, False,
-                                       False, False, True, False, False,])}
+        actual = _trim(ds, ghosts={'time': 2})
+        selection = {'time': slice(2, -2)}
         expected = ds.isel(**selection)
         xrt.assert_equal(expected, actual)
