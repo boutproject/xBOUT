@@ -16,6 +16,11 @@ setup(
     author_email="thomas.nicholas@york.ac.uk",
     description='Collect data from BOUT++ runs in python using xarray',
     license="Apache",
+    python_requires='>=3.5',
+    install_requires=['xarray>=v0.11.0',
+                      'natsort>=5.5.0',
+                      'matplotlib>=2.2',
+                      'animatplot>=0.3'],
     long_description=read('README.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -26,7 +31,9 @@ setup(
         "Natural Language :: English",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3.5",
-        "Topic :: Scientific/Engineering :: Physics"
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Topic :: Scientific/Engineering :: Visualization"
     ],
     packages=find_packages(),
     include_package_data=True)
