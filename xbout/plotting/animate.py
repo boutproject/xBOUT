@@ -93,7 +93,9 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
 
         if not save_as:
             save_as = "{}_over_{}".format(variable, animate_over)
-        anim.save_gif(save_as)
+        # TODO save using PillowWriter instead once matplotlib 3.1 comes out
+        # see https://github.com/t-makaro/animatplot/issues/24
+        anim.save(save_as + '.gif', writer='imagemagick')
 
     return imshow_block
 
