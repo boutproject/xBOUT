@@ -12,7 +12,8 @@ import xarray.testing as xrt
 from natsort import natsorted
 
 from xbout.load import _check_filetype, _expand_wildcards, _expand_filepaths,\
-    _arrange_for_concatenation, _trim, _strip_metadata
+    _arrange_for_concatenation, _trim, _strip_metadata, \
+    _auto_open_mfboutdataset
 
 
 def test_check_extensions(tmpdir):
@@ -162,11 +163,11 @@ class TestArrange:
 
 
 @pytest.fixture()
-def bout_xytexample_files(tmpdir_factory):
+def bout_xyt_example_files(tmpdir_factory):
     return _bout_xyt_example_files
 
 
-def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,1,6),
+def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6),
                             nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
@@ -195,7 +196,7 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,1,6)
     return glob_pattern
 
 
-def create_bout_ds_list(prefix, lengths=(2,4,1,6), nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
+def create_bout_ds_list(prefix, lengths=(2,4,7,6), nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
     """
     Mocks up a set of BOUT-like datasets.
 
@@ -233,7 +234,7 @@ def create_bout_ds_list(prefix, lengths=(2,4,1,6), nxpe=4, nype=2, nt=1, ghosts=
 
     return ds_list_sorted, file_list_sorted
 
-@pytest.fixture()
+
 def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nype=1,
                    upper_bndry_cells={}, lower_bndry_cells={}, guards={}, ghosts={}):
 
@@ -277,9 +278,9 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
 
 
 class TestStripMetadata():
-    def test_strip_metadata(self, create_bout_ds):
+    def test_strip_metadata(self):
 
-        original = create_bout_ds
+        original = create_bout_ds()
         assert original['NXPE'] == 1
 
         ds, metadata = _strip_metadata(original)
@@ -289,23 +290,31 @@ class TestStripMetadata():
         assert metadata['NXPE'] == 1
 
 
-@pytest.mark.skip
 class TestCombine:
-    def test_single_file(self):
-        ...
+    def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        expected = create_bout_ds()
+        xrt.assert_equal(actual.load(), expected.drop(['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB',
+                        'MZ']))
 
+    @pytest.mark.skip
     def test_combine_along_x(self):
         ...
 
+    @pytest.mark.skip
     def test_combine_along_y(self):
         ...
 
+    @pytest.mark.skip
     def test_combine_along_t(self):
         ...
 
+    @pytest.mark.skip
     def test_combine_along_xy(self):
         ...
 
+    @pytest.mark.skip
     def test_combine_along_tx(self):
         ...
 

@@ -9,7 +9,7 @@ from functools import partial
 from natsort import natsorted
 
 
-def _auto_open_mfboutdataset(datapath, chunks, info, keep_guards=True):
+def _auto_open_mfboutdataset(datapath, chunks={}, keep_guards=True):
     filepaths, filetype = _expand_filepaths(datapath)
 
     # Open just one file to read processor splitting
