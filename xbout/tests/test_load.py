@@ -5,13 +5,14 @@ import pytest
 
 import numpy as np
 
+from xarray import DataArray, Dataset
 from xarray.tests.test_dataset import create_test_data
 import xarray.testing as xrt
 
 from natsort import natsorted
 
 from xbout.load import _check_filetype, _expand_wildcards, _expand_filepaths,\
-    _arrange_for_concatenation, _trim
+    _arrange_for_concatenation, _trim, _strip_metadata
 
 
 def test_check_extensions(tmpdir):
@@ -161,7 +162,7 @@ class TestArrange:
 
 
 @pytest.fixture()
-def bout_xyt_example_files(tmpdir_factory):
+def bout_xytexample_files(tmpdir_factory):
     return _bout_xyt_example_files
 
 
@@ -232,20 +233,8 @@ def create_bout_ds_list(prefix, lengths=(2,4,1,6), nxpe=4, nype=2, nt=1, ghosts=
 
     return ds_list_sorted, file_list_sorted
 
-
-def assert_dataset_grids_equal(ds_grid1, ds_grid2):
-    assert ds_grid1.shape == ds_grid2.shape
-
-    for index, ds_dict1 in np.ndenumerate(ds_grid1):
-        ds1 = ds_dict1['key']
-        ds2 = ds_grid2[index]['key']
-        try:
-            xrt.assert_equal(ds1, ds2)
-        except AssertionError as error:
-            print('Datasets in position ' + str(index) + ' are not equal.\n' + str(error))
-
-
-def create_bout_ds(syn_data_type='random', lengths=(2,4,1,6), num=0, nxpe=1, nype=1,
+@pytest.fixture()
+def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nype=1,
                    upper_bndry_cells={}, lower_bndry_cells={}, guards={}, ghosts={}):
 
     # Set the shape of the data in this dataset
@@ -274,15 +263,12 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,1,6), num=0, nxpe=1, nyp
     n = DataArray(data, dims=['x', 'y', 'z', 't'])
     ds = Dataset({'n': n, 'T': T}).squeeze()
 
-    # Include the metadata about parallelization which collect requires
+    # Include metadata
     ds['NXPE'] = nxpe
     ds['NYPE'] = nype
     ds['MXG'] = guards.get('x', 0)
     ds['MYG'] = guards.get('y', 0)
-
     ds['nx'] = x_length
-
-    # Needed for old version of collect, not sure what this means?
     ds['MXSUB'] = ghosts.get('x', 0)
     ds['MYSUB'] = ghosts.get('y', 0)
     ds['MZ'] = z_length
@@ -290,9 +276,17 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,1,6), num=0, nxpe=1, nyp
     return ds
 
 
-@pytest.mark.skip
-class TestStripMetadata:
-    ...
+class TestStripMetadata():
+    def test_strip_metadata(self, create_bout_ds):
+
+        original = create_bout_ds
+        assert original['NXPE'] == 1
+
+        ds, metadata = _strip_metadata(original)
+
+        assert original.drop(['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB',
+                        'MZ']).equals(ds)
+        assert metadata['NXPE'] == 1
 
 
 @pytest.mark.skip
