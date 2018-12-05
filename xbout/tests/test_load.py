@@ -277,6 +277,9 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
     return ds
 
 
+METADATA_VARS = ['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB',
+                        'MZ']
+
 class TestStripMetadata():
     def test_strip_metadata(self):
 
@@ -285,8 +288,7 @@ class TestStripMetadata():
 
         ds, metadata = _strip_metadata(original)
 
-        assert original.drop(['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB',
-                        'MZ']).equals(ds)
+        assert original.drop(METADATA_VARS).equals(ds)
         assert metadata['NXPE'] == 1
 
 
@@ -295,24 +297,30 @@ class TestCombine:
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual, metadata = _auto_open_mfboutdataset(datapath=path)
         expected = create_bout_ds()
-        xrt.assert_equal(actual.load(), expected.drop(['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB',
-                        'MZ']))
+        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
-    @pytest.mark.skip
-    def test_combine_along_x(self):
-        ...
+    def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1,
+                                      syn_data_type='stepped')
+        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        expected = create_bout_ds()
+        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
-    @pytest.mark.skip
-    def test_combine_along_y(self):
-        ...
+    def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=3, nt=1)
+        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        expected = create_bout_ds()
+        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     @pytest.mark.skip
     def test_combine_along_t(self):
         ...
 
-    @pytest.mark.skip
-    def test_combine_along_xy(self):
-        ...
+    def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1)
+        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        expected = create_bout_ds()
+        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     @pytest.mark.skip
     def test_combine_along_tx(self):
