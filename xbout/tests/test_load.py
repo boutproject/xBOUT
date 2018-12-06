@@ -5,7 +5,7 @@ import pytest
 
 import numpy as np
 
-from xarray import DataArray, Dataset
+from xarray import DataArray, Dataset, concat
 from xarray.tests.test_dataset import create_test_data
 import xarray.testing as xrt
 
@@ -257,6 +257,8 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
     elif syn_data_type is 'stepped':
         # Each dataset contains a different number depending on the filename
         data = np.ones(shape) * num
+    elif isinstance(syn_data_type, int):
+        data = np.ones(shape)* syn_data_type
     else:
         raise ValueError('Not a recognised choice of type of synthetic bout data.')
 
@@ -292,39 +294,46 @@ class TestStripMetadata():
         assert metadata['NXPE'] == 1
 
 
-class TestCombine:
+# TODO also test loading multiple files which have ghost cells
+class TestCombineNoTrim:
     def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual, metadata = _auto_open_mfboutdataset(datapath=path)
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
-    # TODO fix these
-
-    @pytest.mark.skip
     def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1,
                                       syn_data_type='stepped')
         actual, metadata = _auto_open_mfboutdataset(datapath=path)
-        expected = create_bout_ds()
+
+        bout_ds = create_bout_ds
+        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x')
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
-    @pytest.mark.skip
     def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=3, nt=1)
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=3, nt=1,
+                                      syn_data_type='stepped')
         actual, metadata = _auto_open_mfboutdataset(datapath=path)
-        expected = create_bout_ds()
+
+        bout_ds = create_bout_ds
+        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2)], dim='y')
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     @pytest.mark.skip
     def test_combine_along_t(self):
         ...
 
-    @pytest.mark.skip
     def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1)
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1,
+                                      syn_data_type='stepped')
         actual, metadata = _auto_open_mfboutdataset(datapath=path)
-        expected = create_bout_ds()
+
+        bout_ds = create_bout_ds
+        line1 = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x')
+        line2 = concat([bout_ds(4), bout_ds(5), bout_ds(6), bout_ds(7)], dim='x')
+        line3 = concat([bout_ds(8), bout_ds(9), bout_ds(10), bout_ds(11)], dim='x')
+        expected = concat([line1, line2, line3], dim='y')
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     @pytest.mark.skip
