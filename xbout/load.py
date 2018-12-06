@@ -9,11 +9,11 @@ from functools import partial
 from natsort import natsorted
 
 
-def _auto_open_mfboutdataset(datapath, chunks, info, keep_guards=True):
+def _auto_open_mfboutdataset(datapath, chunks={}, info=True, keep_guards=True):
     filepaths, filetype = _expand_filepaths(datapath)
 
     # Open just one file to read processor splitting
-    nxpe, nype, mxg, myg, mxsub, mysub = _read_splitting(filepaths[0])
+    nxpe, nype, mxg, myg, mxsub, mysub = _read_splitting(filepaths[0], info)
 
     paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
@@ -59,8 +59,8 @@ def _check_filetype(path):
     elif path.suffix == '.h5netcdf':
         filetype = 'h5netcdf'
     else:
-        raise IOError("Do not know how to read the supplied file extension: "
-                      "{}".format(path.suffix))
+        raise IOError("Do not know how to read file extension "
+                      "\"{path.suffix}\"")
 
     return filetype
 
@@ -83,15 +83,26 @@ def _expand_wildcards(path):
     return natsorted(filepaths, key=lambda filepath: str(filepath))
 
 
-def _read_splitting(filepath):
-    # TODO make sure dask is being used here?
+def _read_splitting(filepath, info=True):
     ds = xarray.open_dataset(str(filepath))
 
     # TODO check that BOUT doesn't ever set the number of guards to be different to the number of ghosts
 
-    nxpe, nype = ds['NXPE'].values, ds['NYPE'].values
-    mxg, myg = ds['MXG'].values, ds['MYG'].values
-    mxsub, mysub = ds['MXSUB'].values, ds['MYSUB'].values
+    # Account for case of no parallelisation, when nxpe etc won't be in dataset
+    def get_scalar(ds, key, default=1, info=True):
+        if key in ds:
+            return ds[key].values
+        else:
+            if info is True:
+                print(f"{key} not found, setting to {default}")
+            return default
+
+    nxpe = get_scalar(ds, 'NXPE', default=1)
+    nype = get_scalar(ds, 'NYPE', default=1)
+    mxg = get_scalar(ds, 'MXG', default=2)
+    myg = get_scalar(ds, 'MYG', default=0)
+    mxsub = get_scalar(ds, 'MXSUB', default=ds.dims['x'] - 2 * mxg)
+    mysub = get_scalar(ds, 'MYSUB', default=ds.dims['y'] - 2 * myg)
 
     # Avoid trying to open this file twice
     ds.close()
