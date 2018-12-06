@@ -1,14 +1,19 @@
 from pathlib import Path
+import re
 
 import pytest
 
 import numpy as np
 
+from xarray import DataArray, Dataset
 from xarray.tests.test_dataset import create_test_data
 import xarray.testing as xrt
 
-from xbout.load import _check_filetype, _expand_wildcards, \
-    _arrange_for_concatenation, _trim
+from natsort import natsorted
+
+from xbout.load import _check_filetype, _expand_wildcards, _expand_filepaths,\
+    _arrange_for_concatenation, _trim, _strip_metadata, \
+    _auto_open_mfboutdataset
 
 
 def test_check_extensions(tmpdir):
@@ -27,7 +32,6 @@ def test_check_extensions(tmpdir):
 
     example_invalid_file = files_dir.join('example.txt')
     example_hdf5_file.write("content_txt")
-
     with pytest.raises(IOError):
         filetype = _check_filetype(Path(str(example_invalid_file)))
 
@@ -57,12 +61,21 @@ class TestPathHandling:
                 example_file = example_run_dir.join('example.' + str(j) + '.nc')
                 example_file.write("content")
                 filepaths.append(Path(str(example_file)))
-        expected_filepaths = sorted(filepaths, key=lambda filepath: str(filepath))
+        expected_filepaths = natsorted(filepaths,
+                                       key=lambda filepath: str(filepath))
 
         path = Path(str(files_dir.join('run*/example.*.nc')))
         actual_filepaths = _expand_wildcards(path)
 
         assert actual_filepaths == expected_filepaths
+
+    def test_no_files(self, tmpdir):
+        files_dir = tmpdir.mkdir("data")
+
+        with pytest.raises(IOError):
+            path = Path(str(files_dir.join('run*/example.*.nc')))
+            actual_filepaths = _expand_filepaths(path)
+            print(actual_filepaths)
 
 
 @pytest.fixture()
@@ -89,7 +102,7 @@ class TestArrange:
         expected_path_grid = [[['./run0/BOUT.dmp.0.nc']]]
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(paths, nxpe=1, nype=1)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == []
+        assert actual_concat_dims == [None, None, None]
 
     def test_arrange_along_x(self, create_filepaths):
         paths = create_filepaths(nxpe=3, nype=1, nt=1)
@@ -98,7 +111,7 @@ class TestArrange:
                                 './run0/BOUT.dmp.2.nc']]]
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(paths, nxpe=3, nype=1)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['x']
+        assert actual_concat_dims == [None, None, 'x']
 
     def test_arrange_along_y(self, create_filepaths):
         paths = create_filepaths(nxpe=1, nype=3, nt=1)
@@ -108,7 +121,7 @@ class TestArrange:
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(
             paths, nxpe=1, nype=3)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['y']
+        assert actual_concat_dims == [None, 'y', None]
 
     def test_arrange_along_t(self, create_filepaths):
         paths = create_filepaths(nxpe=1, nype=1, nt=3)
@@ -118,7 +131,7 @@ class TestArrange:
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(
             paths, nxpe=1, nype=1)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['t']
+        assert actual_concat_dims == ['t', None, None]
 
     def test_arrange_along_xy(self, create_filepaths):
         paths = create_filepaths(nxpe=3, nype=2, nt=1)
@@ -127,7 +140,7 @@ class TestArrange:
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(
             paths, nxpe=3, nype=2)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['x', 'y']
+        assert actual_concat_dims == [None, 'y', 'x']
 
     def test_arrange_along_xt(self, create_filepaths):
         paths = create_filepaths(nxpe=3, nype=1, nt=2)
@@ -136,7 +149,7 @@ class TestArrange:
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(
             paths, nxpe=3, nype=1)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['x', 't']
+        assert actual_concat_dims == ['t', None, 'x']
 
     def test_arrange_along_xyt(self, create_filepaths):
         paths = create_filepaths(nxpe=3, nype=2, nt=2)
@@ -146,26 +159,175 @@ class TestArrange:
                                ['./run1/BOUT.dmp.3.nc', './run1/BOUT.dmp.4.nc', './run1/BOUT.dmp.5.nc']]]
         actual_path_grid, actual_concat_dims = _arrange_for_concatenation(paths, nxpe=3, nype=2)
         assert expected_path_grid == actual_path_grid
-        assert actual_concat_dims == ['x', 'y', 't']
+        assert actual_concat_dims == ['t', 'y', 'x']
 
 
-@pytest.mark.skip
+@pytest.fixture()
+def bout_xyt_example_files(tmpdir_factory):
+    return _bout_xyt_example_files
+
+
+def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6),
+                            nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
+    """
+    Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
+
+    Deletes the temporary directory once that test is done.
+    """
+
+    save_dir = tmpdir_factory.mktemp("data")
+
+    ds_list, file_list = create_bout_ds_list(prefix=prefix, lengths=lengths, nxpe=nxpe, nype=nype, nt=nt,
+                                             ghosts=ghosts, guards=guards, syn_data_type=syn_data_type)
+
+    for ds, file_name in zip(ds_list, file_list):
+        ds.to_netcdf(str(save_dir.join(str(file_name))))
+
+    # Return a glob-like path to all files created, which has all file numbers replaced with a single asterix
+    path = str(save_dir.join(str(file_list[-1])))
+
+    count = 1
+    if nt > 1:
+        count += 1
+    # We have to reverse the path before limiting the number of numbers replaced so that the
+    # tests don't get confused by pytest's persistent temporary directories (which are also designated
+    # by different numbers)
+    glob_pattern = (re.sub(r'\d+', '*', path[::-1], count=count))[::-1]
+    return glob_pattern
+
+
+def create_bout_ds_list(prefix, lengths=(2,4,7,6), nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
+    """
+    Mocks up a set of BOUT-like datasets.
+
+    Structured as though they were produced by a x-y parallelised run with multiple restarts.
+    """
+
+    file_list = []
+    ds_list = []
+    for i in range(nxpe):
+        for j in range(nype):
+            num = (i + nxpe * j)
+            filename = prefix + "." + str(num) + ".nc"
+            file_list.append(filename)
+
+            # Include ghost cells
+            upper_bndry_cells = {dim: ghosts.get(dim) for dim in ghosts.keys()}
+            lower_bndry_cells = {dim: ghosts.get(dim) for dim in ghosts.keys()}
+
+            # Include guard cells
+            for dim in ['x', 'y']:
+                if dim in guards.keys():
+                    if i == 0:
+                        lower_bndry_cells[dim] = guards[dim]
+                    if i == nxpe-1:
+                        upper_bndry_cells[dim] = guards[dim]
+
+            ds = create_bout_ds(syn_data_type=syn_data_type, num=num, lengths=lengths, nxpe=nxpe, nype=nype,
+                                upper_bndry_cells=upper_bndry_cells, lower_bndry_cells=lower_bndry_cells,
+                                guards=guards, ghosts=ghosts)
+            ds_list.append(ds)
+
+    # Sort this in order of num to remove any BOUT-specific structure
+    ds_list_sorted = [ds for filename, ds in sorted(zip(file_list, ds_list))]
+    file_list_sorted = [filename for filename, ds in sorted(zip(file_list, ds_list))]
+
+    return ds_list_sorted, file_list_sorted
+
+
+def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nype=1,
+                   upper_bndry_cells={}, lower_bndry_cells={}, guards={}, ghosts={}):
+
+    # Set the shape of the data in this dataset
+    x_length, y_length, z_length, t_length = lengths
+    x_length += upper_bndry_cells.get('x', 0) + lower_bndry_cells.get('x', 0)
+    y_length += upper_bndry_cells.get('y', 0) + lower_bndry_cells.get('y', 0)
+    z_length += upper_bndry_cells.get('z', 0) + lower_bndry_cells.get('z', 0)
+    t_length += upper_bndry_cells.get('t', 0) + lower_bndry_cells.get('t', 0)
+    shape = (x_length, y_length, z_length, t_length)
+
+    # Fill with some kind of synthetic data
+    if syn_data_type is 'random':
+        # Each dataset contains the same random noise
+        np.random.seed(seed=0)
+        data = np.random.randn(*shape)
+    elif syn_data_type is 'linear':
+        # Variables increase linearly across entire domain
+        raise NotImplementedError
+    elif syn_data_type is 'stepped':
+        # Each dataset contains a different number depending on the filename
+        data = np.ones(shape) * num
+    else:
+        raise ValueError('Not a recognised choice of type of synthetic bout data.')
+
+    T = DataArray(data, dims=['x', 'y', 'z', 't'])
+    n = DataArray(data, dims=['x', 'y', 'z', 't'])
+    ds = Dataset({'n': n, 'T': T}).squeeze()
+
+    # Include metadata
+    ds['NXPE'] = nxpe
+    ds['NYPE'] = nype
+    ds['MXG'] = guards.get('x', 0)
+    ds['MYG'] = guards.get('y', 0)
+    ds['nx'] = x_length
+    ds['MXSUB'] = ghosts.get('x', 0)
+    ds['MYSUB'] = ghosts.get('y', 0)
+    ds['MZ'] = z_length
+
+    return ds
+
+
+METADATA_VARS = ['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB',
+                        'MZ']
+
+class TestStripMetadata():
+    def test_strip_metadata(self):
+
+        original = create_bout_ds()
+        assert original['NXPE'] == 1
+
+        ds, metadata = _strip_metadata(original)
+
+        assert original.drop(METADATA_VARS).equals(ds)
+        assert metadata['NXPE'] == 1
+
+
 class TestCombine:
-    def test_single_file(self):
-        ...
+    def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        expected = create_bout_ds()
+        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
-    def test_combine_along_x(self):
-        ...
+    # TODO fix these
 
-    def test_combine_along_y(self):
-        ...
+    @pytest.mark.skip
+    def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1,
+                                      syn_data_type='stepped')
+        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        expected = create_bout_ds()
+        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
+    @pytest.mark.skip
+    def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=3, nt=1)
+        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        expected = create_bout_ds()
+        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
+
+    @pytest.mark.skip
     def test_combine_along_t(self):
         ...
 
-    def test_combine_along_xy(self):
-        ...
+    @pytest.mark.skip
+    def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1)
+        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        expected = create_bout_ds()
+        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
+    @pytest.mark.skip
     def test_combine_along_tx(self):
         ...
 
@@ -176,13 +338,9 @@ class TestTrim:
         actual = _trim(ds)
         xrt.assert_equal(actual, ds)
 
-    def test_trim(self):
+    def test_trim_ghosts(self):
         ds = create_test_data(0)
-        actual = _trim(ds, ghosts={'time': 2}, proc_splitting={'time': 4},
-                       proc_data_sizes={'time': 1})
-        selection = {'time': np.array([False, False, True, False, False,
-                                       False, False, True, False, False,
-                                       False, False, True, False, False,
-                                       False, False, True, False, False,])}
+        actual = _trim(ds, ghosts={'time': 2})
+        selection = {'time': slice(2, -2)}
         expected = ds.isel(**selection)
         xrt.assert_equal(expected, actual)
