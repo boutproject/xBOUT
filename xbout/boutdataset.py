@@ -54,8 +54,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
     # TODO handle possibility that we are loading a previously saved (and trimmed) dataset
 
     # Gather pointers to all numerical data from BOUT++ output files
-    ds, metadata = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
-                                            info=info)
+    ds, metadata = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks)
     ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
 
     if inputfilepath:
