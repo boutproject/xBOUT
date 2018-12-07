@@ -164,7 +164,10 @@ class BoutDatasetAccessor:
         if self.options is None:
             to_save.attrs = {}
         else:
-            # Store the metadata in the attributes dictionary rather than as data variables in the dataset
+            # Store the metadata as individual attributes because netCDF can't
+            # handle storing arbitrary objects in attrs
+            for key in to_save.attrs['metadata']:
+                to_save[key] = self.metadata[key]
             to_save.attrs['metadata'] = self.metadata
 
         if separate_vars:
