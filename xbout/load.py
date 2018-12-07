@@ -19,7 +19,6 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True, keep_guards=True):
 
     _preprocess = partial(_trim, ghosts={'x': mxg, 'y': myg})
 
-    # TODO Special case needed for case of just one dump file?
     ds = xarray.open_mfdataset(paths_grid, concat_dims=concat_dims,
                                data_vars='minimal', preprocess=_preprocess,
                                engine=filetype, chunks=chunks,
