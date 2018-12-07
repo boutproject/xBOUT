@@ -264,7 +264,7 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
 
     T = DataArray(data, dims=['x', 'y', 'z', 't'])
     n = DataArray(data, dims=['x', 'y', 'z', 't'])
-    ds = Dataset({'n': n, 'T': T}).squeeze()
+    ds = Dataset({'n': n, 'T': T})
 
     # Include metadata
     ds['NXPE'] = nxpe

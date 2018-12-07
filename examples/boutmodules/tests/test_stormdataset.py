@@ -1,10 +1,10 @@
 import pytest
 
 from xarray import concat
-from xcollect.boutdataset import open_boutdataset
-from xcollect.tests.test_collect import bout_xyt_example_files
+from xbout.boutdataset import open_boutdataset
+from xbout.tests.test_load import bout_xyt_example_files
 
-
+@pytest.mark.skip
 class TestStormDataset:
     @pytest.mark.xfail
     def test_storm_dataset(self, tmpdir_factory, bout_xyt_example_files):

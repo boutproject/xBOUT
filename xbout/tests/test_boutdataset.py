@@ -8,62 +8,14 @@ from pathlib import Path
 
 from boutdata.data import BoutOptionsFile, BoutOptions
 
-from xcollect.tests.test_collect import bout_xyt_example_files, create_bout_ds
-from xcollect.boutdataset import BoutAccessor, open_boutdataset
-from xcollect.collect import collect
+from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
+from xbout.boutdataset import BoutDatasetAccessor, open_boutdataset
 
 
-EXAMPLE_OPTIONS_FILE_PATH = './xcollect/tests/data/options/BOUT.inp'
+EXAMPLE_OPTIONS_FILE_PATH = './xbout/tests/data/options/BOUT.inp'
 
 
-@pytest.fixture(scope='session')
-def bout_example_file(tmpdir_factory):
-    """
-    Create single dataset containing variables like an unparallelised BOUT++ run.
-
-    Saves it as a temporary NetCDF file and returns the file.
-    """
-
-    np.random.seed(seed=0)
-    T = DataArray(np.random.randn(5, 10, 20), dims=['t', 'x', 'z'])
-    n = DataArray(np.random.randn(5, 10, 20), dims=['t', 'x', 'z'])
-
-    ds = Dataset({'n': n, 'T': T})
-
-    ds['NXPE'], ds['NYPE'] = 1, 1
-    ds['MXG'], ds['MYG'] = 2, 0
-
-    prefix = 'BOUT.dmp'
-    filename = prefix + ".0.nc"
-    save_dir = tmpdir_factory.mktemp("data")
-    save_path = save_dir.join(filename)
-    ds.to_netcdf(str(save_path))
-
-    return save_path
-
-
-class TestLoadData:
-    def test_load_data(self, bout_example_file):
-        save_path = bout_example_file
-
-        bd = open_boutdataset(datapath=str(save_path), inputfilepath=None)
-        actual = bd
-
-        np.random.seed(seed=0)
-        T = DataArray(np.random.randn(5, 10, 20), dims=['t', 'x', 'z'])
-        n = DataArray(np.random.randn(5, 10, 20), dims=['t', 'x', 'z'])
-        expected = Dataset({'n': n, 'T': T})
-
-        xrt.assert_equal(expected, actual)
-
-    def test_load_from_single_file(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        actual = open_boutdataset(datapath=path, inputfilepath=None).compute()
-        expected = create_bout_ds().drop(['NXPE', 'NYPE', 'MXG', 'MYG', 'MXSUB', 'MYSUB', 'MZ'])
-        xrt.assert_equal(actual, expected)
-
-
-class TestXarrayBehaviour:
+class TestBoutDatasetIsXarrayDataset:
     """
     Set of tests to check that BoutDatasets behave similarly to xarray Datasets.
     (With the accessor approach these should pass trivially now.)
@@ -116,18 +68,21 @@ class TestLoadInputFile:
         assert isinstance(ds.options, BoutOptions)
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason="Not yet implemented")
 class TestLoadLogFile:
     pass
 
-
+@pytest.mark.skip(reason="Need to sort out issue with saving metadata")
 class TestSave:
-    def test_save_all(self, tmpdir_factory, bout_xyt_example_files):
+    @pytest.mark.parametrize("options", [False, True])
+    def test_save_all(self, tmpdir_factory, bout_xyt_example_files, options):
         # Create data
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=5, nt=1)
 
         # Load it as a boutdataset
         original = open_boutdataset(datapath=path, inputfilepath=None)
+        if not options:
+            original.attrs['options'] = {}
 
         # Save it to a netCDF file
         savepath = str(Path(path).parent) + 'temp_boutdata.nc'
