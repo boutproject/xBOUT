@@ -13,7 +13,7 @@ and feel free to raise issues asking questions or making suggestions.
 
 ### Loading your data
 
-The function `open_boutdataset()` uses xarray + dask to collect BOUT++
+The function `open_boutdataset()` uses xarray & dask to collect BOUT++
 data spread across multiple NetCDF files into one contiguous xarray
 dataset.
 
@@ -44,7 +44,7 @@ functionality is stored, for example
 ds['n'].bout.animate2D(animate_over='t', x='x', y='z')
 ```
 
-![density](docs/images/n_over_t.gif)
+![density](doc/images/n_over_t.gif)
 
 or
 
@@ -80,7 +80,7 @@ class StormAccessor(BoutAccessor):
 ds.storm.special_method()
 ```
 ```
-[Out] Do something only STORM users would want to do
+Out [1]: Do something only STORM users would want to do
 ```
 
 
