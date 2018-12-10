@@ -1,0 +1,8 @@
+# File : .pep8speaks.yml
+
+scanner:
+    diff_only: True  # If True, errors caused by only the patch are shown
+
+pycodestyle:
+    max-line-length: 89  # Default is 79 in PEP8
+
