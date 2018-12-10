@@ -7,6 +7,6 @@ install:
   - pip install -r requirements.txt
   - pip install .
 script:
-  - pytest -v --cov=xbout
+  - pytest -v --cov=xbout --pyargs xbout
 after_success:
   - codecov
