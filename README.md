@@ -1,5 +1,8 @@
 # xBOUT
 
+[![Build Status](https://travis-ci.org/boutproject/xBOUT.svg?branch=master)](https://travis-ci.org/boutproject/xBOUT.svg?branch=master)
+[![codecov](https://codecov.io/gh/boutproject/xBOUT/branch/master/graph/badge.svg)](https://codecov.io/gh/boutproject/xBOUT)
+
 xBOUT provides an interface for collecting the output data from a
 [BOUT++](https://boutproject.github.io/) simulation into an
 [xarray](http://xarray.pydata.org/en/stable/index.html)
