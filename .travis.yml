@@ -5,8 +5,8 @@ python:
 install:
   - pip install --upgrade setuptools pip pytest pytest-cov coverage codecov
   - pip install -r requirements.txt
-  - pip install .
+  - pip install -e .
 script:
-  - PY_IGNORE_IMPORTMISMATCH=1 pytest -v --cov
+  - pytest -v --cov
 after_success:
   - codecov
