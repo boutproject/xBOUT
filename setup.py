@@ -17,7 +17,7 @@ setup(
     description='Collect data from BOUT++ runs in python using xarray',
     license="Apache",
     python_requires='>=3.5',
-    install_requires=['xarray>=v0.11.0',
+    install_requires=['xarray>=v0.10.0',
                       'dask[array]>=1.0.0',
                       'natsort>=5.5.0',
                       'matplotlib>=2.2',
