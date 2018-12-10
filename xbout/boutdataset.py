@@ -1,11 +1,11 @@
 from pathlib import Path
 from pprint import pformat
+import configparser
 
 from xarray import register_dataset_accessor, \
     save_mfdataset, set_options, merge
 from dask.diagnostics import ProgressBar
 
-from boutdata.data import BoutOptionsFile
 
 from .load import _auto_open_mfboutdataset
 
@@ -59,7 +59,10 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
 
     if inputfilepath:
         # Use Ben's options class to store all input file options
-        options = BoutOptionsFile(inputfilepath)
+        with open(inputfilepath, 'r') as f:
+            config_string = "[dummysection]\n" + f.read()
+        options = configparser.ConfigParser()
+        options.read_string(config_string)
     else:
         options = None
     ds = _set_attrs_on_all_vars(ds, 'options', options)
@@ -119,7 +122,7 @@ class BoutDatasetAccessor:
                "Metadata:\n{}\n".format(pformat(self.metadata,
                                                 indent=4, compact=True))
         if self.options:
-            text += "Options:\n{}".format(pformat(self.options.as_dict(),
+            text += "Options:\n{}".format(pformat(self.options,
                                                   indent=4, compact=True))
         return text
 
