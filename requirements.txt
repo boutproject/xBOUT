@@ -3,3 +3,4 @@ dask[array] >= 1.0.0
 natsort >= 5.5.0
 matplotlib >= 2.2
 animatplot >= 0.3
+netcdf4 >= 1.4.0
