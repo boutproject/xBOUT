@@ -1,11 +1,8 @@
-import os
 from setuptools import setup, find_packages
 
+with open("README.md", 'r') as f:
+    long_description = f.read()
 
-# Utility function to read the README file.
-# Used for the long_description.
-def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 version_dict = {}
 with open("xbout/_version.py") as f:
     exec(f.read(), version_dict)
@@ -27,7 +24,12 @@ setup(
                       'natsort>=5.5.0',
                       'matplotlib>=2.2',
                       'animatplot>=0.3'],
-    long_description=read('README.md'),
+    extras_require={
+        'tests': ['pytest >= 3.3.0'],
+        'docs': ['sphinx >= 1.4'],
+    },
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Science/Research",
@@ -42,4 +44,13 @@ setup(
         "Topic :: Scientific/Engineering :: Visualization"
     ],
     packages=find_packages(),
-    include_package_data=True)
+    include_package_data=True,
+    command_options={
+        'build_sphinx': {
+            'project': ('setup.py', name),
+            'version': ('setup.py', version),
+            'release': ('setup.py', release),
+            'source_dir': ('setup.py', 'docs'),
+        }
+    },
+)
