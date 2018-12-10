@@ -1,0 +1,13 @@
+language: python
+python:
+  - "3.5"
+  - "3.6"
+  - "3.7"
+install:
+  - pip install --upgrade setuptools pip pytest pytest-cov coverage codecov
+  - pip install -r requirements.txt
+  - pip install .
+script:
+  - pytest -v --cov=xbout
+after_success:
+  - codecov
