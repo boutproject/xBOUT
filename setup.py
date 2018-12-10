@@ -6,12 +6,18 @@ from setuptools import setup, find_packages
 # Used for the long_description.
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
+version_dict = {}
+with open("xbout/_version.py") as f:
+    exec(f.read(), version_dict)
 
+name = 'xBOUT'
+version = version_dict['__version__']
+release = version
 
 setup(
-    name="xBOUT",
-    version="0.1",
-    url="https://github.com/TomNicholas/xBOUT",
+    name=name,
+    version=version,
+    url="https://github.com/boutproject/xBOUT",
     author="Thomas Nicholas",
     author_email="thomas.nicholas@york.ac.uk",
     description='Collect data from BOUT++ runs in python using xarray',
