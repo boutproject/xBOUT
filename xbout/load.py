@@ -93,7 +93,7 @@ def _read_splitting(filepath, info=True):
             return ds[key].values
         else:
             if info is True:
-                print(f"{key} not found, setting to {default}")
+                print("{key} not found, setting to {default}".format(key=key, default=default))
             return default
 
     nxpe = get_scalar(ds, 'NXPE', default=1)
