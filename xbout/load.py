@@ -19,10 +19,9 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True, keep_guards=True):
 
     _preprocess = partial(_trim, ghosts={'x': mxg, 'y': myg})
 
-    ds = xarray.open_mfdataset(paths_grid, concat_dims=concat_dims,
+    ds = xarray.open_mfdataset(paths_grid, concat_dim=concat_dims,
                                data_vars='minimal', preprocess=_preprocess,
-                               engine=filetype, chunks=chunks,
-                               infer_order_from_coords=False)
+                               engine=filetype, chunks=chunks)
 
     ds, metadata = _strip_metadata(ds)
 
