@@ -4,12 +4,11 @@ import numpy.testing as npt
 
 from xbout.load import _auto_open_mfboutdataset
 
-from boutdata import collect
-
 
 class TestAccuracyAgainstOldCollect:
-    @pytest.mark.xfail(reason="Collect tries to read 'nx' when it doesn't exist")
+    @pytest.mark.skip
     def test_single_file(self):
+        from boutdata import collect
         var = 'n'
         expected = collect(var, path='./tests/data/dump_files/single',
                            prefix='equilibrium', xguards=False)
@@ -21,9 +20,9 @@ class TestAccuracyAgainstOldCollect:
         assert expected.shape == actual.shape
         npt.assert_equal(actual, expected)
 
-    @pytest.mark.xfail(reason="Collect says mz=129, then collects an array of "
-                              "length 128?!")
+    @pytest.mark.skip
     def test_multiple_files_along_x(self):
+        from boutdata import collect
         var = 'n'
         expected = collect(var, path='./tests/data/dump_files/',
                            prefix='BOUT.dmp', xguards=False)
