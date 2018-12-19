@@ -9,7 +9,8 @@ from functools import partial
 from natsort import natsorted
 
 
-def _auto_open_mfboutdataset(datapath, chunks={}, info=True, keep_guards=True):
+def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
+                             keep_xguards=False, keep_yguards=False):
     filepaths, filetype = _expand_filepaths(datapath)
 
     # Open just one file to read processor splitting
@@ -17,11 +18,14 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True, keep_guards=True):
 
     paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
-    _preprocess = partial(_trim, ghosts={'x': mxg, 'y': myg})
+    _preprocess = partial(_trim, ghosts={'x': mxg, 'y': myg},
+                          guards={'x': mxg, 'y': myg},
+                          keep_guards={'x': keep_xguards, 'y': keep_yguards})
 
+    # TODO warning message to make sure user knows if it's parallelized
     ds = xarray.open_mfdataset(paths_grid, concat_dim=concat_dims,
                                data_vars='minimal', preprocess=_preprocess,
-                               engine=filetype, chunks=chunks)
+                               engine=filetype, chunks=chunks, parallel=False)
 
     ds, metadata = _strip_metadata(ds)
 
@@ -114,9 +118,9 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     ordering across different processors and consecutive simulation runs.
 
     Filepaths must be a sorted list. Uses the fact that BOUT's output files are
-    named as num = nxpe*i + j, and assumes that any consectutive simulation
-    runs are in directories which when sorted are in the correct order
-    (e.g. /run0/*, /run1/*,  ...).
+    named as num = nxpe*i + j, where i={0, ..., nype}, j={0, ..., nxpe}.
+    Also assumes that any consecutive simulation runs are in directories which
+    when sorted are in the correct order (e.g. /run0/*, /run1/*, ...).
     """
 
     nprocs = nxpe * nype
@@ -150,7 +154,7 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     return paths_grid, concat_dims
 
 
-def _trim(ds, ghosts={}, keep_guards=True):
+def _trim(ds, ghosts={}, guards={}, keep_guards={}, nxpe=1, nype=1):
     """
     Trims all ghost and guard cells off a single dataset read from a single
     BOUT dump file, to prepare for concatenation.
@@ -158,21 +162,70 @@ def _trim(ds, ghosts={}, keep_guards=True):
     Parameters
     ----------
     ghosts : dict, optional
+        Number of ghost cells along each dimension, e.g. {'x': 2, 't': 0}
     guards : dict, optional
+        Number of guard cells along each dimension, e.g. {'x': 2, 'y': 2}
     keep_guards : dict, optional
+        Whether or not to preserve the guard cells along each dimension, e.g.
+        {'x': True, 'y': False}
     """
 
-    # TODO generalise this function to handle guard cells being optional
-    if not keep_guards:
-        raise NotImplementedError
+    if any(keep_guards.values()):
+        # Work out if this particular dataset contains any guard cells
+        # Relies on a change to xarray so datasets always have source encoding
+        # See xarray GH issue #2550
+        lower_guards, upper_guards = _infer_contains_guards(
+            ds.encoding['source'], nxpe, nype)
 
     selection = {}
     for dim in ds.dims:
-        if ghosts.get(dim, False):
-            selection[dim] = slice(ghosts[dim], -ghosts[dim])
+        # Check for guard cells, otherwise use ghost cells, else leave alone
+        if keep_guards.get(dim, False):
+            if lower_guards.get(dim, False):
+                lower = None
+            else:
+                lower = guards[dim]
+        elif ghosts.get(dim, False):
+            lower = ghosts[dim]
+        else:
+            lower = None
+        if keep_guards.get(dim, False):
+            if upper_guards.get(dim, False):
+                upper = None
+            else:
+                upper = -guards[dim]
+        elif ghosts.get(dim, False):
+            upper = -ghosts[dim]
+        else:
+            upper = None
+        selection[dim] = slice(lower, upper)
 
     trimmed_ds = ds.isel(**selection)
     return trimmed_ds
+
+
+def _infer_contains_guards(filename, nxpe, nype):
+    """
+    Uses the name of the output file and the domain decomposition to work out
+    whether this dataset contains guard (boundary) cells, and on which side.
+
+    Uses knowledge that BOUT names its output files as /folder/prefix.num.nc,
+    with a numbering scheme
+    num = nxpe*i + j, where i={0, ..., nype}, j={0, ..., nxpe}
+    """
+
+    *prefix, filenum, extension = Path(filename).suffixes
+    filenum = int(filenum.replace('.', ''))
+
+    lower_guards, upper_guards = {}, {}
+
+    lower_guards['x'] = filenum % nxpe == 0
+    upper_guards['x'] = filenum % nxpe == nxpe-1
+
+    lower_guards['y'] = filenum < nxpe
+    upper_guards['y'] = filenum >= (nype-1)*nxpe
+
+    return lower_guards, upper_guards
 
 
 def _strip_metadata(ds):
