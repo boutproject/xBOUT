@@ -13,7 +13,7 @@ from natsort import natsorted
 
 from xbout.load import _check_filetype, _expand_wildcards, _expand_filepaths,\
     _arrange_for_concatenation, _trim, _strip_metadata, \
-    _auto_open_mfboutdataset
+    _auto_open_mfboutdataset, _infer_contains_guards
 
 
 def test_check_extensions(tmpdir):
@@ -344,12 +344,145 @@ class TestCombineNoTrim:
 class TestTrim:
     def test_no_trim(self):
         ds = create_test_data(0)
+        # Manually add filename - encoding normally added by xr.open_dataset
+        ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
         actual = _trim(ds)
         xrt.assert_equal(actual, ds)
 
     def test_trim_ghosts(self):
         ds = create_test_data(0)
+        # Manually add filename - encoding normally added by xr.open_dataset
+        ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
         actual = _trim(ds, ghosts={'time': 2})
         selection = {'time': slice(2, -2)}
         expected = ds.isel(**selection)
+        xrt.assert_equal(expected, actual)
+
+    def test_infer_guards_single_dataset(self):
+        filename = 'folder0/BOUT.dmp.0.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=1, nype=1)
+        assert lower_guards == {'x': True, 'y': True}
+        assert upper_guards == {'x': True, 'y': True}
+
+    def test_infer_guards_1d_x_parallelization(self):
+        filename = 'folder0/BOUT.dmp.0.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=1)
+        assert lower_guards == {'x': True, 'y': True}
+        assert upper_guards == {'x': False, 'y': True}
+
+        filename = 'folder0/BOUT.dmp.1.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=1)
+        assert lower_guards == {'x': False, 'y': True}
+        assert upper_guards == {'x': False, 'y': True}
+
+        filename = 'folder0/BOUT.dmp.2.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=1)
+        assert lower_guards == {'x': False, 'y': True}
+        assert upper_guards == {'x': True, 'y': True}
+
+    def test_infer_guards_1d_y_parallelization(self):
+        filename = 'folder0/BOUT.dmp.0.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=1, nype=3)
+        assert lower_guards == {'x': True, 'y': True}
+        assert upper_guards == {'x': True, 'y': False}
+
+        filename = 'folder0/BOUT.dmp.1.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=1, nype=3)
+        assert lower_guards == {'x': True, 'y': False}
+        assert upper_guards == {'x': True, 'y': False}
+
+        filename = 'folder0/BOUT.dmp.2.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=1, nype=3)
+        assert lower_guards == {'x': True, 'y': False}
+        assert upper_guards == {'x': True, 'y': True}
+
+    def test_infer_guards_2d_parallelization(self):
+        """
+        Numbering scheme for nxpe=3, nype=4
+
+        y  9 10 11
+        ^  6 7  8
+        |  3 4  5
+        |  0 1  2
+         -----> x
+        """
+
+        # Bottom left corner
+        filename = 'folder0/BOUT.dmp.0.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=4)
+        assert lower_guards == {'x': True, 'y': True}
+        assert upper_guards == {'x': False, 'y': False}
+
+        # Bottom right corner
+        filename = 'folder0/BOUT.dmp.2.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=4)
+        assert lower_guards == {'x': False, 'y': True}
+        assert upper_guards == {'x': True, 'y': False}
+
+        # Top left corner
+        filename = 'folder0/BOUT.dmp.9.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=4)
+        assert lower_guards == {'x': True, 'y': False}
+        assert upper_guards == {'x': False, 'y': True}
+
+        # Top right corner
+        filename = 'folder0/BOUT.dmp.11.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=4)
+        assert lower_guards == {'x': False, 'y': False}
+        assert upper_guards == {'x': True, 'y': True}
+
+        # Centre
+        filename = 'folder0/BOUT.dmp.7.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=4)
+        assert lower_guards == {'x': False, 'y': False}
+        assert upper_guards == {'x': False, 'y': False}
+
+        # Left side
+        filename = 'folder0/BOUT.dmp.3.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=4)
+        assert lower_guards == {'x': True, 'y': False}
+        assert upper_guards == {'x': False, 'y': False}
+
+        # Right side
+        filename = 'folder0/BOUT.dmp.5.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=4)
+        assert lower_guards == {'x': False, 'y': False}
+        assert upper_guards == {'x': True, 'y': False}
+
+        # Bottom side
+        filename = 'folder0/BOUT.dmp.1.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=4)
+        assert lower_guards == {'x': False, 'y': True}
+        assert upper_guards == {'x': False, 'y': False}
+
+        # Top side
+        filename = 'folder0/BOUT.dmp.10.nc'
+        lower_guards, upper_guards = _infer_contains_guards(filename,
+                                                            nxpe=3, nype=4)
+        assert lower_guards == {'x': False, 'y': False}
+        assert upper_guards == {'x': False, 'y': True}
+
+    @pytest.mark.xfail
+    def test_keep_xguards(self):
+        ds = create_test_data(0)
+        # Manually add filename - encoding normally added by xr.open_dataset
+        ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
+
+        actual = _trim(ds, ghosts={'time': 2}, keep_guards={'time': True})
+        expected = ds  # Should be unchanged
         xrt.assert_equal(expected, actual)
