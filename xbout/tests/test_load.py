@@ -279,8 +279,8 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
     return ds
 
 
-METADATA_VARS = ['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB',
-                        'MZ']
+METADATA_VARS = ['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB', 'MZ']
+
 
 class TestStripMetadata():
     def test_strip_metadata(self):
@@ -346,7 +346,7 @@ class TestTrim:
         ds = create_test_data(0)
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
-        actual = _trim(ds)
+        actual = _trim(ds, ghosts={}, guards={}, keep_guards={})
         xrt.assert_equal(actual, ds)
 
     def test_trim_ghosts(self):
@@ -433,12 +433,14 @@ class TestTrim:
         assert actual_lower_guards == lower_guards
         assert actual_upper_guards == upper_guards
 
-    @pytest.mark.xfail
     def test_keep_xguards(self):
         ds = create_test_data(0)
+        ds = ds.rename({'dim2': 'x'})
+
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
 
-        actual = _trim(ds, ghosts={'time': 2}, keep_guards={'time': True})
+        actual = _trim(ds, ghosts={'x': 2}, guards={'x': 2},
+                       keep_guards={'x': True}, nxpe=1, nype=1)
         expected = ds  # Should be unchanged
         xrt.assert_equal(expected, actual)

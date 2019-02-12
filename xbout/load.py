@@ -20,7 +20,8 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
 
     _preprocess = partial(_trim, ghosts={'x': mxg, 'y': myg},
                           guards={'x': mxg, 'y': myg},
-                          keep_guards={'x': keep_xguards, 'y': keep_yguards})
+                          keep_guards={'x': keep_xguards, 'y': keep_yguards},
+                          nxpe=nxpe, nype=nype)
 
     # TODO warning message to make sure user knows if it's parallelized
     ds = xarray.open_mfdataset(paths_grid, concat_dim=concat_dims,
@@ -154,7 +155,7 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     return paths_grid, concat_dims
 
 
-def _trim(ds, ghosts={}, guards={}, keep_guards={}, nxpe=1, nype=1):
+def _trim(ds, ghosts, guards={}, keep_guards={}, nxpe=1, nype=1):
     """
     Trims all ghost and guard cells off a single dataset read from a single
     BOUT dump file, to prepare for concatenation.
@@ -176,6 +177,8 @@ def _trim(ds, ghosts={}, guards={}, keep_guards={}, nxpe=1, nype=1):
         # See xarray GH issue #2550
         lower_guards, upper_guards = _infer_contains_guards(
             ds.encoding['source'], nxpe, nype)
+    else:
+        lower_guards, upper_guards = {}, {}
 
     selection = {}
     for dim in ds.dims:
@@ -184,7 +187,7 @@ def _trim(ds, ghosts={}, guards={}, keep_guards={}, nxpe=1, nype=1):
             if lower_guards.get(dim, False):
                 lower = None
             else:
-                lower = guards[dim]
+                lower = max(ghosts[dim], guards[dim])
         elif ghosts.get(dim, False):
             lower = ghosts[dim]
         else:
@@ -193,7 +196,7 @@ def _trim(ds, ghosts={}, guards={}, keep_guards={}, nxpe=1, nype=1):
             if upper_guards.get(dim, False):
                 upper = None
             else:
-                upper = -guards[dim]
+                upper = -max(ghosts[dim], guards[dim])
         elif ghosts.get(dim, False):
             upper = -ghosts[dim]
         else:
