@@ -1,4 +1,3 @@
-from pathlib import Path
 from pprint import pformat
 import configparser
 
@@ -167,15 +166,16 @@ class BoutDatasetAccessor:
             to_save = to_save.astype(save_dtype)
 
         # TODO How should I store other data? In the attributes dict?
-        # TODO Convert Ben's options class to a (flattened) nested dictionary then store it in ds.attrs?
-        if self.options is None:
-            to_save.attrs = {}
+        if self.options:
+            # TODO Convert Ben's options class to a (flattened) nested
+            # dictionary then store it in ds.attrs?
+            raise NotImplementedError("Haven't decided how to write options "
+                                      "file back out yet")
         else:
-            # Store the metadata as individual attributes because netCDF can't
-            # handle storing arbitrary objects in attrs
-            for key in to_save.attrs['metadata']:
-                to_save[key] = self.metadata[key]
-            to_save.attrs['metadata'] = self.metadata
+            # Store the metadata as individual attributes instead because
+            # netCDF can't handle storing arbitrary objects in attrs
+            for key in to_save.attrs.pop('metadata'):
+                to_save.attrs[key] = self.metadata[key]
 
         if separate_vars:
             # Save each time-dependent variable to a different netCDF file
