@@ -165,7 +165,8 @@ class BoutDatasetAccessor:
         if save_dtype is not None:
             to_save = to_save.astype(save_dtype)
 
-        options = to_save.attrs.pop('options')
+        options = to_save.attrs['options']
+        del to_save.attrs['options']
         if options:
             # TODO Convert Ben's options class to a (flattened) nested
             # dictionary then store it in ds.attrs?
@@ -174,8 +175,9 @@ class BoutDatasetAccessor:
         else:
             # Store the metadata as individual attributes instead because
             # netCDF can't handle storing arbitrary objects in attrs
-            for key in to_save.attrs.pop('metadata'):
+            for key in to_save.attrs['metadata']:
                 to_save.attrs[key] = self.metadata[key]
+            del to_save.attrs['metadata']
 
         if separate_vars:
             # Save each time-dependent variable to a different netCDF file
