@@ -25,8 +25,9 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
 
     # TODO warning message to make sure user knows if it's parallelized
     ds = xarray.open_mfdataset(paths_grid, concat_dim=concat_dims,
-                               data_vars='minimal', preprocess=_preprocess,
-                               engine=filetype, chunks=chunks, parallel=False)
+                               combine='manual', data_vars='minimal',
+                               preprocess=_preprocess, engine=filetype,
+                               chunks=chunks, parallel=False)
 
     ds, metadata = _strip_metadata(ds)
 
