@@ -165,8 +165,8 @@ class BoutDatasetAccessor:
         if save_dtype is not None:
             to_save = to_save.astype(save_dtype)
 
-        # TODO How should I store other data? In the attributes dict?
-        if self.options:
+        options = self.attrs.pop('options')
+        if options:
             # TODO Convert Ben's options class to a (flattened) nested
             # dictionary then store it in ds.attrs?
             raise NotImplementedError("Haven't decided how to write options "
