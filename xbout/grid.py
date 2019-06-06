@@ -1,4 +1,5 @@
 from pathlib import Path
+from warnings import warn
 
 import xarray as xr
 import numpy as np
@@ -30,6 +31,17 @@ def open_grid(gridfilepath='./grid.nc', ds=None):
     gridfilepath = Path(gridfilepath)
     grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath))
 
+    # TODO find out what 'yup_xsplit' etc are in the doublenull storm file John gave me
+    # For now drop any variables with extra dimensions
+    variables = list(grid.variables)
+    vars_to_drop = [var for var in variables
+                    if not all(dim in ['t', 'x', 'y', 'z']
+                               for dim in grid[var].dims)]
+    if vars_to_drop:
+        warn("Will drop variables {} because they had unrecognised dimensions"
+             .format(vars_to_drop))
+    grid = grid.drop(vars_to_drop)
+
     # Merge into one dataset, with scalar vars in attrs
     grid, grid_metadata = _separate_metadata(grid)
     if ds is None:
@@ -38,34 +50,47 @@ def open_grid(gridfilepath='./grid.nc', ds=None):
         ds = xr.merge(ds, grid)
     ds = _set_attrs_on_all_vars(ds, 'grid', grid_metadata)
 
-
+    # TODO should this be refactored somewhere else to handle slabs with no grid file?
     # Define possible coordinate systems
     grid_type = grid.attrs.get('coordinates_type')
     if grid_type == 'orthogonal':
-        # Change names of x, y, z to more informative ones
-        ds = ds.rename({'x': 'r',
-                        'y': 'theta',
-                        'z': 'phi'})
+        # Change names of dimensions to Orthogonal Toroidal ones
+        ds = ds.rename(y='theta', inplace=True)
 
         # Add 1D Orthogonal Toroidal coordinates
-        # TODO use options to set this correctly
-        ny, nz = ds.dims['theta'], ds.dims['phi']
-        r = grid['hthe']
-        r.attrs['units'] = 'm'
+        ny = ds.dims['theta']
         theta = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=ny),
-                             dims='y')
-        phi = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=nz),
-                           dims='phi')
-        ds = ds.assign_coords({'r': r, 'theta': theta, 'phi': phi})
+                             dims='theta')
+        ds = ds.assign_coords(theta=theta)
+
+        # TODO make this coordinate 1D in simplified cases?
+        ds = ds.rename(psixy='psi', inplace=True)
+        ds = ds.set_coords('psi')
+        ds['psi'].attrs['units'] = 'Wb'
+
+        # If full data (not just grid file) then toroidal dim will be present
+        if 'z' in ds.dims:
+            ds = ds.rename(z='phi', inplace=True)
+            nz = ds.dims['phi']
+            phi = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=nz),
+                               dims='phi')
+            ds = ds.assign_coords(phi=phi)
 
         # Add 2D Cylindrical coordinates
-        ds = ds.assign_coords({'R': grid['Rxy'], 'Z': grid['Zxy']})
+        ds = ds.rename(Rxy='R', Zxy='Z', inplace=True)
+        ds = ds.set_coords(['R', 'Z'])
 
     elif grid_type is None:
         # TODO Some definition of slabs?
         raise ValueError("No coordinates_type in grid file")
 
+    # TODO special case for s-alpha?
+    # Add radial coordinate
+    #r = ds['hthe']
+    #r.attrs['units'] = 'm'
+    #ds = ds.assign_coords(r=r)
+
     else:
-        raise ValueError("Unrecognised coordinates type {}".format(grid_type))
+        raise ValueError("Unrecognised coordinates_type {}".format(grid_type))
 
     return ds
