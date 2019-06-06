@@ -7,7 +7,7 @@ import xarray as xr
 
 from natsort import natsorted
 
-from .grid import _open_grid
+from .grid import open_grid
 from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype
 
 
@@ -70,7 +70,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
     ds = _set_attrs_on_all_vars(ds, 'options', options)
 
     if gridfilepath:
-        ds = _open_grid(ds, gridfilepath)
+        ds = open_grid(ds, gridfilepath)
 
     # TODO read and store git commit hashes from output files
 
