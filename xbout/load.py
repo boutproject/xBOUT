@@ -1,12 +1,88 @@
 from warnings import warn
 from pathlib import Path
-
-import numpy as np
-import xarray
-
 from functools import partial
+import configparser
+
+import xarray as xr
 
 from natsort import natsorted
+
+from .grid import _open_grid
+from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype
+
+
+# This code should run whenever any function from this module is imported
+# Set all attrs to survive all mathematical operations
+# (see https://github.com/pydata/xarray/pull/2482)
+try:
+    xr.set_options(keep_attrs=True)
+except ValueError:
+    raise ImportError("For dataset attributes to be permanent you need to be "
+                      "using the development version of xarray - found at "
+                      "https://github.com/pydata/xarray/")
+try:
+    xr.set_options(file_cache_maxsize=256)
+except ValueError:
+    raise ImportError("For open and closing of netCDF files correctly you need"
+                      " to be using the development version of xarray - found"
+                      " at https://github.com/pydata/xarray/")
+
+
+# TODO somehow check that we have access to the latest version of auto_combine
+
+
+def open_boutdataset(datapath='./BOUT.dmp.*.nc',
+                     inputfilepath=None, gridfilepath=None, chunks={},
+                     run_name=None, info=True):
+    """
+    Load a dataset from a set of BOUT output files, including the input options file.
+
+    Parameters
+    ----------
+    datapath : str, optional
+    prefix : str, optional
+    slices : slice object, optional
+    chunks : dict, optional
+    inputfilepath : str, optional
+    gridfilepath : str, optional
+    run_name : str, optional
+    info : bool, optional
+
+    Returns
+    -------
+    ds : xarray.Dataset
+    """
+
+    # TODO handle possibility that we are loading a previously saved (and trimmed) dataset
+
+    # Gather pointers to all numerical data from BOUT++ output files
+    ds, metadata = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks)
+    ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
+
+    if inputfilepath:
+        # Use Ben's options class to store all input file options
+        with open(inputfilepath, 'r') as f:
+            config_string = "[dummysection]\n" + f.read()
+        options = configparser.ConfigParser()
+        options.read_string(config_string)
+    else:
+        options = None
+    ds = _set_attrs_on_all_vars(ds, 'options', options)
+
+    if gridfilepath:
+        ds = _open_grid(ds, gridfilepath)
+
+    # TODO read and store git commit hashes from output files
+
+    if run_name:
+        ds.name = run_name
+
+    if info is 'terse':
+        print("Read in dataset from {}".format(str(Path(datapath))))
+    elif info:
+        print("Read in:\n{}".format(ds.bout))
+
+    return ds
 
 
 def _auto_open_mfboutdataset(datapath, chunks={}, info=True, keep_guards=True):
@@ -19,12 +95,12 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True, keep_guards=True):
 
     _preprocess = partial(_trim, ghosts={'x': mxg, 'y': myg})
 
-    ds = xarray.open_mfdataset(paths_grid, concat_dims=concat_dims,
-                               data_vars='minimal', preprocess=_preprocess,
-                               engine=filetype, chunks=chunks,
-                               infer_order_from_coords=False)
+    ds = xr.open_mfdataset(paths_grid, concat_dims=concat_dims,
+                           data_vars='minimal', preprocess=_preprocess,
+                           engine=filetype, chunks=chunks,
+                           infer_order_from_coords=False)
 
-    ds, metadata = _strip_metadata(ds)
+    ds, metadata = _separate_metadata(ds)
 
     return ds, metadata
 
@@ -47,21 +123,9 @@ def _expand_filepaths(datapath):
              "Recommend using `xr.set_options(file_cache_maxsize=NUM)`"
              " to explicitly set this to a large enough value."
              .format(str(len(filepaths))), UserWarning)
-        xarray.set_options(file_cache_maxsize=len(filepaths))
+        xr.set_options(file_cache_maxsize=len(filepaths))
 
     return filepaths, filetype
-
-
-def _check_filetype(path):
-    if path.suffix == '.nc':
-        filetype = 'netcdf4'
-    elif path.suffix == '.h5netcdf':
-        filetype = 'h5netcdf'
-    else:
-        raise IOError("Do not know how to read file extension "
-                      "\"{path.suffix}\"")
-
-    return filetype
 
 
 def _expand_wildcards(path):
@@ -83,7 +147,7 @@ def _expand_wildcards(path):
 
 
 def _read_splitting(filepath, info=True):
-    ds = xarray.open_dataset(str(filepath))
+    ds = xr.open_dataset(str(filepath))
 
     # TODO check that BOUT doesn't ever set the number of guards to be different to the number of ghosts
 
@@ -174,22 +238,3 @@ def _trim(ds, ghosts={}, keep_guards=True):
 
     trimmed_ds = ds.isel(**selection)
     return trimmed_ds
-
-
-def _strip_metadata(ds):
-    """
-    Extract the metadata (nxpe, myg etc.) from the Dataset.
-
-    Assumes that all scalar variables are metadata, not physical data!
-    """
-
-    # Find only the scalar variables
-    variables = list(ds.variables)
-    scalar_vars = [var for var in variables
-                   if not any(dim in ['t', 'x', 'y', 'z'] for dim in ds[var].dims)]
-
-    # Save metadata as a dictionary
-    metadata_vals = [np.asscalar(ds[var].values) for var in scalar_vars]
-    metadata = dict(zip(scalar_vars, metadata_vals))
-
-    return ds.drop(scalar_vars), metadata

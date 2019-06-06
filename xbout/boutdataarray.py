@@ -1,4 +1,5 @@
-from pprint import pformat
+from pprint import pformat as prettyformat
+from functools import partial
 
 from xarray import register_dataarray_accessor
 
@@ -24,7 +25,8 @@ class BoutDataArrayAccessor:
 
         self.data = da
         self.metadata = da.attrs['metadata']
-        self.options = da.attrs['options']
+        self.options = da.attrs.get('options')  # Might be None if no inp file
+        self.grid = da.attrs.get('grid')  # Might be None if no grid file
 
     def __str__(self):
         """
@@ -33,13 +35,14 @@ class BoutDataArrayAccessor:
         Accessed by print(da.bout)
         """
 
-        text = "<xbout.BoutDataArray>\n" + \
+        styled = partial(prettyformat, indent=4, compact=True)
+        text = "<xbout.BoutDataset>\n" + \
                "Contains:\n{}\n".format(str(self.data)) + \
-               "Metadata:\n{}".format(pformat(self.metadata,
-                                              indent=4, compact=True))
+               "Metadata:\n{}\n".format(styled(self.metadata))
         if self.options:
-            text += "Options:\n{}".format(pformat(self.options.as_dict(),
-                                                  indent=4, compact=True))
+            text += "Options:\n{}".format(styled(self.options))
+        if self.grid:
+            text += "Grid:\n{}".format(styled(self.grid))
         return text
 
     def animate2D(self, animate_over='t', x='x', y='y', animate=True,
