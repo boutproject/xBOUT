@@ -7,7 +7,7 @@ import numpy as np
 from .utils import _set_attrs_on_all_vars, _check_filetype, _separate_metadata
 
 
-def open_grid(gridfilepath='./grid.nc', ds=None):
+def open_grid(gridfilepath='./grid.nc', grid_type=None, ds=None, quiet=False):
     """
     Opens a BOUT++ grid file.
 
@@ -18,9 +18,15 @@ def open_grid(gridfilepath='./grid.nc', ds=None):
     Parameters
     ----------
     gridfilepath : str, optional
+    grid_type : str, optional
+
+
+        If not specified then will attempt to read it from the file attrs.
+        If still not found then a warning will be thrown, which can be
+        suppressed by passing `quiet`=True.
     ds : xarray.Dataset, optional
         BOUT dataset to merge grid information with.
-        Leave unspecified if you just want to open the grid file.
+        Leave unspecified if you just want to open the grid file alone.
 
     Returns
     -------
@@ -50,9 +56,19 @@ def open_grid(gridfilepath='./grid.nc', ds=None):
         ds = xr.merge(ds, grid)
     ds = _set_attrs_on_all_vars(ds, 'grid', grid_metadata)
 
+    ds = _add_grid_coords(ds, grid_type, quiet)
+
+    return ds
+
+
+def _add_grid_coords(ds, grid_type, quiet=False):
+        
+    if grid_type is None:
+        if grid_type in ds.attrs:
+            grid_type = ds.attrs.get('grid_type')
+
     # TODO should this be refactored somewhere else to handle slabs with no grid file?
     # Define possible coordinate systems
-    grid_type = grid.attrs.get('coordinates_type')
     if grid_type == 'orthogonal':
         # Change names of dimensions to Orthogonal Toroidal ones
         ds = ds.rename(y='theta', inplace=True)
@@ -82,15 +98,17 @@ def open_grid(gridfilepath='./grid.nc', ds=None):
 
     elif grid_type is None:
         # TODO Some definition of slabs?
-        raise ValueError("No coordinates_type in grid file")
+        if not quiet:
+            warn("No grid_type found, no coordinates will be added")
+
+    else:
+        raise ValueError("Unrecognised value of grid_type: {}"
+                         .format(grid_type))
 
     # TODO special case for s-alpha?
     # Add radial coordinate
     #r = ds['hthe']
     #r.attrs['units'] = 'm'
     #ds = ds.assign_coords(r=r)
-
-    else:
-        raise ValueError("Unrecognised coordinates_type {}".format(grid_type))
 
     return ds
