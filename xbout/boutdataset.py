@@ -17,16 +17,10 @@ class BoutDatasetAccessor:
     """
 
     def __init__(self, ds):
-
-        # # Load data variables
-        # # Should we just load whole dataset here?
-        # self.datapath = datapath
-        # self.prefix = prefix
-
         self.data = ds
-        self.metadata = ds.attrs['metadata']
-        self.options = ds.attrs.get('options')  # Might be None if no inp file
-        self.grid = ds.attrs.get('grid')  # Might be None if no grid file
+        self.metadata = ds.attrs.get('metadata')  # None if just grid file
+        self.options = ds.attrs.get('options')  # None if no inp file
+        self.grid = ds.attrs.get('grid')  # None if no grid file
 
     def __str__(self):
         """
