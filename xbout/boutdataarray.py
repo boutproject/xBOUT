@@ -4,6 +4,7 @@ from functools import partial
 from xarray import register_dataarray_accessor
 
 from .plotting.animate import animate_imshow, animate_line
+from .plotting.plots import pcolormesh
 
 
 @register_dataarray_accessor('bout')
@@ -17,16 +18,10 @@ class BoutDataArrayAccessor:
     """
 
     def __init__(self, da):
-
-        # # Load data variables
-        # # Should we just load whole dataset here?
-        # self.datapath = datapath
-        # self.prefix = prefix
-
         self.data = da
-        self.metadata = da.attrs['metadata']
-        self.options = da.attrs.get('options')  # Might be None if no inp file
-        self.grid = da.attrs.get('grid')  # Might be None if no grid file
+        self.metadata = da.attrs.get('metadata')  # None if just grid file
+        self.options = da.attrs.get('options')  # None if no inp file
+        self.grid = da.attrs.get('grid')  # None if no grid file
 
     def __str__(self):
         """
@@ -94,7 +89,7 @@ class BoutDataArrayAccessor:
                 "({})".format(str(n_dims)))
 
     def animate1D(self, animate_over='t', x='x', y='y', animate=True,
-                 fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
+                  fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
         data = self.data
         variable = data.name
         n_dims = len(data.dims)
@@ -109,4 +104,8 @@ class BoutDataArrayAccessor:
             return line_block
 
     # TODO BOUT-specific plotting functionality would be implemented as methods here, e.g. ds.bout.plot_poloidal
+
+    def pcolormesh(self, x='R', y='Z', ax=None, **kwargs):
+        return pcolormesh(self.data, x=x, y=y, ax=ax, **kwargs)
+
     # TODO Could trial a 2D surface plotting method here
