@@ -1,6 +1,9 @@
 from .load import open_boutdataset
 from .grid import open_grid
 
+from . import geometries
+from .geometries import register_geometry
+
 from .boutdataset import BoutDatasetAccessor
 from .boutdataarray import BoutDataArrayAccessor
 
