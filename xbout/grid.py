@@ -2,12 +2,12 @@ from pathlib import Path
 from warnings import warn
 
 import xarray as xr
-import numpy as np
 
+from . import geometries
 from .utils import _set_attrs_on_all_vars, _check_filetype, _separate_metadata
 
 
-def open_grid(gridfilepath='./grid.nc', grid_type=None, ds=None, quiet=False):
+def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False):
     """
     Opens a BOUT++ grid file.
 
@@ -18,12 +18,16 @@ def open_grid(gridfilepath='./grid.nc', grid_type=None, ds=None, quiet=False):
     Parameters
     ----------
     gridfilepath : str, optional
-    grid_type : str, optional
-
+    geometry : str, optional
+        The geometry type of the grid data. This will specify what type of
+        coordinates to add to the dataset, e.g. 'toroidal' or 'cylindrical'.
 
         If not specified then will attempt to read it from the file attrs.
         If still not found then a warning will be thrown, which can be
         suppressed by passing `quiet`=True.
+
+        To define a new type of geometry you need to use the
+        `register_geometry` decorator.
     ds : xarray.Dataset, optional
         BOUT dataset to merge grid information with.
         Leave unspecified if you just want to open the grid file alone.
@@ -56,59 +60,15 @@ def open_grid(gridfilepath='./grid.nc', grid_type=None, ds=None, quiet=False):
         ds = xr.merge(ds, grid)
     ds = _set_attrs_on_all_vars(ds, 'grid', grid_metadata)
 
-    ds = _add_grid_coords(ds, grid_type, quiet)
+    if geometry is None:
+        if geometry in ds.attrs:
+            geometry = ds.attrs.get('geometry')
+        else:
+            if not quiet:
+                warn("No geometry type found, no coordinates will be added")
 
-    return ds
-
-
-def _add_grid_coords(ds, grid_type, quiet=False):
-        
-    if grid_type is None:
-        if grid_type in ds.attrs:
-            grid_type = ds.attrs.get('grid_type')
-
-    # TODO should this be refactored somewhere else to handle slabs with no grid file?
-    # Define possible coordinate systems
-    if grid_type == 'orthogonal':
-        # Change names of dimensions to Orthogonal Toroidal ones
-        ds = ds.rename(y='theta', inplace=True)
-
-        # Add 1D Orthogonal Toroidal coordinates
-        ny = ds.dims['theta']
-        theta = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=ny),
-                             dims='theta')
-        ds = ds.assign_coords(theta=theta)
-
-        # TODO make this coordinate 1D in simplified cases?
-        ds = ds.rename(psixy='psi', inplace=True)
-        ds = ds.set_coords('psi')
-        ds['psi'].attrs['units'] = 'Wb'
-
-        # If full data (not just grid file) then toroidal dim will be present
-        if 'z' in ds.dims:
-            ds = ds.rename(z='phi', inplace=True)
-            nz = ds.dims['phi']
-            phi = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=nz),
-                               dims='phi')
-            ds = ds.assign_coords(phi=phi)
-
-        # Add 2D Cylindrical coordinates
-        ds = ds.rename(Rxy='R', Zxy='Z', inplace=True)
-        ds = ds.set_coords(['R', 'Z'])
-
-    elif grid_type is None:
-        # TODO Some definition of slabs?
-        if not quiet:
-            warn("No grid_type found, no coordinates will be added")
-
-    else:
-        raise ValueError("Unrecognised value of grid_type: {}"
-                         .format(grid_type))
-
-    # TODO special case for s-alpha?
-    # Add radial coordinate
-    #r = ds['hthe']
-    #r.attrs['units'] = 'm'
-    #ds = ds.assign_coords(r=r)
+    if geometry is not None:
+        # Update coordinates to match particular geometry of grid
+        ds = geometries.apply_geometry(ds, geometry)
 
     return ds

@@ -31,8 +31,9 @@ except ValueError:
 # TODO somehow check that we have access to the latest version of auto_combine
 
 
-def open_boutdataset(datapath='./BOUT.dmp.*.nc',
-                     inputfilepath=None, gridfilepath=None, chunks={},
+def open_boutdataset(datapath='./BOUT.dmp.*.nc', chunks={},
+                     inputfilepath=None,
+                     gridfilepath=None, geometry=None,
                      run_name=None, info=True):
     """
     Load a dataset from a set of BOUT output files, including the input options file.
@@ -70,7 +71,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
     ds = _set_attrs_on_all_vars(ds, 'options', options)
 
     if gridfilepath:
-        ds = open_grid(ds, gridfilepath)
+        ds = open_grid(gridfilepath=gridfilepath, geometry=geometry, ds=ds)
 
     # TODO read and store git commit hashes from output files
 
