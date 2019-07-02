@@ -101,13 +101,7 @@ install using `python setup.py`
 You can run the tests by navigating to the `/xBOUT/` directory and
 entering `pytest`.
 
-
-It relies on two upstream additions to xarray
-([first](https://github.com/pydata/xarray/pull/2482) &
-[second](https://github.com/pydata/xarray/pull/2553) pull requests).
-The first is merged, but the second isn't, so for now you need to clone
-the branch of xarray containing the PR
-[here](https://github.com/TomNicholas/xarray/tree/feature/nd_combine).
+Requires xarray v0.12.2 or later.
 
 You will also need to install [dask](https://dask.org/),
 as described in the xarray documentation
