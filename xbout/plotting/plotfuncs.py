@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 from .utils import _decompose_regions
 
 
-def contourf(da, ax=None, **kwargs):
+def contourf(da, levels=7, ax=None, **kwargs):
     """
     Plots a 2D filled contour plot, taking into account branch cuts (X-points).
 
@@ -35,6 +36,9 @@ def contourf(da, ax=None, **kwargs):
     if ax is None:
         fig, ax = plt.subplots()
 
+    if isinstance(levels, np.int):
+        levels = np.linspace(da.min(), da.max(), levels, endpoint=True)
+
     regions = _decompose_regions(da)
     region_kwargs = {}
 
@@ -42,11 +46,11 @@ def contourf(da, ax=None, **kwargs):
 
     # Plot all regions on same axis
     first, *rest = regions
-    artists = [first.plot.contourf(x=x, y=y, ax=ax,
+    artists = [first.plot.contourf(x=x, y=y, ax=ax, levels=levels,
                                    **kwargs, **region_kwargs)]
     if rest:
         for region in rest:
-            artist = region.plot.contourf(x=x, y=y, ax=ax,
+            artist = region.plot.contourf(x=x, y=y, ax=ax, levels=levels,
                                           add_colorbar=False, add_labels=False,
                                           **kwargs, **region_kwargs)
             artists.append(artist)
