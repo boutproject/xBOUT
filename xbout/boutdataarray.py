@@ -4,7 +4,7 @@ from functools import partial
 from xarray import register_dataarray_accessor
 
 from .plotting.animate import animate_imshow, animate_line
-from .plotting.plots import pcolormesh
+from .plotting import plotfuncs
 
 
 @register_dataarray_accessor('bout')
@@ -104,8 +104,7 @@ class BoutDataArrayAccessor:
             return line_block
 
     # TODO BOUT-specific plotting functionality would be implemented as methods here, e.g. ds.bout.plot_poloidal
-
-    def pcolormesh(self, x='R', y='Z', ax=None, **kwargs):
-        return pcolormesh(self.data, x=x, y=y, ax=ax, **kwargs)
+    def contourf(self, ax=None, **kwargs):
+        return plotfuncs.contourf(self.data, ax=ax, **kwargs)
 
     # TODO Could trial a 2D surface plotting method here
