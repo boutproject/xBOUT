@@ -37,6 +37,7 @@ def plot_separatrix(da, sep_pos, ax, radial_coord='x'):
 
 def _decompose_regions(da):
 
+    # TODO are we dealing with empty regions sensibly?
 
     grid = da.attrs['grid']
     j11 = grid['jyseps1_1']
@@ -132,7 +133,9 @@ def _decompose_regions(da):
 
         regions.extend([region13, region14, region15])
 
-    if True:  # what's the condition for there to be a second x-point?
+    # TODO what's the condition for there to be a second x-point?
+    if True:
+        # TODO fix this to properly cover the upper X-point
         # X-point regions
         corner1 = da[ix2 - 1, j12]
         corner2 = da[ix2, j12]
