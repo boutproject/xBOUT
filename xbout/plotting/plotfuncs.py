@@ -1,7 +1,45 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+import xarray as xr
+
 from .utils import _decompose_regions
+
+def regions(da, ax=None, **kwargs):
+    """
+    Plots each logical plotting region as a different color for debugging.
+
+    Uses matplotlib.pcolormesh
+    """
+
+    x = kwargs.pop('x', 'R')
+    y = kwargs.pop('y', 'Z')
+
+    if len(da.dims) != 2:
+        raise ValueError("da must be 2D (x,y)")
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    regions = _decompose_regions(da)
+
+    colored_regions = [xr.full_like(region, fill_value=num / len(regions))
+                       for num, region in enumerate(regions)]
+
+    first, *rest = colored_regions
+    artists = [first.plot.pcolormesh(x=x, y=y, vmin=0, vmax=1, cmap='tab20',
+                                     infer_intervals=False,
+                                     add_colorbar=False, ax=ax, **kwargs)]
+    if rest:
+        for region in rest:
+            artist = region.plot.pcolormesh(x=x, y=y, vmin=0, vmax=1,
+                                            cmap='tab20',
+                                            infer_intervals=False,
+                                            add_colorbar=False,
+                                            add_labels=False, ax=ax, **kwargs)
+            artists.append(artist)
+    return artists
+
 
 
 def contourf(da, levels=7, ax=None, **kwargs):

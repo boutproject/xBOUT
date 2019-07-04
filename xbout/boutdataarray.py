@@ -107,4 +107,6 @@ class BoutDataArrayAccessor:
     def contourf(self, ax=None, **kwargs):
         return plotfuncs.contourf(self.data, ax=ax, **kwargs)
 
+    def regions(self, ax=None, **kwargs):
+        return plotfuncs.regions(self.data, ax=ax, **kwargs)
     # TODO Could trial a 2D surface plotting method here
