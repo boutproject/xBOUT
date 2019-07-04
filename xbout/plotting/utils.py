@@ -253,6 +253,45 @@ def plot_separatrices(da, ax):
         ax.plot(core_outer_R, core_outer_Z, 'r--')
 
 
+def plot_targets(da, ax):
+    """Plot divertor and limiter target plates"""
+
+    j11, j12, j21, j22, ix1, ix2, nin, nx, ny = _get_seps(da)
+
+    R = da.coords['R'].transpose('x', 'theta')
+    Z = da.coords['Z'].transpose('x', 'theta')
+
+    if j22 + 1 < ny:
+        # lower PFR exists
+        xin = 0
+    else:
+        xin = ix2
+
+    inner_lower_target_R = R[xin:, 0]
+    inner_lower_target_Z = Z[xin:, 0]
+    ax.plot(inner_lower_target_R, inner_lower_target_Z, 'k-', linewidth=2)
+
+    outer_lower_target_R = R[xin:, ny-1]
+    outer_lower_target_Z = Z[xin:, ny-1]
+    ax.plot(outer_lower_target_R, outer_lower_target_Z, 'k-', linewidth=2)
+
+    if j21 < nin:
+        # upper PFR exists
+        xin = 0
+    else:
+        xin = ix2
+
+    if j21 < nin:
+        inner_upper_target_R = R[xin:, nin-1]
+        inner_upper_target_Z = Z[xin:, nin-1]
+        ax.plot(inner_upper_target_R, inner_upper_target_Z, 'k-', linewidth=2)
+
+    if j12 > nin+1:
+        outer_upper_target_R = R[xin:, nin]
+        outer_upper_target_Z = Z[xin:, nin]
+        ax.plot(outer_upper_target_R, outer_upper_target_Z, 'k-', linewidth=2)
+
+
 def _get_seps(da):
     grid = da.attrs['grid']
     j11 = grid['jyseps1_1']
