@@ -112,25 +112,46 @@ def _decompose_regions(da):
         region14 = da[:, ystart:ny]
 
         # X-point regions
-        xregion1 = da[ix1 - 1, j11]
-        xregion2 = da[ix1, j11]
-        xregion3 = da[ix1, j11 + 1]
-        xregion4 = da[ix1 - 1, j11 + 1]
+        corner1 = da[ix1 - 1, j11]
+        corner2 = da[ix1, j11]
+        corner3 = da[ix1, j11 + 1]
+        corner4 = da[ix1 - 1, j11 + 1]
 
-        xregion_lower = xr.concat([xregion1, xregion2, xregion3, xregion4],
-                                  dim='x')
+        xregion_lower = xr.concat([corner1, corner2, corner3, corner4],
+                                  dim='dim1')
 
-        xregion5 = da[ix1 - 1, j22 + 1]
-        xregion6 = da[ix1, j22 + 1]
-        xregion7 = da[ix1, j22]
-        xregion8 = da[ix1 - 1, j22]
+        corner5 = da[ix1 - 1, j22 + 1]
+        corner6 = da[ix1, j22 + 1]
+        corner7 = da[ix1, j22]
+        corner8 = da[ix1 - 1, j22]
 
-        xregion_upper = xr.concat([xregion5, xregion6, xregion7, xregion8],
-                                  dim='x')
+        xregion_upper = xr.concat([corner5, corner6, corner7, corner8],
+                                  dim='dim1')
 
-        region15 = xr.concat([xregion_lower.drop('theta'),
-                              xregion_upper.drop('theta')], dim='theta')
+        region15 = xr.concat([xregion_lower, xregion_upper], dim='dim2')
 
         regions.extend([region13, region14, region15])
+
+    if True:  # what's the condition for there to be a second x-point?
+        # X-point regions
+        corner1 = da[ix2 - 1, j12]
+        corner2 = da[ix2, j12]
+        corner3 = da[ix2, j12 + 1]
+        corner4 = da[ix2 - 1, j12 + 1]
+
+        xregion_lower = xr.concat([corner1, corner2, corner3, corner4],
+                                  dim='dim1')
+
+        corner5 = da[ix2 - 1, j21 + 1]
+        corner6 = da[ix2, j21 + 1]
+        corner7 = da[ix2, j21]
+        corner8 = da[ix2 - 1, j21]
+
+        xregion_upper = xr.concat([corner5, corner6, corner7, corner8],
+                                  dim='dim1')
+
+        region16 = xr.concat([xregion_lower, xregion_upper], dim='dim2')
+
+        regions.append(region16)
 
     return regions
