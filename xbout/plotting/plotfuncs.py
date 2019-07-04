@@ -3,7 +3,7 @@ import numpy as np
 
 import xarray as xr
 
-from .utils import _decompose_regions
+from .utils import _decompose_regions, plot_separatrices
 
 def regions(da, ax=None, **kwargs):
     """
@@ -42,7 +42,7 @@ def regions(da, ax=None, **kwargs):
 
 
 
-def contourf(da, levels=7, ax=None, **kwargs):
+def contourf(da, levels=7, ax=None, separatrix=True, **kwargs):
     """
     Plots a 2D filled contour plot, taking into account branch cuts (X-points).
 
@@ -97,5 +97,8 @@ def contourf(da, levels=7, ax=None, **kwargs):
                                           add_colorbar=False, add_labels=False,
                                           **kwargs, **region_kwargs)
             artists.append(artist)
+
+    if separatrix:
+        plot_separatrices(da, ax)
 
     return artists

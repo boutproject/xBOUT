@@ -1,5 +1,6 @@
 import warnings
 
+from numpy import concatenate
 import xarray as xr
 
 
@@ -158,3 +159,65 @@ def _decompose_regions(da):
         regions.append(region16)
 
     return regions
+
+
+def plot_separatrices(da, ax):
+    """Plot separatrices"""
+
+    grid = da.attrs['grid']
+    j11 = grid['jyseps1_1']
+    j12 = grid['jyseps1_2']
+    j21 = grid['jyseps2_1']
+    j22 = grid['jyseps2_2']
+    ix1 = grid['ixseps1']
+    ix2 = grid['ixseps2']
+    nin = grid.get('ny_inner', j12)
+
+    nx = grid['nx']
+    ny = grid['ny']
+
+    R = da.coords['R'].transpose('x', 'theta')
+    Z = da.coords['Z'].transpose('x', 'theta')
+
+    # Lower X-point location
+    Rx = 0.125 * (R[ix1 - 1, j11]     + R[ix1, j11]
+                + R[ix1, j11 + 1]     + R[ix1 - 1, j11 + 1]
+                + R[ix1 - 1, j22 + 1] + R[ix1, j22 + 1]
+                + R[ix1, j22]         + R[ix1 - 1, j22])
+    Zx = 0.125 * (Z[ix1 - 1, j11]     + Z[ix1, j11]
+                + Z[ix1, j11 + 1]     + Z[ix1 - 1, j11 + 1]
+                + Z[ix1 - 1, j22 + 1] + Z[ix1, j22 + 1]
+                + Z[ix1, j22]         + Z[ix1 - 1, j22])
+
+    # Lower inner leg
+    lower_inner_R = concatenate(
+        (0.5 * (R[ix1 - 1, 0:(j11 + 1)] + R[ix1, 0:(j11 + 1)]), [Rx]))
+    lower_inner_Z = concatenate(
+        (0.5 * (Z[ix1 - 1, 0:(j11 + 1)] + Z[ix1, 0:(j11 + 1)]), [Zx]))
+
+    # Lower outer leg
+    lower_outer_R = concatenate(
+        ([Rx], 0.5 * (R[ix1 - 1, (j22 + 1):] + R[ix1, (j22 + 1):])))
+    lower_outer_Z = concatenate(
+        ([Zx], 0.5 * (Z[ix1 - 1, (j22 + 1):] + Z[ix1, (j22 + 1):])))
+
+    # Core
+    core_R1 = 0.5 * (R[ix1 - 1, (j11 + 1):(j21 + 1)]
+                   + R[ix1, (j11 + 1):(j21 + 1)])
+    core_R2 = 0.5 * (R[ix1 - 1, (j12 + 1):(j22 + 1)]
+                   + R[ix1, (j12 + 1):(j22 + 1)])
+    core_R = concatenate(([Rx], core_R1, core_R2, [Rx]))
+
+    core_Z1 = 0.5 * (Z[ix1 - 1, (j11 + 1):(j21 + 1)]
+                   + Z[ix1, (j11 + 1):(j21 + 1)])
+    core_Z2 = 0.5 * (Z[ix1 - 1, (j12 + 1):(j22 + 1)]
+                   + Z[ix1, (j12 + 1):(j22 + 1)])
+    core_Z = concatenate(([Zx], core_Z1, core_Z2, [Zx]))
+
+    if ix2 != ix1:
+        # TODO plot second separatrix
+        pass
+
+    ax.plot(lower_inner_R, lower_inner_Z, 'k--')
+    ax.plot(lower_outer_R, lower_outer_Z, 'k--')
+    ax.plot(core_R, core_Z, 'k--')
