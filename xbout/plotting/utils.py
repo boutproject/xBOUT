@@ -40,18 +40,7 @@ def _decompose_regions(da):
 
     # TODO are we dealing with empty regions sensibly?
 
-    grid = da.attrs['grid']
-    j11 = grid['jyseps1_1']
-    j12 = grid['jyseps1_2']
-    j21 = grid['jyseps2_1']
-    j22 = grid['jyseps2_2']
-    ix1 = grid['ixseps1']
-    ix2 = grid['ixseps2']
-    nin = grid.get('ny_inner', j12)
-
-    nx = grid['nx']
-    ny = grid['ny']
-
+    j11, j12, j21, j22, ix1, ix2, nin, _, ny = _get_seps(da)
     regions = []
 
     ystart = 0  # Y index to start the next section
@@ -164,17 +153,7 @@ def _decompose_regions(da):
 def plot_separatrices(da, ax):
     """Plot separatrices"""
 
-    grid = da.attrs['grid']
-    j11 = grid['jyseps1_1']
-    j12 = grid['jyseps1_2']
-    j21 = grid['jyseps2_1']
-    j22 = grid['jyseps2_2']
-    ix1 = grid['ixseps1']
-    ix2 = grid['ixseps2']
-    nin = grid.get('ny_inner', j12)
-
-    nx = grid['nx']
-    ny = grid['ny']
+    j11, j12, j21, j22, ix1, ix2, nin, *_ = _get_seps(da)
 
     R = da.coords['R'].transpose('x', 'theta')
     Z = da.coords['Z'].transpose('x', 'theta')
@@ -214,10 +193,26 @@ def plot_separatrices(da, ax):
                    + Z[ix1, (j12 + 1):(j22 + 1)])
     core_Z = concatenate(([Zx], core_Z1, core_Z2, [Zx]))
 
+    ax.plot(lower_inner_R, lower_inner_Z, 'k--')
+    ax.plot(lower_outer_R, lower_outer_Z, 'k--')
+    ax.plot(core_R, core_Z, 'k--')
+
     if ix2 != ix1:
         # TODO plot second separatrix
         pass
 
-    ax.plot(lower_inner_R, lower_inner_Z, 'k--')
-    ax.plot(lower_outer_R, lower_outer_Z, 'k--')
-    ax.plot(core_R, core_Z, 'k--')
+
+def _get_seps(da):
+    grid = da.attrs['grid']
+    j11 = grid['jyseps1_1']
+    j12 = grid['jyseps1_2']
+    j21 = grid['jyseps2_1']
+    j22 = grid['jyseps2_2']
+    ix1 = grid['ixseps1']
+    ix2 = grid['ixseps2']
+    nin = grid.get('ny_inner', j12)
+
+    nx = grid['nx']
+    ny = grid['ny']
+
+    return j11, j12, j21, j22, ix1, ix2, nin, nx, ny
