@@ -153,20 +153,23 @@ def _decompose_regions(da):
 def plot_separatrices(da, ax):
     """Plot separatrices"""
 
-    j11, j12, j21, j22, ix1, ix2, nin, *_ = _get_seps(da)
+    j11, j12, j21, j22, ix1, ix2, nin, nx, ny = _get_seps(da)
 
     R = da.coords['R'].transpose('x', 'theta')
     Z = da.coords['Z'].transpose('x', 'theta')
 
-    # Lower X-point location
-    Rx = 0.125 * (R[ix1 - 1, j11]     + R[ix1, j11]
-                + R[ix1, j11 + 1]     + R[ix1 - 1, j11 + 1]
-                + R[ix1 - 1, j22 + 1] + R[ix1, j22 + 1]
-                + R[ix1, j22]         + R[ix1 - 1, j22])
-    Zx = 0.125 * (Z[ix1 - 1, j11]     + Z[ix1, j11]
-                + Z[ix1, j11 + 1]     + Z[ix1 - 1, j11 + 1]
-                + Z[ix1 - 1, j22 + 1] + Z[ix1, j22 + 1]
-                + Z[ix1, j22]         + Z[ix1 - 1, j22])
+    if j22 + 1 < ny:
+        # Lower X-point location
+        Rx = 0.125 * (R[ix1 - 1, j11]     + R[ix1, j11]
+                    + R[ix1, j11 + 1]     + R[ix1 - 1, j11 + 1]
+                    + R[ix1 - 1, j22 + 1] + R[ix1, j22 + 1]
+                    + R[ix1, j22]         + R[ix1 - 1, j22])
+        Zx = 0.125 * (Z[ix1 - 1, j11]     + Z[ix1, j11]
+                    + Z[ix1, j11 + 1]     + Z[ix1 - 1, j11 + 1]
+                    + Z[ix1 - 1, j22 + 1] + Z[ix1, j22 + 1]
+                    + Z[ix1, j22]         + Z[ix1 - 1, j22])
+    else:
+        Rx, Zx = None, None
 
     # Lower inner leg
     lower_inner_R = concatenate(
@@ -197,9 +200,57 @@ def plot_separatrices(da, ax):
     ax.plot(lower_outer_R, lower_outer_Z, 'k--')
     ax.plot(core_R, core_Z, 'k--')
 
+    # TODO plot second separatrix
     if ix2 != ix1:
-        # TODO plot second separatrix
-        pass
+        if ix2 < ix1:
+            raise ValueError("Inner separatrix must be the at the bottom")
+
+        # TODO correct check that there is actually a second X-point?
+        if j21 < nin:
+            # Upper X-point location
+            Rx = 0.125 * (R[ix2 - 1, j12] + R[ix2, j12]
+                          + R[ix2, j12 + 1] + R[ix2 - 1, j12 + 1]
+                          + R[ix2 - 1, j21 + 1] + R[ix2, j21 + 1]
+                          + R[ix2, j21] + R[ix2 - 1, j21])
+            Zx = 0.125 * (Z[ix2 - 1, j12] + Z[ix2, j12]
+                          + Z[ix2, j12 + 1] + Z[ix2 - 1, j12 + 1]
+                          + Z[ix2 - 1, j21 + 1] + Z[ix2, j21 + 1]
+                          + Z[ix2, j21] + Z[ix2 - 1, j21])
+        else:
+            Rx, Zx = None, None
+
+        lower_inner_R = 0.5 * (R[ix2 - 1, 0:(j11 + 1)] + R[ix2, 0:(j11 + 1)])
+        lower_inner_Z = 0.5 * (Z[ix2 - 1, 0:(j11 + 1)] + Z[ix2, 0:(j11 + 1)])
+
+        upper_outer_R = 0.5 * (R[ix2 - 1, nin:(j12+1)] + R[ix2, nin:(j12+1)])
+        upper_outer_Z = 0.5 * (Z[ix2 - 1, nin:(j12+1)] + Z[ix2, nin:(j12+1)])
+
+        lower_outer_R = 0.5 * (R[ix2 - 1, (j22 + 1):] + R[ix2, (j22 + 1):])
+        lower_outer_Z = 0.5 * (Z[ix2 - 1, (j22 + 1):] + Z[ix2, (j22 + 1):])
+
+        upper_inner_R = 0.5 * (R[ix2 - 1, (j21+1):nin] + R[ix2, (j21+1):nin])
+        upper_inner_Z = 0.5 * (Z[ix2 - 1, (j21+1):nin] + Z[ix2, (j21+1):nin])
+
+        # Core
+        core_inner_R = 0.5 * (R[ix2 - 1, (j11 + 1):(j21 + 1)]
+                         + R[ix2, (j11 + 1):(j21 + 1)])
+        core_outer_R = 0.5 * (R[ix2 - 1, (j12 + 1):(j22 + 1)]
+                         + R[ix2, (j12 + 1):(j22 + 1)])
+
+        core_inner_Z = 0.5 * (Z[ix2 - 1, (j11 + 1):(j21 + 1)]
+                         + Z[ix2, (j11 + 1):(j21 + 1)])
+        core_outer_Z = 0.5 * (Z[ix2 - 1, (j12 + 1):(j22 + 1)]
+                         + Z[ix2, (j12 + 1):(j22 + 1)])
+
+        # TODO join these up (inc x-point) properly
+        ax.plot(lower_inner_R, lower_inner_Z, 'r--')
+        ax.plot(lower_outer_R, lower_outer_Z, 'r--')
+
+        ax.plot(upper_inner_R, upper_inner_Z, 'r--')
+        ax.plot(upper_outer_R, upper_outer_Z, 'r--')
+
+        ax.plot(core_inner_R, core_inner_Z, 'r--')
+        ax.plot(core_outer_R, core_outer_Z, 'r--')
 
 
 def _get_seps(da):
