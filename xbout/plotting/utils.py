@@ -200,7 +200,7 @@ def plot_separatrices(da, ax):
     ax.plot(lower_outer_R, lower_outer_Z, 'k--')
     ax.plot(core_R, core_Z, 'k--')
 
-    # TODO plot second separatrix
+    # Plot second separatrix
     if ix2 != ix1:
         if ix2 < ix1:
             raise ValueError("Inner separatrix must be the at the bottom")
@@ -242,15 +242,26 @@ def plot_separatrices(da, ax):
         core_outer_Z = 0.5 * (Z[ix2 - 1, (j12 + 1):(j22 + 1)]
                          + Z[ix2, (j12 + 1):(j22 + 1)])
 
-        # TODO join these up (inc x-point) properly
-        ax.plot(lower_inner_R, lower_inner_Z, 'r--')
-        ax.plot(lower_outer_R, lower_outer_Z, 'r--')
+        inner_R = np.concatenate((lower_inner_R, core_inner_R, [Rx],
+                                  np.flip(upper_outer_R)))
+        inner_Z = np.concatenate((lower_inner_Z, core_inner_Z, [Zx],
+                                  np.flip(upper_outer_Z)))
+        ax.plot(inner_R, inner_Z, 'r--')
 
-        ax.plot(upper_inner_R, upper_inner_Z, 'r--')
-        ax.plot(upper_outer_R, upper_outer_Z, 'r--')
+        outer_R = np.concatenate((np.flip(lower_outer_R), np.flip(core_outer_R), [Rx],
+                                  upper_inner_R))
+        outer_Z = np.concatenate((np.flip(lower_outer_Z), np.flip(core_outer_Z), [Zx],
+                                  upper_inner_Z))
+        ax.plot(outer_R, outer_Z, 'r--')
 
-        ax.plot(core_inner_R, core_inner_Z, 'r--')
-        ax.plot(core_outer_R, core_outer_Z, 'r--')
+        #ax.plot(lower_inner_R, lower_inner_Z, 'r--')
+        #ax.plot(lower_outer_R, lower_outer_Z, 'r-->')
+
+        #ax.plot(upper_inner_R, upper_inner_Z, 'r-->')
+        #ax.plot(upper_outer_R, upper_outer_Z, 'r--')
+
+        #ax.plot(core_inner_R, core_inner_Z, 'r--')
+        #ax.plot(core_outer_R, core_outer_Z, 'r--')
 
 
 def plot_targets(da, ax, hatching=True):
