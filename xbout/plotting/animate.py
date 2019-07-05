@@ -3,12 +3,10 @@ import matplotlib.pyplot as plt
 
 import animatplot as amp
 
-from .utils import plot_separatrix
-
 
 def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
                    vmin='min', vmax='max', fps=10, save_as=None,
-                   sep_pos=None, ax=None, **kwargs):
+                   ax=None, **kwargs):
     """
     Plots a color plot which is animated with time over the specified
     coordinate.
@@ -31,8 +29,6 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
     vmax : float, optional
         Maximum value to use for colorbar. Default is to use maximum value of
         data across whole timeseries.
-    sep_pos : int, optional
-        Radial position at which to plot the separatrix
     save_as: str, optional
         Filename to give to the resulting gif
     fps : int, optional
@@ -84,9 +80,7 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
     ax.set_xlabel(x)
     ax.set_ylabel(y)
 
-    # Plot separatrix
-    if sep_pos:
-        ax = plot_separatrix(data, sep_pos, ax)
+    # TODO Plot separatrix
 
     if animate:
         anim.controls(timeline_slider_args={'text': animate_over})
