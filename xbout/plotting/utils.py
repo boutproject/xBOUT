@@ -1,6 +1,6 @@
 import warnings
 
-from numpy import concatenate
+import numpy as np
 import xarray as xr
 
 
@@ -172,15 +172,15 @@ def plot_separatrices(da, ax):
         Rx, Zx = None, None
 
     # Lower inner leg
-    lower_inner_R = concatenate(
+    lower_inner_R = np.concatenate(
         (0.5 * (R[ix1 - 1, 0:(j11 + 1)] + R[ix1, 0:(j11 + 1)]), [Rx]))
-    lower_inner_Z = concatenate(
+    lower_inner_Z = np.concatenate(
         (0.5 * (Z[ix1 - 1, 0:(j11 + 1)] + Z[ix1, 0:(j11 + 1)]), [Zx]))
 
     # Lower outer leg
-    lower_outer_R = concatenate(
+    lower_outer_R = np.concatenate(
         ([Rx], 0.5 * (R[ix1 - 1, (j22 + 1):] + R[ix1, (j22 + 1):])))
-    lower_outer_Z = concatenate(
+    lower_outer_Z = np.concatenate(
         ([Zx], 0.5 * (Z[ix1 - 1, (j22 + 1):] + Z[ix1, (j22 + 1):])))
 
     # Core
@@ -188,13 +188,13 @@ def plot_separatrices(da, ax):
                    + R[ix1, (j11 + 1):(j21 + 1)])
     core_R2 = 0.5 * (R[ix1 - 1, (j12 + 1):(j22 + 1)]
                    + R[ix1, (j12 + 1):(j22 + 1)])
-    core_R = concatenate(([Rx], core_R1, core_R2, [Rx]))
+    core_R = np.concatenate(([Rx], core_R1, core_R2, [Rx]))
 
     core_Z1 = 0.5 * (Z[ix1 - 1, (j11 + 1):(j21 + 1)]
                    + Z[ix1, (j11 + 1):(j21 + 1)])
     core_Z2 = 0.5 * (Z[ix1 - 1, (j12 + 1):(j22 + 1)]
                    + Z[ix1, (j12 + 1):(j22 + 1)])
-    core_Z = concatenate(([Zx], core_Z1, core_Z2, [Zx]))
+    core_Z = np.concatenate(([Zx], core_Z1, core_Z2, [Zx]))
 
     ax.plot(lower_inner_R, lower_inner_Z, 'k--')
     ax.plot(lower_outer_R, lower_outer_Z, 'k--')
@@ -253,7 +253,7 @@ def plot_separatrices(da, ax):
         ax.plot(core_outer_R, core_outer_Z, 'r--')
 
 
-def plot_targets(da, ax):
+def plot_targets(da, ax, hatching=True):
     """Plot divertor and limiter target plates"""
 
     j11, j12, j21, j22, ix1, ix2, nin, nx, ny = _get_seps(da)
@@ -269,11 +269,17 @@ def plot_targets(da, ax):
 
     inner_lower_target_R = R[xin:, 0]
     inner_lower_target_Z = Z[xin:, 0]
-    ax.plot(inner_lower_target_R, inner_lower_target_Z, 'k-', linewidth=2)
+    [line1] = ax.plot(inner_lower_target_R, inner_lower_target_Z, 'k-',
+                      linewidth=2)
+    if hatching:
+        _add_hatching(line1, ax)
 
     outer_lower_target_R = R[xin:, ny-1]
     outer_lower_target_Z = Z[xin:, ny-1]
-    ax.plot(outer_lower_target_R, outer_lower_target_Z, 'k-', linewidth=2)
+    [line2] = ax.plot(outer_lower_target_R, outer_lower_target_Z, 'k-',
+                      linewidth=2)
+    if hatching:
+        _add_hatching(line2, ax, reversed=True)
 
     if j21 < nin:
         # upper PFR exists
@@ -284,12 +290,66 @@ def plot_targets(da, ax):
     if j21 < nin:
         inner_upper_target_R = R[xin:, nin-1]
         inner_upper_target_Z = Z[xin:, nin-1]
-        ax.plot(inner_upper_target_R, inner_upper_target_Z, 'k-', linewidth=2)
+        [line3] = ax.plot(inner_upper_target_R, inner_upper_target_Z, 'k-',
+                          linewidth=2)
+        if hatching:
+            _add_hatching(line3, ax, reversed=True)
 
     if j12 > nin+1:
         outer_upper_target_R = R[xin:, nin]
         outer_upper_target_Z = Z[xin:, nin]
-        ax.plot(outer_upper_target_R, outer_upper_target_Z, 'k-', linewidth=2)
+        [line4] = ax.plot(outer_upper_target_R, outer_upper_target_Z, 'k-',
+                          linewidth=2)
+        if hatching:
+            _add_hatching(line4, ax)
+
+
+def _add_hatching(line, ax, reversed=False):
+    """
+    Adds a series of angled ticks to target plate lines to give a hatching
+    effect, indicative of a solid surface
+    """
+
+    x = line.get_xdata()
+    y = line.get_ydata()
+
+    if reversed:
+        x = np.flip(x)
+        y = np.flip(y)
+
+    # TODO redo this to evenly space ticks by physical distance along line
+    num_hatchings = 5
+    step = len(x) // num_hatchings
+    hatch_inds = np.arange(0, len(x), step)
+
+    vx, vy = x.max() - x.min(), y.max() - y.min()
+    limiter_line_length = np.linalg.norm((vx, vy))
+    hatch_line_length = (limiter_line_length / num_hatchings) / 1.5
+
+    # For each hatching
+    for ind in hatch_inds:
+        # Compute local perpendicular vector
+        dx, dy = _get_perp_vec((x[ind], y[ind]), (x[ind+1], y[ind+1]),
+                               magnitude=hatch_line_length)
+
+        # Rotate by 60 degrees
+        t = -np.pi/3
+        new_dx = dx * np.cos(t) - dy * np.sin(t)
+        new_dy = dx * np.sin(t) + dy * np.cos(t)
+
+        # Draw
+        ax.plot([x[ind], x[ind]+new_dx], [y[ind], y[ind]+new_dy], 'k-')
+
+
+def _get_perp_vec(u1, u2, magnitude=0.04):
+    """Return the vector perpendicular to the vector u2-u1."""
+
+    x1, y1 = u1
+    x2, y2 = u2
+    vx, vy = x2-x1, y2-y1
+    v = np.linalg.norm((vx, vy))
+    wx, wy = -vy/v * magnitude, vx/v * magnitude
+    return wx, wy
 
 
 def _get_seps(da):
