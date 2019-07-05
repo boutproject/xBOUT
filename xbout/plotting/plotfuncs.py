@@ -42,7 +42,8 @@ def regions(da, ax=None, **kwargs):
 
 
 
-def contourf(da, levels=7, ax=None, separatrix=True, targets=True, **kwargs):
+def contourf(da, levels=7, ax=None, separatrix=True, targets=True,
+             add_limiter_hatching=True, **kwargs):
     """
     Plots a 2D filled contour plot, taking into account branch cuts (X-points).
 
@@ -102,6 +103,6 @@ def contourf(da, levels=7, ax=None, separatrix=True, targets=True, **kwargs):
         plot_separatrices(da, ax)
 
     if targets:
-        plot_targets(da, ax)
+        plot_targets(da, ax, hatching=add_limiter_hatching)
 
     return artists
