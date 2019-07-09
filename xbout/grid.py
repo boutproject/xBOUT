@@ -43,14 +43,12 @@ def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False):
 
     # TODO find out what 'yup_xsplit' etc are in the doublenull storm file John gave me
     # For now drop any variables with extra dimensions
-    variables = list(grid.variables)
-    vars_to_drop = [var for var in variables
-                    if not all(dim in ['t', 'x', 'y', 'z']
-                               for dim in grid[var].dims)]
-    if vars_to_drop:
-        warn("Will drop variables {} because they had unrecognised dimensions"
-             .format(vars_to_drop))
-    grid = grid.drop(vars_to_drop)
+    acceptable_dims = ['t', 'x', 'y', 'z']
+    unrecognised_dims = [set(grid.dims) - set(acceptable_dims)]
+    if len(unrecognised_dims) > 0:
+        warn("Will drop all variables containing the dimensions {} because"
+             "they are not recognised".format(unrecognised_dims))
+        grid = grid.drop_dims(unrecognised_dims)
 
     # Merge into one dataset, with scalar vars in attrs
     grid, grid_metadata = _separate_metadata(grid)
