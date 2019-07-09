@@ -2,7 +2,7 @@ from .load import open_boutdataset
 from .grid import open_grid
 
 from . import geometries
-from .geometries import register_geometry
+from .geometries import register_geometry, REGISTERED_GEOMETRIES
 
 from .boutdataset import BoutDatasetAccessor
 from .boutdataarray import BoutDataArrayAccessor

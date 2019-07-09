@@ -1,4 +1,5 @@
 from warnings import warn
+from textwrap import dedent
 
 import xarray as xr
 import numpy as np
@@ -32,7 +33,10 @@ def apply_geometry(ds, geometry_name):
     try:
         add_geometry_coords = REGISTERED_GEOMETRIES[geometry_name]
     except KeyError:
-        raise UnregisteredGeometryError
+        message = dedent("""{} is not a registered geometry. Inspect the global
+                         variable REGISTERED_GEOMETRIES to see which geometries
+                         have been registered.""".format(geometry_name))
+        raise UnregisteredGeometryError(message)
 
     updated_ds = add_geometry_coords(ds)
     return updated_ds
