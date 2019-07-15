@@ -179,8 +179,7 @@ def _trim(ds, ghosts={}, keep_guards=True):
 
     trimmed_ds = ds.isel(**selection)
 
-    vars_to_drop = [v for v in _bout_timing_variables if v in ds]
-    trimmed_ds = trimmed_ds.drop(vars_to_drop)
+    trimmed_ds = trimmed_ds.drop(_bout_timing_variables, errors='ignore')
 
     return trimmed_ds
 
