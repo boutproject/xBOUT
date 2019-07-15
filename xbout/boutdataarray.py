@@ -100,8 +100,7 @@ class BoutDataArrayAccessor:
             print("{} data passed has {} dimensions - will use "
                   "animatplot.blocks.Line()".format(variable, str(n_dims)))
             line_block = animate_line(data=data, animate_over=animate_over,
-                                      x=x, y=y, sep_pos=sep_pos,
-                                      animate=animate, fps=fps,
+                                      sep_pos=sep_pos, animate=animate, fps=fps,
                                       save_as=save_as, ax=ax, **kwargs)
             return line_block
 
