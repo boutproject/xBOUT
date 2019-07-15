@@ -353,3 +353,23 @@ class TestTrim:
         selection = {'time': slice(2, -2)}
         expected = ds.isel(**selection)
         xrt.assert_equal(expected, actual)
+
+    def test_trim_timing_info(self):
+        ds = create_test_data(0)
+        from xbout.load import _bout_timing_variables
+
+        # remove a couple of entries from _bout_timing_variables so we test that _trim
+        # does not fail if not all of them are present
+        _bout_timing_variables = _bout_timing_variables[:-2]
+
+        for v in _bout_timing_variables:
+            ds[v] = 42.
+        expected = create_test_data(0)
+        try:
+            xrt.assert_equal(ds, expected)
+        except AssertionError:
+            pass
+        else:
+            assert False, "ds has had variables added, should be different from expected"
+        ds = _trim(ds)
+        xrt.assert_equal(ds, expected)
