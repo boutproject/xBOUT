@@ -8,7 +8,7 @@ from functools import partial
 
 from natsort import natsorted
 
-_bout_timing_variables = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
+_BOUT_TIMING_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
                           'wtime_comms', 'wtime_io', 'wtime_per_rhs', 'wtime_per_rhs_e',
                           'wtime_per_rhs_i']
 
@@ -179,7 +179,7 @@ def _trim(ds, ghosts={}, keep_guards=True):
 
     trimmed_ds = ds.isel(**selection)
 
-    trimmed_ds = trimmed_ds.drop(_bout_timing_variables, errors='ignore')
+    trimmed_ds = trimmed_ds.drop(_BOUT_TIMING_VARIABLES, errors='ignore')
 
     return trimmed_ds
 
