@@ -7,7 +7,7 @@ from .utils import plot_separatrix
 
 
 def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
-                   vmin='min', vmax='max', fps=10, save_as=None,
+                   vmin=None, vmax=None, fps=10, save_as=None,
                    sep_pos=None, ax=None, **kwargs):
     """
     Plots a color plot which is animated with time over the specified
@@ -60,9 +60,9 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
     image_data = data.values
 
     # If not specified, determine max and min values across entire data series
-    if vmax is 'max':
+    if vmax is None:
         vmax = np.max(image_data)
-    if vmin is 'min':
+    if vmin is None:
         vmin = np.min(image_data)
 
     if not ax:
@@ -101,7 +101,7 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
 
 
 def animate_line(data, animate_over='t', animate=True,
-                 vmin='min', vmax='max', fps=10, save_as=None, sep_pos=None, ax=None,
+                 vmin=None, vmax=None, fps=10, save_as=None, sep_pos=None, ax=None,
                  **kwargs):
     """
     Plots a line plot which is animated with time.
@@ -146,9 +146,9 @@ def animate_line(data, animate_over='t', animate=True,
     image_data = data.values
 
     # If not specified, determine max and min values across entire data series
-    if vmax is 'max':
+    if vmax is None:
         vmax = np.max(image_data)
-    if vmin is 'min':
+    if vmin is None:
         vmin = np.min(image_data)
 
     if not ax:
