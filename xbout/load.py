@@ -181,6 +181,12 @@ def _trim(ds, ghosts={}, keep_guards=True):
 
     trimmed_ds = trimmed_ds.drop(_BOUT_TIMING_VARIABLES, errors='ignore')
 
+    # Ignore FieldPerps for now
+    for name in trimmed_ds:
+        if (trimmed_ds[name].dims == ('x', 'z')
+                or trimmed_ds[name].dims == ('t', 'x', 'z')):
+            trimmed_ds = trimmed_ds.drop(name)
+
     return trimmed_ds
 
 
