@@ -71,9 +71,8 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
     imshow_block = amp.blocks.Imshow(image_data, vmin=vmin, vmax=vmax,
                                      ax=ax, origin='lower', **kwargs)
 
-    timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
-
     if animate:
+        timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
         anim = amp.Animation([imshow_block], timeline)
 
     cbar = plt.colorbar(imshow_block.im, ax=ax)
@@ -159,9 +158,8 @@ def animate_line(data, animate_over='t', animate=True,
 
     line_block = amp.blocks.Line(image_data, ax=ax, **kwargs)
 
-    timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
-
     if animate:
+        timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
         anim = amp.Animation([line_block], timeline)
 
     # Add title and axis labels
