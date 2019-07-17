@@ -2,9 +2,12 @@ from pprint import pformat as prettyformat
 from functools import partial
 
 from xarray import register_dataset_accessor, save_mfdataset, merge
+import animatplot as amp
+from matplotlib import pyplot as plt
+import numpy as np
 from dask.diagnostics import ProgressBar
 
-
+from .plotting.animate import animate_imshow, animate_line
 @register_dataset_accessor('bout')
 class BoutDatasetAccessor:
     """
@@ -157,6 +160,50 @@ class BoutDatasetAccessor:
         with ProgressBar():
             save_mfdataset(restart_datasets, paths, compute=True)
         return
+
+    def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
+                     nrows=None, ncols=None):
+        nvars = len(variables)
+
+        if nrows is None and ncols is None:
+            ncols = int(np.ceil(np.sqrt(nvars)))
+            nrows = int(np.ceil(nvars/ncols))
+        elif nrows is None:
+            nrows = int(np.ceil(nvars/ncols))
+        elif ncols is None:
+            ncols = int(np.ceil(nvars/nrows))
+        else:
+            assert nrows*ncols >= nvars, 'nrows*ncols not as big as nvar'
+
+        fig, axes = plt.subplots(nrows, ncols, squeeze=False)
+
+        blocks = []
+        for v, ax in zip(variables, axes.flatten()):
+            data = v.bout.data
+            ndims = len(data.dims)
+            ax.set_title(data.name)
+
+            if ndims == 2:
+                blocks.append(animate_line(data=data, ax=ax, animate_over=animate_over,
+                              animate=False))
+            elif ndims == 3:
+                blocks.append(animate_imshow(data=data, ax=ax, animate_over=animate_over,
+                              animate=False))
+            else:
+                raise ValueError("Unsupported number of dimensions "
+                                 + str(ndims) + ". Dims are " + str(v.dims))
+
+        timeline = amp.Timeline(np.arange(variables[0].sizes[animate_over]), fps=fps)
+        anim = amp.Animation(blocks, timeline)
+        anim.controls(timeline_slider_args={'text': animate_over})
+
+        if save_as is not None:
+            anim.save(save_as + '.gif', writer='imagemagick')
+
+        if show:
+            plt.show()
+
+        return anim
 
 
 def _find_time_dependent_vars(data):
