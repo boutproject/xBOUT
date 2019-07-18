@@ -103,7 +103,7 @@ def animate_imshow(data, animate_over='t', x=None, y=None, animate=True,
     cbar.ax.set_ylabel(variable)
 
     # Add title and axis labels
-    ax.set_title("{} variation over {}".format(variable, animate_over))
+    ax.set_title(variable)
     ax.set_xlabel(x)
     ax.set_ylabel(y)
 
@@ -186,7 +186,7 @@ def animate_line(data, animate_over='t', animate=True,
         anim = amp.Animation([line_block], timeline)
 
     # Add title and axis labels
-    ax.set_title("{} variation over {}".format(variable, animate_over))
+    ax.set_title(variable)
     ax.set_xlabel(x_read)
     ax.set_ylabel(variable)
 
