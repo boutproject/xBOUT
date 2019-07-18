@@ -8,7 +8,7 @@ from matplotlib.animation import PillowWriter
 
 
 def animate_imshow(data, animate_over='t', x=None, y=None, animate=True,
-                   vmin=None, vmax=None, fps=10, save_as=None,
+                   vmin=None, vmax=None, vsymmetric=False, fps=10, save_as=None,
                    sep_pos=None, ax=None, **kwargs):
     """
     Plots a color plot which is animated with time over the specified
@@ -87,6 +87,9 @@ def animate_imshow(data, animate_over='t', x=None, y=None, animate=True,
         vmax = np.max(image_data)
     if vmin is None:
         vmin = np.min(image_data)
+    if vsymmetric:
+        vmax = max(np.abs(vmin), np.abs(vmax))
+        vmin = -vmax
 
     if not ax:
         fig, ax = plt.subplots()
