@@ -162,7 +162,7 @@ class BoutDatasetAccessor:
         return
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
-                     nrows=None, ncols=None):
+                     nrows=None, ncols=None, **kwargs):
         nvars = len(variables)
 
         if nrows is None and ncols is None:
@@ -185,10 +185,10 @@ class BoutDatasetAccessor:
 
             if ndims == 2:
                 blocks.append(animate_line(data=data, ax=ax, animate_over=animate_over,
-                              animate=False))
+                              animate=False, **kwargs))
             elif ndims == 3:
                 blocks.append(animate_imshow(data=data, ax=ax, animate_over=animate_over,
-                              animate=False))
+                              animate=False, **kwargs))
             else:
                 raise ValueError("Unsupported number of dimensions "
                                  + str(ndims) + ". Dims are " + str(v.dims))
