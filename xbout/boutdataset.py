@@ -254,7 +254,8 @@ class BoutDatasetAccessor:
         elif ncols is None:
             ncols = int(np.ceil(nvars/nrows))
         else:
-            assert nrows*ncols >= nvars, 'nrows*ncols not as big as nvar'
+            if nrows*ncols < nvars:
+                raise ValueError('Not enough rows*columns to fit all variables')
 
         fig, axes = plt.subplots(nrows, ncols, squeeze=False)
 
