@@ -52,6 +52,8 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
         If true, keep y-direction boundary cells (the cells past the physical edges of the
         grid, where boundary conditions are set); increases the size of the y dimension in
         the returned data-set. If false, trim these cells.
+        Note: in double-null topology, setting this argument to True loads the boundary
+        cells at the second divertor, so the length of the y-dimension would be ny+4*MYG.
     run_name : str, optional
     info : bool, optional
 

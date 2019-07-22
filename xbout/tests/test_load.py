@@ -429,9 +429,81 @@ class TestTrim:
          -----> x
         """
 
-        filename = "folder0/BOUT.dmp." + str(filenum) + ".nc"
+        ds = create_test_data(0)
+        ds['jyseps2_1'] = 0
+        ds['jyseps1_2'] = 0
+        ds.encoding['source'] = "folder0/BOUT.dmp." + str(filenum) + ".nc"
         actual_lower_boundaries, actual_upper_boundaries = _infer_contains_boundaries(
-            filename, nxpe, nype)
+            ds, nxpe, nype)
+
+        assert actual_lower_boundaries == lower_boundaries
+        assert actual_upper_boundaries == upper_boundaries
+
+    @pytest.mark.parametrize("filenum, nxpe, nype, lower_boundaries, upper_boundaries",
+                              # 1d parallelization along y:
+                              # Bottom
+                             [(0,      1,    4,    {'x': True,  'y': True},
+                                                   {'x': True,  'y': False}),
+                              # Lower Middle
+                              (1,      1,    4,    {'x': True,  'y': False},
+                                                   {'x': True,  'y': True}),
+                              # Upper Middle
+                              (2,      1,    4,    {'x': True,  'y': True},
+                                                   {'x': True,  'y': False}),
+                              # Top
+                              (3,      1,    4,    {'x': True,  'y': False},
+                                                   {'x': True,  'y': True}),
+
+                              # 2d parallelization:
+                              # Bottom left corner
+                              (0,      3,    4,    {'x': True,  'y': True},
+                                                   {'x': False, 'y': False}),
+                              (1,      3,    4,    {'x': False,  'y': True},
+                                                   {'x': False, 'y': False}),
+                              # Bottom right corner
+                              (2,      3,    4,    {'x': False, 'y': True},
+                                                   {'x': True,  'y': False}),
+                              (3,      3,    4,    {'x': True, 'y': False},
+                                                   {'x': False,  'y': True}),
+                              (4,      3,    4,    {'x': False, 'y': False},
+                                                   {'x': False,  'y': True}),
+                              (5,      3,    4,    {'x': False, 'y': False},
+                                                   {'x': True,  'y': True}),
+                              (6,      3,    4,    {'x': True, 'y': True},
+                                                   {'x': False,  'y': False}),
+                              (7,      3,    4,    {'x': False, 'y': True},
+                                                   {'x': False,  'y': False}),
+                              (8,      3,    4,    {'x': False, 'y': True},
+                                                   {'x': True,  'y': False}),
+                              # Top left corner
+                              (9,      3,    4,    {'x': True,  'y': False},
+                                                   {'x': False, 'y': True}),
+                              (10,     3,    4,    {'x': False,  'y': False},
+                                                   {'x': False, 'y': True}),
+                              # Top right corner
+                              (11,     3,    4,    {'x': False, 'y': False},
+                                                   {'x': True,  'y': True}),
+                              ])
+    def test_infer_boundaries_2d_parallelization_doublenull(self, filenum, nxpe, nype,
+            lower_boundaries, upper_boundaries):
+        """
+        Numbering scheme for nxpe=3, nype=4
+
+        y  9 10 11
+        ^  6 7  8
+        |  3 4  5
+        |  0 1  2
+         -----> x
+        """
+
+        ds = create_test_data(0)
+        ds['jyseps2_1'] = 3
+        ds['jyseps1_2'] = 11
+        ds['ny_inner'] = 8
+        ds['MYSUB'] = 4
+        ds.encoding['source'] = "folder0/BOUT.dmp." + str(filenum) + ".nc"
+        actual_lower_boundaries, actual_upper_boundaries = _infer_contains_boundaries(
+            ds, nxpe, nype)
 
         assert actual_lower_boundaries == lower_boundaries
         assert actual_upper_boundaries == upper_boundaries
@@ -443,8 +515,50 @@ class TestTrim:
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
 
+        ds['jyseps2_1'] = 8
+        ds['jyseps1_2'] = 8
+
         actual = _trim(ds, guards={'x': 2}, keep_boundaries={'x': True}, nxpe=1, nype=1)
         expected = ds  # Should be unchanged
+        xrt.assert_equal(expected, actual)
+
+    def test_keep_yboundaries(self):
+        ds = create_test_data(0)
+        ds = ds.rename({'dim2': 'y'})
+
+        # Manually add filename - encoding normally added by xr.open_dataset
+        ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
+
+        ds['jyseps2_1'] = 8
+        ds['jyseps1_2'] = 8
+
+        actual = _trim(ds, guards={'y': 2}, keep_boundaries={'y': True}, nxpe=1, nype=1)
+        expected = ds  # Should be unchanged
+        xrt.assert_equal(expected, actual)
+
+    @pytest.mark.parametrize("filenum, lower, upper",
+            [(0, True, False),
+             (1, False, True),
+             (2, True, False),
+             (3, False, True)])
+    def test_keep_yboundaries_doublenull(self, filenum, lower, upper):
+        ds = create_test_data(0)
+        ds = ds.rename({'dim2': 'y'})
+
+        # Manually add filename - encoding normally added by xr.open_dataset
+        ds.encoding['source'] = 'folder0/BOUT.dmp.'+str(filenum)+'.nc'
+
+        ds['jyseps2_1'] = 3
+        ds['jyseps1_2'] = 11
+        ds['ny_inner'] = 8
+        ds['MYSUB'] = 4
+
+        actual = _trim(ds, guards={'y': 2}, keep_boundaries={'y': True}, nxpe=1, nype=4)
+        expected = ds  # Should be unchanged
+        if not lower:
+            expected = expected.isel(y=slice(2, None, None))
+        if not upper:
+            expected = expected.isel(y=slice(None, -2, None))
         xrt.assert_equal(expected, actual)
 
     def test_trim_timing_info(self):
