@@ -22,7 +22,6 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
     paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
     _preprocess = partial(_trim, guards={'x': mxg, 'y': myg},
-                          boundary_cells={'x': mxg, 'y': myg},
                           keep_boundaries={'x': keep_xboundaries, 'y': keep_yboundaries},
                           nxpe=nxpe, nype=nype)
 
@@ -93,8 +92,6 @@ def _expand_wildcards(path):
 def _read_splitting(filepath, info=True):
     ds = xarray.open_dataset(str(filepath))
 
-    # TODO check that BOUT doesn't ever set the number of guards to be different to the number of ghosts
-
     # Account for case of no parallelisation, when nxpe etc won't be in dataset
     def get_scalar(ds, key, default=1, info=True):
         if key in ds:
@@ -159,7 +156,7 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     return paths_grid, concat_dims
 
 
-def _trim(ds, *, guards, boundary_cells, keep_boundaries, nxpe, nype):
+def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
     """
     Trims all guard (and optionally boundary) cells off a single dataset read from a
     single BOUT dump file, to prepare for concatenation.
@@ -170,8 +167,6 @@ def _trim(ds, *, guards, boundary_cells, keep_boundaries, nxpe, nype):
     ----------
     guards : dict
         Number of guard cells along each dimension, e.g. {'x': 2, 't': 0}
-    boundary_cells : dict
-        Number of boundary cells along each dimension, e.g. {'x': 2, 'y': 2}
     keep_boundaries : dict
         Whether or not to preserve the boundary cells along each dimension, e.g.
         {'x': True, 'y': False}
@@ -193,7 +188,7 @@ def _trim(ds, *, guards, boundary_cells, keep_boundaries, nxpe, nype):
             if lower_boundaries.get(dim, False):
                 lower = None
             else:
-                lower = max(guards[dim], boundary_cells[dim])
+                lower = guards[dim]
         elif guards.get(dim, False):
             lower = guards[dim]
         else:
@@ -202,7 +197,7 @@ def _trim(ds, *, guards, boundary_cells, keep_boundaries, nxpe, nype):
             if upper_boundaries.get(dim, False):
                 upper = None
             else:
-                upper = -max(guards[dim], boundary_cells[dim])
+                upper = -guards[dim]
         elif guards.get(dim, False):
             upper = -guards[dim]
         else:
