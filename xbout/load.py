@@ -8,6 +8,9 @@ from functools import partial
 
 from natsort import natsorted
 
+_BOUT_TIMING_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
+                          'wtime_comms', 'wtime_io', 'wtime_per_rhs', 'wtime_per_rhs_e',
+                          'wtime_per_rhs_i']
 
 def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
                              keep_xguards=False, keep_yguards=False):
@@ -25,8 +28,9 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
 
     # TODO warning message to make sure user knows if it's parallelized
     ds = xarray.open_mfdataset(paths_grid, concat_dim=concat_dims,
-                               data_vars='minimal', preprocess=_preprocess,
-                               engine=filetype, chunks=chunks, parallel=False)
+                               combine='nested', data_vars='minimal',
+                               preprocess=_preprocess, engine=filetype,
+                               chunks=chunks)
 
     ds, metadata = _strip_metadata(ds)
 
@@ -159,6 +163,8 @@ def _trim(ds, ghosts, guards={}, keep_guards={}, nxpe=1, nype=1):
     """
     Trims all ghost and guard cells off a single dataset read from a single
     BOUT dump file, to prepare for concatenation.
+    Also drops some variables that store timing information, which are different for each
+    process and so cannot be concatenated.
 
     Parameters
     ----------
@@ -204,6 +210,9 @@ def _trim(ds, ghosts, guards={}, keep_guards={}, nxpe=1, nype=1):
         selection[dim] = slice(lower, upper)
 
     trimmed_ds = ds.isel(**selection)
+
+    trimmed_ds = trimmed_ds.drop(_BOUT_TIMING_VARIABLES, errors='ignore')
+
     return trimmed_ds
 
 
