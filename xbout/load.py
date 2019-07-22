@@ -177,7 +177,7 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
         # Relies on a change to xarray so datasets always have source encoding
         # See xarray GH issue #2550
         lower_boundaries, upper_boundaries = _infer_contains_boundaries(
-            ds.encoding['source'], nxpe, nype)
+            ds, nxpe, nype)
     else:
         lower_boundaries, upper_boundaries = {}, {}
 
@@ -211,15 +211,18 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
     return trimmed_ds
 
 
-def _infer_contains_boundaries(filename, nxpe, nype):
+def _infer_contains_boundaries(ds, nxpe, nype):
     """
-    Uses the name of the output file and the domain decomposition to work out
-    whether this dataset contains boundary cells, and on which side.
+    Uses the name of the output file, BOUT++'s topology indices, and the domain
+    decomposition to work out whether this dataset contains boundary cells, and on which
+    side.
 
     Uses knowledge that BOUT names its output files as /folder/prefix.num.nc,
     with a numbering scheme
     num = nxpe*i + j, where i={0, ..., nype}, j={0, ..., nxpe}
     """
+
+    filename = ds.encoding['source']
 
     *prefix, filenum, extension = Path(filename).suffixes
     filenum = int(filenum.replace('.', ''))
@@ -231,6 +234,18 @@ def _infer_contains_boundaries(filename, nxpe, nype):
 
     lower_boundaries['y'] = filenum < nxpe
     upper_boundaries['y'] = filenum >= (nype-1)*nxpe
+
+    jyseps2_1 = int(ds['jyseps2_1'])
+    jyseps1_2 = int(ds['jyseps1_2'])
+    if jyseps1_2 > jyseps2_1:
+        # second divertor present
+        yproc = filenum // nxpe
+        ny_inner = int(ds['ny_inner'])
+        mysub = int(ds['MYSUB'])
+        if mysub*(yproc + 1) == ny_inner:
+            upper_boundaries['y'] = True
+        elif mysub*yproc == ny_inner:
+            lower_boundaries['y'] = True
 
     return lower_boundaries, upper_boundaries
 
