@@ -168,7 +168,7 @@ def bout_xyt_example_files(tmpdir_factory):
 
 
 def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6),
-                            nxpe=4, nype=2, nt=1, guards={}, boundary_cells={}, syn_data_type='random'):
+                            nxpe=4, nype=2, nt=1, guards={}, syn_data_type='random'):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
 
@@ -178,7 +178,7 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6)
     save_dir = tmpdir_factory.mktemp("data")
 
     ds_list, file_list = create_bout_ds_list(prefix=prefix, lengths=lengths, nxpe=nxpe, nype=nype, nt=nt,
-                                             guards=guards, boundary_cells=boundary_cells, syn_data_type=syn_data_type)
+                                             guards=guards, syn_data_type=syn_data_type)
 
     for ds, file_name in zip(ds_list, file_list):
         ds.to_netcdf(str(save_dir.join(str(file_name))))
@@ -197,7 +197,7 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6)
 
 
 def create_bout_ds_list(prefix, lengths=(2,4,7,6), nxpe=4, nype=2, nt=1, guards={},
-        boundary_cells={}, syn_data_type='random'):
+        syn_data_type='random'):
     """
     Mocks up a set of BOUT-like datasets.
 
@@ -218,15 +218,15 @@ def create_bout_ds_list(prefix, lengths=(2,4,7,6), nxpe=4, nype=2, nt=1, guards=
 
             # Include boundary cells
             for dim in ['x', 'y']:
-                if dim in boundary_cells.keys():
+                if dim in guards.keys():
                     if i == 0:
-                        lower_bndry_cells[dim] = boundary_cells[dim]
+                        lower_bndry_cells[dim] = guards[dim]
                     if i == nxpe-1:
-                        upper_bndry_cells[dim] = boundary_cells[dim]
+                        upper_bndry_cells[dim] = guards[dim]
 
             ds = create_bout_ds(syn_data_type=syn_data_type, num=num, lengths=lengths, nxpe=nxpe, nype=nype,
                                 upper_bndry_cells=upper_bndry_cells, lower_bndry_cells=lower_bndry_cells,
-                                boundary_cells=boundary_cells, guards=guards)
+                                guards=guards)
             ds_list.append(ds)
 
     # Sort this in order of num to remove any BOUT-specific structure
@@ -237,8 +237,7 @@ def create_bout_ds_list(prefix, lengths=(2,4,7,6), nxpe=4, nype=2, nt=1, guards=
 
 
 def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nype=1,
-                   upper_bndry_cells={}, lower_bndry_cells={}, boundary_cells={},
-                   guards={}):
+                   upper_bndry_cells={}, lower_bndry_cells={}, guards={}):
 
     # Set the shape of the data in this dataset
     x_length, y_length, z_length, t_length = lengths
@@ -271,8 +270,8 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
     # Include metadata
     ds['NXPE'] = nxpe
     ds['NYPE'] = nype
-    ds['MXG'] = boundary_cells.get('x', 0)
-    ds['MYG'] = boundary_cells.get('y', 0)
+    ds['MXG'] = guards.get('x', 0)
+    ds['MYG'] = guards.get('y', 0)
     ds['nx'] = x_length
     ds['MXSUB'] = guards.get('x', 0)
     ds['MYSUB'] = guards.get('y', 0)
@@ -348,7 +347,7 @@ class TestTrim:
         ds = create_test_data(0)
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
-        actual = _trim(ds, guards={}, boundary_cells={}, keep_boundaries={}, nxpe=1,
+        actual = _trim(ds, guards={}, keep_boundaries={}, nxpe=1,
                 nype=1)
         xrt.assert_equal(actual, ds)
 
@@ -356,7 +355,7 @@ class TestTrim:
         ds = create_test_data(0)
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
-        actual = _trim(ds, guards={'time': 2}, boundary_cells={}, keep_boundaries={},
+        actual = _trim(ds, guards={'time': 2}, keep_boundaries={},
                 nxpe=1, nype=1)
         selection = {'time': slice(2, -2)}
         expected = ds.isel(**selection)
@@ -444,8 +443,7 @@ class TestTrim:
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
 
-        actual = _trim(ds, guards={'x': 2}, boundary_cells={'x': 2},
-                       keep_boundaries={'x': True}, nxpe=1, nype=1)
+        actual = _trim(ds, guards={'x': 2}, keep_boundaries={'x': True}, nxpe=1, nype=1)
         expected = ds  # Should be unchanged
         xrt.assert_equal(expected, actual)
 
@@ -459,7 +457,7 @@ class TestTrim:
 
         for v in _BOUT_TIMING_VARIABLES:
             ds[v] = 42.
-        ds = _trim(ds, guards={}, boundary_cells={}, keep_boundaries={}, nxpe=1, nype=1)
+        ds = _trim(ds, guards={}, keep_boundaries={}, nxpe=1, nype=1)
 
         expected = create_test_data(0)
         xrt.assert_equal(ds, expected)
