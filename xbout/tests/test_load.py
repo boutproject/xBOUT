@@ -444,3 +444,18 @@ class TestTrim:
                        keep_guards={'x': True}, nxpe=1, nype=1)
         expected = ds  # Should be unchanged
         xrt.assert_equal(expected, actual)
+
+    def test_trim_timing_info(self):
+        ds = create_test_data(0)
+        from xbout.load import _BOUT_TIMING_VARIABLES
+
+        # remove a couple of entries from _BOUT_TIMING_VARIABLES so we test that _trim
+        # does not fail if not all of them are present
+        _BOUT_TIMING_VARIABLES = _BOUT_TIMING_VARIABLES[:-2]
+
+        for v in _BOUT_TIMING_VARIABLES:
+            ds[v] = 42.
+        ds = _trim(ds)
+
+        expected = create_test_data(0)
+        xrt.assert_equal(ds, expected)
