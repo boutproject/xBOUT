@@ -159,7 +159,7 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     return paths_grid, concat_dims
 
 
-def _trim(ds, ghosts, guards={}, keep_guards={}, nxpe=1, nype=1):
+def _trim(ds, ghosts, guards=None, keep_guards=None, nxpe=1, nype=1):
     """
     Trims all ghost and guard cells off a single dataset read from a single
     BOUT dump file, to prepare for concatenation.
@@ -176,6 +176,12 @@ def _trim(ds, ghosts, guards={}, keep_guards={}, nxpe=1, nype=1):
         Whether or not to preserve the guard cells along each dimension, e.g.
         {'x': True, 'y': False}
     """
+
+    if guards is None:
+        guards = {}
+
+    if keep_guards is None:
+        keep_guards = {}
 
     if any(keep_guards.values()):
         # Work out if this particular dataset contains any guard cells
