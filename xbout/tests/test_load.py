@@ -455,7 +455,7 @@ class TestTrim:
 
         for v in _BOUT_TIMING_VARIABLES:
             ds[v] = 42.
-        ds = _trim(ds)
+        ds = _trim(ds, {})
 
         expected = create_test_data(0)
         xrt.assert_equal(ds, expected)
