@@ -31,7 +31,7 @@ except ValueError:
 
 def open_boutdataset(datapath='./BOUT.dmp.*.nc',
                      inputfilepath=None, gridfilepath=None, chunks={},
-                     keep_xguards=True, keep_yguards=False,
+                     keep_xboundaries=True, keep_yboundaries=False,
                      run_name=None, info=True):
     """
     Load a dataset from a set of BOUT output files, including the input options file.
@@ -56,8 +56,8 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
 
     # Gather pointers to all numerical data from BOUT++ output files
     ds, metadata = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
-                                            keep_xguards=keep_xguards,
-                                            keep_yguards=keep_yguards)
+                                            keep_xboundaries=keep_xboundaries,
+                                            keep_yboundaries=keep_yboundaries)
 
     ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
 
@@ -235,7 +235,7 @@ class BoutDatasetAccessor:
             else:
                 nxpe, nype = self.metadata['NXPE'], self.metadata['NYPE']
 
-        # Is this even possible without saving the ghost cells?
+        # Is this even possible without saving the guard cells?
         # Can they be recreated?
         restart_datasets, paths = _split_into_restarts(self.data, savepath,
                                                        nxpe, nype)

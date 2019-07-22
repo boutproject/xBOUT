@@ -13,7 +13,7 @@ _BOUT_TIMING_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
                           'wtime_per_rhs_i']
 
 def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
-                             keep_xguards=False, keep_yguards=False):
+                             keep_xboundaries=False, keep_yboundaries=False):
     filepaths, filetype = _expand_filepaths(datapath)
 
     # Open just one file to read processor splitting
@@ -21,9 +21,9 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
 
     paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
-    _preprocess = partial(_trim, ghosts={'x': mxg, 'y': myg},
-                          guards={'x': mxg, 'y': myg},
-                          keep_guards={'x': keep_xguards, 'y': keep_yguards},
+    _preprocess = partial(_trim, guards={'x': mxg, 'y': myg},
+                          boundary_cells={'x': mxg, 'y': myg},
+                          keep_boundaries={'x': keep_xboundaries, 'y': keep_yboundaries},
                           nxpe=nxpe, nype=nype)
 
     # TODO warning message to make sure user knows if it's parallelized
@@ -159,58 +159,52 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     return paths_grid, concat_dims
 
 
-def _trim(ds, ghosts, guards=None, keep_guards=None, nxpe=1, nype=1):
+def _trim(ds, *, guards, boundary_cells, keep_boundaries, nxpe, nype):
     """
-    Trims all ghost and guard cells off a single dataset read from a single
-    BOUT dump file, to prepare for concatenation.
+    Trims all guard (and optionally boundary) cells off a single dataset read from a
+    single BOUT dump file, to prepare for concatenation.
     Also drops some variables that store timing information, which are different for each
     process and so cannot be concatenated.
 
     Parameters
     ----------
-    ghosts : dict, optional
-        Number of ghost cells along each dimension, e.g. {'x': 2, 't': 0}
-    guards : dict, optional
-        Number of guard cells along each dimension, e.g. {'x': 2, 'y': 2}
-    keep_guards : dict, optional
-        Whether or not to preserve the guard cells along each dimension, e.g.
+    guards : dict
+        Number of guard cells along each dimension, e.g. {'x': 2, 't': 0}
+    boundary_cells : dict
+        Number of boundary cells along each dimension, e.g. {'x': 2, 'y': 2}
+    keep_boundaries : dict
+        Whether or not to preserve the boundary cells along each dimension, e.g.
         {'x': True, 'y': False}
     """
 
-    if guards is None:
-        guards = {}
-
-    if keep_guards is None:
-        keep_guards = {}
-
-    if any(keep_guards.values()):
-        # Work out if this particular dataset contains any guard cells
+    if any(keep_boundaries.values()):
+        # Work out if this particular dataset contains any boundary cells
         # Relies on a change to xarray so datasets always have source encoding
         # See xarray GH issue #2550
-        lower_guards, upper_guards = _infer_contains_guards(
+        lower_boundaries, upper_boundaries = _infer_contains_boundaries(
             ds.encoding['source'], nxpe, nype)
     else:
-        lower_guards, upper_guards = {}, {}
+        lower_boundaries, upper_boundaries = {}, {}
 
     selection = {}
     for dim in ds.dims:
-        # Check for guard cells, otherwise use ghost cells, else leave alone
-        if keep_guards.get(dim, False):
-            if lower_guards.get(dim, False):
+        # Check for boundary cells, otherwise use guard cells, else leave alone
+        if keep_boundaries.get(dim, False):
+            if lower_boundaries.get(dim, False):
                 lower = None
             else:
-                lower = max(ghosts[dim], guards[dim])
-        elif ghosts.get(dim, False):
-            lower = ghosts[dim]
+                lower = max(guards[dim], boundary_cells[dim])
+        elif guards.get(dim, False):
+            lower = guards[dim]
         else:
             lower = None
-        if keep_guards.get(dim, False):
-            if upper_guards.get(dim, False):
+        if keep_boundaries.get(dim, False):
+            if upper_boundaries.get(dim, False):
                 upper = None
             else:
-                upper = -max(ghosts[dim], guards[dim])
-        elif ghosts.get(dim, False):
-            upper = -ghosts[dim]
+                upper = -max(guards[dim], boundary_cells[dim])
+        elif guards.get(dim, False):
+            upper = -guards[dim]
         else:
             upper = None
         selection[dim] = slice(lower, upper)
@@ -222,10 +216,10 @@ def _trim(ds, ghosts, guards=None, keep_guards=None, nxpe=1, nype=1):
     return trimmed_ds
 
 
-def _infer_contains_guards(filename, nxpe, nype):
+def _infer_contains_boundaries(filename, nxpe, nype):
     """
     Uses the name of the output file and the domain decomposition to work out
-    whether this dataset contains guard (boundary) cells, and on which side.
+    whether this dataset contains boundary cells, and on which side.
 
     Uses knowledge that BOUT names its output files as /folder/prefix.num.nc,
     with a numbering scheme
@@ -235,15 +229,15 @@ def _infer_contains_guards(filename, nxpe, nype):
     *prefix, filenum, extension = Path(filename).suffixes
     filenum = int(filenum.replace('.', ''))
 
-    lower_guards, upper_guards = {}, {}
+    lower_boundaries, upper_boundaries = {}, {}
 
-    lower_guards['x'] = filenum % nxpe == 0
-    upper_guards['x'] = filenum % nxpe == nxpe-1
+    lower_boundaries['x'] = filenum % nxpe == 0
+    upper_boundaries['x'] = filenum % nxpe == nxpe-1
 
-    lower_guards['y'] = filenum < nxpe
-    upper_guards['y'] = filenum >= (nype-1)*nxpe
+    lower_boundaries['y'] = filenum < nxpe
+    upper_boundaries['y'] = filenum >= (nype-1)*nxpe
 
-    return lower_guards, upper_guards
+    return lower_boundaries, upper_boundaries
 
 
 def _strip_metadata(ds):
