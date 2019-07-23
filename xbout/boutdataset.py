@@ -45,13 +45,13 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
     inputfilepath : str, optional
     gridfilepath : str, optional
     keep_xboundaries : bool, optional
-        If true, keep x-direction boundary cells (the cells past the physical edges of the
-        grid, where boundary conditions are set); increases the size of the x dimension in
-        the returned data-set. If false, trim these cells.
+        If true, keep x-direction boundary cells (the cells past the physical edges of
+        the grid, where boundary conditions are set); increases the size of the x
+        dimension in the returned data-set. If false, trim these cells.
     keep_yboundaries : bool, optional
-        If true, keep y-direction boundary cells (the cells past the physical edges of the
-        grid, where boundary conditions are set); increases the size of the y dimension in
-        the returned data-set. If false, trim these cells.
+        If true, keep y-direction boundary cells (the cells past the physical edges of
+        the grid, where boundary conditions are set); increases the size of the y
+        dimension in the returned data-set. If false, trim these cells.
     run_name : str, optional
     info : bool, optional
 
