@@ -12,6 +12,7 @@ _BOUT_TIMING_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
                           'wtime_comms', 'wtime_io', 'wtime_per_rhs', 'wtime_per_rhs_e',
                           'wtime_per_rhs_i']
 
+
 def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
                              keep_xboundaries=False, keep_yboundaries=False):
     filepaths, filetype = _expand_filepaths(datapath)

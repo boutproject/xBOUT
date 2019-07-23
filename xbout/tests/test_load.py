@@ -440,8 +440,8 @@ class TestTrim:
         assert actual_upper_boundaries == upper_boundaries
 
     @pytest.mark.parametrize("filenum, nxpe, nype, lower_boundaries, upper_boundaries",
-                              # 1d parallelization along y:
-                              # Bottom
+                             # 1d parallelization along y:
+                             # Bottom
                              [(0,      1,    4,    {'x': True,  'y': True},
                                                    {'x': True,  'y': False}),
                               # Lower Middle
@@ -484,8 +484,8 @@ class TestTrim:
                               (11,     3,    4,    {'x': False, 'y': False},
                                                    {'x': True,  'y': True}),
                               ])
-    def test_infer_boundaries_2d_parallelization_doublenull(self, filenum, nxpe, nype,
-            lower_boundaries, upper_boundaries):
+    def test_infer_boundaries_2d_parallelization_doublenull(
+            self, filenum, nxpe, nype, lower_boundaries, upper_boundaries):
         """
         Numbering scheme for nxpe=3, nype=4
 
@@ -537,10 +537,10 @@ class TestTrim:
         xrt.assert_equal(expected, actual)
 
     @pytest.mark.parametrize("filenum, lower, upper",
-            [(0, True, False),
-             (1, False, True),
-             (2, True, False),
-             (3, False, True)])
+                             [(0, True, False),
+                              (1, False, True),
+                              (2, True, False),
+                              (3, False, True)])
     def test_keep_yboundaries_doublenull(self, filenum, lower, upper):
         ds = create_test_data(0)
         ds = ds.rename({'dim2': 'y'})
