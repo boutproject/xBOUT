@@ -196,8 +196,8 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6)
     return glob_pattern
 
 
-def create_bout_ds_list(prefix, lengths=(2,4,7,6), nxpe=4, nype=2, nt=1, guards={},
-        syn_data_type='random'):
+def create_bout_ds_list(prefix, lengths=(2, 4, 7, 6), nxpe=4, nype=2, nt=1, guards={},
+                        syn_data_type='random'):
     """
     Mocks up a set of BOUT-like datasets.
 
@@ -348,7 +348,7 @@ class TestTrim:
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
         actual = _trim(ds, guards={}, keep_boundaries={}, nxpe=1,
-                nype=1)
+                       nype=1)
         xrt.assert_equal(actual, ds)
 
     def test_trim_guards(self):
@@ -356,7 +356,7 @@ class TestTrim:
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
         actual = _trim(ds, guards={'time': 2}, keep_boundaries={},
-                nxpe=1, nype=1)
+                       nxpe=1, nype=1)
         selection = {'time': slice(2, -2)}
         expected = ds.isel(**selection)
         xrt.assert_equal(expected, actual)
@@ -418,7 +418,7 @@ class TestTrim:
                                                    {'x': False, 'y': True})
                               ])
     def test_infer_boundaries_2d_parallelization(self, filenum, nxpe, nype,
-            lower_boundaries, upper_boundaries):
+                                                 lower_boundaries, upper_boundaries):
         """
         Numbering scheme for nxpe=3, nype=4
 
