@@ -10,7 +10,8 @@ from natsort import natsorted
 
 _BOUT_PER_PROC_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
                             'wtime_comms', 'wtime_io', 'wtime_per_rhs',
-                            'wtime_per_rhs_e', 'wtime_per_rhs_i', 'PE_XIND', 'PE_YIND']
+                            'wtime_per_rhs_e', 'wtime_per_rhs_i', 'PE_XIND', 'PE_YIND',
+                            'MYPE']
 
 
 def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
