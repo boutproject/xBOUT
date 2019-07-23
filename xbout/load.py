@@ -8,9 +8,9 @@ from functools import partial
 
 from natsort import natsorted
 
-_BOUT_TIMING_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
-                          'wtime_comms', 'wtime_io', 'wtime_per_rhs', 'wtime_per_rhs_e',
-                          'wtime_per_rhs_i']
+_BOUT_PER_PROC_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
+                            'wtime_comms', 'wtime_io', 'wtime_per_rhs',
+                            'wtime_per_rhs_e', 'wtime_per_rhs_i', 'PE_XIND', 'PE_YIND']
 
 
 def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
@@ -207,40 +207,43 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
 
     trimmed_ds = ds.isel(**selection)
 
-    trimmed_ds = trimmed_ds.drop(_BOUT_TIMING_VARIABLES, errors='ignore')
+    trimmed_ds = trimmed_ds.drop(_BOUT_PER_PROC_VARIABLES, errors='ignore')
 
     return trimmed_ds
 
 
 def _infer_contains_boundaries(ds, nxpe, nype):
     """
-    Uses the name of the output file, BOUT++'s topology indices, and the domain
-    decomposition to work out whether this dataset contains boundary cells, and on which
-    side.
-
-    Uses knowledge that BOUT names its output files as /folder/prefix.num.nc,
-    with a numbering scheme
-    num = nxpe*i + j, where i={0, ..., nype}, j={0, ..., nxpe}
+    Uses the processor indices and BOUT++'s topology indices to work out whether this
+    dataset contains boundary cells, and on which side.
     """
 
-    filename = ds.encoding['source']
-
-    *prefix, filenum, extension = Path(filename).suffixes
-    filenum = int(filenum.replace('.', ''))
+    try:
+        xproc = int(ds['PE_XIND'])
+        yproc = int(ds['PE_YIND'])
+    except KeyError:
+        # output file from BOUT++ earlier than 4.3
+        # Use knowledge that BOUT names its output files as /folder/prefix.num.nc, with a
+        # numbering scheme
+        # num = nxpe*i + j, where i={0, ..., nype}, j={0, ..., nxpe}
+        filename = ds.encoding['source']
+        *prefix, filenum, extension = Path(filename).suffixes
+        filenum = int(filenum.replace('.', ''))
+        xproc = filenum % nxpe
+        yproc = filenum // nxpe
 
     lower_boundaries, upper_boundaries = {}, {}
 
-    lower_boundaries['x'] = filenum % nxpe == 0
-    upper_boundaries['x'] = filenum % nxpe == nxpe-1
+    lower_boundaries['x'] = xproc == 0
+    upper_boundaries['x'] = xproc == nxpe-1
 
-    lower_boundaries['y'] = filenum < nxpe
-    upper_boundaries['y'] = filenum >= (nype-1)*nxpe
+    lower_boundaries['y'] = yproc == 0
+    upper_boundaries['y'] = yproc == nype-1
 
     jyseps2_1 = int(ds['jyseps2_1'])
     jyseps1_2 = int(ds['jyseps1_2'])
     if jyseps1_2 > jyseps2_1:
         # second divertor present
-        yproc = filenum // nxpe
         ny_inner = int(ds['ny_inner'])
         mysub = int(ds['MYSUB'])
         if mysub*(yproc + 1) == ny_inner:
