@@ -58,8 +58,14 @@ def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False):
     if ds is None:
         ds = grid
     else:
-        # TODO should instead drop variables which appear twice from grid
-        # i.e. assume dataset variables are correct
+        if grid.get('y_boundary_guards', 0) > 0 and not grid['keep_yboundaries'].values:
+            raise NotImplementedError('Do not know what to do with y-boundary cells in '
+                                      'grid when dataset does not have y boundary cells')
+        # Drop variables in ds from grid, so that variables saved to both do not conflict
+        # when merging.
+        # Prefer the version from ds, as this may have had normalisations, etc., applied
+        # by the PhysicsModel that we want to keep.
+        grid = grid.drop(ds.keys(), errors='ignore')
         ds = xr.merge((ds, grid))
 
     ds = _set_attrs_on_all_vars(ds, 'grid', grid_metadata)
