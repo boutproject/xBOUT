@@ -199,23 +199,22 @@ def plot_separatrices(da, ax):
     ax.plot(core_R, core_Z, 'k--')
 
     # Plot second separatrix
+    if j12 > j21:
+        # Upper X-point location
+        Rx = 0.125 * (R[ix2 - 1, j12] + R[ix2, j12]
+                      + R[ix2, j12 + 1] + R[ix2 - 1, j12 + 1]
+                      + R[ix2 - 1, j21 + 1] + R[ix2, j21 + 1]
+                      + R[ix2, j21] + R[ix2 - 1, j21])
+        Zx = 0.125 * (Z[ix2 - 1, j12] + Z[ix2, j12]
+                      + Z[ix2, j12 + 1] + Z[ix2 - 1, j12 + 1]
+                      + Z[ix2 - 1, j21 + 1] + Z[ix2, j21 + 1]
+                      + Z[ix2, j21] + Z[ix2 - 1, j21])
+    else:
+        Rx, Zx = None, None
+
     if ix2 != ix1:
         if ix2 < ix1:
             raise ValueError("Inner separatrix must be the at the bottom")
-
-        # TODO is this correct check that there is actually a second X-point?
-        if j21 < nin:
-            # Upper X-point location
-            Rx = 0.125 * (R[ix2 - 1, j12] + R[ix2, j12]
-                          + R[ix2, j12 + 1] + R[ix2 - 1, j12 + 1]
-                          + R[ix2 - 1, j21 + 1] + R[ix2, j21 + 1]
-                          + R[ix2, j21] + R[ix2 - 1, j21])
-            Zx = 0.125 * (Z[ix2 - 1, j12] + Z[ix2, j12]
-                          + Z[ix2, j12 + 1] + Z[ix2 - 1, j12 + 1]
-                          + Z[ix2 - 1, j21 + 1] + Z[ix2, j21 + 1]
-                          + Z[ix2, j21] + Z[ix2 - 1, j21])
-        else:
-            Rx, Zx = None, None
 
         lower_inner_R = 0.5 * (R[ix2 - 1, 0:(j11 + 1)] + R[ix2, 0:(j11 + 1)])
         lower_inner_Z = 0.5 * (Z[ix2 - 1, 0:(j11 + 1)] + Z[ix2, 0:(j11 + 1)])
@@ -251,6 +250,20 @@ def plot_separatrices(da, ax):
         outer_Z = np.concatenate((np.flip(lower_outer_Z),
                                   np.flip(core_outer_Z), [Zx], upper_inner_Z))
         ax.plot(outer_R, outer_Z, 'k--')
+    elif j12 > j21:
+        # Connected double-null - plot separatrices in upper legs
+        upper_outer_R = np.concatenate(
+                (0.5 * (R[ix2 - 1, nin:(j12+1)] + R[ix2, nin:(j12+1)]), [Rx]))
+        upper_outer_Z = np.concatenate(
+                (0.5 * (Z[ix2 - 1, nin:(j12+1)] + Z[ix2, nin:(j12+1)]), [Zx]))
+
+        upper_inner_R = np.concatenate(
+                ([Rx], 0.5 * (R[ix2 - 1, (j21+1):nin] + R[ix2, (j21+1):nin])))
+        upper_inner_Z = np.concatenate(
+                ([Zx], 0.5 * (Z[ix2 - 1, (j21+1):nin] + Z[ix2, (j21+1):nin])))
+
+        ax.plot(upper_inner_R, upper_inner_Z, 'k--')
+        ax.plot(upper_outer_R, upper_outer_Z, 'k--')
 
 
 def plot_targets(da, ax, hatching=True):
