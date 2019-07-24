@@ -123,8 +123,7 @@ def _decompose_regions(da):
 
         regions.extend([region13, region14, region15])
 
-    # TODO is this correct check that there is actually a second X-point?
-    if j21 < nin:
+    if j21 > j11 and j12 > j21 and j22 > j12:
         # X-point regions
         corner1 = da[ix1-1, j12]
         corner2 = da[ix1, j12]
