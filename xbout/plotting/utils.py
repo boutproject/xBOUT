@@ -38,8 +38,6 @@ def plot_separatrix(da, sep_pos, ax, radial_coord='x'):
 
 def _decompose_regions(da):
 
-    # TODO are we dealing with empty regions sensibly?
-
     j11, j12, j21, j22, ix1, ix2, nin, _, ny = _get_seps(da)
     regions = []
 
@@ -60,11 +58,12 @@ def _decompose_regions(da):
 
         ystart = j11 + 1
 
-    # Inner SOL
-    region5 = da[:, ystart:(j21 + 1)]
-    regions.append(region5)
+    if j21 + 1 > ystart:
+        # Inner SOL
+        region5 = da[:, ystart:(j21 + 1)]
+        regions.append(region5)
 
-    ystart = j21 + 1
+        ystart = j21 + 1
 
     if j12 > j21:
         # Contains upper PF region
@@ -91,11 +90,12 @@ def _decompose_regions(da):
     else:
         ystart -= 1
 
-    # Outer SOL
-    region12 = da[:, ystart:(j22 + 1)]
-    regions.append(region12)
+    if j22 + 1 > ystart:
+        # Outer SOL
+        region12 = da[:, ystart:(j22 + 1)]
+        regions.append(region12)
 
-    ystart = j22 + 1
+        ystart = j22 + 1
 
     if j22 + 1 < ny:
         # Outer leg
