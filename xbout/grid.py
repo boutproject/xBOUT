@@ -60,7 +60,8 @@ def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False):
     else:
         # TODO should instead drop variables which appear twice from grid
         # i.e. assume dataset variables are correct
-        ds = xr.merge(ds, grid)
+        ds = xr.merge((ds, grid))
+
     ds = _set_attrs_on_all_vars(ds, 'grid', grid_metadata)
 
     if geometry is None:
