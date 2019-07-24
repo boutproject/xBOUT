@@ -1,3 +1,4 @@
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -43,11 +44,11 @@ def regions(da, ax=None, **kwargs):
 
 
 def contourf(da, levels=7, ax=None, separatrix=True, targets=True,
-             add_limiter_hatching=True, **kwargs):
+             add_limiter_hatching=True, cmap=None, **kwargs):
     """
     Plots a 2D filled contour plot, taking into account branch cuts (X-points).
 
-    Wraps `xarray.plot.contourf`, so automatically adds a colorbar and labels.
+    Wraps `xarray.plot.contourf`, so automatically adds labels.
 
     Parameters
     ----------
@@ -81,22 +82,37 @@ def contourf(da, levels=7, ax=None, separatrix=True, targets=True,
         fig, ax = plt.subplots()
 
     if isinstance(levels, np.int):
-        levels = np.linspace(da.min(), da.max(), levels, endpoint=True)
+        vmin = da.min().values
+        vmax = da.max().values
+        levels = np.linspace(vmin, vmax, levels, endpoint=True)
+    else:
+        levels = np.array(levels)
+        vmin = np.min(levels)
+        vmax = np.max(levels)
+
+    # create colorbar
+    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+    # make colorbar have only discrete levels
+    # average the levels so that colors represent the intervals between the levels
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
+            'discrete cmap', sm.to_rgba(0.5*(levels[:-1] + levels[1:])), len(levels) - 1)
+    # re-make sm with new cmap
+    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+    fig.colorbar(sm, ticks=levels)
 
     regions = _decompose_regions(da)
     region_kwargs = {}
 
-    # TODO create colorbar using all the data?
-
     # Plot all regions on same axis
     first, *rest = regions
-    artists = [first.plot.contourf(x=x, y=y, ax=ax, levels=levels,
-                                   **kwargs, **region_kwargs)]
+    artists = [first.plot.contourf(x=x, y=y, ax=ax, levels=levels, add_colorbar=False,
+                                   cmap=cmap, **kwargs, **region_kwargs)]
     if rest:
         for region in rest:
             artist = region.plot.contourf(x=x, y=y, ax=ax, levels=levels,
                                           add_colorbar=False, add_labels=False,
-                                          **kwargs, **region_kwargs)
+                                          cmap=cmap, **kwargs, **region_kwargs)
             artists.append(artist)
 
     if separatrix:
