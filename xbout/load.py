@@ -126,6 +126,9 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
 
     ds, metadata = _separate_metadata(ds)
 
+    metadata['keep_xboundaries'] = keep_xboundaries
+    metadata['keep_yboundaries'] = keep_yboundaries
+
     return ds, metadata
 
 
