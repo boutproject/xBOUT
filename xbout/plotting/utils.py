@@ -280,15 +280,15 @@ def plot_targets(da, ax, hatching=True):
     else:
         xin = ix2
 
-    inner_lower_target_R = R[xin:, 0]
-    inner_lower_target_Z = Z[xin:, 0]
+    inner_lower_target_R = R[xin:, y_boundary_guards]
+    inner_lower_target_Z = Z[xin:, y_boundary_guards]
     [line1] = ax.plot(inner_lower_target_R, inner_lower_target_Z, 'k-',
                       linewidth=2)
     if hatching:
         _add_hatching(line1, ax)
 
-    outer_lower_target_R = R[xin:, ny-1]
-    outer_lower_target_Z = Z[xin:, ny-1]
+    outer_lower_target_R = R[xin:, ny - 1 - y_boundary_guards]
+    outer_lower_target_Z = Z[xin:, ny - 1 - y_boundary_guards]
     [line2] = ax.plot(outer_lower_target_R, outer_lower_target_Z, 'k-',
                       linewidth=2)
     if hatching:
@@ -300,17 +300,16 @@ def plot_targets(da, ax, hatching=True):
     else:
         xin = ix2
 
-    if j21 < nin:
-        inner_upper_target_R = R[xin:, nin-1]
-        inner_upper_target_Z = Z[xin:, nin-1]
+    if j12 > j21:
+        inner_upper_target_R = R[xin:, nin - 1 - y_boundary_guards]
+        inner_upper_target_Z = Z[xin:, nin - 1 - y_boundary_guards]
         [line3] = ax.plot(inner_upper_target_R, inner_upper_target_Z, 'k-',
                           linewidth=2)
         if hatching:
             _add_hatching(line3, ax, reversed=True)
 
-    if j12 > nin+1:
-        outer_upper_target_R = R[xin:, nin]
-        outer_upper_target_Z = Z[xin:, nin]
+        outer_upper_target_R = R[xin:, nin + y_boundary_guards]
+        outer_upper_target_Z = Z[xin:, nin + y_boundary_guards]
         [line4] = ax.plot(outer_upper_target_R, outer_upper_target_Z, 'k-',
                           linewidth=2)
         if hatching:
