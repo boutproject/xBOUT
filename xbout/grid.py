@@ -7,8 +7,8 @@ from . import geometries
 from .utils import _set_attrs_on_all_vars, _check_filetype, _separate_metadata
 
 
-def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False,
-              keep_xboundaries=False, keep_yboundaries=False):
+def open_grid(gridfilepath='./grid.nc', geometry=None, coordinates=None, ds=None,
+              quiet=False, keep_xboundaries=False, keep_yboundaries=False):
     """
     Opens a BOUT++ grid file.
 
@@ -29,6 +29,9 @@ def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False,
 
         To define a new type of geometry you need to use the
         `register_geometry` decorator.
+    coordinates : sequence of str, optional
+        Names to give the physical coordinates corresponding to 'x', 'y' and 'z' (in
+        order). If not specified, default names are chosen.
     ds : xarray.Dataset, optional
         BOUT dataset to merge grid information with.
         Leave unspecified if you just want to open the grid file alone.
@@ -105,6 +108,6 @@ def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False,
 
     if geometry is not None:
         # Update coordinates to match particular geometry of grid
-        ds = geometries.apply_geometry(ds, geometry)
+        ds = geometries.apply_geometry(ds, geometry, coordinates=coordinates)
 
     return ds
