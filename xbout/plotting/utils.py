@@ -41,19 +41,6 @@ def _decompose_regions(da):
     j11, j12, j21, j22, ix1, ix2, nin, _, ny, y_boundary_guards = _get_seps(da)
     regions = []
 
-    if j21 == j12:
-        upper_y_boundary_guards = 0
-    else:
-        upper_y_boundary_guards = y_boundary_guards
-
-    # translate topology indices - ones from BOUT++ do not include boundary cells
-    j11 += y_boundary_guards
-    j21 += y_boundary_guards
-    nin += y_boundary_guards + upper_y_boundary_guards
-    j12 += y_boundary_guards + 2*upper_y_boundary_guards
-    j22 += y_boundary_guards + 2*upper_y_boundary_guards
-    ny += 2*y_boundary_guards + 2*upper_y_boundary_guards
-
     ystart = 0  # Y index to start the next section
     if j11 >= 0:
         # plot lower inner leg
@@ -395,5 +382,17 @@ def _get_seps(da):
     else:
         print('j21={}, j12={}, ny_array={}, ny={}'.format(j21,j12,ny_array,ny))
         raise ValueError("Unrecognized combination of ny/jyseps")
+
+    # translate topology indices - ones from BOUT++ do not include boundary cells
+    if j21 == j12:
+        upper_y_boundary_guards = 0
+    else:
+        upper_y_boundary_guards = y_boundary_guards
+    j11 += y_boundary_guards
+    j21 += y_boundary_guards
+    nin += y_boundary_guards + upper_y_boundary_guards
+    j12 += y_boundary_guards + 2*upper_y_boundary_guards
+    j22 += y_boundary_guards + 2*upper_y_boundary_guards
+    ny += 2*y_boundary_guards + 2*upper_y_boundary_guards
 
     return j11, j12, j21, j22, ix1, ix2, nin, nx, ny, y_boundary_guards
