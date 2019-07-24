@@ -38,8 +38,21 @@ def plot_separatrix(da, sep_pos, ax, radial_coord='x'):
 
 def _decompose_regions(da):
 
-    j11, j12, j21, j22, ix1, ix2, nin, _, ny = _get_seps(da)
+    j11, j12, j21, j22, ix1, ix2, nin, _, ny, y_boundary_guards = _get_seps(da)
     regions = []
+
+    if j21 == j12:
+        upper_y_boundary_guards = 0
+    else:
+        upper_y_boundary_guards = y_boundary_guards
+
+    # translate topology indices - ones from BOUT++ do not include boundary cells
+    j11 += y_boundary_guards
+    j21 += y_boundary_guards
+    nin += y_boundary_guards + upper_y_boundary_guards
+    j12 += y_boundary_guards + 2*upper_y_boundary_guards
+    j22 += y_boundary_guards + 2*upper_y_boundary_guards
+    ny += 2*y_boundary_guards + 2*upper_y_boundary_guards
 
     ystart = 0  # Y index to start the next section
     if j11 >= 0:
@@ -151,7 +164,7 @@ def _decompose_regions(da):
 def plot_separatrices(da, ax):
     """Plot separatrices"""
 
-    j11, j12, j21, j22, ix1, ix2, nin, nx, ny = _get_seps(da)
+    j11, j12, j21, j22, ix1, ix2, nin, nx, ny, y_boundary_guards = _get_seps(da)
 
     R = da.coords['R'].transpose('x', 'theta')
     Z = da.coords['Z'].transpose('x', 'theta')
@@ -256,7 +269,7 @@ def plot_separatrices(da, ax):
 def plot_targets(da, ax, hatching=True):
     """Plot divertor and limiter target plates"""
 
-    j11, j12, j21, j22, ix1, ix2, nin, nx, ny = _get_seps(da)
+    j11, j12, j21, j22, ix1, ix2, nin, nx, ny, y_boundary_guards = _get_seps(da)
 
     R = da.coords['R'].transpose('x', 'theta')
     Z = da.coords['Z'].transpose('x', 'theta')
@@ -354,6 +367,9 @@ def _get_perp_vec(u1, u2, magnitude=0.04):
 
 def _get_seps(da):
     grid = da.attrs['grid']
+
+    nx = grid['nx']
+    ny = grid['ny']
     j11 = grid['jyseps1_1']
     j12 = grid['jyseps1_2']
     j21 = grid['jyseps2_1']
@@ -362,7 +378,22 @@ def _get_seps(da):
     ix2 = grid['ixseps2']
     nin = grid.get('ny_inner', j12)
 
-    nx = grid['nx']
-    ny = grid['ny']
+    ny_array = len(da['theta'])
 
-    return j11, j12, j21, j22, ix1, ix2, nin, nx, ny
+    y_boundary_guards = grid.get('y_boundary_guards', 0)
+
+    if ny_array == ny:
+        if y_boundary_guards > 0:
+            # grid has y-boundary guard cells but collected data does not
+            raise NotImplementedError()
+    elif j12 == j21 and ny_array == ny + 2*y_boundary_guards:
+        # single-null with guard cells
+        pass
+    elif j12 > j21 and ny_array == ny + 4*y_boundary_guards:
+        # double-null with guard cells
+        pass
+    else:
+        print('j21={}, j12={}, ny_array={}, ny={}'.format(j21,j12,ny_array,ny))
+        raise ValueError("Unrecognized combination of ny/jyseps")
+
+    return j11, j12, j21, j22, ix1, ix2, nin, nx, ny, y_boundary_guards
