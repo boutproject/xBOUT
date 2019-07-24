@@ -1,6 +1,7 @@
 from pprint import pformat as prettyformat
 from functools import partial
 
+import xarray as xr
 from xarray import register_dataarray_accessor
 
 from .plotting.animate import animate_imshow, animate_line
@@ -105,8 +106,10 @@ class BoutDataArrayAccessor:
 
     # TODO BOUT-specific plotting functionality would be implemented as methods here, e.g. ds.bout.plot_poloidal
     def contourf(self, ax=None, **kwargs):
-        return plotfuncs.contourf(self.data, ax=ax, **kwargs)
+        return plotfuncs.plot2d_wrapper(self.data, xr.plot.contourf, ax=ax, **kwargs)
+
+    def pcolormesh(self, ax=None, **kwargs):
+        return plotfuncs.plot2d_wrapper(self.data, xr.plot.pcolormesh, ax=ax, **kwargs)
 
     def regions(self, ax=None, **kwargs):
         return plotfuncs.regions(self.data, ax=ax, **kwargs)
-    # TODO Could trial a 2D surface plotting method here
