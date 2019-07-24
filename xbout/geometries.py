@@ -11,7 +11,7 @@ class UnregisteredGeometryError(Exception):
     """Error for unregistered geometry type"""
 
 
-def apply_geometry(ds, geometry_name):
+def apply_geometry(ds, geometry_name, coordinates=None):
     """
 
     Parameters
@@ -20,6 +20,9 @@ def apply_geometry(ds, geometry_name):
         Dataset (from
     geometry_name : str
         Name under which the desired geometry function was registered
+    coordinates : sequence of str, optional
+        Names to give the physical coordinates corresponding to 'x', 'y' and 'z' (in
+        order). If not specified, default names are chosen.
 
     Returns
     -------
@@ -38,7 +41,7 @@ def apply_geometry(ds, geometry_name):
                          have been registered.""".format(geometry_name))
         raise UnregisteredGeometryError(message)
 
-    updated_ds = add_geometry_coords(ds)
+    updated_ds = add_geometry_coords(ds, coordinates=coordinates)
     return updated_ds
 
 
@@ -75,49 +78,68 @@ def register_geometry(name):
 
 
 @register_geometry('toroidal')
-def add_toroidal_geometry_coords(ds):
+def add_toroidal_geometry_coords(ds, coordinates=None):
+
+    if coordinates is None:
+        coordinates = ('psi', 'theta', 'phi')
+
+    # Check whether coordinates names conflict with variables in ds
+    bad_names = []
+    for name in coordinates:
+        if name in ds:
+            bad_names.append(name)
+    if bad_names:
+        raise ValueError('Coordinate names {} clash with variables in the dataset. '
+                         "Use the 'coordinates' argument of open_boutdataset to provide "
+                         "alternative names".format(bad_names))
 
     # Change names of dimensions to Orthogonal Toroidal ones
-    ds = ds.rename(y='theta', inplace=True)
+    ds = ds.rename(y=coordinates[1])
 
     # Add 1D Orthogonal Toroidal coordinates
-    ny = ds.dims['theta']
+    ny = ds.dims[coordinates[1]]
     theta = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=ny),
-                         dims='theta')
-    ds = ds.assign_coords(theta=theta)
+                         dims=coordinates[1])
+    ds = ds.assign_coords(**{coordinates[1]: theta})
 
     # TODO automatically make this coordinate 1D in simplified cases?
-    ds = ds.rename(psixy='psi', inplace=True)
-    ds = ds.set_coords('psi')
-    ds['psi'].attrs['units'] = 'Wb'
+    ds = ds.rename(psixy=coordinates[0])
+    ds = ds.set_coords(coordinates[0])
+    ds[coordinates[0]].attrs['units'] = 'Wb'
 
     # If full data (not just grid file) then toroidal dim will be present
     if 'z' in ds.dims:
-        ds = ds.rename(z='phi', inplace=True)
-        nz = ds.dims['phi']
+        ds = ds.rename(z=coordinates[2])
+        nz = ds.dims[coordinates[2]]
         phi = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=nz),
-                           dims='phi')
-        ds = ds.assign_coords(phi=phi)
+                           dims=coordinates[2])
+        ds = ds.assign_coords(**{coordinates[2]: phi})
 
     # Add 2D Cylindrical coordinates
-    ds = ds.rename(Rxy='R', Zxy='Z', inplace=True)
-    ds = ds.set_coords(['R', 'Z'])
+    if ('R' not in ds) and ('Z' not in ds):
+        ds = ds.rename(Rxy='R', Zxy='Z')
+        ds = ds.set_coords(('R', 'Z'))
+    else:
+        ds.set_coords(('Rxy', 'Zxy'))
 
     return ds
 
 
 @register_geometry('s-alpha')
-def add_s_alpha_geometry_coords(ds):
+def add_s_alpha_geometry_coords(ds, coordinates=None):
 
-    ds = add_toroidal_geometry_coords(ds)
+    ds = add_toroidal_geometry_coords(ds, coordinates=coordinates)
 
     # Add 1D radial coordinate
-    ds['r'] = ds['hthe'].isel(theta=0).squeeze(drop=True)
+    if 'r' in ds:
+        raise ValueError("Cannot have variable 'r' in dataset when using "
+                         "geometry='s-alpha'")
+    ds['r'] = ds['hthe'].isel({coordinates[1]: 0}).squeeze(drop=True)
     ds['r'].attrs['units'] = 'm'
     ds = ds.set_coords('r')
-    ds = ds.rename(x='r', inplace=True)
+    ds = ds.rename(x='r')
 
     # Simplify psi to be radially-varying only
-    ds['psi'] = ds['psi'].isel(theta=0).squeeze(drop=True)
+    ds[coordinates[0]] = ds[coordinates[0]].isel({coordinates[1]: 0}).squeeze(drop=True)
 
     return ds

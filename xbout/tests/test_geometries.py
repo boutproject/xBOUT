@@ -14,7 +14,7 @@ class TestGeometryRegistration:
 
     def test_register_new_geometry(self):
         @register_geometry(name="Schwarzschild")
-        def add_schwarzschild_coords(ds):
+        def add_schwarzschild_coords(ds, coordinates=None):
             ds['event_horizon'] = 4.0
             return ds
 
