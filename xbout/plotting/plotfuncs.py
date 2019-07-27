@@ -142,6 +142,8 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                             cmap=cmap, **kwargs, **region_kwargs)
             artists.append(artist)
 
+    ax.set_title(da.name)
+
     if separatrix:
         plot_separatrices(da, ax)
 
