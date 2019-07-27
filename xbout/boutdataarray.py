@@ -79,7 +79,7 @@ class BoutDataArrayAccessor:
             print("{} data passed has {} dimensions - will use "
                   "animatplot.blocks.Imshow()".format(variable, str(n_dims)))
             imshow_block = animate_imshow(data=data, animate_over=animate_over,
-                                          x=x, y=y, sep_pos=sep_pos,
+                                          x=x, y=y,
                                           animate=animate, fps=fps,
                                           save_as=save_as, ax=ax, **kwargs)
             return imshow_block
