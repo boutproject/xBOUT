@@ -117,6 +117,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                 'discrete cmap', sm.to_rgba(0.5*(levels[:-1] + levels[1:])), len(levels) - 1)
         # re-make sm with new cmap
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+        sm.set_array([])
         fig.colorbar(sm, ticks=levels)
     else:
         # pass vmin and vmax through kwargs as they are not used for contour plots
@@ -126,6 +127,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         # create colorbar
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+        sm.set_array([])
         cmap = sm.get_cmap()
         fig.colorbar(sm)
 
