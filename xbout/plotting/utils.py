@@ -368,13 +368,20 @@ def _get_seps(da):
     grid = da.attrs['grid']
 
     nx = grid['nx']
+    ix1 = grid['ixseps1']
+    ix2 = grid['ixseps2']
+
+    if not da.metadata['keep_xboundaries']:
+        # remove x-boundary cell count from ix1 and ix2
+        x_boundary_guards = da.metadata['MXG']
+        ix1 -= x_boundary_guards
+        ix2 -= x_boundary_guards
+
     ny = grid['ny']
     j11 = grid['jyseps1_1']
     j12 = grid['jyseps1_2']
     j21 = grid['jyseps2_1']
     j22 = grid['jyseps2_2']
-    ix1 = grid['ixseps1']
-    ix2 = grid['ixseps2']
     nin = grid.get('ny_inner', j12)
 
     ny_array = len(da['theta'])
@@ -382,9 +389,12 @@ def _get_seps(da):
     y_boundary_guards = grid.get('y_boundary_guards', 0)
 
     if ny_array == ny:
-        if y_boundary_guards > 0:
-            # grid has y-boundary guard cells but collected data does not
-            raise NotImplementedError()
+        # No y-boundary cells, or keep_yboundaries is False
+        if y_boundary_guards > 0 and da.metadata['keep_yboundaries']:
+            raise ValueError('keep_yboundaries is True and y_boundary_guards={}, which '
+                             'is greater than 0, but data does not havy y-boundary '
+                             'cells.')
+        y_boundary_guards = 0
     elif j12 == j21 and ny_array == ny + 2*y_boundary_guards:
         # single-null with guard cells
         pass
