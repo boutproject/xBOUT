@@ -7,7 +7,8 @@ from . import geometries
 from .utils import _set_attrs_on_all_vars, _check_filetype, _separate_metadata
 
 
-def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False):
+def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False,
+              keep_xboundaries=False, keep_yboundaries=False):
     """
     Opens a BOUT++ grid file.
 
@@ -53,12 +54,32 @@ def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False):
              UserWarning)
         grid = grid.drop_dims(unrecognised_dims)
 
+    if not keep_xboundaries:
+        if ds is not None:
+            xboundaries = int(ds.metadata['MXG'])
+        else:
+            xboundaries = 0
+        if xboundaries > 0:
+            grid = grid.isel(x=slice(xboundaries, -xboundaries, None))
+    if not keep_yboundaries:
+        yboundaries = int(grid['y_boundary_guards'])
+        if yboundaries > 0:
+            # Remove y-boundary cells from first divertor target
+            grid = grid.isel(y=slice(yboundaries, -yboundaries, None))
+            if grid['jyseps1_2'] > grid['jyseps2_1']:
+                # There is a second divertor target, remove y-boundary cells there too
+                nin = int(grid['ny_inner'])
+                grid_lower = grid.isel(y=slice(None, nin, None))
+                grid_upper = grid.isel(y=slice(nin+2*yboundaries, None, None))
+                grid = xr.concat((grid_lower, grid_upper), dim='y', data_vars='minimal',
+                                 compat='identical')
+
     # Merge into one dataset, with scalar vars in attrs
     grid, grid_metadata = _separate_metadata(grid)
     if ds is None:
         ds = grid
     else:
-        if grid.get('y_boundary_guards', 0) > 0 and not grid['keep_yboundaries'].values:
+        if grid.get('y_boundary_guards', 0) > 0 and not ds.metadata['keep_yboundaries']:
             raise NotImplementedError('Do not know what to do with y-boundary cells in '
                                       'grid when dataset does not have y boundary cells')
         # Drop variables in ds from grid, so that variables saved to both do not conflict
