@@ -31,6 +31,7 @@ except ValueError:
 
 def open_boutdataset(datapath='./BOUT.dmp.*.nc',
                      inputfilepath=None, gridfilepath=None, chunks={},
+                     keep_xboundaries=True, keep_yboundaries=False,
                      run_name=None, info=True):
     """
     Load a dataset from a set of BOUT output files, including the input options file.
@@ -43,6 +44,14 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
     chunks : dict, optional
     inputfilepath : str, optional
     gridfilepath : str, optional
+    keep_xboundaries : bool, optional
+        If true, keep x-direction boundary cells (the cells past the physical edges of
+        the grid, where boundary conditions are set); increases the size of the x
+        dimension in the returned data-set. If false, trim these cells.
+    keep_yboundaries : bool, optional
+        If true, keep y-direction boundary cells (the cells past the physical edges of
+        the grid, where boundary conditions are set); increases the size of the y
+        dimension in the returned data-set. If false, trim these cells.
     run_name : str, optional
     info : bool, optional
 
@@ -54,7 +63,10 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
     # TODO handle possibility that we are loading a previously saved (and trimmed) dataset
 
     # Gather pointers to all numerical data from BOUT++ output files
-    ds, metadata = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks)
+    ds, metadata = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
+                                            keep_xboundaries=keep_xboundaries,
+                                            keep_yboundaries=keep_yboundaries)
+
     ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
 
     if inputfilepath:
@@ -231,7 +243,7 @@ class BoutDatasetAccessor:
             else:
                 nxpe, nype = self.metadata['NXPE'], self.metadata['NYPE']
 
-        # Is this even possible without saving the ghost cells?
+        # Is this even possible without saving the guard cells?
         # Can they be recreated?
         restart_datasets, paths = _split_into_restarts(self.data, savepath,
                                                        nxpe, nype)
