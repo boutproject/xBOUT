@@ -49,6 +49,9 @@ def animate_imshow(data, animate_over='t', x=None, y=None, animate=True,
     # Check plot is the right orientation
     spatial_dims = list(data.dims)
 
+    if len(data.dims) != 3:
+        raise ValueError('Data passed to animate_imshow must be 3-dimensional')
+
     try:
         spatial_dims.remove(animate_over)
     except ValueError:
