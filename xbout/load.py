@@ -184,32 +184,14 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
 
     selection = {}
     for dim in ds.dims:
-        # Check for boundary cells, otherwise use guard cells, else leave alone
-        if keep_boundaries.get(dim, False):
-            if lower_boundaries.get(dim, False):
-                lower = None
-            else:
-                lower = guards[dim]
-        elif guards.get(dim, False):
-            lower = guards[dim]
-        else:
-            lower = None
-        if keep_boundaries.get(dim, False):
-            if upper_boundaries.get(dim, False):
-                upper = None
-            else:
-                upper = -guards[dim]
-        elif guards.get(dim, False):
-            upper = -guards[dim]
-        else:
-            upper = None
+        lower = _get_limit('lower', dim, keep_boundaries, lower_boundaries,
+                           guards)
+        upper = _get_limit('upper', dim, keep_boundaries, upper_boundaries,
+                           guards)
         selection[dim] = slice(lower, upper)
-
     trimmed_ds = ds.isel(**selection)
 
-    trimmed_ds = trimmed_ds.drop(_BOUT_TIMING_VARIABLES, errors='ignore')
-
-    return trimmed_ds
+    return trimmed_ds.drop(_BOUT_TIMING_VARIABLES, errors='ignore')
 
 
 def _infer_contains_boundaries(ds, nxpe, nype):
@@ -249,6 +231,22 @@ def _infer_contains_boundaries(ds, nxpe, nype):
             lower_boundaries['y'] = True
 
     return lower_boundaries, upper_boundaries
+
+
+def _get_limit(side, dim, keep_boundaries, boundaries, guards):
+    # Check for boundary cells, otherwise use guard cells, else leave alone
+
+    if keep_boundaries.get(dim, False):
+        if boundaries.get(dim, False):
+            limit = None
+        else:
+            limit = guards[dim] if side is 'lower' else -guards[dim]
+    elif guards.get(dim, False):
+        limit = guards[dim] if side is 'lower' else -guards[dim]
+    else:
+        limit = None
+
+    return limit
 
 
 def _strip_metadata(ds):
