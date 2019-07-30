@@ -339,7 +339,7 @@ def _add_hatching(line, ax, reversed=False):
     hatch_line_length = (limiter_line_length / num_hatchings) / 1.5
 
     # For each hatching
-    for ind in hatch_inds:
+    for ind in hatch_inds[:-1]:
         # Compute local perpendicular vector
         dx, dy = _get_perp_vec((x[ind], y[ind]), (x[ind+1], y[ind+1]),
                                magnitude=hatch_line_length)
