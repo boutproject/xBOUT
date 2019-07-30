@@ -273,7 +273,11 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
     ds['NYPE'] = nype
     ds['MXG'] = guards.get('x', 0)
     ds['MYG'] = guards.get('y', 0)
-    ds['nx'] = x_length
+    ds['nx'] = (nxpe*lengths[0] + upper_bndry_cells.get('x', 0)
+                + lower_bndry_cells.get('x', 0))
+    ds['ny'] = nype*lengths[1]
+    ds['jyseps2_1'] = ds['ny'] // 2
+    ds['jyseps1_2'] = ds['ny'] // 2
     ds['MXSUB'] = guards.get('x', 0)
     ds['MYSUB'] = guards.get('y', 0)
     ds['MZ'] = z_length
@@ -281,7 +285,8 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
     return ds
 
 
-METADATA_VARS = ['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB', 'MZ']
+METADATA_VARS = ['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'ny', 'jyseps2_1', 'jyseps1_2',
+                 'MXSUB', 'MYSUB', 'MZ']
 
 
 class TestStripMetadata():
