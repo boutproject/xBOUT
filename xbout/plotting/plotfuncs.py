@@ -131,6 +131,10 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         cmap = sm.get_cmap()
         fig.colorbar(sm)
 
+    if method is xr.plot.pcolormesh:
+        if 'infer_intervals' not in kwargs:
+            kwargs['infer_intervals'] = False
+
     regions = _decompose_regions(da)
     region_kwargs = {}
 
