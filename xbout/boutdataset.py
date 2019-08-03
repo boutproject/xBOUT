@@ -145,7 +145,7 @@ class BoutDatasetAccessor:
             else:
                 nxpe, nype = self.metadata['NXPE'], self.metadata['NYPE']
 
-        # Is this even possible without saving the ghost cells?
+        # Is this even possible without saving the guard cells?
         # Can they be recreated?
         restart_datasets, paths = _split_into_restarts(self.data, savepath,
                                                        nxpe, nype)
