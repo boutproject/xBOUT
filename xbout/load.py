@@ -96,10 +96,10 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True, keep_guards=True):
 
     _preprocess = partial(_trim, ghosts={'x': mxg, 'y': myg})
 
-    ds = xr.open_mfdataset(paths_grid, concat_dims=concat_dims,
-                           data_vars='minimal', preprocess=_preprocess,
-                           engine=filetype, chunks=chunks,
-                           infer_order_from_coords=False)
+    ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims,
+                           combine='nested', data_vars='minimal',
+                           preprocess=_preprocess, engine=filetype,
+                           chunks=chunks)
 
     ds, metadata = _separate_metadata(ds)
 
