@@ -12,7 +12,8 @@ from xbout.geometries import register_geometry, REGISTERED_GEOMETRIES
 @pytest.fixture
 def create_example_grid_file(tmpdir_factory):
     """
-    Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
+    Mocks up a set of BOUT-like netCDF files, and return the temporary test
+    directory containing them.
 
     Deletes the temporary directory once that test is done.
     """
@@ -38,20 +39,17 @@ class TestOpenGrid:
         assert_equal(result, open_dataset(example_grid))
         result.close()
 
-    @pytest.mark.xfail(reason="unsolved bug in test")
-    def test_open_grid_extra_dims(self):
-        example_grid_path = create_example_grid_file
-        # TODO this throws an error and I have no idea why
-        # this doesn't also affect the previous test
-        example_grid = open_dataset(example_grid_path)
+    @pytest.xfail(reason='Warning not matching correctly - problem with pytest?')
+    def test_open_grid_extra_dims(self, create_example_grid_file):
+        example_grid = open_dataset(create_example_grid_file)
 
-        new_var = DataArray([[1, 2], [8, 9]], dims=['x', 'w'])
+        new_var = DataArray(name='new', data=[[1, 2], [8, 9]], dims=['x', 'w'])
         # TODO this should be handled by pytest's tmpdir factory too
-        dodgy_grid_path = 'dodgy_grid'
+        dodgy_grid_path = 'dodgy_grid.nc'
         merge([example_grid, new_var]).to_netcdf(dodgy_grid_path)
 
-        with pytest.warns(Warning, match="Will drop all variables containing"
-                                         " the dimensions w"):
+        with pytest.warns(UserWarning, match="drop all variables containing "
+                                             "the dimensions ['w']"):
             result = open_grid(gridfilepath=dodgy_grid_path)
         assert_equal(result, example_grid)
         result.close()
