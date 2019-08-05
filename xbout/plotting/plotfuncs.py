@@ -91,6 +91,8 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
 
     if ax is None:
         fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
 
     if vmin is None:
         vmin = da.min().values
