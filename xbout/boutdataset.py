@@ -207,9 +207,11 @@ class BoutDatasetAccessor:
                                            animate=False, **kwargs))
             elif ndims == 3:
                 if poloidal_plot:
-                    blocks.append(animate_poloidal(data, ax=ax,
-                                                   animate_over=animate_over,
-                                                   animate=False, **kwargs))
+                    var_blocks = animate_poloidal(data, ax=ax,
+                                                  animate_over=animate_over,
+                                                  animate=False, **kwargs)
+                    for block in var_blocks:
+                        blocks.append(block)
                 else:
                     blocks.append(animate_pcolormesh(data=data, ax=ax,
                                                      animate_over=animate_over,
