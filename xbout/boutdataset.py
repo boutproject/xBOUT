@@ -165,7 +165,8 @@ class BoutDatasetAccessor:
         return
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
-                     nrows=None, ncols=None, poloidal_plot=False, **kwargs):
+                     nrows=None, ncols=None, poloidal_plot=False,
+                     subplots_adjust=None, **kwargs):
         """
         Parameters
         ----------
@@ -191,6 +192,9 @@ class BoutDatasetAccessor:
                 raise ValueError('Not enough rows*columns to fit all variables')
 
         fig, axes = plt.subplots(nrows, ncols, squeeze=False)
+
+        if subplots_adjust is not None:
+            fig.subplots_adjust(**subplots_adjust)
 
         blocks = []
         for v, ax in zip(variables, axes.flatten()):
