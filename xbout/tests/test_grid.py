@@ -27,7 +27,7 @@ def create_example_grid_file(tmpdir_factory):
 
     # Save
     filepath = save_dir + '/grid.nc'
-    grid.to_netcdf(filepath)
+    grid.to_netcdf(filepath, engine='netcdf4')
 
     return Path(filepath)
 
@@ -39,14 +39,14 @@ class TestOpenGrid:
         assert_equal(result, open_dataset(example_grid))
         result.close()
 
-    #@pytest.xfail(reason='Warning not matching correctly - problem with pytest?')
     def test_open_grid_extra_dims(self, create_example_grid_file):
         example_grid = open_dataset(create_example_grid_file)
 
         new_var = DataArray(name='new', data=[[1, 2], [8, 9]], dims=['x', 'w'])
         # TODO this should be handled by pytest's tmpdir factory too
         dodgy_grid_path = 'dodgy_grid.nc'
-        merge([example_grid, new_var]).to_netcdf(dodgy_grid_path)
+        merge([example_grid, new_var]).to_netcdf(dodgy_grid_path,
+                                                 engine='netcdf4')
 
         with pytest.warns(UserWarning, match="drop all variables containing "
                                              "the dimensions 'w'"):
