@@ -120,7 +120,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         # re-make sm with new cmap
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
-        fig.colorbar(sm, ticks=levels)
+        fig.colorbar(sm, ticks=levels, ax=ax)
     else:
         # pass vmin and vmax through kwargs as they are not used for contour plots
         kwargs['vmin'] = vmin
@@ -131,7 +131,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cmap = sm.get_cmap()
-        fig.colorbar(sm)
+        fig.colorbar(sm, ax=ax)
 
     if method is xr.plot.pcolormesh:
         if 'infer_intervals' not in kwargs:
