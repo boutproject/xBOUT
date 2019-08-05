@@ -78,6 +78,8 @@ def animate_poloidal(da, *, ax=None, animate_over = 't', separatrix=True, target
     cmap = sm.get_cmap()
     fig.colorbar(sm, ax=ax)
 
+    ax.set_aspect('equal')
+
     regions = _decompose_regions(da)
 
     # Plot all regions on same axis
