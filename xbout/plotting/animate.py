@@ -1,7 +1,114 @@
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 
 import animatplot as amp
+
+from .utils import _decompose_regions, plot_separatrices, plot_targets
+
+
+def animate_poloidal(da, *, ax=None, animate_over = 't', separatrix=True, targets=True,
+                     add_limiter_hatching=True, cmap=None, vmin=None, vmax=None,
+                     animate=True, save_as=None, fps=10, **kwargs):
+    """
+    Make a 2D plot in R-Z coordinates using animatplotlib's Pcolormesh, taking into
+    account branch cuts (X-points).
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        A 2D (x,y) DataArray of data to plot
+    ax : Axes, optional
+        A matplotlib axes instance to plot to. If None, create a new
+        figure and axes, and plot to that
+    separatrix : bool, optional
+        Add dashed lines showing separatrices
+    targets : bool, optional
+        Draw solid lines at the target surfaces
+    add_limiter_hatching : bool, optional
+        Draw hatched areas at the targets
+    **kwargs : optional
+        Additional arguments are passed on to method
+
+    ###Returns
+    ###-------
+    ###artists
+    ###    List of the contourf instances
+    """
+
+    # TODO generalise this
+    x = kwargs.pop('x', 'R')
+    y = kwargs.pop('y', 'Z')
+
+    # Check plot is the right orientation
+    spatial_dims = list(da.dims)
+
+    try:
+        spatial_dims.remove(animate_over)
+    except ValueError:
+        raise ValueError("Dimension animate_over={} is not present in the data"
+                         .format(animate_over))
+
+    if len(da.dims) != 3:
+        raise ValueError("da must be 2+1D (t,x,y)")
+
+    # TODO work out how to auto-set the aspect ratio of the plot correctly
+    height = da.coords[y].max() - da.coords[y].min()
+    width = da.coords[x].max() - da.coords[x].min()
+    aspect = height / width
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    if vmin is None:
+        vmin = da.min().values
+    if vmax is None:
+        vmax = da.max().values
+
+    # pass vmin and vmax through kwargs as they are not used for contour plots
+    kwargs['vmin'] = vmin
+    kwargs['vmax'] = vmax
+
+    # create colorbar
+    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+    sm.set_array([])
+    cmap = sm.get_cmap()
+    fig.colorbar(sm)
+
+    regions = _decompose_regions(da)
+
+    # Plot all regions on same axis
+    blocks = []
+    for region in regions:
+        # Load values eagerly otherwise for some reason the plotting takes
+        # 100's of times longer - for some reason animatplot does not deal
+        # well with dask arrays!
+        blocks.append(amp.blocks.Pcolormesh(region.coords[x].values,
+                      region.coords[y].values, region.values, ax=ax, cmap=cmap,
+                      **kwargs))
+
+    ax.set_title(da.name)
+    ax.set_xlabel(x)
+    ax.set_ylabel(y)
+
+    if separatrix:
+        plot_separatrices(da, ax)
+
+    if targets:
+        plot_targets(da, ax, hatching=add_limiter_hatching)
+
+    if animate:
+        timeline = amp.Timeline(np.arange(da.sizes[animate_over]), fps=fps)
+        anim = amp.Animation(blocks, timeline)
+
+        anim.controls(timeline_slider_args={'text': animate_over})
+
+        if not save_as:
+            save_as = "{}_over_{}".format(da.name, animate_over)
+        anim.save(save_as + '.gif', writer='imagemagick')
+
+    return blocks
 
 from .utils import plot_separatrix
 from matplotlib.animation import PillowWriter
