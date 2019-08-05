@@ -4,7 +4,7 @@ from functools import partial
 import xarray as xr
 from xarray import register_dataarray_accessor
 
-from .plotting.animate import animate_pcolormesh, animate_line
+from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 
 
@@ -38,8 +38,8 @@ class BoutDataArrayAccessor:
             text += "Options:\n{}".format(styled(self.options))
         return text
 
-    def animate2D(self, animate_over='t', x=None, y=None, animate=True,
-                  fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
+    def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
+                  save_as=None, ax=None, poloidal_plot=False, **kwargs):
         """
         Plots a color plot which is animated with time over the specified
         coordinate.
@@ -63,10 +63,11 @@ class BoutDataArrayAccessor:
             Frames per second of resulting gif
         save_as : str, optional
             Filename to give to the resulting gif
-        sep_pos : int, optional
-            Position along the 'x' dimension to plot the separatrix
         ax : matplotlib.pyplot.axes object, optional
             Axis on which to plot the gif
+        poloidal_plot : bool, optional
+            Use animate_poloidal to make a plot in R-Z coordinates (input field must be
+            (t,x,y))
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (e.g. imshow for 2D plots).
@@ -76,13 +77,25 @@ class BoutDataArrayAccessor:
         variable = data.name
         n_dims = len(data.dims)
         if n_dims == 3:
-            print("{} data passed has {} dimensions - will use "
-                  "animatplot.blocks.Pcolormesh()".format(variable, str(n_dims)))
-            pcolormesh_block = animate_pcolormesh(data=data, animate_over=animate_over,
-                                                  x=x, y=y,
-                                                  animate=animate, fps=fps,
-                                                  save_as=save_as, ax=ax, **kwargs)
-            return pcolormesh_block
+            if poloidal_plot:
+                print("{} data passed has {} dimensions - making poloidal plot with "
+                      "animate_poloidal()".format(variable, str(n_dims)))
+                if x is not None:
+                    kwargs['x'] = x
+                if y is not None:
+                    kwargs['y'] = y
+                poloidal_blocks = animate_poloidal(data, animate_over=animate_over,
+                                                   animate=animate, fps=fps,
+                                                   save_as=save_as, ax=ax, **kwargs)
+                return poloidal_blocks
+            else:
+                print("{} data passed has {} dimensions - will use "
+                      "animatplot.blocks.Pcolormesh()".format(variable, str(n_dims)))
+                pcolormesh_block = animate_pcolormesh(data=data, animate_over=animate_over,
+                                                      x=x, y=y,
+                                                      animate=animate, fps=fps,
+                                                      save_as=save_as, ax=ax, **kwargs)
+                return pcolormesh_block
         else:
             raise ValueError(
                 "Data passed has an unsupported number of dimensions "
