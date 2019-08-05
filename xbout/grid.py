@@ -46,8 +46,11 @@ def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False):
     acceptable_dims = ['t', 'x', 'y', 'z']
     unrecognised_dims = list(set(grid.dims) - set(acceptable_dims))
     if len(unrecognised_dims) > 0:
+        # Weird string formatting is a workaround to deal with possible bug in
+        # pytest warnings capture - doesn't match strings containing brackets
         warn("Will drop all variables containing the dimensions {} because "
-             "they are not recognised".format(unrecognised_dims), UserWarning)
+             "they are not recognised".format(str(unrecognised_dims)[1:-1]),
+             UserWarning)
         grid = grid.drop_dims(unrecognised_dims)
 
     # Merge into one dataset, with scalar vars in attrs
