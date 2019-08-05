@@ -26,8 +26,11 @@ def create_example_grid_file(tmpdir_factory):
     save_dir = tmpdir_factory.mktemp("griddata")
 
     # Save
-    filepath = save_dir + '/grid.nc'
-    grid.to_netcdf(str(filepath), engine='netcdf4')
+    # Convert to str because tmpdir_factory returns a 'LocalPath' object, while xarray's
+    # to_netcdf method expects a str, and 'Path' is compatible with 'LocalPath' in
+    # Python-3.6 but not in Python-3.5
+    filepath = str(save_dir + '/grid.nc')
+    grid.to_netcdf(filepath, engine='netcdf4')
 
     return Path(filepath)
 
