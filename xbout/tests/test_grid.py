@@ -39,7 +39,7 @@ class TestOpenGrid:
         assert_equal(result, open_dataset(example_grid))
         result.close()
 
-    @pytest.xfail(reason='Warning not matching correctly - problem with pytest?')
+    #@pytest.xfail(reason='Warning not matching correctly - problem with pytest?')
     def test_open_grid_extra_dims(self, create_example_grid_file):
         example_grid = open_dataset(create_example_grid_file)
 
@@ -49,7 +49,7 @@ class TestOpenGrid:
         merge([example_grid, new_var]).to_netcdf(dodgy_grid_path)
 
         with pytest.warns(UserWarning, match="drop all variables containing "
-                                             "the dimensions ['w']"):
+                                             "the dimensions 'w'"):
             result = open_grid(gridfilepath=dodgy_grid_path)
         assert_equal(result, example_grid)
         result.close()
