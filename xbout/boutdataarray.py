@@ -4,7 +4,7 @@ from functools import partial
 import xarray as xr
 from xarray import register_dataarray_accessor
 
-from .plotting.animate import animate_imshow, animate_line
+from .plotting.animate import animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 
 
@@ -44,8 +44,8 @@ class BoutDataArrayAccessor:
         Plots a color plot which is animated with time over the specified
         coordinate.
 
-        Currently only supports 2D+1 data, which it plots with xarray's
-        wrapping of matplotlib's imshow.
+        Currently only supports 2D+1 data, which it plots with animatplot's
+        wrapping of matplotlib's pcolormesh.
 
         Parameters
         ----------
@@ -77,12 +77,12 @@ class BoutDataArrayAccessor:
         n_dims = len(data.dims)
         if n_dims == 3:
             print("{} data passed has {} dimensions - will use "
-                  "animatplot.blocks.Imshow()".format(variable, str(n_dims)))
-            imshow_block = animate_imshow(data=data, animate_over=animate_over,
-                                          x=x, y=y,
-                                          animate=animate, fps=fps,
-                                          save_as=save_as, ax=ax, **kwargs)
-            return imshow_block
+                  "animatplot.blocks.Pcolormesh()".format(variable, str(n_dims)))
+            pcolormesh_block = animate_pcolormesh(data=data, animate_over=animate_over,
+                                                  x=x, y=y,
+                                                  animate=animate, fps=fps,
+                                                  save_as=save_as, ax=ax, **kwargs)
+            return pcolormesh_block
         else:
             raise ValueError(
                 "Data passed has an unsupported number of dimensions "
