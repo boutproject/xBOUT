@@ -181,7 +181,7 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
             raise ValueError("Dimension {} is not present in the data" .format(x))
         y = spatial_dims[0]
 
-    data = data.transpose(animate_over, x, y)
+    data = data.transpose(animate_over, y, x)
 
     # Load values eagerly otherwise for some reason the plotting takes
     # 100's of times longer - for some reason animatplot does not deal
@@ -200,7 +200,12 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
     if not ax:
         fig, ax = plt.subplots()
 
-    pcolormesh_block = amp.blocks.Pcolormesh(image_data, vmin=vmin, vmax=vmax, ax=ax,
+    # Note: animatplot's Pcolormesh gave strange outputs without passing
+    # explicitly x- and y-value arrays, although in principle these should not
+    # be necessary.
+    ny, nx = image_data.shape[1:]
+    pcolormesh_block = amp.blocks.Pcolormesh(np.arange(float(nx)), np.arange(float(ny)),
+                                             image_data, vmin=vmin, vmax=vmax, ax=ax,
                                              **kwargs)
 
     if animate:
