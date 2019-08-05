@@ -7,15 +7,15 @@ from .utils import plot_separatrix
 from matplotlib.animation import PillowWriter
 
 
-def animate_imshow(data, animate_over='t', x=None, y=None, animate=True,
+def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
                    vmin=None, vmax=None, vsymmetric=False, fps=10, save_as=None,
                    sep_pos=None, ax=None, **kwargs):
     """
     Plots a color plot which is animated with time over the specified
     coordinate.
 
-    Currently only supports 2D+1 data, which it plots with xarray's
-    wrapping of matplotlib's imshow.
+    Currently only supports 2D+1 data, which it plots with animatplotlib's
+    wrapping of matplotlib's pcolormesh.
 
     Parameters
     ----------
@@ -74,8 +74,7 @@ def animate_imshow(data, animate_over='t', x=None, y=None, animate=True,
             raise ValueError("Dimension {} is not present in the data" .format(x))
         y = spatial_dims[0]
 
-    # Use (y, x) here so we transpose by default for imshow
-    data = data.transpose(animate_over, y, x)
+    data = data.transpose(animate_over, x, y)
 
     # Load values eagerly otherwise for some reason the plotting takes
     # 100's of times longer - for some reason animatplot does not deal
@@ -94,14 +93,14 @@ def animate_imshow(data, animate_over='t', x=None, y=None, animate=True,
     if not ax:
         fig, ax = plt.subplots()
 
-    imshow_block = amp.blocks.Imshow(image_data, vmin=vmin, vmax=vmax,
-                                     ax=ax, origin='lower', **kwargs)
+    pcolormesh_block = amp.blocks.Pcolormesh(image_data, vmin=vmin, vmax=vmax, ax=ax,
+                                             **kwargs)
 
     if animate:
         timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
-        anim = amp.Animation([imshow_block], timeline)
+        anim = amp.Animation([pcolormesh_block], timeline)
 
-    cbar = plt.colorbar(imshow_block.im, ax=ax)
+    cbar = plt.colorbar(pcolormesh_block.im, ax=ax)
     cbar.ax.set_ylabel(variable)
 
     # Add title and axis labels
@@ -120,7 +119,7 @@ def animate_imshow(data, animate_over='t', x=None, y=None, animate=True,
             save_as = "{}_over_{}".format(variable, animate_over)
         anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
-    return imshow_block
+    return pcolormesh_block
 
 
 def animate_line(data, animate_over='t', animate=True,
