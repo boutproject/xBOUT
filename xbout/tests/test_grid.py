@@ -27,7 +27,7 @@ def create_example_grid_file(tmpdir_factory):
 
     # Save
     filepath = save_dir + '/grid.nc'
-    grid.to_netcdf(filepath, engine='netcdf4')
+    grid.to_netcdf(str(filepath), engine='netcdf4')
 
     return Path(filepath)
 
