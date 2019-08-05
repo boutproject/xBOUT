@@ -9,7 +9,7 @@ from .utils import _decompose_regions, plot_separatrices, plot_targets
 
 def animate_poloidal(da, *, ax=None, animate_over = 't', separatrix=True, targets=True,
                      add_limiter_hatching=True, cmap=None, vmin=None, vmax=None,
-                     animate=True, save_as=None, fps=10, **kwargs):
+                     animate=True, save_as=None, fps=10, controls=True, **kwargs):
     """
     Make a 2D plot in R-Z coordinates using animatplotlib's Pcolormesh, taking into
     account branch cuts (X-points).
@@ -106,7 +106,8 @@ def animate_poloidal(da, *, ax=None, animate_over = 't', separatrix=True, target
         timeline = amp.Timeline(np.arange(da.sizes[animate_over]), fps=fps)
         anim = amp.Animation(blocks, timeline)
 
-        anim.controls(timeline_slider_args={'text': animate_over})
+        if controls:
+            anim.controls(timeline_slider_args={'text': animate_over})
 
         if not save_as:
             save_as = "{}_over_{}".format(da.name, animate_over)
@@ -120,7 +121,7 @@ from matplotlib.animation import PillowWriter
 
 def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
                    vmin=None, vmax=None, vsymmetric=False, fps=10, save_as=None,
-                   sep_pos=None, ax=None, **kwargs):
+                   ax=None, controls=True, **kwargs):
     """
     Plots a color plot which is animated with time over the specified
     coordinate.
@@ -229,7 +230,8 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
         ax = plot_separatrix(data, sep_pos, ax)
 
     if animate:
-        anim.controls(timeline_slider_args={'text': animate_over})
+        if controls:
+            anim.controls(timeline_slider_args={'text': animate_over})
 
         if not save_as:
             save_as = "{}_over_{}".format(variable, animate_over)
@@ -240,7 +242,7 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
 
 def animate_line(data, animate_over='t', animate=True,
                  vmin=None, vmax=None, fps=10, save_as=None, sep_pos=None, ax=None,
-                 **kwargs):
+                 controls=True, **kwargs):
     """
     Plots a line plot which is animated with time.
 
@@ -312,7 +314,8 @@ def animate_line(data, animate_over='t', animate=True,
         ax.plot_vline(sep_pos, '--')
 
     if animate:
-        anim.controls(timeline_slider_args={'text': animate_over})
+        if controls:
+            anim.controls(timeline_slider_args={'text': animate_over})
 
         if not save_as:
             save_as = "{}_over_{}".format(variable, animate_over)
