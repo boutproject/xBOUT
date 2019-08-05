@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from dask.diagnostics import ProgressBar
 
-from .plotting.animate import animate_pcolormesh, animate_line
+from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 @register_dataset_accessor('bout')
 class BoutDatasetAccessor:
     """
