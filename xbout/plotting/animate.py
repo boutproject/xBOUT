@@ -59,6 +59,8 @@ def animate_poloidal(da, *, ax=None, animate_over = 't', separatrix=True, target
 
     if ax is None:
         fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
 
     if vmin is None:
         vmin = da.min().values
@@ -74,7 +76,7 @@ def animate_poloidal(da, *, ax=None, animate_over = 't', separatrix=True, target
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
     cmap = sm.get_cmap()
-    fig.colorbar(sm)
+    fig.colorbar(sm, ax=ax)
 
     regions = _decompose_regions(da)
 
