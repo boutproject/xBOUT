@@ -163,6 +163,17 @@ class BoutDatasetAccessor:
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
                      nrows=None, ncols=None, poloidal_plot=False, **kwargs):
+        """
+        Parameters
+        ----------
+        variables : list of str or BoutDataArray
+            The variables to plot. For any string passed, the corresponding
+            variable in this DataSet is used - then the calling DataSet must
+            have only 3 dimensions. It is possible to pass BoutDataArrays to
+            allow more flexible plots, e.g. with different variables being
+            plotted against different axes.
+        """
+
         nvars = len(variables)
 
         if nrows is None and ncols is None:
@@ -180,6 +191,10 @@ class BoutDatasetAccessor:
 
         blocks = []
         for v, ax in zip(variables, axes.flatten()):
+
+            if isinstance(v, str):
+                v = self.data[v]
+
             data = v.bout.data
             ndims = len(data.dims)
             ax.set_title(data.name)
@@ -200,7 +215,7 @@ class BoutDatasetAccessor:
                 raise ValueError("Unsupported number of dimensions "
                                  + str(ndims) + ". Dims are " + str(v.dims))
 
-        timeline = amp.Timeline(np.arange(variables[0].sizes[animate_over]), fps=fps)
+        timeline = amp.Timeline(np.arange(v.sizes[animate_over]), fps=fps)
         anim = amp.Animation(blocks, timeline)
         anim.controls(timeline_slider_args={'text': animate_over})
 
