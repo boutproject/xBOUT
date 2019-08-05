@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from dask.diagnostics import ProgressBar
 
-from .plotting.animate import animate_imshow, animate_line
+from .plotting.animate import animate_pcolormesh, animate_line
 
 
 @register_dataset_accessor('bout')
@@ -189,10 +189,11 @@ class BoutDatasetAccessor:
 
             if ndims == 2:
                 blocks.append(animate_line(data=data, ax=ax, animate_over=animate_over,
-                              animate=False, **kwargs))
+                                           animate=False, **kwargs))
             elif ndims == 3:
-                blocks.append(animate_imshow(data=data, ax=ax, animate_over=animate_over,
-                              animate=False, **kwargs))
+                blocks.append(animate_pcolormesh(data=data, ax=ax,
+                                                 animate_over=animate_over,
+                                                 animate=False, **kwargs))
             else:
                 raise ValueError("Unsupported number of dimensions "
                                  + str(ndims) + ". Dims are " + str(v.dims))
