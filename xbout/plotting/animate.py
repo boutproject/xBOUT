@@ -217,7 +217,7 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
         timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
         anim = amp.Animation([pcolormesh_block], timeline)
 
-    cbar = plt.colorbar(pcolormesh_block.im, ax=ax)
+    cbar = plt.colorbar(pcolormesh_block.quad, ax=ax)
     cbar.ax.set_ylabel(variable)
 
     # Add title and axis labels
