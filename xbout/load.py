@@ -262,49 +262,34 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
         # Relies on a change to xarray so datasets always have source encoding
         # See xarray GH issue #2550
         lower_boundaries, upper_boundaries = _infer_contains_boundaries(
-            ds.encoding['source'], nxpe, nype)
+            ds, nxpe, nype)
     else:
         lower_boundaries, upper_boundaries = {}, {}
 
     selection = {}
     for dim in ds.dims:
-        # Check for boundary cells, otherwise use guard cells, else leave alone
-        if keep_boundaries.get(dim, False):
-            if lower_boundaries.get(dim, False):
-                lower = None
-            else:
-                lower = guards[dim]
-        elif guards.get(dim, False):
-            lower = guards[dim]
-        else:
-            lower = None
-        if keep_boundaries.get(dim, False):
-            if upper_boundaries.get(dim, False):
-                upper = None
-            else:
-                upper = -guards[dim]
-        elif guards.get(dim, False):
-            upper = -guards[dim]
-        else:
-            upper = None
+        lower = _get_limit('lower', dim, keep_boundaries, lower_boundaries,
+                           guards)
+        upper = _get_limit('upper', dim, keep_boundaries, upper_boundaries,
+                           guards)
         selection[dim] = slice(lower, upper)
-
     trimmed_ds = ds.isel(**selection)
 
-    trimmed_ds = trimmed_ds.drop(_BOUT_TIMING_VARIABLES, errors='ignore')
-
-    return trimmed_ds
+    return trimmed_ds.drop(_BOUT_TIMING_VARIABLES, errors='ignore')
 
 
-def _infer_contains_boundaries(filename, nxpe, nype):
+def _infer_contains_boundaries(ds, nxpe, nype):
     """
-    Uses the name of the output file and the domain decomposition to work out
-    whether this dataset contains boundary cells, and on which side.
+    Uses the name of the output file, BOUT++'s topology indices, and the domain
+    decomposition to work out whether this dataset contains boundary cells, and on which
+    side.
 
     Uses knowledge that BOUT names its output files as /folder/prefix.num.nc,
     with a numbering scheme
     num = nxpe*i + j, where i={0, ..., nype}, j={0, ..., nxpe}
     """
+
+    filename = ds.encoding['source']
 
     *prefix, filenum, extension = Path(filename).suffixes
     filenum = int(filenum.replace('.', ''))
@@ -317,4 +302,32 @@ def _infer_contains_boundaries(filename, nxpe, nype):
     lower_boundaries['y'] = filenum < nxpe
     upper_boundaries['y'] = filenum >= (nype-1)*nxpe
 
+    jyseps2_1 = int(ds['jyseps2_1'])
+    jyseps1_2 = int(ds['jyseps1_2'])
+    if jyseps1_2 > jyseps2_1:
+        # second divertor present
+        yproc = filenum // nxpe
+        ny_inner = int(ds['ny_inner'])
+        mysub = int(ds['MYSUB'])
+        if mysub*(yproc + 1) == ny_inner:
+            upper_boundaries['y'] = True
+        elif mysub*yproc == ny_inner:
+            lower_boundaries['y'] = True
+
     return lower_boundaries, upper_boundaries
+
+
+def _get_limit(side, dim, keep_boundaries, boundaries, guards):
+    # Check for boundary cells, otherwise use guard cells, else leave alone
+
+    if keep_boundaries.get(dim, False):
+        if boundaries.get(dim, False):
+            limit = None
+        else:
+            limit = guards[dim] if side is 'lower' else -guards[dim]
+    elif guards.get(dim, False):
+        limit = guards[dim] if side is 'lower' else -guards[dim]
+    else:
+        limit = None
+
+    return limit
