@@ -62,7 +62,12 @@ def open_grid(gridfilepath='./grid.nc', geometry=None, ds=None, quiet=False,
         if xboundaries > 0:
             grid = grid.isel(x=slice(xboundaries, -xboundaries, None))
     if not keep_yboundaries:
-        yboundaries = int(grid['y_boundary_guards'])
+        try:
+            yboundaries = int(grid['y_boundary_guards'])
+        except KeyError:
+            # y_boundary_guards variable not in grid file - older grid files never had
+            # y-boundary cells
+            yboundaries = 0
         if yboundaries > 0:
             # Remove y-boundary cells from first divertor target
             grid = grid.isel(y=slice(yboundaries, -yboundaries, None))
