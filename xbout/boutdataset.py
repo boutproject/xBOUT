@@ -1,96 +1,8 @@
-from pprint import pformat
-import configparser
+from pprint import pformat as prettyformat
+from functools import partial
 
-from xarray import register_dataset_accessor, \
-    save_mfdataset, set_options, merge
+from xarray import register_dataset_accessor, save_mfdataset, merge
 from dask.diagnostics import ProgressBar
-
-
-from .load import _auto_open_mfboutdataset
-
-
-# This code should run whenever any function from this module is imported
-# Set all attrs to survive all mathematical operations
-# (see https://github.com/pydata/xarray/pull/2482)
-try:
-    set_options(keep_attrs=True)
-except ValueError:
-    raise ImportError("For dataset attributes to be permanent you need to be "
-                      "using the development version of xarray - found at "
-                      "https://github.com/pydata/xarray/")
-try:
-    set_options(file_cache_maxsize=256)
-except ValueError:
-    raise ImportError("For open and closing of netCDF files correctly you need"
-                      " to be using the development version of xarray - found"
-                      " at https://github.com/pydata/xarray/")
-
-# TODO somehow check that we have access to the latest version of auto_combine
-
-
-def open_boutdataset(datapath='./BOUT.dmp.*.nc',
-                     inputfilepath=None, gridfilepath=None, chunks={},
-                     keep_xguards=True, keep_yguards=False,
-                     run_name=None, info=True):
-    """
-    Load a dataset from a set of BOUT output files, including the input options file.
-
-    Parameters
-    ----------
-    datapath : str, optional
-    prefix : str, optional
-    slices : slice object, optional
-    chunks : dict, optional
-    inputfilepath : str, optional
-    gridfilepath : str, optional
-    run_name : str, optional
-    info : bool, optional
-
-    Returns
-    -------
-    ds : xarray.Dataset
-    """
-
-    # TODO handle possibility that we are loading a previously saved (and trimmed) dataset
-
-    # Gather pointers to all numerical data from BOUT++ output files
-    ds, metadata = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
-                                            keep_xguards=keep_xguards,
-                                            keep_yguards=keep_yguards)
-
-    ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
-
-    if inputfilepath:
-        # Use Ben's options class to store all input file options
-        with open(inputfilepath, 'r') as f:
-            config_string = "[dummysection]\n" + f.read()
-        options = configparser.ConfigParser()
-        options.read_string(config_string)
-    else:
-        options = None
-    ds = _set_attrs_on_all_vars(ds, 'options', options)
-
-    # TODO This is where you would load the grid file as a separate object
-    # (Ideally using xgcm but could also just store the grid.nc file as another dataset)
-
-    # TODO read and store git commit hashes from output files
-
-    if run_name:
-        ds.name = run_name
-
-    if info is 'terse':
-        print("Read in dataset from {}".format(str(Path(datapath))))
-    elif info:
-        print("Read in:\n{}".format(ds.bout))
-
-    return ds
-
-
-def _set_attrs_on_all_vars(ds, key, attr_data):
-    ds.attrs[key] = attr_data
-    for da in ds.values():
-        da.attrs[key] = attr_data
-    return ds
 
 
 @register_dataset_accessor('bout')
@@ -104,15 +16,10 @@ class BoutDatasetAccessor:
     """
 
     def __init__(self, ds):
-
-        # # Load data variables
-        # # Should we just load whole dataset here?
-        # self.datapath = datapath
-        # self.prefix = prefix
-
         self.data = ds
-        self.metadata = ds.attrs['metadata']
-        self.options = ds.attrs['options']
+        self.metadata = ds.attrs.get('metadata')  # None if just grid file
+        self.options = ds.attrs.get('options')  # None if no inp file
+        self.grid = ds.attrs.get('grid')  # None if no grid file
 
     def __str__(self):
         """
@@ -120,13 +27,15 @@ class BoutDatasetAccessor:
 
         Accessed by print(ds.bout)
         """
+
+        styled = partial(prettyformat, indent=4, compact=True)
         text = "<xbout.BoutDataset>\n" + \
                "Contains:\n{}\n".format(str(self.data)) + \
-               "Metadata:\n{}\n".format(pformat(self.metadata,
-                                                indent=4, compact=True))
+               "Metadata:\n{}\n".format(styled(self.metadata))
         if self.options:
-            text += "Options:\n{}".format(pformat(self.options,
-                                                  indent=4, compact=True))
+            text += "Options:\n{}".format(styled(self.options))
+        if self.grid:
+            text += "Grid:\n{}".format(styled(self.grid))
         return text
 
     #def __repr__(self):
@@ -244,7 +153,7 @@ class BoutDatasetAccessor:
             else:
                 nxpe, nype = self.metadata['NXPE'], self.metadata['NYPE']
 
-        # Is this even possible without saving the ghost cells?
+        # Is this even possible without saving the guard cells?
         # Can they be recreated?
         restart_datasets, paths = _split_into_restarts(self.data, savepath,
                                                        nxpe, nype)
