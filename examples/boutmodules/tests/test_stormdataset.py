@@ -1,7 +1,7 @@
 import pytest
 
 from xarray import concat
-from xbout.boutdataset import open_boutdataset
+from xbout import open_boutdataset
 from xbout.tests.test_load import bout_xyt_example_files
 
 @pytest.mark.skip

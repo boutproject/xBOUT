@@ -6,7 +6,7 @@ import numpy as np
 from pathlib import Path
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
-from xbout.boutdataset import BoutDatasetAccessor, open_boutdataset
+from xbout import BoutDatasetAccessor, open_boutdataset
 
 
 EXAMPLE_OPTIONS_FILE_PATH = './xbout/tests/data/options/BOUT.inp'
