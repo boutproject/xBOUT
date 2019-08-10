@@ -6,7 +6,7 @@ import numpy as np
 from pathlib import Path
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
-from xbout.boutdataset import BoutDatasetAccessor, open_boutdataset
+from xbout import BoutDatasetAccessor, open_boutdataset
 
 
 EXAMPLE_OPTIONS_FILE_PATH = './xbout/tests/data/options/BOUT.inp'
@@ -21,17 +21,17 @@ class TestBoutDatasetIsXarrayDataset:
     def test_concat(self, tmpdir_factory, bout_xyt_example_files):
         path1 = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
         bd1 = open_boutdataset(datapath=path1, inputfilepath=None,
-                               keep_xguards=False)
+                               keep_xboundaries=False)
         path2 = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
         bd2 = open_boutdataset(datapath=path2, inputfilepath=None,
-                               keep_xguards=False)
+                               keep_xboundaries=False)
         result = concat([bd1, bd2], dim='run')
         assert result.dims == {**bd1.dims, 'run': 2}
 
     def test_isel(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         bd = open_boutdataset(datapath=path, inputfilepath=None,
-                              keep_xguards=False)
+                              keep_xboundaries=False)
         actual = bd.isel(x=slice(None,None,2))
         expected = bd.bout.data.isel(x=slice(None,None,2))
         xrt.assert_equal(actual, expected)
