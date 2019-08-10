@@ -3,6 +3,8 @@
 [![Build Status](https://travis-ci.org/boutproject/xBOUT.svg?branch=master)](https://travis-ci.org/boutproject/xBOUT.svg?branch=master)
 [![codecov](https://codecov.io/gh/boutproject/xBOUT/branch/master/graph/badge.svg)](https://codecov.io/gh/boutproject/xBOUT)
 
+Documentation: https://xbout.readthedocs.io
+
 xBOUT provides an interface for collecting the output data from a
 [BOUT++](https://boutproject.github.io/) simulation into an
 [xarray](http://xarray.pydata.org/en/stable/index.html)
@@ -11,8 +13,6 @@ for common BOUT++ analysis and plotting tasks.
 
 Currently only in alpha (until 1.0 released) so please report any bugs,
 and feel free to raise issues asking questions or making suggestions.
-
-
 
 ### Loading your data
 
