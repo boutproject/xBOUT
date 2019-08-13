@@ -343,6 +343,109 @@ class TestCombineNoTrim:
         ...
 
 
+_test_processor_layouts_list = [
+        # No parallelization
+        (0,   0,   1,    1,    {'x': True,  'y': True},
+                               {'x': True,  'y': True}),
+
+        # 1d parallelization along x:
+        # Left
+        (0,    0,    3,    1,    {'x': True,  'y': True},
+                                 {'x': False, 'y': True}),
+        # Middle
+        (1,    0,    3,    1,    {'x': False, 'y': True},
+                                 {'x': False, 'y': True}),
+        # Right
+        (2,    0,    3,    1,    {'x': False, 'y': True},
+                                 {'x': True,  'y': True}),
+
+        # 1d parallelization along y:
+        # Bottom
+        (0,    0,    1,    3,    {'x': True,  'y': True},
+                                 {'x': True,  'y': False}),
+        # Middle
+        (0,    1,    1,    3,    {'x': True,  'y': False},
+                                 {'x': True,  'y': False}),
+        # Top
+        (0,    2,    1,    3,    {'x': True,  'y': False},
+                                 {'x': True,  'y': True}),
+
+        # 2d parallelization:
+        # Bottom left corner
+        (0,    0,    3,    4,    {'x': True,  'y': True},
+                                 {'x': False, 'y': False}),
+        # Bottom right corner
+        (2,    0,    3,    4,    {'x': False, 'y': True},
+                                 {'x': True,  'y': False}),
+        # Top left corner
+        (0,    3,    3,    4,    {'x': True,  'y': False},
+                                 {'x': False, 'y': True}),
+        # Top right corner
+        (2,    3,    3,    4,    {'x': False, 'y': False},
+                                 {'x': True,  'y': True}),
+        # Centre
+        (1,    2,    3,    4,    {'x': False, 'y': False},
+                                 {'x': False, 'y': False}),
+        # Left side
+        (0,    2,    3,    4,    {'x': True,  'y': False},
+                                 {'x': False, 'y': False}),
+        # Right side
+        (2,    2,    3,    4,    {'x': False, 'y': False},
+                                 {'x': True,  'y': False}),
+        # Bottom side
+        (1,    0,    3,    4,    {'x': False, 'y': True},
+                                 {'x': False, 'y': False}),
+        # Top side
+        (1,    3,    3,    4,    {'x': False, 'y': False},
+                                 {'x': False, 'y': True})
+        ]
+
+_test_processor_layouts_doublenull_list = [
+        # 1d parallelization along y:
+        # Bottom
+        (0,    0,    1,    4,    {'x': True,  'y': True},
+                                 {'x': True,  'y': False}),
+        # Lower Middle
+        (0,    1,    1,    4,    {'x': True,  'y': False},
+                                 {'x': True,  'y': True}),
+        # Upper Middle
+        (0,    2,    1,    4,    {'x': True,  'y': True},
+                                 {'x': True,  'y': False}),
+        # Top
+        (0,    3,    1,    4,    {'x': True,  'y': False},
+                                 {'x': True,  'y': True}),
+
+        # 2d parallelization:
+        # Bottom left corner
+        (0,    0,    3,    4,    {'x': True,  'y': True},
+                                 {'x': False, 'y': False}),
+        (1,    0,    3,    4,    {'x': False,  'y': True},
+                                 {'x': False, 'y': False}),
+        # Bottom right corner
+        (2,    0,    3,    4,    {'x': False, 'y': True},
+                                 {'x': True,  'y': False}),
+        (0,    1,    3,    4,    {'x': True, 'y': False},
+                                 {'x': False,  'y': True}),
+        (1,    1,    3,    4,    {'x': False, 'y': False},
+                                 {'x': False,  'y': True}),
+        (2,    1,    3,    4,    {'x': False, 'y': False},
+                                 {'x': True,  'y': True}),
+        (0,    2,    3,    4,    {'x': True, 'y': True},
+                                 {'x': False,  'y': False}),
+        (1,    2,    3,    4,    {'x': False, 'y': True},
+                                 {'x': False,  'y': False}),
+        (2,    2,    3,    4,    {'x': False, 'y': True},
+                                 {'x': True,  'y': False}),
+        # Top left corner
+        (0,    3,    3,    4,    {'x': True,  'y': False},
+                                 {'x': False, 'y': True}),
+        (1,    3,    3,    4,    {'x': False,  'y': False},
+                                 {'x': False, 'y': True}),
+        # Top right corner
+        (2,    3,    3,    4,    {'x': False, 'y': False},
+                                 {'x': True,  'y': True})
+        ]
+
 class TestTrim:
     def test_no_trim(self):
         ds = create_test_data(0)
@@ -362,64 +465,11 @@ class TestTrim:
         expected = ds.isel(**selection)
         xrt.assert_equal(expected, actual)
 
-    @pytest.mark.parametrize("filenum, nxpe, nype, lower_boundaries, upper_boundaries",
-                             # no parallelization
-                             [(0,      1,    1,    {'x': True,  'y': True},
-                                                   {'x': True,  'y': True}),
-
-                              # 1d parallelization along x:
-                              # Left
-                              (0,      3,    1,    {'x': True,  'y': True},
-                                                   {'x': False, 'y': True}),
-                              # Middle
-                              (1,      3,    1,    {'x': False, 'y': True},
-                                                   {'x': False, 'y': True}),
-                              # Right
-                              (2,      3,    1,    {'x': False, 'y': True},
-                                                   {'x': True,  'y': True}),
-
-                              # 1d parallelization along y:
-                              # Bottom
-                              (0,      1,    3,    {'x': True,  'y': True},
-                                                   {'x': True,  'y': False}),
-                              # Middle
-                              (1,      1,    3,    {'x': True,  'y': False},
-                                                   {'x': True,  'y': False}),
-                              # Top
-                              (2,      1,    3,    {'x': True,  'y': False},
-                                                   {'x': True,  'y': True}),
-
-                              # 2d parallelization:
-                              # Bottom left corner
-                              (0,      3,    4,    {'x': True,  'y': True},
-                                                   {'x': False, 'y': False}),
-                              # Bottom right corner
-                              (2,      3,    4,    {'x': False, 'y': True},
-                                                   {'x': True,  'y': False}),
-                              # Top left corner
-                              (9,      3,    4,    {'x': True,  'y': False},
-                                                   {'x': False, 'y': True}),
-                              # Top right corner
-                              (11,     3,    4,    {'x': False, 'y': False},
-                                                   {'x': True,  'y': True}),
-                              # Centre
-                              (7,      3,    4,    {'x': False, 'y': False},
-                                                   {'x': False, 'y': False}),
-                              # Left side
-                              (3,      3,    4,    {'x': True,  'y': False},
-                                                   {'x': False, 'y': False}),
-                              # Right side
-                              (5,      3,    4,    {'x': False, 'y': False},
-                                                   {'x': True,  'y': False}),
-                              # Bottom side
-                              (1,      3,    4,    {'x': False, 'y': True},
-                                                   {'x': False, 'y': False}),
-                              # Top side
-                              (10,     3,    4,    {'x': False, 'y': False},
-                                                   {'x': False, 'y': True})
-                              ])
-    def test_infer_boundaries_2d_parallelization(self, filenum, nxpe, nype,
-                                                 lower_boundaries, upper_boundaries):
+    @pytest.mark.parametrize(
+            "xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries",
+            _test_processor_layouts_list)
+    def test_infer_boundaries_2d_parallelization(
+            self, xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries):
         """
         Numbering scheme for nxpe=3, nype=4
 
@@ -433,60 +483,19 @@ class TestTrim:
         ds = create_test_data(0)
         ds['jyseps2_1'] = 0
         ds['jyseps1_2'] = 0
-        ds.encoding['source'] = "folder0/BOUT.dmp." + str(filenum) + ".nc"
+        ds['PE_XIND'] = xproc
+        ds['PE_YIND'] = yproc
         actual_lower_boundaries, actual_upper_boundaries = _infer_contains_boundaries(
             ds, nxpe, nype)
 
         assert actual_lower_boundaries == lower_boundaries
         assert actual_upper_boundaries == upper_boundaries
 
-    @pytest.mark.parametrize("filenum, nxpe, nype, lower_boundaries, upper_boundaries",
-                             # 1d parallelization along y:
-                             # Bottom
-                             [(0,      1,    4,    {'x': True,  'y': True},
-                                                   {'x': True,  'y': False}),
-                              # Lower Middle
-                              (1,      1,    4,    {'x': True,  'y': False},
-                                                   {'x': True,  'y': True}),
-                              # Upper Middle
-                              (2,      1,    4,    {'x': True,  'y': True},
-                                                   {'x': True,  'y': False}),
-                              # Top
-                              (3,      1,    4,    {'x': True,  'y': False},
-                                                   {'x': True,  'y': True}),
-
-                              # 2d parallelization:
-                              # Bottom left corner
-                              (0,      3,    4,    {'x': True,  'y': True},
-                                                   {'x': False, 'y': False}),
-                              (1,      3,    4,    {'x': False,  'y': True},
-                                                   {'x': False, 'y': False}),
-                              # Bottom right corner
-                              (2,      3,    4,    {'x': False, 'y': True},
-                                                   {'x': True,  'y': False}),
-                              (3,      3,    4,    {'x': True, 'y': False},
-                                                   {'x': False,  'y': True}),
-                              (4,      3,    4,    {'x': False, 'y': False},
-                                                   {'x': False,  'y': True}),
-                              (5,      3,    4,    {'x': False, 'y': False},
-                                                   {'x': True,  'y': True}),
-                              (6,      3,    4,    {'x': True, 'y': True},
-                                                   {'x': False,  'y': False}),
-                              (7,      3,    4,    {'x': False, 'y': True},
-                                                   {'x': False,  'y': False}),
-                              (8,      3,    4,    {'x': False, 'y': True},
-                                                   {'x': True,  'y': False}),
-                              # Top left corner
-                              (9,      3,    4,    {'x': True,  'y': False},
-                                                   {'x': False, 'y': True}),
-                              (10,     3,    4,    {'x': False,  'y': False},
-                                                   {'x': False, 'y': True}),
-                              # Top right corner
-                              (11,     3,    4,    {'x': False, 'y': False},
-                                                   {'x': True,  'y': True}),
-                              ])
+    @pytest.mark.parametrize(
+            "xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries",
+            _test_processor_layouts_doublenull_list)
     def test_infer_boundaries_2d_parallelization_doublenull(
-            self, filenum, nxpe, nype, lower_boundaries, upper_boundaries):
+            self, xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries):
         """
         Numbering scheme for nxpe=3, nype=4
 
@@ -496,6 +505,61 @@ class TestTrim:
         |  0 1  2
          -----> x
         """
+
+        ds = create_test_data(0)
+        ds['jyseps2_1'] = 3
+        ds['jyseps1_2'] = 11
+        ds['ny_inner'] = 8
+        ds['MYSUB'] = 4
+        ds['PE_XIND'] = xproc
+        ds['PE_YIND'] = yproc
+        actual_lower_boundaries, actual_upper_boundaries = _infer_contains_boundaries(
+            ds, nxpe, nype)
+
+        assert actual_lower_boundaries == lower_boundaries
+        assert actual_upper_boundaries == upper_boundaries
+
+    @pytest.mark.parametrize("xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries",
+                             _test_processor_layouts_list)
+    def test_infer_boundaries_2d_parallelization_by_filenum(
+            self, xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries):
+        """
+        Numbering scheme for nxpe=3, nype=4
+
+        y  9 10 11
+        ^  6 7  8
+        |  3 4  5
+        |  0 1  2
+         -----> x
+        """
+
+        filenum = yproc*nxpe + xproc
+
+        ds = create_test_data(0)
+        ds['jyseps2_1'] = 0
+        ds['jyseps1_2'] = 0
+        ds.encoding['source'] = "folder0/BOUT.dmp." + str(filenum) + ".nc"
+        actual_lower_boundaries, actual_upper_boundaries = _infer_contains_boundaries(
+            ds, nxpe, nype)
+
+        assert actual_lower_boundaries == lower_boundaries
+        assert actual_upper_boundaries == upper_boundaries
+
+    @pytest.mark.parametrize("xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries",
+                             _test_processor_layouts_doublenull_list)
+    def test_infer_boundaries_2d_parallelization_doublenull_by_filenum(
+            self, xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries):
+        """
+        Numbering scheme for nxpe=3, nype=4
+
+        y  9 10 11
+        ^  6 7  8
+        |  3 4  5
+        |  0 1  2
+         -----> x
+        """
+
+        filenum = yproc*nxpe + xproc
 
         ds = create_test_data(0)
         ds['jyseps2_1'] = 3
@@ -542,7 +606,7 @@ class TestTrim:
                               (1, False, True),
                               (2, True, False),
                               (3, False, True)])
-    def test_keep_yboundaries_doublenull(self, filenum, lower, upper):
+    def test_keep_yboundaries_doublenull_by_filenum(self, filenum, lower, upper):
         ds = create_test_data(0)
         ds = ds.rename({'dim2': 'y'})
 
@@ -564,13 +628,13 @@ class TestTrim:
 
     def test_trim_timing_info(self):
         ds = create_test_data(0)
-        from xbout.load import _BOUT_TIMING_VARIABLES
+        from xbout.load import _BOUT_PER_PROC_VARIABLES
 
-        # remove a couple of entries from _BOUT_TIMING_VARIABLES so we test that _trim
+        # remove a couple of entries from _BOUT_PER_PROC_VARIABLES so we test that _trim
         # does not fail if not all of them are present
-        _BOUT_TIMING_VARIABLES = _BOUT_TIMING_VARIABLES[:-2]
+        _BOUT_PER_PROC_VARIABLES = _BOUT_PER_PROC_VARIABLES[:-2]
 
-        for v in _BOUT_TIMING_VARIABLES:
+        for v in _BOUT_PER_PROC_VARIABLES:
             ds[v] = 42.
         ds = _trim(ds, guards={}, keep_boundaries={}, nxpe=1, nype=1)
 
