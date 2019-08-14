@@ -127,6 +127,11 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
 
     ds, metadata = _separate_metadata(ds)
 
+    # Store as ints because netCDF doesn't support bools, so we can't save bool
+    # attributes
+    metadata['keep_xboundaries'] = int(keep_xboundaries)
+    metadata['keep_yboundaries'] = int(keep_yboundaries)
+
     return ds, metadata
 
 
