@@ -37,10 +37,10 @@ except ValueError:
 # TODO somehow check that we have access to the latest version of auto_combine
 
 
-def open_boutdataset(datapath='./BOUT.dmp.*.nc', chunks={},
+def open_boutdataset(datapath='./BOUT.dmp.*.nc',
                      inputfilepath=None, gridfilepath=None, geometry=None,
-                     keep_xboundaries=True, keep_yboundaries=False,
-                     run_name=None, info=True):
+                     coordinates=None, chunks={}, keep_xboundaries=True,
+                     keep_yboundaries=False, run_name=None, info=True):
     """
     Load a dataset from a set of BOUT output files, including the input options file.
 
@@ -51,9 +51,11 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', chunks={},
     inputfilepath : str, optional
     gridfilepath : str, optional
     geometry : str, optional
-        Type of geometry to treat this data as having. The choice applies the
-        corresponding function from the set of registered geometries. Default
-        is None.
+        Create coordinates for a certain type of geometry.
+        Currently supported: toroidal, s-alpha
+    coordinates : sequence of str, optional
+        Names to give the physical coordinates corresponding to 'x', 'y' and 'z' (in
+        order). If not specified, default names are chosen.
     keep_xboundaries : bool, optional
         If true, keep x-direction boundary cells (the cells past the physical
         edges of the grid, where boundary conditions are set); increases the
@@ -92,7 +94,8 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', chunks={},
     ds = _set_attrs_on_all_vars(ds, 'options', options)
 
     if gridfilepath:
-        ds = open_grid(gridfilepath=gridfilepath, geometry=geometry, ds=ds,
+        ds = open_grid(gridfilepath=gridfilepath, geometry=geometry,
+                       coordinates=coordinates, ds=ds,
                        keep_xboundaries=keep_xboundaries,
                        keep_yboundaries=keep_yboundaries)
 
@@ -122,9 +125,8 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
                           keep_boundaries={'x': keep_xboundaries, 'y': keep_yboundaries},
                           nxpe=nxpe, nype=nype)
 
-    ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims,
-                           combine='nested', data_vars='minimal',
-                           preprocess=_preprocess, engine=filetype,
+    ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims, combine='nested',
+                           data_vars='minimal', preprocess=_preprocess, engine=filetype,
                            chunks=chunks)
 
     ds, metadata = _separate_metadata(ds)
