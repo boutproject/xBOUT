@@ -79,9 +79,7 @@ def register_geometry(name):
     return wrapper
 
 
-@register_geometry('toroidal')
-def add_toroidal_geometry_coords(ds, coordinates=None):
-
+def _set_default_toroidal_coordinates(coordinates):
     if coordinates is None:
         coordinates = {}
 
@@ -89,6 +87,12 @@ def add_toroidal_geometry_coords(ds, coordinates=None):
     coordinates['x'] = coordinates.get('x', 'psi')
     coordinates['y'] = coordinates.get('y', 'theta')
     coordinates['z'] = coordinates.get('z', 'phi')
+
+
+@register_geometry('toroidal')
+def add_toroidal_geometry_coords(ds, coordinates=None):
+
+    coordinates = _set_default_toroidal_coordinates(coordinates)
 
     # Check whether coordinates names conflict with variables in ds
     bad_names = []
@@ -135,18 +139,20 @@ def add_toroidal_geometry_coords(ds, coordinates=None):
 @register_geometry('s-alpha')
 def add_s_alpha_geometry_coords(ds, coordinates=None):
 
+    coordinates = _set_default_toroidal_coordinates(coordinates)
+
     ds = add_toroidal_geometry_coords(ds, coordinates=coordinates)
 
     # Add 1D radial coordinate
     if 'r' in ds:
         raise ValueError("Cannot have variable 'r' in dataset when using "
                          "geometry='s-alpha'")
-    ds['r'] = ds['hthe'].isel({coordinates[1]: 0}).squeeze(drop=True)
+    ds['r'] = ds['hthe'].isel({coordinates['y']: 0}).squeeze(drop=True)
     ds['r'].attrs['units'] = 'm'
     ds = ds.set_coords('r')
     ds = ds.rename(x='r')
 
     # Simplify psi to be radially-varying only
-    ds[coordinates[0]] = ds[coordinates[0]].isel({coordinates[1]: 0}).squeeze(drop=True)
+    ds['r'] = ds['r'].isel({coordinates['y']: 0}).squeeze(drop=True)
 
     return ds
