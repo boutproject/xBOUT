@@ -20,9 +20,11 @@ def apply_geometry(ds, geometry_name, coordinates=None):
         Dataset (from
     geometry_name : str
         Name under which the desired geometry function was registered
-    coordinates : sequence of str, optional
-        Names to give the physical coordinates corresponding to 'x', 'y' and 'z' (in
-        order). If not specified, default names are chosen.
+    coordinates : dict of str, optional
+        Names to give the physical coordinates corresponding to 'x', 'y' and 'z'; values
+        corresponding to 'x', 'y' and 'z' keys in the passed dict are used as the names
+        of the dimensions. Any not passed are given default values. If not specified,
+        default names are chosen.
 
     Returns
     -------
@@ -81,11 +83,16 @@ def register_geometry(name):
 def add_toroidal_geometry_coords(ds, coordinates=None):
 
     if coordinates is None:
-        coordinates = ('psi', 'theta', 'phi')
+        coordinates = {}
+
+    # Replace any values that have not been passed in with defaults
+    coordinates['x'] = coordinates.get('x', 'psi')
+    coordinates['y'] = coordinates.get('y', 'theta')
+    coordinates['z'] = coordinates.get('z', 'phi')
 
     # Check whether coordinates names conflict with variables in ds
     bad_names = []
-    for name in coordinates:
+    for name in coordinates.values():
         if name in ds:
             bad_names.append(name)
     if bad_names:
@@ -94,26 +101,26 @@ def add_toroidal_geometry_coords(ds, coordinates=None):
                          "alternative names".format(bad_names))
 
     # Change names of dimensions to Orthogonal Toroidal ones
-    ds = ds.rename(y=coordinates[1])
+    ds = ds.rename(y=coordinates['y'])
 
     # Add 1D Orthogonal Toroidal coordinates
-    ny = ds.dims[coordinates[1]]
+    ny = ds.dims[coordinates['y']]
     theta = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=ny),
-                         dims=coordinates[1])
-    ds = ds.assign_coords(**{coordinates[1]: theta})
+                         dims=coordinates['y'])
+    ds = ds.assign_coords(**{coordinates['y']: theta})
 
     # TODO automatically make this coordinate 1D in simplified cases?
-    ds = ds.rename(psixy=coordinates[0])
-    ds = ds.set_coords(coordinates[0])
-    ds[coordinates[0]].attrs['units'] = 'Wb'
+    ds = ds.rename(psixy=coordinates['x'])
+    ds = ds.set_coords(coordinates['x'])
+    ds[coordinates['x']].attrs['units'] = 'Wb'
 
     # If full data (not just grid file) then toroidal dim will be present
     if 'z' in ds.dims:
-        ds = ds.rename(z=coordinates[2])
-        nz = ds.dims[coordinates[2]]
+        ds = ds.rename(z=coordinates['z'])
+        nz = ds.dims[coordinates['z']]
         phi = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=nz),
-                           dims=coordinates[2])
-        ds = ds.assign_coords(**{coordinates[2]: phi})
+                           dims=coordinates['z'])
+        ds = ds.assign_coords(**{coordinates['z']: phi})
 
     # Add 2D Cylindrical coordinates
     if ('R' not in ds) and ('Z' not in ds):
