@@ -95,10 +95,7 @@ def add_toroidal_geometry_coords(ds, coordinates=None):
     coordinates = _set_default_toroidal_coordinates(coordinates)
 
     # Check whether coordinates names conflict with variables in ds
-    bad_names = []
-    for name in coordinates.values():
-        if name in ds:
-            bad_names.append(name)
+    bad_names = [name for name in coordinates.values() if name in ds]
     if bad_names:
         raise ValueError('Coordinate names {} clash with variables in the dataset. '
                          "Use the 'coordinates' argument of open_boutdataset to provide "
