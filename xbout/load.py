@@ -331,7 +331,7 @@ def _infer_contains_boundaries(ds, nxpe, nype):
 
     if nxpe*nype == 1:
         # single file, always contains boundaries
-        return {'x':True, 'y':True}, {'x':True, 'y':True}
+        return {'x': True, 'y': True}, {'x': True, 'y': True}
 
     try:
         xproc = int(ds['PE_XIND'])
