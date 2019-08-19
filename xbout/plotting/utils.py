@@ -158,14 +158,14 @@ def plot_separatrices(da, ax):
 
     if j22 + 1 < ny:
         # Lower X-point location
-        Rx = 0.125 * (R[ix1 - 1, j11]     + R[ix1, j11]
-                    + R[ix1, j11 + 1]     + R[ix1 - 1, j11 + 1]
-                    + R[ix1 - 1, j22 + 1] + R[ix1, j22 + 1]
-                    + R[ix1, j22]         + R[ix1 - 1, j22])
-        Zx = 0.125 * (Z[ix1 - 1, j11]     + Z[ix1, j11]
-                    + Z[ix1, j11 + 1]     + Z[ix1 - 1, j11 + 1]
-                    + Z[ix1 - 1, j22 + 1] + Z[ix1, j22 + 1]
-                    + Z[ix1, j22]         + Z[ix1 - 1, j22])
+        Rx = 0.125 * (R[ix1 - 1, j11] + R[ix1, j11]
+                      + R[ix1, j11 + 1] + R[ix1 - 1, j11 + 1]
+                      + R[ix1 - 1, j22 + 1] + R[ix1, j22 + 1]
+                      + R[ix1, j22] + R[ix1 - 1, j22])
+        Zx = 0.125 * (Z[ix1 - 1, j11] + Z[ix1, j11]
+                      + Z[ix1, j11 + 1] + Z[ix1 - 1, j11 + 1]
+                      + Z[ix1 - 1, j22 + 1] + Z[ix1, j22 + 1]
+                      + Z[ix1, j22] + Z[ix1 - 1, j22])
     else:
         Rx, Zx = None, None
 
@@ -183,15 +183,15 @@ def plot_separatrices(da, ax):
 
     # Core
     core_R1 = 0.5 * (R[ix1 - 1, (j11 + 1):(j21 + 1)]
-                   + R[ix1, (j11 + 1):(j21 + 1)])
+                     + R[ix1, (j11 + 1):(j21 + 1)])
     core_R2 = 0.5 * (R[ix1 - 1, (j12 + 1):(j22 + 1)]
-                   + R[ix1, (j12 + 1):(j22 + 1)])
+                     + R[ix1, (j12 + 1):(j22 + 1)])
     core_R = np.concatenate(([Rx], core_R1, core_R2, [Rx]))
 
     core_Z1 = 0.5 * (Z[ix1 - 1, (j11 + 1):(j21 + 1)]
-                   + Z[ix1, (j11 + 1):(j21 + 1)])
+                     + Z[ix1, (j11 + 1):(j21 + 1)])
     core_Z2 = 0.5 * (Z[ix1 - 1, (j12 + 1):(j22 + 1)]
-                   + Z[ix1, (j12 + 1):(j22 + 1)])
+                     + Z[ix1, (j12 + 1):(j22 + 1)])
     core_Z = np.concatenate(([Zx], core_Z1, core_Z2, [Zx]))
 
     ax.plot(lower_inner_R, lower_inner_Z, 'k--')
@@ -230,14 +230,14 @@ def plot_separatrices(da, ax):
 
         # Core
         core_inner_R = 0.5 * (R[ix2 - 1, (j11 + 1):(j21 + 1)]
-                         + R[ix2, (j11 + 1):(j21 + 1)])
+                              + R[ix2, (j11 + 1):(j21 + 1)])
         core_outer_R = 0.5 * (R[ix2 - 1, (j12 + 1):(j22 + 1)]
-                         + R[ix2, (j12 + 1):(j22 + 1)])
+                              + R[ix2, (j12 + 1):(j22 + 1)])
 
         core_inner_Z = 0.5 * (Z[ix2 - 1, (j11 + 1):(j21 + 1)]
-                         + Z[ix2, (j11 + 1):(j21 + 1)])
+                              + Z[ix2, (j11 + 1):(j21 + 1)])
         core_outer_Z = 0.5 * (Z[ix2 - 1, (j12 + 1):(j22 + 1)]
-                         + Z[ix2, (j12 + 1):(j22 + 1)])
+                              + Z[ix2, (j12 + 1):(j22 + 1)])
 
         inner_R = np.concatenate((lower_inner_R, core_inner_R, [Rx],
                                   np.flip(upper_outer_R)))
@@ -402,7 +402,7 @@ def _get_seps(da):
         # double-null with guard cells
         pass
     else:
-        print('j21={}, j12={}, ny_array={}, ny={}'.format(j21,j12,ny_array,ny))
+        print('j21={}, j12={}, ny_array={}, ny={}'.format(j21, j12, ny_array, ny))
         raise ValueError("Unrecognized combination of ny/jyseps")
 
     # translate topology indices - ones from BOUT++ do not include boundary cells
