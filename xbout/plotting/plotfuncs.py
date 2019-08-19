@@ -44,7 +44,8 @@ def regions(da, ax=None, **kwargs):
 
 
 def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
-             add_limiter_hatching=True, cmap=None, vmin=None, vmax=None, **kwargs):
+             add_limiter_hatching=True, cmap=None, vmin=None, vmax=None, aspect=None,
+             **kwargs):
     """
     Make a 2D plot using an xarray method, taking into account branch cuts (X-points).
 
@@ -71,6 +72,8 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         Minimum value for the color scale
     vmax : float, optional
         Maximum value for the color scale
+    aspect : str or float, optional
+        Passed to ax.set_aspect(). By default 'equal' is used.
     levels : int or iterable, optional
         Only used by contour or contourf, sets the number of levels (if int) or the level
         values (if iterable)
@@ -90,15 +93,14 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
     if len(da.dims) != 2:
         raise ValueError("da must be 2D (x,y)")
 
-    # TODO work out how to auto-set the aspect ratio of the plot correctly
-    height = da.coords[y].max() - da.coords[y].min()
-    width = da.coords[x].max() - da.coords[x].min()
-    aspect = height / width
-
     if ax is None:
         fig, ax = plt.subplots()
     else:
         fig = ax.get_figure()
+
+    if aspect is None:
+        aspect = 'equal'
+    ax.set_aspect(aspect)
 
     if vmin is None:
         vmin = da.min().values
