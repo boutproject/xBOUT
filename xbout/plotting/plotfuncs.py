@@ -65,6 +65,12 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         Draw solid lines at the target surfaces
     add_limiter_hatching : bool, optional
         Draw hatched areas at the targets
+    cmap : Matplotlib colormap, optional
+        Color map to use for the plot
+    vmin : float, optional
+        Minimum value for the color scale
+    vmax : float, optional
+        Maximum value for the color scale
     levels : int or iterable, optional
         Only used by contour or contourf, sets the number of levels (if int) or the level
         values (if iterable)
@@ -74,7 +80,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
     Returns
     -------
     artists
-        List of the contourf instances
+        List of the artist instances
     """
 
     # TODO generalise this
@@ -84,7 +90,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
     if len(da.dims) != 2:
         raise ValueError("da must be 2D (x,y)")
 
-    # TODO work out how to auto-set the aspect ration of the plot correctly
+    # TODO work out how to auto-set the aspect ratio of the plot correctly
     height = da.coords[y].max() - da.coords[y].min()
     width = da.coords[x].max() - da.coords[x].min()
     aspect = height / width
