@@ -104,7 +104,10 @@ class BoutDataArrayAccessor:
                                       save_as=save_as, ax=ax, **kwargs)
             return line_block
 
-    # TODO BOUT-specific plotting functionality would be implemented as methods here, e.g. ds.bout.plot_poloidal
+    # BOUT-specific plotting functionality: methods that plot on a poloidal (R-Z) plane
+    def contour(self, ax=None, **kwargs):
+        return plotfuncs.plot2d_wrapper(self.data, xr.plot.contour, ax=ax, **kwargs)
+
     def contourf(self, ax=None, **kwargs):
         return plotfuncs.plot2d_wrapper(self.data, xr.plot.contourf, ax=ax, **kwargs)
 
