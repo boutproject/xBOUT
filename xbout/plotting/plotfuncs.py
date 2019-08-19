@@ -6,6 +6,7 @@ import xarray as xr
 
 from .utils import _decompose_regions, plot_separatrices, plot_targets
 
+
 def regions(da, ax=None, **kwargs):
     """
     Plots each logical plotting region as a different color for debugging.
@@ -42,10 +43,9 @@ def regions(da, ax=None, **kwargs):
     return artists
 
 
-
 def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
-             add_limiter_hatching=True, cmap=None, vmin=None, vmax=None, aspect=None,
-             **kwargs):
+                   add_limiter_hatching=True, cmap=None, vmin=None, vmax=None,
+                   aspect=None, **kwargs):
     """
     Make a 2D plot using an xarray method, taking into account branch cuts (X-points).
 
@@ -124,7 +124,8 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         # make colorbar have only discrete levels
         # average the levels so that colors represent the intervals between the levels
         cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
-                'discrete cmap', sm.to_rgba(0.5*(levels[:-1] + levels[1:])), len(levels) - 1)
+                'discrete cmap', sm.to_rgba(0.5*(levels[:-1] + levels[1:])),
+                len(levels) - 1)
         # re-make sm with new cmap
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
@@ -154,8 +155,8 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                       **region_kwargs)]
     if rest:
         for region in rest:
-            artist = method(region, x=x, y=y, ax=ax, add_colorbar=False, add_labels=False,
-                            cmap=cmap, **kwargs, **region_kwargs)
+            artist = method(region, x=x, y=y, ax=ax, add_colorbar=False,
+                            add_labels=False, cmap=cmap, **kwargs, **region_kwargs)
             artists.append(artist)
 
     ax.set_title(da.name)
