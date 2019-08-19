@@ -323,7 +323,8 @@ class TestCombineNoTrim:
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     def test_squashed_file(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1, squashed=True)
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1,
+                                      squashed=True)
         actual, metadata = _auto_open_mfboutdataset(datapath=path)
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
