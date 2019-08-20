@@ -146,8 +146,6 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
     vmax : float, optional
         Maximum value to use for colorbar. Default is to use maximum value of
         data across whole timeseries.
-    sep_pos : int, optional
-        Radial position at which to plot the separatrix
     save_as: str, optional
         Filename to give to the resulting gif
     fps : int, optional
@@ -224,10 +222,6 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
     ax.set_title(variable)
     ax.set_xlabel(x)
     ax.set_ylabel(y)
-
-    # Plot separatrix
-    if sep_pos:
-        ax = plot_separatrix(data, sep_pos, ax)
 
     if animate:
         if controls:
