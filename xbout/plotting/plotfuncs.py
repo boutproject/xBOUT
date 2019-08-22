@@ -115,6 +115,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
             kwargs['levels'] = levels
         else:
             levels = np.array(list(levels))
+            kwargs['levels'] = levels
             vmin = np.min(levels)
             vmax = np.max(levels)
 
