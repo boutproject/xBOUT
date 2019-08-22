@@ -150,13 +150,9 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
     regions = _decompose_regions(da)
 
     # Plot all regions on same axis
-    first, *rest = regions
-    artists = [method(first, x=x, y=y, ax=ax, add_colorbar=False, cmap=cmap, **kwargs)]
-    if rest:
-        for region in rest:
-            artist = method(region, x=x, y=y, ax=ax, add_colorbar=False,
-                            add_labels=False, cmap=cmap, **kwargs)
-            artists.append(artist)
+    add_labels = [True] + [False] * (len(regions) - 1)
+    artists = [method(region, x=x, y=y, ax=ax, add_colorbar=False, add_labels=add_label,
+        cmap=cmap, **kwargs) for region, add_label in zip(regions, add_labels)]
 
     ax.set_title(da.name)
 
