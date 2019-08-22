@@ -148,16 +148,14 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
             kwargs['infer_intervals'] = False
 
     regions = _decompose_regions(da)
-    region_kwargs = {}
 
     # Plot all regions on same axis
     first, *rest = regions
-    artists = [method(first, x=x, y=y, ax=ax, add_colorbar=False, cmap=cmap, **kwargs,
-                      **region_kwargs)]
+    artists = [method(first, x=x, y=y, ax=ax, add_colorbar=False, cmap=cmap, **kwargs)]
     if rest:
         for region in rest:
             artist = method(region, x=x, y=y, ax=ax, add_colorbar=False,
-                            add_labels=False, cmap=cmap, **kwargs, **region_kwargs)
+                            add_labels=False, cmap=cmap, **kwargs)
             artists.append(artist)
 
     ax.set_title(da.name)
