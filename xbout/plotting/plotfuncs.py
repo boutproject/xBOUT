@@ -1,3 +1,5 @@
+import collections
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,8 +37,8 @@ def regions(da, ax=None, **kwargs):
 
 
 def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
-                   add_limiter_hatching=True, cmap=None, vmin=None, vmax=None,
-                   aspect=None, **kwargs):
+                   add_limiter_hatching=True, gridlines=None, cmap=None, vmin=None,
+                   vmax=None, aspect=None, **kwargs):
     """
     Make a 2D plot using an xarray method, taking into account branch cuts (X-points).
 
@@ -57,6 +59,9 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         Draw solid lines at the target surfaces
     add_limiter_hatching : bool, optional
         Draw hatched areas at the targets
+    gridlines : bool or int, optional
+        If True, draw grid lines on the plot. If an int is passed, it is used as the
+        stride when plotting grid lines (to reduce the number on the plot)
     cmap : Matplotlib colormap, optional
         Color map to use for the plot
     vmin : float, optional
@@ -168,6 +173,24 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         # this.
         extend = kwargs.get('extend', 'neither')
         fig.colorbar(artists[0], ax=ax, extend=extend)
+
+    if gridlines is not None:
+        if gridlines is True:
+            gridlines = (1, 1)
+        if not isinstance(gridlines, collections.Sequence):
+            gridlines = (gridlines, gridlines)
+        R_global = da['R']
+        R_global.attrs['metadata'] = da.metadata
+
+        Z_global = da['Z']
+        Z_global.attrs['metadata'] = da.metadata
+
+        R_regions = _decompose_regions(da['R'])
+        Z_regions = _decompose_regions(da['Z'])
+
+        for R, Z in zip(R_regions, Z_regions):
+            plt.plot(R[::gridlines[0], :].T, Z[::gridlines[0], :].T, color='k', lw=0.1)
+            plt.plot(R[:, ::gridlines[1]], Z[:, ::gridlines[1]], color='k', lw=0.1)
 
     ax.set_title(da.name)
 
