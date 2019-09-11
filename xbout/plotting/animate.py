@@ -93,7 +93,6 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
 
         if not save_as:
             save_as = "{}_over_{}".format(variable, animate_over)
-        
         anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return imshow_block
