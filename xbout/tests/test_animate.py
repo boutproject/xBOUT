@@ -16,10 +16,10 @@ class TestAnimate:
         bd = open_boutdataset(DATA_PATH).squeeze(drop=True)
 
         anim_creator = str(bd['T'].bout.animate2D(y='z'))
-        checker = '<animatplot.blocks.image_like.Imshow' in anim_creator    
-        
+        checker = '<animatplot.blocks.image_like.Imshow' in anim_creator
+
         remove('./T_over_t.gif')
-        assert checker == True
+        assert checker
 
     def test_animate1D(self):
 
@@ -27,8 +27,7 @@ class TestAnimate:
 
         anim_creator = str(bd['T'][:,:,0].bout.animate1D())
         print(anim_creator)
-        checker = '<animatplot.blocks.lineplots.Line' in anim_creator    
-        
-        remove('./T_over_t.gif')
-        assert checker == True 
+        checker = '<animatplot.blocks.lineplots.Line' in anim_creator
 
+        remove('./T_over_t.gif')
+        assert checker
