@@ -4,3 +4,4 @@ natsort >= 5.5.0
 matplotlib >= 3.0.3
 animatplot >= 0.3
 netcdf4 >= 1.4.0
+Pillow >= 6.1.0
