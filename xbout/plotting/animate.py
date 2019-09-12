@@ -176,7 +176,6 @@ def animate_line(data, animate_over='t', animate=True,
 
         if not save_as:
             save_as = "{}_over_{}".format(variable, animate_over)
-
         anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return line_block
