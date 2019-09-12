@@ -4,7 +4,7 @@ from os import remove
 from xbout import open_boutdataset
 from xbout.boutdataarray import BoutDataArrayAccessor
 
-DATA_PATH = './data/dump_files/along_x/BOUT.dmp.*.nc'
+DATA_PATH = './xbout/tests/data/dump_files/along_x/BOUT.dmp.*.nc'
 
 
 class TestAnimate:
