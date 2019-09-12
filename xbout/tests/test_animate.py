@@ -27,7 +27,6 @@ class TestAnimate:
         bd = open_boutdataset(DATA_PATH).squeeze(drop=True)
 
         anim_creator = str(bd['T'][:, :, 0].bout.animate1D())
-        print(anim_creator)
         checker = '<animatplot.blocks.lineplots.Line' in anim_creator
 
         remove('./T_over_t.gif')
