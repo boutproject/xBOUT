@@ -6,6 +6,7 @@ from xbout.boutdataarray import BoutDataArrayAccessor
 
 DATA_PATH = './data/dump_files/along_x/BOUT.dmp.*.nc'
 
+
 class TestAnimate:
     """
     Set of tests to check whether animate1D() and animate2D() are running properly
@@ -25,7 +26,7 @@ class TestAnimate:
 
         bd = open_boutdataset(DATA_PATH).squeeze(drop=True)
 
-        anim_creator = str(bd['T'][:,:,0].bout.animate1D())
+        anim_creator = str(bd['T'][:, :, 0].bout.animate1D())
         print(anim_creator)
         checker = '<animatplot.blocks.lineplots.Line' in anim_creator
 
