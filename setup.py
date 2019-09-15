@@ -24,8 +24,9 @@ setup(
         'xarray>=v0.10.0',
         'dask[array]>=1.0.0',
         'natsort>=5.5.0',
-        'matplotlib>=2.2',
-        'animatplot>=0.3'
+        'matplotlib>=3.0.3',
+        'animatplot>=0.3',
+        'Pillow>=6.1.0'
     ],
     extras_require={
         'tests': ['pytest >= 3.3.0'],
