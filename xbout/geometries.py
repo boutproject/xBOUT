@@ -11,6 +11,11 @@ class UnregisteredGeometryError(Exception):
     """Error for unregistered geometry type"""
 
 
+# TODO remove coordinates argument completely. All the functionality should
+# instead be implemented by defining a particular geometry that does what is
+# desired
+
+
 def apply_geometry(ds, geometry_name, coordinates=None):
     """
 
