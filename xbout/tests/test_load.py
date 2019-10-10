@@ -12,8 +12,8 @@ import xarray.testing as xrt
 from natsort import natsorted
 
 from xbout.load import (_check_filetype, _expand_wildcards, _expand_filepaths,
-    _arrange_for_concatenation, _trim, _auto_open_mfboutdataset,
-    _infer_contains_boundaries)
+    _arrange_for_concatenation, _trim, _infer_contains_boundaries,
+    open_boutdataset)
 from xbout.utils import _separate_metadata
 
 
@@ -277,11 +277,16 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
     ds['MXSUB'] = guards.get('x', 0)
     ds['MYSUB'] = guards.get('y', 0)
     ds['MZ'] = z_length
+    ds['jyseps1_1'] = -1
+    ds['jyseps1_2'] = -1
+    ds['jyseps2_1'] = -1
+    ds['jyseps2_2'] = -1
 
     return ds
 
 
-METADATA_VARS = ['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB', 'MZ']
+METADATA_VARS = ['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB', 'MZ',
+                 'jyseps1_1', 'jyseps1_2', 'jyseps2_1', 'jyseps2_2']
 
 
 class TestStripMetadata():
@@ -300,14 +305,14 @@ class TestStripMetadata():
 class TestCombineNoTrim:
     def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1,
                                       syn_data_type='stepped')
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
         expected = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x')
@@ -316,7 +321,7 @@ class TestCombineNoTrim:
     def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=3, nt=1,
                                       syn_data_type='stepped')
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
         expected = concat([bout_ds(0), bout_ds(1), bout_ds(2)], dim='y')
@@ -329,7 +334,7 @@ class TestCombineNoTrim:
     def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1,
                                       syn_data_type='stepped')
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
         line1 = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x')
