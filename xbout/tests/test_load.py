@@ -13,7 +13,7 @@ from natsort import natsorted
 
 from xbout.load import (_check_filetype, _expand_wildcards, _expand_filepaths,
     _arrange_for_concatenation, _trim, _infer_contains_boundaries,
-                        open_boutdataset)
+    open_boutdataset)
 from xbout.utils import _separate_metadata
 
 
