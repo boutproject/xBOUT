@@ -37,5 +37,3 @@ class TestAnimate:
         animation = ds['T'][:, :, 0].bout.animate1D(save_as="%s/test.gif" % save_dir)
 
         assert isinstance(animation, Line)
-
-
