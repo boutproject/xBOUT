@@ -5,15 +5,19 @@ from xbout.boutdataarray import BoutDataArrayAccessor
 
 from animatplot.blocks import Imshow, Line
 
-DATA_PATH = './xbout/tests/data/dump_files/along_x/BOUT.dmp.*.nc' # Path to test dmp files
+# Path to test dmp files
+DATA_PATH = './xbout/tests/data/dump_files/along_x/BOUT.dmp.*.nc'
+
 
 @pytest.fixture
 def create_test_file(tmpdir_factory):
 
-    save_dir = tmpdir_factory.mktemp("test_data") # Create temp dir for output of animate1D/2D
-    ds = open_boutdataset(DATA_PATH).squeeze(drop=True) # Open test data
+    # Create temp dir for output of animate1D/2D
+    save_dir = tmpdir_factory.mktemp("test_data")
+    ds = open_boutdataset(DATA_PATH).squeeze(drop=True)  # Open test data
 
     return save_dir, ds
+
 
 class TestAnimate:
     """
@@ -33,4 +37,5 @@ class TestAnimate:
         animation = ds['T'][:, :, 0].bout.animate1D(save_as="%s/test.gif" % save_dir)
 
         assert isinstance(animation, Line)
+
 
