@@ -27,13 +27,13 @@ class TestAnimate:
     def test_animate2D(self, create_test_file):
 
         save_dir, ds = create_test_file
-        animation = ds['T'].bout.animate2D(y='z', save_as="%s/test.gif" % save_dir)
+        animation = ds['T'].bout.animate2D(y='z', save_as="%s/test" % save_dir)
 
         assert isinstance(animation, Imshow)
 
     def test_animate1D(self, create_test_file):
 
         save_dir, ds = create_test_file
-        animation = ds['T'][:, :, 0].bout.animate1D(save_as="%s/test.gif" % save_dir)
+        animation = ds['T'][:, :, 0].bout.animate1D(save_as="%s/test" % save_dir)
 
         assert isinstance(animation, Line)
