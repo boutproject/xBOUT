@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import animatplot as amp
 
 from .utils import plot_separatrix
-
+from matplotlib.animation import PillowWriter
 
 def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
                    vmin=None, vmax=None, fps=10, save_as=None,
@@ -93,9 +93,7 @@ def animate_imshow(data, animate_over='t', x='x', y='y', animate=True,
 
         if not save_as:
             save_as = "{}_over_{}".format(variable, animate_over)
-        # TODO save using PillowWriter instead once matplotlib 3.1 comes out
-        # see https://github.com/t-makaro/animatplot/issues/24
-        anim.save(save_as + '.gif', writer='imagemagick')
+        anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return imshow_block
 
@@ -178,8 +176,6 @@ def animate_line(data, animate_over='t', animate=True,
 
         if not save_as:
             save_as = "{}_over_{}".format(variable, animate_over)
-        # TODO save using PillowWriter instead once matplotlib 3.1 comes out
-        # see https://github.com/t-makaro/animatplot/issues/24
-        anim.save(save_as + '.gif', writer='imagemagick')
+        anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return line_block
