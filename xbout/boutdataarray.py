@@ -1,4 +1,5 @@
-from pprint import pformat
+from pprint import pformat as prettyformat
+from functools import partial
 
 from xarray import register_dataarray_accessor
 
@@ -16,15 +17,10 @@ class BoutDataArrayAccessor:
     """
 
     def __init__(self, da):
-
-        # # Load data variables
-        # # Should we just load whole dataset here?
-        # self.datapath = datapath
-        # self.prefix = prefix
-
         self.data = da
-        self.metadata = da.attrs['metadata']
-        self.options = da.attrs['options']
+        self.metadata = da.attrs.get('metadata')  # None if just grid file
+        self.options = da.attrs.get('options')  # None if no inp file
+        self.grid = da.attrs.get('grid')  # None if no grid file
 
     def __str__(self):
         """
@@ -33,13 +29,14 @@ class BoutDataArrayAccessor:
         Accessed by print(da.bout)
         """
 
-        text = "<xbout.BoutDataArray>\n" + \
+        styled = partial(prettyformat, indent=4, compact=True)
+        text = "<xbout.BoutDataset>\n" + \
                "Contains:\n{}\n".format(str(self.data)) + \
-               "Metadata:\n{}".format(pformat(self.metadata,
-                                              indent=4, compact=True))
+               "Metadata:\n{}\n".format(styled(self.metadata))
         if self.options:
-            text += "Options:\n{}".format(pformat(self.options.as_dict(),
-                                                  indent=4, compact=True))
+            text += "Options:\n{}".format(styled(self.options))
+        if self.grid:
+            text += "Grid:\n{}".format(styled(self.grid))
         return text
 
     def animate2D(self, animate_over='t', x='x', y='y', animate=True,
@@ -91,7 +88,7 @@ class BoutDataArrayAccessor:
                 "({})".format(str(n_dims)))
 
     def animate1D(self, animate_over='t', x='x', y='y', animate=True,
-                 fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
+                  fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
         data = self.data
         variable = data.name
         n_dims = len(data.dims)
@@ -103,6 +100,3 @@ class BoutDataArrayAccessor:
                                       sep_pos=sep_pos, animate=animate, fps=fps,
                                       save_as=save_as, ax=ax, **kwargs)
             return line_block
-
-    # TODO BOUT-specific plotting functionality would be implemented as methods here, e.g. ds.bout.plot_poloidal
-    # TODO Could trial a 2D surface plotting method here

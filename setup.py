@@ -21,11 +21,12 @@ setup(
     license="Apache",
     python_requires='>=3.5',
     install_requires=[
-        'xarray>=v0.10.0',
+        'xarray>=v0.12.2',
         'dask[array]>=1.0.0',
         'natsort>=5.5.0',
         'matplotlib>=3.0.3',
         'animatplot>=0.3',
+        'netcdf4>=1.4.0',
         'Pillow>=6.1.0'
     ],
     extras_require={
