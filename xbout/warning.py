@@ -1,0 +1,2 @@
+class xBOUTWarning(Warning):
+    pass
