@@ -246,8 +246,8 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
 
     # Fill with some kind of synthetic data
     if syn_data_type is 'random':
-        # Each dataset contains the same random noise
-        np.random.seed(seed=0)
+        # Each dataset contains unique random noise
+        np.random.seed(seed = num)
         data = np.random.randn(*shape)
     elif syn_data_type is 'linear':
         # Variables increase linearly across entire domain
