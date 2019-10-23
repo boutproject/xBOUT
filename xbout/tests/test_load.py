@@ -168,7 +168,7 @@ def bout_xyt_example_files(tmpdir_factory):
     return _bout_xyt_example_files
 
 
-def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6),
+def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6,2,4,7),
                             nxpe=4, nype=2, nt=1, guards={}, syn_data_type='random'):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
@@ -197,7 +197,7 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6)
     return glob_pattern
 
 
-def create_bout_ds_list(prefix, lengths=(2, 4, 7, 6), nxpe=4, nype=2, nt=1, guards={},
+def create_bout_ds_list(prefix, lengths=(6,2,4,7), nxpe=4, nype=2, nt=1, guards={},
                         syn_data_type='random'):
     """
     Mocks up a set of BOUT-like datasets.
@@ -228,16 +228,16 @@ def create_bout_ds_list(prefix, lengths=(2, 4, 7, 6), nxpe=4, nype=2, nt=1, guar
     return ds_list_sorted, file_list_sorted
 
 
-def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nype=1,
+def create_bout_ds(syn_data_type='random', lengths=(6,2,4,7), num=0, nxpe=1, nype=1,
                    xproc=0, yproc=0, guards={}):
 
     # Set the shape of the data in this dataset
-    x_length, y_length, z_length, t_length = lengths
+    t_length, x_length, y_length, z_length = lengths
     mxg = guards.get('x', 0)
     myg = guards.get('y', 0)
     x_length += 2*mxg
     y_length += 2*myg
-    shape = (x_length, y_length, z_length, t_length)
+    shape = (t_length, x_length, y_length, z_length)
 
     # calculate global nx, ny and nz
     nx = nxpe*lengths[1] + 2*mxg
@@ -260,8 +260,8 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
     else:
         raise ValueError('Not a recognised choice of type of synthetic bout data.')
 
-    T = DataArray(data, dims=['x', 'y', 'z', 't'])
-    n = DataArray(data, dims=['x', 'y', 'z', 't'])
+    T = DataArray(data, dims=['t', 'x', 'y', 'z'])
+    n = DataArray(data, dims=['t', 'x', 'y', 'z'])
     ds = Dataset({'n': n, 'T': T})
 
     # Include grid data
