@@ -13,7 +13,7 @@ from natsort import natsorted
 
 from xbout.load import (_check_filetype, _expand_wildcards, _expand_filepaths,
     _arrange_for_concatenation, _trim, _infer_contains_boundaries,
-    open_boutdataset)
+    open_boutdataset, _BOUT_PER_PROC_VARIABLES)
 from xbout.utils import _separate_metadata
 
 
@@ -358,7 +358,8 @@ class TestStripMetadata():
 
         ds, metadata = _separate_metadata(original)
 
-        assert original.drop(METADATA_VARS).equals(ds)
+        assert original.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                             errors='ignore').equals(ds)
         assert metadata['NXPE'] == 1
 
 
@@ -368,7 +369,9 @@ class TestCombineNoTrim:
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds()
-        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
+        xrt.assert_equal(actual.load(),
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                             errors='ignore'))
 
     def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1,
@@ -378,7 +381,9 @@ class TestCombineNoTrim:
         bout_ds = create_bout_ds
         expected = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x',
                           data_vars='minimal')
-        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
+        xrt.assert_equal(actual.load(),
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                             errors='ignore'))
 
     def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=3, nt=1,
@@ -388,7 +393,9 @@ class TestCombineNoTrim:
         bout_ds = create_bout_ds
         expected = concat([bout_ds(0), bout_ds(1), bout_ds(2)], dim='y',
                           data_vars='minimal')
-        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
+        xrt.assert_equal(actual.load(),
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                             errors='ignore'))
 
     @pytest.mark.skip
     def test_combine_along_t(self):
@@ -408,7 +415,9 @@ class TestCombineNoTrim:
                        data_vars='minimal')
         expected = concat([line1, line2, line3], dim='y',
                           data_vars='minimal')
-        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
+        xrt.assert_equal(actual.load(),
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                             errors='ignore'))
 
     @pytest.mark.skip
     def test_combine_along_tx(self):
