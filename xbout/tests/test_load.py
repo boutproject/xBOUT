@@ -342,10 +342,12 @@ def create_bout_ds(syn_data_type='random', lengths=(6,2,4,7), num=0, nxpe=1, nyp
     return ds
 
 
-METADATA_VARS = ['NXPE', 'NYPE', 'NZPE', 'PE_XIND', 'PE_YIND', 'MYPE', 'MXG', 'MYG', 'nx',
-                 'ny', 'nz', 'MZ', 'MXSUB', 'MYSUB', 'MZSUB', 'ixseps1', 'ixseps2',
-                 'jyseps1_1', 'jyseps1_2', 'jyseps2_1', 'jyseps2_2', 'ny_inner',
-                 'zperiod', 'ZMIN', 'ZMAX', 'dz', 'iteration']
+# Note, MYPE, PE_XIND and PE_YIND not included, since they are different for each
+# processor and so are dropped when loading datasets.
+METADATA_VARS = ['BOUT_VERSION', 'NXPE', 'NYPE', 'NZPE', 'MXG', 'MYG', 'nx', 'ny', 'nz',
+                 'MZ', 'MXSUB', 'MYSUB', 'MZSUB', 'ixseps1', 'ixseps2', 'jyseps1_1',
+                 'jyseps1_2', 'jyseps2_1', 'jyseps2_2', 'ny_inner', 'zperiod', 'ZMIN',
+                 'ZMAX', 'dz', 'iteration']
 
 
 class TestStripMetadata():
