@@ -217,17 +217,8 @@ def create_bout_ds_list(prefix, lengths=(2, 4, 7, 6), nxpe=4, nype=2, nt=1, guar
             upper_bndry_cells = {dim: guards.get(dim) for dim in guards.keys()}
             lower_bndry_cells = {dim: guards.get(dim) for dim in guards.keys()}
 
-            # Include boundary cells
-            for dim in ['x', 'y']:
-                if dim in guards.keys():
-                    if i == 0:
-                        lower_bndry_cells[dim] = guards[dim]
-                    if i == nxpe-1:
-                        upper_bndry_cells[dim] = guards[dim]
-
             ds = create_bout_ds(syn_data_type=syn_data_type, num=num, lengths=lengths, nxpe=nxpe, nype=nype,
-                                upper_bndry_cells=upper_bndry_cells, lower_bndry_cells=lower_bndry_cells,
-                                guards=guards)
+                                xproc=i, yproc=j, guards=guards)
             ds_list.append(ds)
 
     # Sort this in order of num to remove any BOUT-specific structure
@@ -238,15 +229,20 @@ def create_bout_ds_list(prefix, lengths=(2, 4, 7, 6), nxpe=4, nype=2, nt=1, guar
 
 
 def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nype=1,
-                   upper_bndry_cells={}, lower_bndry_cells={}, guards={}):
+                   xproc=0, yproc=0, guards={}):
 
     # Set the shape of the data in this dataset
     x_length, y_length, z_length, t_length = lengths
-    x_length += upper_bndry_cells.get('x', 0) + lower_bndry_cells.get('x', 0)
-    y_length += upper_bndry_cells.get('y', 0) + lower_bndry_cells.get('y', 0)
-    z_length += upper_bndry_cells.get('z', 0) + lower_bndry_cells.get('z', 0)
-    t_length += upper_bndry_cells.get('t', 0) + lower_bndry_cells.get('t', 0)
+    mxg = guards.get('x', 0)
+    myg = guards.get('y', 0)
+    x_length += 2*mxg
+    y_length += 2*myg
     shape = (x_length, y_length, z_length, t_length)
+
+    # calculate global nx, ny and nz
+    nx = nxpe*lengths[1] + 2*mxg
+    ny = nype*lengths[2]
+    nz = 1*lengths[3]
 
     # Fill with some kind of synthetic data
     if syn_data_type is 'random':
@@ -268,25 +264,70 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
     n = DataArray(data, dims=['x', 'y', 'z', 't'])
     ds = Dataset({'n': n, 'T': T})
 
-    # Include metadata
+    # Include grid data
     ds['NXPE'] = nxpe
     ds['NYPE'] = nype
-    ds['MXG'] = guards.get('x', 0)
-    ds['MYG'] = guards.get('y', 0)
-    ds['nx'] = x_length
-    ds['MXSUB'] = guards.get('x', 0)
-    ds['MYSUB'] = guards.get('y', 0)
-    ds['MZ'] = z_length
-    ds['jyseps1_1'] = -1
-    ds['jyseps1_2'] = -1
-    ds['jyseps2_1'] = -1
-    ds['jyseps2_2'] = -1
+    ds['NZPE'] = 1
+    ds['PE_XIND'] = xproc
+    ds['PE_YIND'] = yproc
+    ds['MYPE'] = num
+
+    ds['MXG'] = mxg
+    ds['MYG'] = myg
+    ds['nx'] = nx
+    ds['ny'] = ny
+    ds['nz'] = nz
+    ds['MZ'] = 1*lengths[3]
+    ds['MXSUB'] = lengths[1]
+    ds['MYSUB'] = lengths[2]
+    ds['MZSUB'] = lengths[3]
+    ds['ixseps1'] = nx
+    ds['ixseps2'] = nx
+    ds['jyseps1_1'] = 0
+    ds['jyseps1_2'] = ny
+    ds['jyseps2_1'] = ny//2 - 1
+    ds['jyseps2_2'] = ny//2 - 1
+    ds['ny_inner'] = ny//2
+
+    one = DataArray(np.ones((x_length, y_length)), dims=['x', 'y'])
+    zero = DataArray(np.zeros((x_length, y_length)), dims=['x', 'y'])
+
+    ds['zperiod'] = 1
+    ds['ZMIN'] = 0.
+    ds['ZMAX'] = 2.*np.pi
+    ds['g11'] = one
+    ds['g22'] = one
+    ds['g33'] = one
+    ds['g12'] = zero
+    ds['g13'] = zero
+    ds['g23'] = zero
+    ds['g_11'] = one
+    ds['g_22'] = one
+    ds['g_33'] = one
+    ds['g_12'] = zero
+    ds['g_13'] = zero
+    ds['g_23'] = zero
+    ds['G1'] = zero
+    ds['G2'] = zero
+    ds['G3'] = zero
+    ds['J'] = one
+    ds['Bxy'] = one
+    ds['zShift'] = zero
+
+    ds['dx'] = 0.5*one
+    ds['dy'] = 2.*one
+    ds['dz'] = 0.7
+
+    ds['iteration'] = t_length
+    ds['t_array'] = DataArray(np.arange(t_length, dtype=float)*10., dims='t')
 
     return ds
 
 
-METADATA_VARS = ['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB', 'MZ',
-                 'jyseps1_1', 'jyseps1_2', 'jyseps2_1', 'jyseps2_2']
+METADATA_VARS = ['NXPE', 'NYPE', 'NZPE', 'PE_XIND', 'PE_YIND', 'MYPE', 'MXG', 'MYG', 'nx',
+                 'ny', 'nz', 'MZ', 'MXSUB', 'MYSUB', 'MZSUB', 'ixseps1', 'ixseps2',
+                 'jyseps1_1', 'jyseps1_2', 'jyseps2_1', 'jyseps2_2', 'ny_inner',
+                 'zperiod', 'ZMIN', 'ZMAX', 'dz', 'iteration']
 
 
 class TestStripMetadata():
@@ -315,7 +356,8 @@ class TestCombineNoTrim:
         actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
-        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x')
+        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x',
+                          data_vars='minimal')
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
@@ -324,7 +366,8 @@ class TestCombineNoTrim:
         actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
-        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2)], dim='y')
+        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2)], dim='y',
+                          data_vars='minimal')
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     @pytest.mark.skip
@@ -337,10 +380,14 @@ class TestCombineNoTrim:
         actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
-        line1 = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x')
-        line2 = concat([bout_ds(4), bout_ds(5), bout_ds(6), bout_ds(7)], dim='x')
-        line3 = concat([bout_ds(8), bout_ds(9), bout_ds(10), bout_ds(11)], dim='x')
-        expected = concat([line1, line2, line3], dim='y')
+        line1 = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x',
+                       data_vars='minimal')
+        line2 = concat([bout_ds(4), bout_ds(5), bout_ds(6), bout_ds(7)], dim='x',
+                       data_vars='minimal')
+        line3 = concat([bout_ds(8), bout_ds(9), bout_ds(10), bout_ds(11)], dim='x',
+                       data_vars='minimal')
+        expected = concat([line1, line2, line3], dim='y',
+                          data_vars='minimal')
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     @pytest.mark.skip
