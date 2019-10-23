@@ -19,7 +19,7 @@ setup(
     author_email="thomas.nicholas@york.ac.uk",
     description='Collect data from BOUT++ runs in python using xarray',
     license="Apache",
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     install_requires=[
         'xarray>=v0.12.2',
         'dask[array]>=1.0.0',
@@ -43,7 +43,6 @@ setup(
         "License :: OSI Approved :: Apache License",
         "Natural Language :: English",
         "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Topic :: Scientific/Engineering :: Visualization"
