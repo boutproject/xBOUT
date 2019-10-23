@@ -26,7 +26,6 @@ class TestAccuracyAgainstOldCollect:
         assert expected.shape == actual.shape
         npt.assert_equal(actual, expected)
 
-
     def test_multiple_files_along_x(self, tmpdir_factory):
 
         # Create temp directory for files
@@ -47,7 +46,6 @@ class TestAccuracyAgainstOldCollect:
 
         assert expected.shape == actual.shape
         npt.assert_equal(actual, expected)
-
 
     def test_multiple_files_along_y(self, tmpdir_factory):
 
@@ -70,7 +68,6 @@ class TestAccuracyAgainstOldCollect:
         assert expected.shape == actual.shape
         npt.assert_equal(actual, expected)
 
-
     def test_multiple_files_along_xy(self, tmpdir_factory):
 
         # Create temp directory for files
@@ -91,7 +88,6 @@ class TestAccuracyAgainstOldCollect:
 
         assert expected.shape == actual.shape
         npt.assert_equal(actual, expected)
-
 
     def test_metadata(self, tmpdir_factory):
         # Create temp directory for files

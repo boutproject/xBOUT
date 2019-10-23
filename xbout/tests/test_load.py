@@ -12,8 +12,8 @@ import xarray.testing as xrt
 from natsort import natsorted
 
 from xbout.load import (_check_filetype, _expand_wildcards, _expand_filepaths,
-    _arrange_for_concatenation, _trim, _infer_contains_boundaries,
-    open_boutdataset, _BOUT_PER_PROC_VARIABLES)
+                        _arrange_for_concatenation, _trim, _infer_contains_boundaries,
+                        open_boutdataset, _BOUT_PER_PROC_VARIABLES)
 from xbout.utils import _separate_metadata
 
 
@@ -168,7 +168,7 @@ def bout_xyt_example_files(tmpdir_factory):
     return _bout_xyt_example_files
 
 
-def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6,2,4,7),
+def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4, 7),
                             nxpe=4, nype=2, nt=1, guards={}, syn_data_type='random'):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
@@ -197,7 +197,7 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6,2,4,7)
     return glob_pattern
 
 
-def create_bout_ds_list(prefix, lengths=(6,2,4,7), nxpe=4, nype=2, nt=1, guards={},
+def create_bout_ds_list(prefix, lengths=(6, 2, 4, 7), nxpe=4, nype=2, nt=1, guards={},
                         syn_data_type='random'):
     """
     Mocks up a set of BOUT-like datasets.
@@ -228,7 +228,7 @@ def create_bout_ds_list(prefix, lengths=(6,2,4,7), nxpe=4, nype=2, nt=1, guards=
     return ds_list_sorted, file_list_sorted
 
 
-def create_bout_ds(syn_data_type='random', lengths=(6,2,4,7), num=0, nxpe=1, nype=1,
+def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, nype=1,
                    xproc=0, yproc=0, guards={}):
 
     # Set the shape of the data in this dataset
@@ -247,7 +247,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6,2,4,7), num=0, nxpe=1, nyp
     # Fill with some kind of synthetic data
     if syn_data_type is 'random':
         # Each dataset contains unique random noise
-        np.random.seed(seed = num)
+        np.random.seed(seed=num)
         data = np.random.randn(*shape)
     elif syn_data_type is 'linear':
         # Variables increase linearly across entire domain
@@ -371,7 +371,7 @@ class TestCombineNoTrim:
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
-                             errors='ignore'))
+                                       errors='ignore'))
 
     def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1,
@@ -383,7 +383,7 @@ class TestCombineNoTrim:
                           data_vars='minimal')
         xrt.assert_equal(actual.load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
-                             errors='ignore'))
+                                       errors='ignore'))
 
     def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=3, nt=1,
@@ -395,7 +395,7 @@ class TestCombineNoTrim:
                           data_vars='minimal')
         xrt.assert_equal(actual.load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
-                             errors='ignore'))
+                                       errors='ignore'))
 
     @pytest.mark.skip
     def test_combine_along_t(self):
@@ -417,7 +417,7 @@ class TestCombineNoTrim:
                           data_vars='minimal')
         xrt.assert_equal(actual.load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
-                             errors='ignore'))
+                                       errors='ignore'))
 
     @pytest.mark.skip
     def test_combine_along_tx(self):

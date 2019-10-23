@@ -19,7 +19,7 @@ def create_test_file(tmpdir_factory):
     for ds, file_name in zip(ds_list, file_list):
         ds.to_netcdf(str(save_dir.join(str(file_name))))
 
-    ds = open_boutdataset(save_dir.join("BOUT.dmp.*.nc")) # Open test data
+    ds = open_boutdataset(save_dir.join("BOUT.dmp.*.nc"))  # Open test data
 
     return save_dir, ds
 
