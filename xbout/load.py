@@ -393,6 +393,9 @@ def _get_limit(side, dim, keep_boundaries, boundaries, guards):
     else:
         limit = None
 
+    if limit == 0:
+        # 0 would give incorrect result as an upper limit
+        limit = None
     return limit
 
 
