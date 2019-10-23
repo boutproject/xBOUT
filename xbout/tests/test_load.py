@@ -251,7 +251,21 @@ def create_bout_ds(syn_data_type='random', lengths=(6,2,4,7), num=0, nxpe=1, nyp
         data = np.random.randn(*shape)
     elif syn_data_type is 'linear':
         # Variables increase linearly across entire domain
-        raise NotImplementedError
+        data = DataArray(-np.ones(shape), dims=('t', 'x', 'y', 'z'))
+
+        t_array = DataArray((nx - 2*mxg)*ny*nz*np.arange(t_length, dtype=float),
+                            dims='t')
+        x_array = DataArray(ny*nz*(xproc*lengths[1] + mxg
+                            + np.arange(lengths[1], dtype=float)),
+                            dims='x')
+        y_array = DataArray(nz*(yproc*lengths[2] + myg
+                            + np.arange(lengths[2], dtype=float)),
+                            dims='y')
+        z_array = DataArray(np.arange(z_length, dtype=float), dims='z')
+
+        data[:, mxg:x_length-mxg, myg:y_length-myg, :] = (
+                t_array + x_array + y_array + z_array
+                )
     elif syn_data_type is 'stepped':
         # Each dataset contains a different number depending on the filename
         data = np.ones(shape) * num
