@@ -153,8 +153,8 @@ def plot_separatrices(da, ax):
 
     j11, j12, j21, j22, ix1, ix2, nin, nx, ny, y_boundary_guards = _get_seps(da)
 
-    R = da.coords['R'].transpose('x', 'theta')
-    Z = da.coords['Z'].transpose('x', 'theta')
+    R = da.coords['R'].transpose('x', 'theta').values
+    Z = da.coords['Z'].transpose('x', 'theta').values
 
     if j22 + 1 < ny:
         # Lower X-point location
