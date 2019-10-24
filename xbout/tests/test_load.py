@@ -364,7 +364,7 @@ class TestStripMetadata():
 
 
 # TODO also test loading multiple files which have guard cells
-class TestCombineNoTrim:
+class TestOpen:
     def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual = open_boutdataset(datapath=path, keep_xboundaries=False)
@@ -418,6 +418,16 @@ class TestCombineNoTrim:
         xrt.assert_equal(actual.load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
                                        errors='ignore'))
+
+    def test_toroidal(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=3, nt=1,
+                                      syn_data_type='stepped')
+        actual = open_boutdataset(datapath=path, geometry='toroidal')
+
+    def test_salpha(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=3, nt=1,
+                                      syn_data_type='stepped')
+        actual = open_boutdataset(datapath=path, geometry='s-alpha')
 
     @pytest.mark.skip
     def test_combine_along_tx(self):
