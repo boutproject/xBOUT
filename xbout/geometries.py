@@ -108,6 +108,16 @@ def add_toroidal_geometry_coords(ds, coordinates=None):
                          "Use the 'coordinates' argument of open_boutdataset to provide "
                          "alternative names".format(bad_names))
 
+    # Get extra geometry information from grid file if it's not in the dump files
+    needed_variables = ['psixy', 'Rxy', 'Zxy']
+    for v in needed_variables:
+        if v not in ds:
+            if ds._grid is None:
+                raise ValueError("Grid file is required to provide %s. Pass the grid "
+                                 "file name as the 'gridfilepath' argument to "
+                                 "open_boutdataset().")
+            ds[v] = ds._grid[v]
+
     # Change names of dimensions to Orthogonal Toroidal ones
     ds = ds.rename(y=coordinates['y'])
 
