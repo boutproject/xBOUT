@@ -155,6 +155,14 @@ def add_s_alpha_geometry_coords(ds, coordinates=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates)
 
+    # Add 'hthe' from grid file, needed below for radial coordinate
+    if not 'hthe' in ds:
+        if ds._grid is None:
+            raise ValueError("Grid file is required to provide %s. Pass the grid "
+                             "file name as the 'gridfilepath' argument to "
+                             "open_boutdataset().")
+        ds['hthe'] = ds._grid['hthe']
+
     ds = add_toroidal_geometry_coords(ds, coordinates=coordinates)
 
     # Add 1D radial coordinate
@@ -165,8 +173,5 @@ def add_s_alpha_geometry_coords(ds, coordinates=None):
     ds['r'].attrs['units'] = 'm'
     ds = ds.set_coords('r')
     ds = ds.rename(x='r')
-
-    # Simplify psi to be radially-varying only
-    ds['r'] = ds['r'].isel({coordinates['y']: 0}).squeeze(drop=True)
 
     return ds
