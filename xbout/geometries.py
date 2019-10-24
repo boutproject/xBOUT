@@ -89,9 +89,9 @@ def _set_default_toroidal_coordinates(coordinates):
         coordinates = {}
 
     # Replace any values that have not been passed in with defaults
-    coordinates['x'] = coordinates.get('x', 'psi')
+    coordinates['x'] = coordinates.get('x', 'psi_poloidal')
     coordinates['y'] = coordinates.get('y', 'theta')
-    coordinates['z'] = coordinates.get('z', 'phi')
+    coordinates['z'] = coordinates.get('z', 'zeta')
 
 
 @register_geometry('toroidal')
