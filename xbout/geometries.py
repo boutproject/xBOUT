@@ -88,6 +88,8 @@ def _set_default_toroidal_coordinates(coordinates):
     coordinates['y'] = coordinates.get('y', 'theta')
     coordinates['z'] = coordinates.get('z', 'zeta')
 
+    return coordinates
+
 
 @register_geometry('toroidal')
 def add_toroidal_geometry_coords(ds, coordinates=None):
