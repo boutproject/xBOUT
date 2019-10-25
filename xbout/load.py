@@ -131,12 +131,10 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
             print("Applying {} geometry conventions".format(geometry))
 
         if gridfilepath is not None:
-            print('here in load', ds.attrs)
             ds.attrs["_grid"] = open_boutdataset(gridfilepath, chunks=chunks,
                                                  keep_xboundaries=keep_xboundaries,
                                                  keep_yboundaries=keep_yboundaries,
                                                  info=info)
-            print('after in load', ds.attrs)
         else:
             ds.attrs["_grid"] = None
 
