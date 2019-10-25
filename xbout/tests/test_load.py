@@ -76,7 +76,6 @@ class TestPathHandling:
         with pytest.raises(IOError):
             path = Path(str(files_dir.join('run*/example.*.nc')))
             actual_filepaths = _expand_filepaths(path)
-            print(actual_filepaths)
 
 
 @pytest.fixture()
@@ -189,7 +188,6 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
         xsize = lengths[1]*nxpe
         ysize = lengths[2]*nype
         grid_ds = create_bout_grid_ds(xsize=xsize, ysize=ysize, guards=guards)
-        print('check grid_ds',xsize,ysize,grid_ds)
         grid_ds.to_netcdf(str(save_dir.join(grid + ".nc")))
 
     # Return a glob-like path to all files created, which has all file numbers replaced with a single asterix
@@ -348,6 +346,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     ds['t_array'] = DataArray(np.arange(t_length, dtype=float)*10., dims='t')
 
     return ds
+
 
 def create_bout_grid_ds(xsize=2, ysize=4, guards={}):
 

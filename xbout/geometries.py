@@ -156,7 +156,7 @@ def add_s_alpha_geometry_coords(ds, coordinates=None):
     coordinates = _set_default_toroidal_coordinates(coordinates)
 
     # Add 'hthe' from grid file, needed below for radial coordinate
-    if not 'hthe' in ds:
+    if 'hthe' not in ds:
         if ds._grid is None:
             raise ValueError("Grid file is required to provide %s. Pass the grid "
                              "file name as the 'gridfilepath' argument to "
