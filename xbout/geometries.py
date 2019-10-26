@@ -112,11 +112,11 @@ def add_toroidal_geometry_coords(ds, coordinates=None):
     needed_variables = ['psixy', 'Rxy', 'Zxy']
     for v in needed_variables:
         if v not in ds:
-            if ds._grid is None:
+            if ds.bout._grid is None:
                 raise ValueError("Grid file is required to provide %s. Pass the grid "
                                  "file name as the 'gridfilepath' argument to "
                                  "open_boutdataset().")
-            ds[v] = ds._grid[v]
+            ds[v] = ds.bout._grid[v]
 
     # Change names of dimensions to Orthogonal Toroidal ones
     ds = ds.rename(y=coordinates['y'])
@@ -157,11 +157,11 @@ def add_s_alpha_geometry_coords(ds, coordinates=None):
 
     # Add 'hthe' from grid file, needed below for radial coordinate
     if 'hthe' not in ds:
-        if ds._grid is None:
+        if ds.bout._grid is None:
             raise ValueError("Grid file is required to provide %s. Pass the grid "
                              "file name as the 'gridfilepath' argument to "
                              "open_boutdataset().")
-        ds['hthe'] = ds._grid['hthe']
+        ds['hthe'] = ds.bout._grid['hthe']
 
     ds = add_toroidal_geometry_coords(ds, coordinates=coordinates)
 
