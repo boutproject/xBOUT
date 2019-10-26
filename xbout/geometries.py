@@ -157,11 +157,14 @@ def add_s_alpha_geometry_coords(ds, coordinates=None):
 
     # Add 'hthe' from grid file, needed below for radial coordinate
     if 'hthe' not in ds:
+        hthe_from_grid = True
         if ds.bout._grid is None:
             raise ValueError("Grid file is required to provide %s. Pass the grid "
                              "file name as the 'gridfilepath' argument to "
                              "open_boutdataset().")
         ds['hthe'] = ds.bout._grid['hthe']
+    else:
+        hthe_from_grid = False
 
     ds = add_toroidal_geometry_coords(ds, coordinates=coordinates)
 
@@ -173,5 +176,9 @@ def add_s_alpha_geometry_coords(ds, coordinates=None):
     ds['r'].attrs['units'] = 'm'
     ds = ds.set_coords('r')
     ds = ds.rename(x='r')
+
+    if hthe_from_grid:
+        # remove hthe because it does not have correct metadata
+        del ds['hthe']
 
     return ds
