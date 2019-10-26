@@ -447,11 +447,19 @@ class TestOpen:
         actual = open_boutdataset(datapath=path, geometry='toroidal',
                                   gridfilepath=Path(path).parent.joinpath('grid.nc'))
 
+        # check dataset can be saved
+        save_dir = tmpdir_factory.mktemp('data')
+        actual.bout.save(str(save_dir.join('boutdata.nc')))
+
     def test_salpha(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=3, nt=1,
                                       syn_data_type='stepped', grid='grid')
         actual = open_boutdataset(datapath=path, geometry='s-alpha',
                                   gridfilepath=Path(path).parent.joinpath('grid.nc'))
+
+        # check dataset can be saved
+        save_dir = tmpdir_factory.mktemp('data')
+        actual.bout.save(str(save_dir.join('boutdata.nc')))
 
     @pytest.mark.skip
     def test_combine_along_tx(self):
