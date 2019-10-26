@@ -3,7 +3,6 @@ python:
   - "3.6"
   - "3.7"
 install:
-  - pip install --upgrade vtk # fixes install of mayavi for Python-3.6, which is a dependency of boutdata
   - pip install --upgrade setuptools pip pytest pytest-cov coverage codecov boutdata "xarray!=0.14.0"
   - pip install -r requirements.txt
   - pip install -e .
