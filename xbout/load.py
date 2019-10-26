@@ -131,12 +131,11 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
             print("Applying {} geometry conventions".format(geometry))
 
         if gridfilepath is not None:
-            ds.attrs["_grid"] = open_boutdataset(gridfilepath, chunks=chunks,
-                                                 keep_xboundaries=keep_xboundaries,
-                                                 keep_yboundaries=keep_yboundaries,
-                                                 info=info)
+            ds.bout._grid = _open_grid(gridfilepath, chunks=chunks,
+                                       keep_xboundaries=keep_xboundaries,
+                                       keep_yboundaries=keep_yboundaries)
         else:
-            ds.attrs["_grid"] = None
+            ds.bout._grid = None
 
         # Update coordinates to match particular geometry of grid
         ds = geometries.apply_geometry(ds, geometry)
