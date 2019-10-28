@@ -11,7 +11,12 @@ class UnregisteredGeometryError(Exception):
     """Error for unregistered geometry type"""
 
 
-def apply_geometry(ds, geometry_name, coordinates=None):
+# TODO remove coordinates argument completely. All the functionality should
+# instead be implemented by defining a particular geometry that does what is
+# desired
+
+
+def apply_geometry(ds, geometry_name):
     """
 
     Parameters
@@ -20,11 +25,6 @@ def apply_geometry(ds, geometry_name, coordinates=None):
         Dataset (from
     geometry_name : str
         Name under which the desired geometry function was registered
-    coordinates : dict of str, optional
-        Names to give the physical coordinates corresponding to 'x', 'y' and 'z'; values
-        corresponding to 'x', 'y' and 'z' keys in the passed dict are used as the names
-        of the dimensions. Any not passed are given default values. If not specified,
-        default names are chosen.
 
     Returns
     -------
@@ -43,7 +43,7 @@ def apply_geometry(ds, geometry_name, coordinates=None):
                          have been registered.""".format(geometry_name))
         raise UnregisteredGeometryError(message)
 
-    updated_ds = add_geometry_coords(ds, coordinates=coordinates)
+    updated_ds = add_geometry_coords(ds)
     return updated_ds
 
 
@@ -84,9 +84,11 @@ def _set_default_toroidal_coordinates(coordinates):
         coordinates = {}
 
     # Replace any values that have not been passed in with defaults
-    coordinates['x'] = coordinates.get('x', 'psi')
+    coordinates['x'] = coordinates.get('x', 'psi_poloidal')
     coordinates['y'] = coordinates.get('y', 'theta')
-    coordinates['z'] = coordinates.get('z', 'phi')
+    coordinates['z'] = coordinates.get('z', 'zeta')
+
+    return coordinates
 
 
 @register_geometry('toroidal')
@@ -97,9 +99,10 @@ def add_toroidal_geometry_coords(ds, coordinates=None):
     # Check whether coordinates names conflict with variables in ds
     bad_names = [name for name in coordinates.values() if name in ds]
     if bad_names:
-        raise ValueError('Coordinate names {} clash with variables in the dataset. '
-                         "Use the 'coordinates' argument of open_boutdataset to provide "
-                         "alternative names".format(bad_names))
+        raise ValueError("Coordinate names {} clash with variables in the dataset. "
+                         "Register a different geometry to provide alternative names. "
+                         "It may be useful to use the 'coordinates' argument to "
+                         "add_toroidal_geometry_coords() for this.".format(bad_names))
 
     # Change names of dimensions to Orthogonal Toroidal ones
     ds = ds.rename(y=coordinates['y'])

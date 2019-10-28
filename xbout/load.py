@@ -7,7 +7,7 @@ import xarray as xr
 
 from natsort import natsorted
 
-from .grid import open_grid
+from . import geometries
 from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype
 
 
@@ -37,25 +37,36 @@ except ValueError:
 # TODO somehow check that we have access to the latest version of auto_combine
 
 
-def open_boutdataset(datapath='./BOUT.dmp.*.nc',
-                     inputfilepath=None, gridfilepath=None, geometry=None,
-                     coordinates=None, chunks={}, keep_xboundaries=True,
-                     keep_yboundaries=False, run_name=None, info=True):
+def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
+                     geometry=None, chunks={},
+                     keep_xboundaries=True, keep_yboundaries=False,
+                     run_name=None, info=True):
     """
-    Load a dataset from a set of BOUT output files, including the input options file.
+    Load a dataset from a set of BOUT output files, including the input options
+    file. Can also load from a grid file.
 
     Parameters
     ----------
     datapath : str, optional
+        Path to the data to open. Can point to either a set of one or more dump
+        files, or a single grid file.
+
+        To specify multiple dump files you must enter the path to them as a
+        single glob, e.g. './BOUT.dmp.*.nc', or for multiple consecutive runs
+        in different directories (in order) then './run*/BOUT.dmp.*.nc'.
     chunks : dict, optional
     inputfilepath : str, optional
-    gridfilepath : str, optional
     geometry : str, optional
-        Create coordinates for a certain type of geometry.
-        Currently supported: toroidal, s-alpha
-    coordinates : sequence of str, optional
-        Names to give the physical coordinates corresponding to 'x', 'y' and 'z' (in
-        order). If not specified, default names are chosen.
+        The geometry type of the grid data. This will specify what type of
+        coordinates to add to the dataset, e.g. 'toroidal' or 'cylindrical'.
+
+        If not specified then will attempt to read it from the file attrs.
+        If still not found then a warning will be thrown, which can be
+        suppressed by passing `info`=False.
+
+        To define a new type of geometry you need to use the
+        `register_geometry` decorator. You are encouraged to do this for your
+        own BOUT++ physics module, to apply relevant normalisations.
     keep_xboundaries : bool, optional
         If true, keep x-direction boundary cells (the cells past the physical
         edges of the grid, where boundary conditions are set); increases the
@@ -67,6 +78,9 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
         size of the y dimension in the returned data-set. If false, trim these
         cells.
     run_name : str, optional
+        Name to give to the whole dataset, e.g. 'JET_ELM_high_resolution'.
+        Useful if you are going to open multiple simulations and compare the
+        results.
     info : bool, optional
 
     Returns
@@ -76,11 +90,23 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
 
     # TODO handle possibility that we are loading a previously saved (and trimmed) dataset
 
-    # Gather pointers to all numerical data from BOUT++ output files
-    ds, metadata = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
-                                            keep_xboundaries=keep_xboundaries,
-                                            keep_yboundaries=keep_yboundaries)
+    # Determine if file is a grid file or data dump files
+    if _is_dump_files(datapath):
+        # Gather pointers to all numerical data from BOUT++ output files
+        ds = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
+                                      keep_xboundaries=keep_xboundaries,
+                                      keep_yboundaries=keep_yboundaries)
+    else:
+        # Its a grid file
+        ds = _open_grid(datapath, chunks=chunks,
+                        keep_xboundaries=keep_xboundaries,
+                        keep_yboundaries=keep_yboundaries)
 
+    ds, metadata = _separate_metadata(ds)
+    # Store as ints because netCDF doesn't support bools, so we can't save bool
+    # attributes
+    metadata['keep_xboundaries'] = int(keep_xboundaries)
+    metadata['keep_yboundaries'] = int(keep_yboundaries)
     ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
 
     if inputfilepath:
@@ -93,11 +119,17 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
         options = None
     ds = _set_attrs_on_all_vars(ds, 'options', options)
 
-    if gridfilepath:
-        ds = open_grid(gridfilepath=gridfilepath, geometry=geometry,
-                       coordinates=coordinates, ds=ds,
-                       keep_xboundaries=keep_xboundaries,
-                       keep_yboundaries=keep_yboundaries)
+    if geometry is None:
+        if geometry in ds.attrs:
+            geometry = ds.attrs.get('geometry')
+    if geometry:
+        if info:
+            print("Applying {} geometry conventions".format(geometry))
+        # Update coordinates to match particular geometry of grid
+        ds = geometries.apply_geometry(ds, geometry)
+    else:
+        if info:
+            warn("No geometry type found, no coordinates will be added")
 
     # TODO read and store git commit hashes from output files
 
@@ -112,6 +144,23 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc',
     return ds
 
 
+def _is_dump_files(datapath):
+    """
+    If there is only one file, and it's not got a time dimension, assume it's a
+    grid file. Else assume we have one or more dump files.
+    """
+
+    filepaths, filetype = _expand_filepaths(datapath)
+
+    if len(filepaths) == 1:
+        ds = xr.open_dataset(filepaths[0], engine=filetype)
+        dims = ds.dims
+        ds.close()
+        return True if 't' in dims else False
+    else:
+        return True
+
+
 def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
                              keep_xboundaries=False, keep_yboundaries=False):
     filepaths, filetype = _expand_filepaths(datapath)
@@ -122,21 +171,15 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
     paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
     _preprocess = partial(_trim, guards={'x': mxg, 'y': myg},
-                          keep_boundaries={'x': keep_xboundaries, 'y': keep_yboundaries},
+                          keep_boundaries={'x': keep_xboundaries,
+                                           'y': keep_yboundaries},
                           nxpe=nxpe, nype=nype)
 
     ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims, combine='nested',
                            data_vars='minimal', preprocess=_preprocess, engine=filetype,
                            chunks=chunks)
 
-    ds, metadata = _separate_metadata(ds)
-
-    # Store as ints because netCDF doesn't support bools, so we can't save bool
-    # attributes
-    metadata['keep_xboundaries'] = int(keep_xboundaries)
-    metadata['keep_yboundaries'] = int(keep_yboundaries)
-
-    return ds, metadata
+    return ds
 
 
 def _expand_filepaths(datapath):
@@ -189,7 +232,8 @@ def _read_splitting(filepath, info=True):
             return ds[key].values
         else:
             if info is True:
-                print("{key} not found, setting to {default}".format(key=key, default=default))
+                print("{key} not found, setting to {default}"
+                      .format(key=key, default=default))
             return default
 
     nxpe = get_scalar(ds, 'NXPE', default=1)
@@ -383,3 +427,53 @@ def _get_limit(side, dim, keep_boundaries, boundaries, guards):
         limit = None
 
     return limit
+
+
+def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries):
+    """
+    Opens a single grid file. Implements slightly different logic for
+    boundaries to deal with different conventions in a BOUT grid file.
+    """
+
+    gridfilepath = Path(datapath)
+    grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath),
+                           chunks=chunks)
+
+    # TODO find out what 'yup_xsplit' etc are in the doublenull storm file John gave me
+    # For now drop any variables with extra dimensions
+    acceptable_dims = ['t', 'x', 'y', 'z']
+    unrecognised_dims = list(set(grid.dims) - set(acceptable_dims))
+    if len(unrecognised_dims) > 0:
+        # Weird string formatting is a workaround to deal with possible bug in
+        # pytest warnings capture - doesn't match strings containing brackets
+        warn(
+            "Will drop all variables containing the dimensions {} because "
+            "they are not recognised".format(str(unrecognised_dims)[1:-1]),
+            UserWarning)
+        grid = grid.drop_dims(unrecognised_dims)
+
+    if not keep_xboundaries:
+        xboundaries = int(grid.metadata['MXG'])
+        if xboundaries > 0:
+            grid = grid.isel(x=slice(xboundaries, -xboundaries, None))
+    if not keep_yboundaries:
+        try:
+            yboundaries = int(grid['y_boundary_guards'])
+        except KeyError:
+            # y_boundary_guards variable not in grid file - older grid files
+            # never had y-boundary cells
+            yboundaries = 0
+        if yboundaries > 0:
+            # Remove y-boundary cells from first divertor target
+            grid = grid.isel(y=slice(yboundaries, -yboundaries, None))
+            if grid['jyseps1_2'] > grid['jyseps2_1']:
+                # There is a second divertor target, remove y-boundary cells
+                # there too
+                nin = int(grid['ny_inner'])
+                grid_lower = grid.isel(y=slice(None, nin, None))
+                grid_upper = grid.isel(
+                    y=slice(nin + 2 * yboundaries, None, None))
+                grid = xr.concat((grid_lower, grid_upper), dim='y',
+                                 data_vars='minimal',
+                                 compat='identical')
+    return grid
