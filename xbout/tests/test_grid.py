@@ -7,7 +7,6 @@ import numpy as np
 
 from xbout.load import open_boutdataset
 from xbout.geometries import register_geometry, REGISTERED_GEOMETRIES
-from xbout.warning import xBOUTWarning
 
 
 @pytest.fixture
@@ -52,8 +51,8 @@ class TestOpenGrid:
         merge([example_grid, new_var]).to_netcdf(dodgy_grid_path,
                                                  engine='netcdf4')
 
-        with pytest.warns(xBOUTWarning, match="drop all variables containing "
-                                              "the dimensions 'w'"):
+        with pytest.warns(UserWarning, match="drop all variables containing "
+                                             "the dimensions 'w'"):
             result = open_boutdataset(datapath=dodgy_grid_path)
         assert_equal(result, example_grid)
         result.close()
