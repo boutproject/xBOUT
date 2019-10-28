@@ -9,7 +9,6 @@ from natsort import natsorted
 
 from . import geometries
 from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype
-from .warning import xBOUTWarning
 
 
 _BOUT_PER_PROC_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
@@ -130,8 +129,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         ds = geometries.apply_geometry(ds, geometry)
     else:
         if info:
-            warn("No geometry type found, no coordinates will be added",
-                 category=xBOUTWarning)
+            warn("No geometry type found, no coordinates will be added")
 
     # TODO read and store git commit hashes from output files
 
@@ -201,7 +199,7 @@ def _expand_filepaths(datapath):
              " `file_cache_maxsize` global option to {} to accommodate this. "
              "Recommend using `xr.set_options(file_cache_maxsize=NUM)`"
              " to explicitly set this to a large enough value."
-             .format(str(len(filepaths))), category=xBOUTWarning)
+             .format(str(len(filepaths))))
         xr.set_options(file_cache_maxsize=len(filepaths))
 
     return filepaths, filetype
@@ -420,8 +418,7 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries):
         # pytest warnings capture - doesn't match strings containing brackets
         warn(
             "Will drop all variables containing the dimensions {} because "
-            "they are not recognised".format(str(unrecognised_dims)[1:-1]),
-            xBOUTWarning)
+            "they are not recognised".format(str(unrecognised_dims)[1:-1]))
         grid = grid.drop_dims(unrecognised_dims)
 
     if not keep_xboundaries:
