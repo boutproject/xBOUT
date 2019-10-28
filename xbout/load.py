@@ -175,6 +175,14 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
     info : bool, optional
         Print information about collect? (default: True)
 
+    Notes
+    ----------
+    strict : This option found in boutdata.collect() is not present in this function
+             it is assumed that the varname given is correct, if variable does not exist
+             the function will fail
+    tind_auto : This option is not required when using _auto_open_mfboutdataset as an
+             automatic failure if datasets are different lengths is included
+
     Returns
     ----------
     ds : numpy.ndarray
@@ -185,6 +193,9 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
 
     ds = _auto_open_mfboutdataset(datapath, keep_xboundaries=xguards,
                                   keep_yboundaries=yguards, info=info)
+
+    if varname not in ds:
+        raise KeyError("No variable, {} was found in {}.".format(varname, datapath))
 
     dims = ['t', 'x', 'y', 'z']
     inds = [tind, xind, yind, zind]
