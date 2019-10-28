@@ -187,18 +187,21 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
                                   keep_yboundaries=yguards, info=info)
 
     dims = ['t', 'x', 'y', 'z']
-    indexers = [tind, xind, yind, zind]
+    inds = [tind, xind, yind, zind]
 
     selection = {}
 
-    for i in range(len(dims)):
+    for dim, ind in zip(dims, inds):
 
-        if indexers[i] is not None:
+        if isinstance(ind, int):
+            indexer = [ind]
+        elif isinstance(ind, list):
+            start, end = ind
+            indexer = slice(start, end)
+        elif ind is not None:
+            indexer = ind
 
-            if isinstance(indexers[i], int):
-                selection[dims[i]] = [indexers[i]]
-            else:
-                selection[dims[i]] = indexers[i]
+        selection[dim] = indexer
 
     if selection:
         ds = ds.isel(selection)
