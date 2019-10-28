@@ -193,7 +193,7 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
 
     for i in range(len(dims)):
 
-        if indexers[i] != None:
+        if indexers[i] not None:
 
             if isinstance(indexers[i], int):
                 selection[dims[i]] = [indexers[i]]
