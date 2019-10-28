@@ -186,14 +186,14 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
     ds = _auto_open_mfboutdataset(datapath, keep_xboundaries=xguards,
                                   keep_yboundaries=yguards, info=info)
 
-    dims = ('t', 'x', 'y', 'z')
-    indexers = (tind, xind, yind, zind)
+    dims = ['t', 'x', 'y', 'z']
+    indexers = [tind, xind, yind, zind]
 
     selection = {}
 
     for i in range(len(dims)):
 
-        if indexers[i] not None:
+        if indexers[i] is not None:
 
             if isinstance(indexers[i], int):
                 selection[dims[i]] = [indexers[i]]
