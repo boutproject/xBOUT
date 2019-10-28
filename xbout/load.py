@@ -144,6 +144,68 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     return ds
 
 
+def collect(varname, xind=None, yind=None, zind=None, tind=None,
+            path=".", yguards=False, xguards=True, info=True, prefix="BOUT.dmp"):
+
+    from os.path import join
+
+    """
+
+    Extract the data pertaining to a specified variable in a BOUT++ data set
+
+
+    Parameters
+    ----------
+    varname : str
+        Name of the variable
+    xind, yind, zind, tind : int, slice or list of int, optional
+        Range of X, Y, Z or time indices to collect. Either a single
+        index to collect, a list containing [start, end] (inclusive
+        end), or a slice object (usual python indexing). Default is to
+        fetch all indices
+    path : str, optional
+        Path to data files (default: ".")
+    prefix : str, optional
+        File prefix (default: "BOUT.dmp")
+    yguards : bool, optional
+        Collect Y boundary guard cells? (default: False)
+    xguards : bool, optional
+        Collect X boundary guard cells? (default: True)
+        (Set to True to be consistent with the definition of nx)
+    info : bool, optional
+        Print information about collect? (default: True)
+
+    Returns
+    ----------
+    ds : numpy.ndarray
+
+    """
+
+    datapath = join(path, prefix + "*.nc")
+
+    ds = _auto_open_mfboutdataset(datapath, keep_xboundaries=xguards,
+                                  keep_yboundaries=yguards, info=info)
+
+    dims = ('t', 'x', 'y', 'z')
+    indexers = (tind, xind, yind, zind)
+
+    selection = {}
+
+    for i in range(len(dims)):
+
+        if indexers[i] != None:
+
+            if isinstance(indexers[i], int):
+                selection[dims[i]] = [indexers[i]]
+            else:
+                selection[dims[i]] = indexers[i]
+
+    if selection:
+        ds = ds.isel(selection)
+
+    return ds[varname].values
+
+
 def _is_dump_files(datapath):
     """
     If there is only one file, and it's not got a time dimension, assume it's a
