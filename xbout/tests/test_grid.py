@@ -5,7 +5,7 @@ from xarray.testing import assert_equal
 import pytest
 import numpy as np
 
-from xbout.grid import open_grid
+from xbout.load import open_boutdataset
 from xbout.geometries import register_geometry, REGISTERED_GEOMETRIES
 
 
@@ -38,7 +38,7 @@ def create_example_grid_file(tmpdir_factory):
 class TestOpenGrid:
     def test_open_grid(self, create_example_grid_file):
         example_grid = create_example_grid_file
-        result = open_grid(gridfilepath=example_grid)
+        result = open_boutdataset(datapath=example_grid)
         assert_equal(result, open_dataset(example_grid))
         result.close()
 
@@ -53,7 +53,7 @@ class TestOpenGrid:
 
         with pytest.warns(UserWarning, match="drop all variables containing "
                                              "the dimensions 'w'"):
-            result = open_grid(gridfilepath=dodgy_grid_path)
+            result = open_boutdataset(datapath=dodgy_grid_path)
         assert_equal(result, example_grid)
         result.close()
 
@@ -69,7 +69,8 @@ class TestOpenGrid:
 
         example_grid = create_example_grid_file
 
-        result = open_grid(gridfilepath=example_grid, geometry="Schwarzschild")
+        result = result = open_boutdataset(datapath=example_grid,
+                                           geometry="Schwarzschild")
         assert_equal(result['event_horizon'], DataArray(4.0))
 
         # clean up

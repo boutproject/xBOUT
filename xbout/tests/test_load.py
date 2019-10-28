@@ -12,8 +12,8 @@ import xarray.testing as xrt
 from natsort import natsorted
 
 from xbout.load import (_check_filetype, _expand_wildcards, _expand_filepaths,
-    _arrange_for_concatenation, _trim, _auto_open_mfboutdataset,
-    _infer_contains_boundaries)
+    _arrange_for_concatenation, _trim, _infer_contains_boundaries,
+    open_boutdataset)
 from xbout.utils import _separate_metadata
 
 
@@ -168,7 +168,7 @@ def bout_xyt_example_files(tmpdir_factory):
     return _bout_xyt_example_files
 
 
-def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6),
+def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6,2,4,7),
                             nxpe=4, nype=2, nt=1, guards={}, syn_data_type='random',
                             squashed=False):
     """
@@ -210,7 +210,7 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6)
     return glob_pattern
 
 
-def create_bout_ds_list(prefix, lengths=(2, 4, 7, 6), nxpe=4, nype=2, nt=1, guards={},
+def create_bout_ds_list(prefix, lengths=(6,2,4,7), nxpe=4, nype=2, nt=1, guards={},
                         syn_data_type='random'):
     """
     Mocks up a set of BOUT-like datasets.
@@ -230,17 +230,8 @@ def create_bout_ds_list(prefix, lengths=(2, 4, 7, 6), nxpe=4, nype=2, nt=1, guar
             upper_bndry_cells = {dim: guards.get(dim) for dim in guards.keys()}
             lower_bndry_cells = {dim: guards.get(dim) for dim in guards.keys()}
 
-            # Include boundary cells
-            for dim in ['x', 'y']:
-                if dim in guards.keys():
-                    if i == 0:
-                        lower_bndry_cells[dim] = guards[dim]
-                    if i == nxpe-1:
-                        upper_bndry_cells[dim] = guards[dim]
-
             ds = create_bout_ds(syn_data_type=syn_data_type, num=num, lengths=lengths, nxpe=nxpe, nype=nype,
-                                upper_bndry_cells=upper_bndry_cells, lower_bndry_cells=lower_bndry_cells,
-                                guards=guards)
+                                xproc=i, yproc=j, guards=guards)
             ds_list.append(ds)
 
     # Sort this in order of num to remove any BOUT-specific structure
@@ -250,25 +241,44 @@ def create_bout_ds_list(prefix, lengths=(2, 4, 7, 6), nxpe=4, nype=2, nt=1, guar
     return ds_list_sorted, file_list_sorted
 
 
-def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nype=1,
-                   upper_bndry_cells={}, lower_bndry_cells={}, guards={}):
+def create_bout_ds(syn_data_type='random', lengths=(6,2,4,7), num=0, nxpe=1, nype=1,
+                   xproc=0, yproc=0, guards={}):
 
     # Set the shape of the data in this dataset
-    x_length, y_length, z_length, t_length = lengths
-    x_length += upper_bndry_cells.get('x', 0) + lower_bndry_cells.get('x', 0)
-    y_length += upper_bndry_cells.get('y', 0) + lower_bndry_cells.get('y', 0)
-    z_length += upper_bndry_cells.get('z', 0) + lower_bndry_cells.get('z', 0)
-    t_length += upper_bndry_cells.get('t', 0) + lower_bndry_cells.get('t', 0)
-    shape = (x_length, y_length, z_length, t_length)
+    t_length, x_length, y_length, z_length = lengths
+    mxg = guards.get('x', 0)
+    myg = guards.get('y', 0)
+    x_length += 2*mxg
+    y_length += 2*myg
+    shape = (t_length, x_length, y_length, z_length)
+
+    # calculate global nx, ny and nz
+    nx = nxpe*lengths[1] + 2*mxg
+    ny = nype*lengths[2]
+    nz = 1*lengths[3]
 
     # Fill with some kind of synthetic data
     if syn_data_type is 'random':
-        # Each dataset contains the same random noise
-        np.random.seed(seed=0)
+        # Each dataset contains unique random noise
+        np.random.seed(seed = num)
         data = np.random.randn(*shape)
     elif syn_data_type is 'linear':
         # Variables increase linearly across entire domain
-        raise NotImplementedError
+        data = DataArray(-np.ones(shape), dims=('t', 'x', 'y', 'z'))
+
+        t_array = DataArray((nx - 2*mxg)*ny*nz*np.arange(t_length, dtype=float),
+                            dims='t')
+        x_array = DataArray(ny*nz*(xproc*lengths[1] + mxg
+                            + np.arange(lengths[1], dtype=float)),
+                            dims='x')
+        y_array = DataArray(nz*(yproc*lengths[2] + myg
+                            + np.arange(lengths[2], dtype=float)),
+                            dims='y')
+        z_array = DataArray(np.arange(z_length, dtype=float), dims='z')
+
+        data[:, mxg:x_length-mxg, myg:y_length-myg, :] = (
+                t_array + x_array + y_array + z_array
+                )
     elif syn_data_type is 'stepped':
         # Each dataset contains a different number depending on the filename
         data = np.ones(shape) * num
@@ -277,29 +287,74 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
     else:
         raise ValueError('Not a recognised choice of type of synthetic bout data.')
 
-    T = DataArray(data, dims=['x', 'y', 'z', 't'])
-    n = DataArray(data, dims=['x', 'y', 'z', 't'])
+    T = DataArray(data, dims=['t', 'x', 'y', 'z'])
+    n = DataArray(data, dims=['t', 'x', 'y', 'z'])
     ds = Dataset({'n': n, 'T': T})
 
-    # Include metadata
+    # Include grid data
     ds['NXPE'] = nxpe
     ds['NYPE'] = nype
-    ds['MXG'] = guards.get('x', 0)
-    ds['MYG'] = guards.get('y', 0)
-    ds['nx'] = (nxpe*lengths[0] + upper_bndry_cells.get('x', 0)
-                + lower_bndry_cells.get('x', 0))
-    ds['ny'] = nype*lengths[1]
-    ds['jyseps2_1'] = ds['ny'] // 2
-    ds['jyseps1_2'] = ds['ny'] // 2
-    ds['MXSUB'] = guards.get('x', 0)
-    ds['MYSUB'] = guards.get('y', 0)
-    ds['MZ'] = z_length
+    ds['NZPE'] = 1
+    ds['PE_XIND'] = xproc
+    ds['PE_YIND'] = yproc
+    ds['MYPE'] = num
+
+    ds['MXG'] = mxg
+    ds['MYG'] = myg
+    ds['nx'] = nx
+    ds['ny'] = ny
+    ds['nz'] = nz
+    ds['MZ'] = 1*lengths[3]
+    ds['MXSUB'] = lengths[1]
+    ds['MYSUB'] = lengths[2]
+    ds['MZSUB'] = lengths[3]
+    ds['ixseps1'] = nx
+    ds['ixseps2'] = nx
+    ds['jyseps1_1'] = 0
+    ds['jyseps1_2'] = ny
+    ds['jyseps2_1'] = ny//2 - 1
+    ds['jyseps2_2'] = ny//2 - 1
+    ds['ny_inner'] = ny//2
+
+    one = DataArray(np.ones((x_length, y_length)), dims=['x', 'y'])
+    zero = DataArray(np.zeros((x_length, y_length)), dims=['x', 'y'])
+
+    ds['zperiod'] = 1
+    ds['ZMIN'] = 0.
+    ds['ZMAX'] = 2.*np.pi
+    ds['g11'] = one
+    ds['g22'] = one
+    ds['g33'] = one
+    ds['g12'] = zero
+    ds['g13'] = zero
+    ds['g23'] = zero
+    ds['g_11'] = one
+    ds['g_22'] = one
+    ds['g_33'] = one
+    ds['g_12'] = zero
+    ds['g_13'] = zero
+    ds['g_23'] = zero
+    ds['G1'] = zero
+    ds['G2'] = zero
+    ds['G3'] = zero
+    ds['J'] = one
+    ds['Bxy'] = one
+    ds['zShift'] = zero
+
+    ds['dx'] = 0.5*one
+    ds['dy'] = 2.*one
+    ds['dz'] = 0.7
+
+    ds['iteration'] = t_length
+    ds['t_array'] = DataArray(np.arange(t_length, dtype=float)*10., dims='t')
 
     return ds
 
 
-METADATA_VARS = ['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'ny', 'jyseps2_1', 'jyseps1_2',
-                 'MXSUB', 'MYSUB', 'MZ']
+METADATA_VARS = ['NXPE', 'NYPE', 'NZPE', 'PE_XIND', 'PE_YIND', 'MYPE', 'MXG', 'MYG', 'nx',
+                 'ny', 'nz', 'MZ', 'MXSUB', 'MYSUB', 'MZSUB', 'ixseps1', 'ixseps2',
+                 'jyseps1_1', 'jyseps1_2', 'jyseps2_1', 'jyseps2_2', 'ny_inner',
+                 'zperiod', 'ZMIN', 'ZMAX', 'dz', 'iteration']
 
 
 class TestStripMetadata():
@@ -318,33 +373,35 @@ class TestStripMetadata():
 class TestCombineNoTrim:
     def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     def test_squashed_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1,
                                       squashed=True)
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1,
                                       syn_data_type='stepped')
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
-        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x')
+        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x',
+                          data_vars='minimal')
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=3, nt=1,
                                       syn_data_type='stepped')
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
-        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2)], dim='y')
+        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2)], dim='y',
+                          data_vars='minimal')
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     @pytest.mark.skip
@@ -354,13 +411,17 @@ class TestCombineNoTrim:
     def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1,
                                       syn_data_type='stepped')
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
-        line1 = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x')
-        line2 = concat([bout_ds(4), bout_ds(5), bout_ds(6), bout_ds(7)], dim='x')
-        line3 = concat([bout_ds(8), bout_ds(9), bout_ds(10), bout_ds(11)], dim='x')
-        expected = concat([line1, line2, line3], dim='y')
+        line1 = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x',
+                       data_vars='minimal')
+        line2 = concat([bout_ds(4), bout_ds(5), bout_ds(6), bout_ds(7)], dim='x',
+                       data_vars='minimal')
+        line3 = concat([bout_ds(8), bout_ds(9), bout_ds(10), bout_ds(11)], dim='x',
+                       data_vars='minimal')
+        expected = concat([line1, line2, line3], dim='y',
+                          data_vars='minimal')
         xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
 
     @pytest.mark.skip
