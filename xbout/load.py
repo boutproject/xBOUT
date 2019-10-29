@@ -197,11 +197,12 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
     if varname not in ds:
         raise KeyError("No variable, {} was found in {}.".format(varname, datapath))
 
-    dims = ['t', 'x', 'y', 'z']
+    dims = list(ds.dims)
     inds = [tind, xind, yind, zind]
 
     selection = {}
 
+    # Convert indexing values to an isel suitable format
     for dim, ind in zip(dims, inds):
 
         if isinstance(ind, int):
@@ -211,8 +212,23 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
             indexer = slice(start, end)
         elif ind is not None:
             indexer = ind
+        else:
+            indexer = None
 
-        selection[dim] = indexer
+        if indexer:
+            selection[dim] = indexer
+
+    try:
+         version = ds['BOUT_VERSION']
+    except KeyError:
+         # If BOUT Version is not saved in the dataset
+         version = 0
+
+    # Subtraction of z-dimensional data occurs in boutdata.collect
+    # if BOUT++ version is old - same feature added here
+    if (version < 3.5) and ('z' in dims):
+        zsize = int(ds['nz']) - 1
+        selection['z'] = slice(zsize)
 
     if selection:
         ds = ds.isel(selection)
