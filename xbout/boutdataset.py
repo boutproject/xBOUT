@@ -166,7 +166,7 @@ class BoutDatasetAccessor:
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
                      nrows=None, ncols=None, poloidal_plot=False,
-                     subplots_adjust=None, **kwargs):
+                     subplots_adjust=None, vmin=None, vmax=None, **kwargs):
         """
         Parameters
         ----------
@@ -176,6 +176,10 @@ class BoutDatasetAccessor:
             have only 3 dimensions. It is possible to pass BoutDataArrays to
             allow more flexible plots, e.g. with different variables being
             plotted against different axes.
+        vmin : float or sequence of floats
+            Minimum value for color scale, per variable if a sequence is given
+        vmax : float or sequence of floats
+            Maximum value for color scale, per variable if a sequence is given
         """
 
         nvars = len(variables)
@@ -196,8 +200,22 @@ class BoutDatasetAccessor:
         if subplots_adjust is not None:
             fig.subplots_adjust(**subplots_adjust)
 
+        try:
+            if len(vmin) != len(variables):
+                raise ValueError('if vmin is a sequence, it must have the same number '
+                                 'of elements as "variables"')
+        except TypeError:
+            vmin = [vmin] * len(variables)
+
+        try:
+            if len(vmax) != len(variables):
+                raise ValueError('if vmin is a sequence, it must have the same number '
+                                 'of elements as "variables"')
+        except TypeError:
+            vmax = [vmax] * len(variables)
+
         blocks = []
-        for v, ax in zip(variables, axes.flatten()):
+        for v, ax, this_vmin, this_vmax in zip(variables, axes.flatten(), vmin, vmax):
 
             if isinstance(v, str):
                 v = self.data[v]
@@ -213,13 +231,15 @@ class BoutDatasetAccessor:
                 if poloidal_plot:
                     var_blocks = animate_poloidal(data, ax=ax,
                                                   animate_over=animate_over,
-                                                  animate=False, **kwargs)
+                                                  animate=False, vmin=this_vmin,
+                                                  vmax=this_vmax, **kwargs)
                     for block in var_blocks:
                         blocks.append(block)
                 else:
                     blocks.append(animate_pcolormesh(data=data, ax=ax,
                                                      animate_over=animate_over,
-                                                     animate=False, **kwargs))
+                                                     animate=False, vmin=this_vmin,
+                                                     vmax=this_vmax, **kwargs))
             else:
                 raise ValueError("Unsupported number of dimensions "
                                  + str(ndims) + ". Dims are " + str(v.dims))
