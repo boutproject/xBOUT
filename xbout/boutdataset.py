@@ -19,7 +19,6 @@ class BoutDatasetAccessor:
         self.data = ds
         self.metadata = ds.attrs.get('metadata')  # None if just grid file
         self.options = ds.attrs.get('options')  # None if no inp file
-        self.grid = ds.attrs.get('grid')  # None if no grid file
 
     def __str__(self):
         """
@@ -34,8 +33,6 @@ class BoutDatasetAccessor:
                "Metadata:\n{}\n".format(styled(self.metadata))
         if self.options:
             text += "Options:\n{}".format(styled(self.options))
-        if self.grid:
-            text += "Grid:\n{}".format(styled(self.grid))
         return text
 
     #def __repr__(self):

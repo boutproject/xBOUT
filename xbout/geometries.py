@@ -93,6 +93,8 @@ def _set_default_toroidal_coordinates(coordinates):
     coordinates['y'] = coordinates.get('y', 'theta')
     coordinates['z'] = coordinates.get('z', 'phi')
 
+    return coordinates
+
 
 @register_geometry('toroidal')
 def add_toroidal_geometry_coords(ds, coordinates=None):
@@ -105,6 +107,16 @@ def add_toroidal_geometry_coords(ds, coordinates=None):
         raise ValueError('Coordinate names {} clash with variables in the dataset. '
                          "Use the 'coordinates' argument of open_boutdataset to provide "
                          "alternative names".format(bad_names))
+
+    # Get extra geometry information from grid file if it's not in the dump files
+    needed_variables = ['psixy', 'Rxy', 'Zxy']
+    for v in needed_variables:
+        if v not in ds:
+            if ds.bout._grid is None:
+                raise ValueError("Grid file is required to provide %s. Pass the grid "
+                                 "file name as the 'gridfilepath' argument to "
+                                 "open_boutdataset().")
+            ds[v] = ds.bout._grid[v]
 
     # Change names of dimensions to Orthogonal Toroidal ones
     ds = ds.rename(y=coordinates['y'])
@@ -143,6 +155,17 @@ def add_s_alpha_geometry_coords(ds, coordinates=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates)
 
+    # Add 'hthe' from grid file, needed below for radial coordinate
+    if 'hthe' not in ds:
+        hthe_from_grid = True
+        if ds.bout._grid is None:
+            raise ValueError("Grid file is required to provide %s. Pass the grid "
+                             "file name as the 'gridfilepath' argument to "
+                             "open_boutdataset().")
+        ds['hthe'] = ds.bout._grid['hthe']
+    else:
+        hthe_from_grid = False
+
     ds = add_toroidal_geometry_coords(ds, coordinates=coordinates)
 
     # Add 1D radial coordinate
@@ -154,7 +177,8 @@ def add_s_alpha_geometry_coords(ds, coordinates=None):
     ds = ds.set_coords('r')
     ds = ds.rename(x='r')
 
-    # Simplify psi to be radially-varying only
-    ds['r'] = ds['r'].isel({coordinates['y']: 0}).squeeze(drop=True)
+    if hthe_from_grid:
+        # remove hthe because it does not have correct metadata
+        del ds['hthe']
 
     return ds
