@@ -365,11 +365,10 @@ def _get_perp_vec(u1, u2, magnitude=0.04):
 
 
 def _get_seps(da):
-    grid = da.attrs['grid']
 
-    nx = grid['nx']
-    ix1 = grid['ixseps1']
-    ix2 = grid['ixseps2']
+    nx = da.metadata['nx']
+    ix1 = da.metadata['ixseps1']
+    ix2 = da.metadata['ixseps2']
 
     if not da.metadata['keep_xboundaries']:
         # remove x-boundary cell count from ix1 and ix2
@@ -377,16 +376,19 @@ def _get_seps(da):
         ix1 -= x_boundary_guards
         ix2 -= x_boundary_guards
 
-    ny = grid['ny']
-    j11 = grid['jyseps1_1']
-    j12 = grid['jyseps1_2']
-    j21 = grid['jyseps2_1']
-    j22 = grid['jyseps2_2']
-    nin = grid.get('ny_inner', j12)
+    ny = da.metadata['ny']
+    j11 = da.metadata['jyseps1_1']
+    j12 = da.metadata['jyseps1_2']
+    j21 = da.metadata['jyseps2_1']
+    j22 = da.metadata['jyseps2_2']
+    nin = da.metadata.get('ny_inner', j12)
 
     ny_array = len(da['theta'])
 
-    y_boundary_guards = grid.get('y_boundary_guards', 0)
+    if da.metadata['keep_yboundaries']:
+        y_boundary_guards = da.metadata['MYG']
+    else:
+        y_boundary_guards = 0
 
     if ny_array == ny:
         # No y-boundary cells, or keep_yboundaries is False
