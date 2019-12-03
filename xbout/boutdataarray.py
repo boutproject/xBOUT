@@ -20,7 +20,6 @@ class BoutDataArrayAccessor:
         self.data = da
         self.metadata = da.attrs.get('metadata')  # None if just grid file
         self.options = da.attrs.get('options')  # None if no inp file
-        self.grid = da.attrs.get('grid')  # None if no grid file
 
     def __str__(self):
         """
@@ -35,8 +34,6 @@ class BoutDataArrayAccessor:
                "Metadata:\n{}\n".format(styled(self.metadata))
         if self.options:
             text += "Options:\n{}".format(styled(self.options))
-        if self.grid:
-            text += "Grid:\n{}".format(styled(self.grid))
         return text
 
     def animate2D(self, animate_over='t', x='x', y='y', animate=True,

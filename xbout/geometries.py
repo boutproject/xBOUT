@@ -16,7 +16,7 @@ class UnregisteredGeometryError(Exception):
 # desired
 
 
-def apply_geometry(ds, geometry_name, coordinates=None):
+def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     """
 
     Parameters
@@ -48,7 +48,16 @@ def apply_geometry(ds, geometry_name, coordinates=None):
                          have been registered.""".format(geometry_name))
         raise UnregisteredGeometryError(message)
 
-    updated_ds = add_geometry_coords(ds, coordinates=coordinates)
+    # User-registered functions may accept 'coordinates' and 'grid' arguments, but do not
+    # have to as long as they are not used
+    if coordinates is not None and grid is not None:
+        updated_ds = add_geometry_coords(ds, coordinates=coordinates, grid=grid)
+    elif coordinates is not None:
+        updated_ds = add_geometry_coords(ds, coordinates=coordinates)
+    elif grid is not None:
+        updated_ds = add_geometry_coords(ds, grid=grid)
+    else:
+        updated_ds = add_geometry_coords(ds)
     return updated_ds
 
 
@@ -97,7 +106,7 @@ def _set_default_toroidal_coordinates(coordinates):
 
 
 @register_geometry('toroidal')
-def add_toroidal_geometry_coords(ds, coordinates=None):
+def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates)
 
@@ -112,11 +121,11 @@ def add_toroidal_geometry_coords(ds, coordinates=None):
     needed_variables = ['psixy', 'Rxy', 'Zxy']
     for v in needed_variables:
         if v not in ds:
-            if ds.bout._grid is None:
+            if grid is None:
                 raise ValueError("Grid file is required to provide %s. Pass the grid "
                                  "file name as the 'gridfilepath' argument to "
                                  "open_boutdataset().")
-            ds[v] = ds.bout._grid[v]
+            ds[v] = grid[v]
 
     # Change names of dimensions to Orthogonal Toroidal ones
     ds = ds.rename(y=coordinates['y'])
@@ -151,22 +160,22 @@ def add_toroidal_geometry_coords(ds, coordinates=None):
 
 
 @register_geometry('s-alpha')
-def add_s_alpha_geometry_coords(ds, coordinates=None):
+def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates)
 
     # Add 'hthe' from grid file, needed below for radial coordinate
     if 'hthe' not in ds:
         hthe_from_grid = True
-        if ds.bout._grid is None:
+        if grid is None:
             raise ValueError("Grid file is required to provide %s. Pass the grid "
                              "file name as the 'gridfilepath' argument to "
                              "open_boutdataset().")
-        ds['hthe'] = ds.bout._grid['hthe']
+        ds['hthe'] = grid['hthe']
     else:
         hthe_from_grid = False
 
-    ds = add_toroidal_geometry_coords(ds, coordinates=coordinates)
+    ds = add_toroidal_geometry_coords(ds, coordinates=coordinates, grid=grid)
 
     # Add 1D radial coordinate
     if 'r' in ds:
