@@ -30,6 +30,10 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         corresponding to 'x', 'y' and 'z' keys in the passed dict are used as the names
         of the dimensions. Any not passed are given default values. If not specified,
         default names are chosen.
+    grid : Dataset, optional
+        Dataset containing extra geometrical information not stored in the dump files that
+        is needed to add coordinates for the geometry being applied. For example, should
+        contain 2d arrays Rxy, Zxy and psixy for toroidal geometry.
 
     Returns
     -------
