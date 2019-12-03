@@ -38,7 +38,7 @@ except ValueError:
 
 
 def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
-                     geometry=None, chunks={},
+                     geometry=None, gridfilepath=None, chunks={},
                      keep_xboundaries=True, keep_yboundaries=False,
                      run_name=None, info=True):
     """
@@ -67,6 +67,9 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         To define a new type of geometry you need to use the
         `register_geometry` decorator. You are encouraged to do this for your
         own BOUT++ physics module, to apply relevant normalisations.
+    gridfilepath : str, optional
+        The path to a grid file, containing any variables needed to apply the geometry
+        specified by the 'geometry' option, which are not contained in the dump files.
     keep_xboundaries : bool, optional
         If true, keep x-direction boundary cells (the cells past the physical
         edges of the grid, where boundary conditions are set); increases the
@@ -125,6 +128,14 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     if geometry:
         if info:
             print("Applying {} geometry conventions".format(geometry))
+
+        if gridfilepath is not None:
+            ds.bout._grid = _open_grid(gridfilepath, chunks=chunks,
+                                       keep_xboundaries=keep_xboundaries,
+                                       keep_yboundaries=keep_yboundaries)
+        else:
+            ds.bout._grid = None
+
         # Update coordinates to match particular geometry of grid
         ds = geometries.apply_geometry(ds, geometry)
     else:

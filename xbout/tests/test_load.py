@@ -76,7 +76,6 @@ class TestPathHandling:
         with pytest.raises(IOError):
             path = Path(str(files_dir.join('run*/example.*.nc')))
             actual_filepaths = _expand_filepaths(path)
-            print(actual_filepaths)
 
 
 @pytest.fixture()
@@ -169,7 +168,8 @@ def bout_xyt_example_files(tmpdir_factory):
 
 
 def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4, 7),
-                            nxpe=4, nype=2, nt=1, guards={}, syn_data_type='random'):
+                            nxpe=4, nype=2, nt=1, guards={}, syn_data_type='random',
+                            grid=None):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
 
@@ -183,6 +183,12 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
 
     for ds, file_name in zip(ds_list, file_list):
         ds.to_netcdf(str(save_dir.join(str(file_name))))
+
+    if grid is not None:
+        xsize = lengths[1]*nxpe
+        ysize = lengths[2]*nype
+        grid_ds = create_bout_grid_ds(xsize=xsize, ysize=ysize, guards=guards)
+        grid_ds.to_netcdf(str(save_dir.join(grid + ".nc")))
 
     # Return a glob-like path to all files created, which has all file numbers replaced with a single asterix
     path = str(save_dir.join(str(file_list[-1])))
@@ -342,6 +348,22 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     return ds
 
 
+def create_bout_grid_ds(xsize=2, ysize=4, guards={}):
+
+    # Set the shape of the data in this dataset
+    mxg = guards.get('x', 0)
+    myg = guards.get('y', 0)
+    xsize += 2*mxg
+    ysize += 2*myg
+    shape = (xsize, ysize)
+
+    data = DataArray(np.ones(shape), dims=['x', 'y'])
+
+    ds = Dataset({'psixy': data, 'Rxy': data, 'Zxy': data, 'hthe': data})
+
+    return ds
+
+
 # Note, MYPE, PE_XIND and PE_YIND not included, since they are different for each
 # processor and so are dropped when loading datasets.
 METADATA_VARS = ['BOUT_VERSION', 'NXPE', 'NYPE', 'NZPE', 'MXG', 'MYG', 'nx', 'ny', 'nz',
@@ -364,7 +386,7 @@ class TestStripMetadata():
 
 
 # TODO also test loading multiple files which have guard cells
-class TestCombineNoTrim:
+class TestOpen:
     def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
         actual = open_boutdataset(datapath=path, keep_xboundaries=False)
@@ -418,6 +440,26 @@ class TestCombineNoTrim:
         xrt.assert_equal(actual.load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
                                        errors='ignore'))
+
+    def test_toroidal(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=3, nt=1,
+                                      syn_data_type='stepped', grid='grid')
+        actual = open_boutdataset(datapath=path, geometry='toroidal',
+                                  gridfilepath=Path(path).parent.joinpath('grid.nc'))
+
+        # check dataset can be saved
+        save_dir = tmpdir_factory.mktemp('data')
+        actual.bout.save(str(save_dir.join('boutdata.nc')))
+
+    def test_salpha(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=3, nt=1,
+                                      syn_data_type='stepped', grid='grid')
+        actual = open_boutdataset(datapath=path, geometry='s-alpha',
+                                  gridfilepath=Path(path).parent.joinpath('grid.nc'))
+
+        # check dataset can be saved
+        save_dir = tmpdir_factory.mktemp('data')
+        actual.bout.save(str(save_dir.join('boutdata.nc')))
 
     @pytest.mark.skip
     def test_combine_along_tx(self):
