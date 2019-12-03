@@ -5,7 +5,8 @@ import numpy.testing as npt
 from xbout.load import open_boutdataset
 from .test_load import create_bout_ds, create_bout_ds_list, METADATA_VARS
 
-from boutdata import collect
+boutdata = pytest.importorskip("boutdata", reason="boutdata is not available")
+collect = boutdata.collect
 
 class TestAccuracyAgainstOldCollect:
     def test_single_file(self, tmpdir_factory):
