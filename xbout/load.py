@@ -132,7 +132,8 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         if gridfilepath is not None:
             grid = _open_grid(gridfilepath, chunks=chunks,
                                        keep_xboundaries=keep_xboundaries,
-                                       keep_yboundaries=keep_yboundaries)
+                                       keep_yboundaries=keep_yboundaries,
+                                       mxg=ds.metadata['MXG'])
         else:
             grid = None
 
@@ -410,7 +411,7 @@ def _get_limit(side, dim, keep_boundaries, boundaries, guards):
     return limit
 
 
-def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries):
+def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
     """
     Opens a single grid file. Implements slightly different logic for
     boundaries to deal with different conventions in a BOUT grid file.
@@ -433,7 +434,7 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries):
         grid = grid.drop_dims(unrecognised_dims)
 
     if not keep_xboundaries:
-        xboundaries = int(grid.metadata['MXG'])
+        xboundaries = mxg
         if xboundaries > 0:
             grid = grid.isel(x=slice(xboundaries, -xboundaries, None))
     if not keep_yboundaries:
