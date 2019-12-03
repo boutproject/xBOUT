@@ -131,9 +131,9 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
 
         if gridfilepath is not None:
             grid = _open_grid(gridfilepath, chunks=chunks,
-                                       keep_xboundaries=keep_xboundaries,
-                                       keep_yboundaries=keep_yboundaries,
-                                       mxg=ds.metadata['MXG'])
+                              keep_xboundaries=keep_xboundaries,
+                              keep_yboundaries=keep_yboundaries,
+                              mxg=ds.metadata['MXG'])
         else:
             grid = None
 
