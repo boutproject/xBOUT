@@ -98,9 +98,9 @@ def _set_default_toroidal_coordinates(coordinates):
         coordinates = {}
 
     # Replace any values that have not been passed in with defaults
-    coordinates['x'] = coordinates.get('x', 'psi')
+    coordinates['x'] = coordinates.get('x', 'psi_poloidal')
     coordinates['y'] = coordinates.get('y', 'theta')
-    coordinates['z'] = coordinates.get('z', 'phi')
+    coordinates['z'] = coordinates.get('z', 'zeta')
 
     return coordinates
 
@@ -113,9 +113,10 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     # Check whether coordinates names conflict with variables in ds
     bad_names = [name for name in coordinates.values() if name in ds]
     if bad_names:
-        raise ValueError('Coordinate names {} clash with variables in the dataset. '
-                         "Use the 'coordinates' argument of open_boutdataset to provide "
-                         "alternative names".format(bad_names))
+        raise ValueError("Coordinate names {} clash with variables in the dataset. "
+                         "Register a different geometry to provide alternative names. "
+                         "It may be useful to use the 'coordinates' argument to "
+                         "add_toroidal_geometry_coords() for this.".format(bad_names))
 
     # Get extra geometry information from grid file if it's not in the dump files
     needed_variables = ['psixy', 'Rxy', 'Zxy']
