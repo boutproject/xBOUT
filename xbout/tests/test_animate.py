@@ -32,7 +32,9 @@ class TestAnimate:
     def test_animate2D(self, create_test_file):
 
         save_dir, ds = create_test_file
-        animation = ds['n'].isel(y=1).bout.animate2D(y='z', save_as="%s/test" % save_dir)
+        animation = ds['n'].isel(x=1).bout.animate2D(save_as="%s/testyz" % save_dir)
+        animation = ds['n'].isel(y=2).bout.animate2D(save_as="%s/testxz" % save_dir)
+        animation = ds['n'].isel(z=3).bout.animate2D(save_as="%s/testxy" % save_dir)
 
         assert isinstance(animation, Imshow)
 
