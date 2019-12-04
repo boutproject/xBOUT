@@ -11,9 +11,10 @@ import xarray.testing as xrt
 
 from natsort import natsorted
 
-from xbout.load import _check_filetype, _expand_wildcards, _expand_filepaths,\
-    _arrange_for_concatenation, _trim, _strip_metadata, \
-    _auto_open_mfboutdataset
+from xbout.load import (_check_filetype, _expand_wildcards, _expand_filepaths,
+                        _arrange_for_concatenation, _trim, _infer_contains_boundaries,
+                        open_boutdataset, _BOUT_PER_PROC_VARIABLES)
+from xbout.utils import _separate_metadata
 
 
 def test_check_extensions(tmpdir):
@@ -75,7 +76,6 @@ class TestPathHandling:
         with pytest.raises(IOError):
             path = Path(str(files_dir.join('run*/example.*.nc')))
             actual_filepaths = _expand_filepaths(path)
-            print(actual_filepaths)
 
 
 @pytest.fixture()
@@ -167,8 +167,9 @@ def bout_xyt_example_files(tmpdir_factory):
     return _bout_xyt_example_files
 
 
-def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6),
-                            nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
+def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4, 7),
+                            nxpe=4, nype=2, nt=1, guards={}, syn_data_type='random',
+                            grid=None):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
 
@@ -178,10 +179,16 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6)
     save_dir = tmpdir_factory.mktemp("data")
 
     ds_list, file_list = create_bout_ds_list(prefix=prefix, lengths=lengths, nxpe=nxpe, nype=nype, nt=nt,
-                                             ghosts=ghosts, guards=guards, syn_data_type=syn_data_type)
+                                             guards=guards, syn_data_type=syn_data_type)
 
     for ds, file_name in zip(ds_list, file_list):
         ds.to_netcdf(str(save_dir.join(str(file_name))))
+
+    if grid is not None:
+        xsize = lengths[1]*nxpe
+        ysize = lengths[2]*nype
+        grid_ds = create_bout_grid_ds(xsize=xsize, ysize=ysize, guards=guards)
+        grid_ds.to_netcdf(str(save_dir.join(grid + ".nc")))
 
     # Return a glob-like path to all files created, which has all file numbers replaced with a single asterix
     path = str(save_dir.join(str(file_list[-1])))
@@ -196,7 +203,8 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(2,4,7,6)
     return glob_pattern
 
 
-def create_bout_ds_list(prefix, lengths=(2,4,7,6), nxpe=4, nype=2, nt=1, ghosts={}, guards={}, syn_data_type='random'):
+def create_bout_ds_list(prefix, lengths=(6, 2, 4, 7), nxpe=4, nype=2, nt=1, guards={},
+                        syn_data_type='random'):
     """
     Mocks up a set of BOUT-like datasets.
 
@@ -211,21 +219,12 @@ def create_bout_ds_list(prefix, lengths=(2,4,7,6), nxpe=4, nype=2, nt=1, ghosts=
             filename = prefix + "." + str(num) + ".nc"
             file_list.append(filename)
 
-            # Include ghost cells
-            upper_bndry_cells = {dim: ghosts.get(dim) for dim in ghosts.keys()}
-            lower_bndry_cells = {dim: ghosts.get(dim) for dim in ghosts.keys()}
-
             # Include guard cells
-            for dim in ['x', 'y']:
-                if dim in guards.keys():
-                    if i == 0:
-                        lower_bndry_cells[dim] = guards[dim]
-                    if i == nxpe-1:
-                        upper_bndry_cells[dim] = guards[dim]
+            upper_bndry_cells = {dim: guards.get(dim) for dim in guards.keys()}
+            lower_bndry_cells = {dim: guards.get(dim) for dim in guards.keys()}
 
             ds = create_bout_ds(syn_data_type=syn_data_type, num=num, lengths=lengths, nxpe=nxpe, nype=nype,
-                                upper_bndry_cells=upper_bndry_cells, lower_bndry_cells=lower_bndry_cells,
-                                guards=guards, ghosts=ghosts)
+                                xproc=i, yproc=j, guards=guards)
             ds_list.append(ds)
 
     # Sort this in order of num to remove any BOUT-specific structure
@@ -235,25 +234,44 @@ def create_bout_ds_list(prefix, lengths=(2,4,7,6), nxpe=4, nype=2, nt=1, ghosts=
     return ds_list_sorted, file_list_sorted
 
 
-def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nype=1,
-                   upper_bndry_cells={}, lower_bndry_cells={}, guards={}, ghosts={}):
+def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, nype=1,
+                   xproc=0, yproc=0, guards={}):
 
     # Set the shape of the data in this dataset
-    x_length, y_length, z_length, t_length = lengths
-    x_length += upper_bndry_cells.get('x', 0) + lower_bndry_cells.get('x', 0)
-    y_length += upper_bndry_cells.get('y', 0) + lower_bndry_cells.get('y', 0)
-    z_length += upper_bndry_cells.get('z', 0) + lower_bndry_cells.get('z', 0)
-    t_length += upper_bndry_cells.get('t', 0) + lower_bndry_cells.get('t', 0)
-    shape = (x_length, y_length, z_length, t_length)
+    t_length, x_length, y_length, z_length = lengths
+    mxg = guards.get('x', 0)
+    myg = guards.get('y', 0)
+    x_length += 2*mxg
+    y_length += 2*myg
+    shape = (t_length, x_length, y_length, z_length)
+
+    # calculate global nx, ny and nz
+    nx = nxpe*lengths[1] + 2*mxg
+    ny = nype*lengths[2]
+    nz = 1*lengths[3]
 
     # Fill with some kind of synthetic data
     if syn_data_type is 'random':
-        # Each dataset contains the same random noise
-        np.random.seed(seed=0)
+        # Each dataset contains unique random noise
+        np.random.seed(seed=num)
         data = np.random.randn(*shape)
     elif syn_data_type is 'linear':
         # Variables increase linearly across entire domain
-        raise NotImplementedError
+        data = DataArray(-np.ones(shape), dims=('t', 'x', 'y', 'z'))
+
+        t_array = DataArray((nx - 2*mxg)*ny*nz*np.arange(t_length, dtype=float),
+                            dims='t')
+        x_array = DataArray(ny*nz*(xproc*lengths[1] + mxg
+                            + np.arange(lengths[1], dtype=float)),
+                            dims='x')
+        y_array = DataArray(nz*(yproc*lengths[2] + myg
+                            + np.arange(lengths[2], dtype=float)),
+                            dims='y')
+        z_array = DataArray(np.arange(z_length, dtype=float), dims='z')
+
+        data[:, mxg:x_length-mxg, myg:y_length-myg, :] = (
+                t_array + x_array + y_array + z_array
+                )
     elif syn_data_type is 'stepped':
         # Each dataset contains a different number depending on the filename
         data = np.ones(shape) * num
@@ -262,25 +280,97 @@ def create_bout_ds(syn_data_type='random', lengths=(2,4,7,6), num=0, nxpe=1, nyp
     else:
         raise ValueError('Not a recognised choice of type of synthetic bout data.')
 
-    T = DataArray(data, dims=['x', 'y', 'z', 't'])
-    n = DataArray(data, dims=['x', 'y', 'z', 't'])
+    T = DataArray(data, dims=['t', 'x', 'y', 'z'])
+    n = DataArray(data, dims=['t', 'x', 'y', 'z'])
     ds = Dataset({'n': n, 'T': T})
 
-    # Include metadata
+    # BOUT_VERSION needed so that we know that number of points in z is MZ, not MZ-1 (as
+    # it was in BOUT++ before v4.0
+    ds['BOUT_VERSION'] = 4.3
+
+    # Include grid data
     ds['NXPE'] = nxpe
     ds['NYPE'] = nype
-    ds['MXG'] = guards.get('x', 0)
-    ds['MYG'] = guards.get('y', 0)
-    ds['nx'] = x_length
-    ds['MXSUB'] = ghosts.get('x', 0)
-    ds['MYSUB'] = ghosts.get('y', 0)
-    ds['MZ'] = z_length
+    ds['NZPE'] = 1
+    ds['PE_XIND'] = xproc
+    ds['PE_YIND'] = yproc
+    ds['MYPE'] = num
+
+    ds['MXG'] = mxg
+    ds['MYG'] = myg
+    ds['nx'] = nx
+    ds['ny'] = ny
+    ds['nz'] = nz
+    ds['MZ'] = 1*lengths[3]
+    ds['MXSUB'] = lengths[1]
+    ds['MYSUB'] = lengths[2]
+    ds['MZSUB'] = lengths[3]
+    ds['ixseps1'] = nx
+    ds['ixseps2'] = nx
+    ds['jyseps1_1'] = 0
+    ds['jyseps1_2'] = ny
+    ds['jyseps2_1'] = ny//2 - 1
+    ds['jyseps2_2'] = ny//2 - 1
+    ds['ny_inner'] = ny//2
+
+    one = DataArray(np.ones((x_length, y_length)), dims=['x', 'y'])
+    zero = DataArray(np.zeros((x_length, y_length)), dims=['x', 'y'])
+
+    ds['zperiod'] = 1
+    ds['ZMIN'] = 0.
+    ds['ZMAX'] = 2.*np.pi
+    ds['g11'] = one
+    ds['g22'] = one
+    ds['g33'] = one
+    ds['g12'] = zero
+    ds['g13'] = zero
+    ds['g23'] = zero
+    ds['g_11'] = one
+    ds['g_22'] = one
+    ds['g_33'] = one
+    ds['g_12'] = zero
+    ds['g_13'] = zero
+    ds['g_23'] = zero
+    ds['G1'] = zero
+    ds['G2'] = zero
+    ds['G3'] = zero
+    ds['J'] = one
+    ds['Bxy'] = one
+    ds['zShift'] = zero
+
+    ds['dx'] = 0.5*one
+    ds['dy'] = 2.*one
+    ds['dz'] = 0.7
+
+    ds['iteration'] = t_length
+    ds['t_array'] = DataArray(np.arange(t_length, dtype=float)*10., dims='t')
 
     return ds
 
 
-METADATA_VARS = ['NXPE', 'NYPE', 'MXG', 'MYG', 'nx', 'MXSUB', 'MYSUB',
-                        'MZ']
+def create_bout_grid_ds(xsize=2, ysize=4, guards={}):
+
+    # Set the shape of the data in this dataset
+    mxg = guards.get('x', 0)
+    myg = guards.get('y', 0)
+    xsize += 2*mxg
+    ysize += 2*myg
+    shape = (xsize, ysize)
+
+    data = DataArray(np.ones(shape), dims=['x', 'y'])
+
+    ds = Dataset({'psixy': data, 'Rxy': data, 'Zxy': data, 'hthe': data})
+
+    return ds
+
+
+# Note, MYPE, PE_XIND and PE_YIND not included, since they are different for each
+# processor and so are dropped when loading datasets.
+METADATA_VARS = ['BOUT_VERSION', 'NXPE', 'NYPE', 'NZPE', 'MXG', 'MYG', 'nx', 'ny', 'nz',
+                 'MZ', 'MXSUB', 'MYSUB', 'MZSUB', 'ixseps1', 'ixseps2', 'jyseps1_1',
+                 'jyseps1_2', 'jyseps2_1', 'jyseps2_2', 'ny_inner', 'zperiod', 'ZMIN',
+                 'ZMAX', 'dz', 'iteration']
+
 
 class TestStripMetadata():
     def test_strip_metadata(self):
@@ -288,37 +378,46 @@ class TestStripMetadata():
         original = create_bout_ds()
         assert original['NXPE'] == 1
 
-        ds, metadata = _strip_metadata(original)
+        ds, metadata = _separate_metadata(original)
 
-        assert original.drop(METADATA_VARS).equals(ds)
+        assert original.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                             errors='ignore').equals(ds)
         assert metadata['NXPE'] == 1
 
 
-# TODO also test loading multiple files which have ghost cells
-class TestCombineNoTrim:
+# TODO also test loading multiple files which have guard cells
+class TestOpen:
     def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds()
-        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
+        xrt.assert_equal(actual.load(),
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                                       errors='ignore'))
 
     def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1,
                                       syn_data_type='stepped')
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
-        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x')
-        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
+        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x',
+                          data_vars='minimal')
+        xrt.assert_equal(actual.load(),
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                                       errors='ignore'))
 
     def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=3, nt=1,
                                       syn_data_type='stepped')
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
-        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2)], dim='y')
-        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
+        expected = concat([bout_ds(0), bout_ds(1), bout_ds(2)], dim='y',
+                          data_vars='minimal')
+        xrt.assert_equal(actual.load(),
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                                       errors='ignore'))
 
     @pytest.mark.skip
     def test_combine_along_t(self):
@@ -327,44 +426,340 @@ class TestCombineNoTrim:
     def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1,
                                       syn_data_type='stepped')
-        actual, metadata = _auto_open_mfboutdataset(datapath=path)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
-        line1 = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x')
-        line2 = concat([bout_ds(4), bout_ds(5), bout_ds(6), bout_ds(7)], dim='x')
-        line3 = concat([bout_ds(8), bout_ds(9), bout_ds(10), bout_ds(11)], dim='x')
-        expected = concat([line1, line2, line3], dim='y')
-        xrt.assert_equal(actual.load(), expected.drop(METADATA_VARS))
+        line1 = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x',
+                       data_vars='minimal')
+        line2 = concat([bout_ds(4), bout_ds(5), bout_ds(6), bout_ds(7)], dim='x',
+                       data_vars='minimal')
+        line3 = concat([bout_ds(8), bout_ds(9), bout_ds(10), bout_ds(11)], dim='x',
+                       data_vars='minimal')
+        expected = concat([line1, line2, line3], dim='y',
+                          data_vars='minimal')
+        xrt.assert_equal(actual.load(),
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                                       errors='ignore'))
+
+    def test_toroidal(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=3, nt=1,
+                                      syn_data_type='stepped', grid='grid')
+        actual = open_boutdataset(datapath=path, geometry='toroidal',
+                                  gridfilepath=Path(path).parent.joinpath('grid.nc'))
+
+        # check dataset can be saved
+        save_dir = tmpdir_factory.mktemp('data')
+        actual.bout.save(str(save_dir.join('boutdata.nc')))
+
+    def test_salpha(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=3, nt=1,
+                                      syn_data_type='stepped', grid='grid')
+        actual = open_boutdataset(datapath=path, geometry='s-alpha',
+                                  gridfilepath=Path(path).parent.joinpath('grid.nc'))
+
+        # check dataset can be saved
+        save_dir = tmpdir_factory.mktemp('data')
+        actual.bout.save(str(save_dir.join('boutdata.nc')))
 
     @pytest.mark.skip
     def test_combine_along_tx(self):
         ...
 
 
+_test_processor_layouts_list = [
+        # No parallelization
+        (0,   0,   1,    1,    {'x': True,  'y': True},
+                               {'x': True,  'y': True}),
+
+        # 1d parallelization along x:
+        # Left
+        (0,    0,    3,    1,    {'x': True,  'y': True},
+                                 {'x': False, 'y': True}),
+        # Middle
+        (1,    0,    3,    1,    {'x': False, 'y': True},
+                                 {'x': False, 'y': True}),
+        # Right
+        (2,    0,    3,    1,    {'x': False, 'y': True},
+                                 {'x': True,  'y': True}),
+
+        # 1d parallelization along y:
+        # Bottom
+        (0,    0,    1,    3,    {'x': True,  'y': True},
+                                 {'x': True,  'y': False}),
+        # Middle
+        (0,    1,    1,    3,    {'x': True,  'y': False},
+                                 {'x': True,  'y': False}),
+        # Top
+        (0,    2,    1,    3,    {'x': True,  'y': False},
+                                 {'x': True,  'y': True}),
+
+        # 2d parallelization:
+        # Bottom left corner
+        (0,    0,    3,    4,    {'x': True,  'y': True},
+                                 {'x': False, 'y': False}),
+        # Bottom right corner
+        (2,    0,    3,    4,    {'x': False, 'y': True},
+                                 {'x': True,  'y': False}),
+        # Top left corner
+        (0,    3,    3,    4,    {'x': True,  'y': False},
+                                 {'x': False, 'y': True}),
+        # Top right corner
+        (2,    3,    3,    4,    {'x': False, 'y': False},
+                                 {'x': True,  'y': True}),
+        # Centre
+        (1,    2,    3,    4,    {'x': False, 'y': False},
+                                 {'x': False, 'y': False}),
+        # Left side
+        (0,    2,    3,    4,    {'x': True,  'y': False},
+                                 {'x': False, 'y': False}),
+        # Right side
+        (2,    2,    3,    4,    {'x': False, 'y': False},
+                                 {'x': True,  'y': False}),
+        # Bottom side
+        (1,    0,    3,    4,    {'x': False, 'y': True},
+                                 {'x': False, 'y': False}),
+        # Top side
+        (1,    3,    3,    4,    {'x': False, 'y': False},
+                                 {'x': False, 'y': True})
+        ]
+
+_test_processor_layouts_doublenull_list = [
+        # 1d parallelization along y:
+        # Bottom
+        (0,    0,    1,    4,    {'x': True,  'y': True},
+                                 {'x': True,  'y': False}),
+        # Lower Middle
+        (0,    1,    1,    4,    {'x': True,  'y': False},
+                                 {'x': True,  'y': True}),
+        # Upper Middle
+        (0,    2,    1,    4,    {'x': True,  'y': True},
+                                 {'x': True,  'y': False}),
+        # Top
+        (0,    3,    1,    4,    {'x': True,  'y': False},
+                                 {'x': True,  'y': True}),
+
+        # 2d parallelization:
+        # Bottom left corner
+        (0,    0,    3,    4,    {'x': True,  'y': True},
+                                 {'x': False, 'y': False}),
+        (1,    0,    3,    4,    {'x': False,  'y': True},
+                                 {'x': False, 'y': False}),
+        # Bottom right corner
+        (2,    0,    3,    4,    {'x': False, 'y': True},
+                                 {'x': True,  'y': False}),
+        (0,    1,    3,    4,    {'x': True, 'y': False},
+                                 {'x': False,  'y': True}),
+        (1,    1,    3,    4,    {'x': False, 'y': False},
+                                 {'x': False,  'y': True}),
+        (2,    1,    3,    4,    {'x': False, 'y': False},
+                                 {'x': True,  'y': True}),
+        (0,    2,    3,    4,    {'x': True, 'y': True},
+                                 {'x': False,  'y': False}),
+        (1,    2,    3,    4,    {'x': False, 'y': True},
+                                 {'x': False,  'y': False}),
+        (2,    2,    3,    4,    {'x': False, 'y': True},
+                                 {'x': True,  'y': False}),
+        # Top left corner
+        (0,    3,    3,    4,    {'x': True,  'y': False},
+                                 {'x': False, 'y': True}),
+        (1,    3,    3,    4,    {'x': False,  'y': False},
+                                 {'x': False, 'y': True}),
+        # Top right corner
+        (2,    3,    3,    4,    {'x': False, 'y': False},
+                                 {'x': True,  'y': True})
+        ]
+
 class TestTrim:
     def test_no_trim(self):
         ds = create_test_data(0)
-        actual = _trim(ds)
+        # Manually add filename - encoding normally added by xr.open_dataset
+        ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
+        actual = _trim(ds, guards={}, keep_boundaries={}, nxpe=1,
+                       nype=1)
         xrt.assert_equal(actual, ds)
 
-    def test_trim_ghosts(self):
+    def test_trim_guards(self):
         ds = create_test_data(0)
-        actual = _trim(ds, ghosts={'time': 2})
+        # Manually add filename - encoding normally added by xr.open_dataset
+        ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
+        actual = _trim(ds, guards={'time': 2}, keep_boundaries={},
+                       nxpe=1, nype=1)
         selection = {'time': slice(2, -2)}
         expected = ds.isel(**selection)
         xrt.assert_equal(expected, actual)
 
+    @pytest.mark.parametrize(
+            "xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries",
+            _test_processor_layouts_list)
+    def test_infer_boundaries_2d_parallelization(
+            self, xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries):
+        """
+        Numbering scheme for nxpe=3, nype=4
+
+        y  9 10 11
+        ^  6 7  8
+        |  3 4  5
+        |  0 1  2
+         -----> x
+        """
+
+        ds = create_test_data(0)
+        ds['jyseps2_1'] = 0
+        ds['jyseps1_2'] = 0
+        ds['PE_XIND'] = xproc
+        ds['PE_YIND'] = yproc
+        actual_lower_boundaries, actual_upper_boundaries = _infer_contains_boundaries(
+            ds, nxpe, nype)
+
+        assert actual_lower_boundaries == lower_boundaries
+        assert actual_upper_boundaries == upper_boundaries
+
+    @pytest.mark.parametrize(
+            "xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries",
+            _test_processor_layouts_doublenull_list)
+    def test_infer_boundaries_2d_parallelization_doublenull(
+            self, xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries):
+        """
+        Numbering scheme for nxpe=3, nype=4
+
+        y  9 10 11
+        ^  6 7  8
+        |  3 4  5
+        |  0 1  2
+         -----> x
+        """
+
+        ds = create_test_data(0)
+        ds['jyseps2_1'] = 3
+        ds['jyseps1_2'] = 11
+        ds['ny_inner'] = 8
+        ds['MYSUB'] = 4
+        ds['PE_XIND'] = xproc
+        ds['PE_YIND'] = yproc
+        actual_lower_boundaries, actual_upper_boundaries = _infer_contains_boundaries(
+            ds, nxpe, nype)
+
+        assert actual_lower_boundaries == lower_boundaries
+        assert actual_upper_boundaries == upper_boundaries
+
+    @pytest.mark.parametrize("xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries",
+                             _test_processor_layouts_list)
+    def test_infer_boundaries_2d_parallelization_by_filenum(
+            self, xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries):
+        """
+        Numbering scheme for nxpe=3, nype=4
+
+        y  9 10 11
+        ^  6 7  8
+        |  3 4  5
+        |  0 1  2
+         -----> x
+        """
+
+        filenum = yproc*nxpe + xproc
+
+        ds = create_test_data(0)
+        ds['jyseps2_1'] = 0
+        ds['jyseps1_2'] = 0
+        ds.encoding['source'] = "folder0/BOUT.dmp." + str(filenum) + ".nc"
+        actual_lower_boundaries, actual_upper_boundaries = _infer_contains_boundaries(
+            ds, nxpe, nype)
+
+        assert actual_lower_boundaries == lower_boundaries
+        assert actual_upper_boundaries == upper_boundaries
+
+    @pytest.mark.parametrize("xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries",
+                             _test_processor_layouts_doublenull_list)
+    def test_infer_boundaries_2d_parallelization_doublenull_by_filenum(
+            self, xproc, yproc, nxpe, nype, lower_boundaries, upper_boundaries):
+        """
+        Numbering scheme for nxpe=3, nype=4
+
+        y  9 10 11
+        ^  6 7  8
+        |  3 4  5
+        |  0 1  2
+         -----> x
+        """
+
+        filenum = yproc*nxpe + xproc
+
+        ds = create_test_data(0)
+        ds['jyseps2_1'] = 3
+        ds['jyseps1_2'] = 11
+        ds['ny_inner'] = 8
+        ds['MYSUB'] = 4
+        ds.encoding['source'] = "folder0/BOUT.dmp." + str(filenum) + ".nc"
+        actual_lower_boundaries, actual_upper_boundaries = _infer_contains_boundaries(
+            ds, nxpe, nype)
+
+        assert actual_lower_boundaries == lower_boundaries
+        assert actual_upper_boundaries == upper_boundaries
+
+    def test_keep_xboundaries(self):
+        ds = create_test_data(0)
+        ds = ds.rename({'dim2': 'x'})
+
+        # Manually add filename - encoding normally added by xr.open_dataset
+        ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
+
+        ds['jyseps2_1'] = 8
+        ds['jyseps1_2'] = 8
+
+        actual = _trim(ds, guards={'x': 2}, keep_boundaries={'x': True}, nxpe=1, nype=1)
+        expected = ds  # Should be unchanged
+        xrt.assert_equal(expected, actual)
+
+    def test_keep_yboundaries(self):
+        ds = create_test_data(0)
+        ds = ds.rename({'dim2': 'y'})
+
+        # Manually add filename - encoding normally added by xr.open_dataset
+        ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
+
+        ds['jyseps2_1'] = 8
+        ds['jyseps1_2'] = 8
+
+        actual = _trim(ds, guards={'y': 2}, keep_boundaries={'y': True}, nxpe=1, nype=1)
+        expected = ds  # Should be unchanged
+        xrt.assert_equal(expected, actual)
+
+    @pytest.mark.parametrize("filenum, lower, upper",
+                             [(0, True, False),
+                              (1, False, True),
+                              (2, True, False),
+                              (3, False, True)])
+    def test_keep_yboundaries_doublenull_by_filenum(self, filenum, lower, upper):
+        ds = create_test_data(0)
+        ds = ds.rename({'dim2': 'y'})
+
+        # Manually add filename - encoding normally added by xr.open_dataset
+        ds.encoding['source'] = 'folder0/BOUT.dmp.'+str(filenum)+'.nc'
+
+        ds['jyseps2_1'] = 3
+        ds['jyseps1_2'] = 11
+        ds['ny_inner'] = 8
+        ds['MYSUB'] = 4
+
+        actual = _trim(ds, guards={'y': 2}, keep_boundaries={'y': True}, nxpe=1, nype=4)
+        expected = ds  # Should be unchanged
+        if not lower:
+            expected = expected.isel(y=slice(2, None, None))
+        if not upper:
+            expected = expected.isel(y=slice(None, -2, None))
+        xrt.assert_equal(expected, actual)
+
     def test_trim_timing_info(self):
         ds = create_test_data(0)
-        from xbout.load import _BOUT_TIMING_VARIABLES
+        from xbout.load import _BOUT_PER_PROC_VARIABLES
 
-        # remove a couple of entries from _BOUT_TIMING_VARIABLES so we test that _trim
+        # remove a couple of entries from _BOUT_PER_PROC_VARIABLES so we test that _trim
         # does not fail if not all of them are present
-        _BOUT_TIMING_VARIABLES = _BOUT_TIMING_VARIABLES[:-2]
+        _BOUT_PER_PROC_VARIABLES = _BOUT_PER_PROC_VARIABLES[:-2]
 
-        for v in _BOUT_TIMING_VARIABLES:
+        for v in _BOUT_PER_PROC_VARIABLES:
             ds[v] = 42.
-        ds = _trim(ds)
+        ds = _trim(ds, guards={}, keep_boundaries={}, nxpe=1, nype=1)
 
         expected = create_test_data(0)
         xrt.assert_equal(ds, expected)
