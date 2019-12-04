@@ -29,15 +29,13 @@ Requirements
 
 - :py:mod:`xbout` requires Python 3
 
-- :py:mod:`xbout` currently requires some modifications to xarray to
-  work with BOUT++. These can be found in `this fork`_.
-
 - The following modules are also needed:
-  - ``dask[array]``
-  - ``natsort``
-  - ``matplotlib``
-  - ``animatplot``
-  - ``netcdf4``
+  - ``xarray >= v0.12.2``
+  - ``dask[array] >= 1.0.0``
+  - ``natsort >= 5.5.0``
+  - ``matplotlib >= 2.2``
+  - ``animatplot >= 0.3``
+  - ``netcdf4 >= 1.4.0``
 - All dependencies can be installed by running:
 
 .. code-block:: bash
