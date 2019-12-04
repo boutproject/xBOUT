@@ -98,10 +98,8 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
     if vmax is None:
         vmax = da.max().values
 
-    # Need to create a colorscale that covers the range of values in the whole array.
-    # Using the add_colorbar argument would create a separate color scale for each
-    # separate region, which would not make sense.
-    if method is xr.plot.contourf:
+    # set up 'levels' if needed
+    if method is xr.plot.contourf or method is xr.plot.contour:
         levels = kwargs.get('levels', 7)
         if isinstance(levels, np.int):
             levels = np.linspace(vmin, vmax, levels, endpoint=True)
@@ -113,6 +111,10 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
             vmin = np.min(levels)
             vmax = np.max(levels)
 
+    # Need to create a colorscale that covers the range of values in the whole array.
+    # Using the add_colorbar argument would create a separate color scale for each
+    # separate region, which would not make sense.
+    if method is xr.plot.contourf:
         # create colorbar
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
@@ -127,19 +129,6 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         sm.set_array([])
         fig.colorbar(sm, ticks=levels, ax=ax)
     elif method is xr.plot.contour:
-        levels = kwargs.get('levels', 7)
-        if isinstance(levels, np.int):
-            vrange = vmax - vmin
-            levels = np.linspace(vmin + vrange/(levels + 1), vmax - vrange/(levels + 1),
-                                 levels, endpoint=True)
-            # put levels back into kwargs
-            kwargs['levels'] = levels
-        else:
-            levels = np.array(list(levels))
-            kwargs['levels'] = levels
-            vmin = np.min(levels)
-            vmax = np.max(levels)
-
         # create colormap to be shared by all regions
         norm = matplotlib.colors.Normalize(vmin=levels[0], vmax=levels[-1])
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
