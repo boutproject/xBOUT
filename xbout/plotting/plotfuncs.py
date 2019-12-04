@@ -6,7 +6,7 @@ import numpy as np
 
 import xarray as xr
 
-from .utils import _decompose_regions, plot_separatrices, plot_targets
+from .utils import _decompose_regions, _is_core_only, plot_separatrices, plot_targets
 
 
 def regions(da, ax=None, **kwargs):
@@ -193,6 +193,10 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
             plt.plot(R[:, ::gridlines[1]], Z[:, ::gridlines[1]], color='k', lw=0.1)
 
     ax.set_title(da.name)
+
+    if _is_core_only(da):
+        separatrix = False
+        targets = False
 
     if separatrix:
         plot_separatrices(da, ax)
