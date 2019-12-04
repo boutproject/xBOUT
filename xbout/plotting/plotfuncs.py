@@ -28,19 +28,10 @@ def regions(da, ax=None, **kwargs):
     colored_regions = [xr.full_like(region, fill_value=num / len(regions))
                        for num, region in enumerate(regions)]
 
-    first, *rest = colored_regions
-    artists = [first.plot.pcolormesh(x=x, y=y, vmin=0, vmax=1, cmap='tab20',
-                                     infer_intervals=False,
-                                     add_colorbar=False, ax=ax, **kwargs)]
-    if rest:
-        for region in rest:
-            artist = region.plot.pcolormesh(x=x, y=y, vmin=0, vmax=1,
-                                            cmap='tab20',
-                                            infer_intervals=False,
-                                            add_colorbar=False,
-                                            add_labels=False, ax=ax, **kwargs)
-            artists.append(artist)
-    return artists
+    return [region.plot.pcolormesh(x=x, y=y, vmin=0, vmax=1, cmap='tab20',
+                                   infer_intervals=False, add_colorbar=False, ax=ax,
+                                   **kwargs)
+            for region in colored_regions]
 
 
 def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
