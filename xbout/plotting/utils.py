@@ -160,8 +160,10 @@ def plot_separatrices(da, ax):
 
     j11, j12, j21, j22, ix1, ix2, nin, nx, ny, y_boundary_guards = _get_seps(da)
 
-    R = da.coords['R'].values
-    Z = da.coords['Z'].values
+    R = da.coords['R'].transpose(da.metadata['bout_xdim'],
+                                 da.metadata['bout_ydim']).values
+    Z = da.coords['Z'].transpose(da.metadata['bout_xdim'],
+                                 da.metadata['bout_ydim']).values
 
     if j22 + 1 < ny:
         # Lower X-point location
@@ -278,8 +280,10 @@ def plot_targets(da, ax, hatching=True):
 
     j11, j12, j21, j22, ix1, ix2, nin, nx, ny, y_boundary_guards = _get_seps(da)
 
-    R = da.coords['R'].values
-    Z = da.coords['Z'].values
+    R = da.coords['R'].transpose(da.metadata['bout_xdim'],
+                                 da.metadata['bout_ydim']).values
+    Z = da.coords['Z'].transpose(da.metadata['bout_xdim'],
+                                 da.metadata['bout_ydim']).values
 
     if j22 + 1 < ny:
         # lower PFR exists
