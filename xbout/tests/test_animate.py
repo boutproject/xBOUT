@@ -4,7 +4,7 @@ from xbout import open_boutdataset
 from xbout.boutdataarray import BoutDataArrayAccessor
 from .test_load import create_bout_ds_list
 
-from animatplot.blocks import Imshow, Line
+from animatplot.blocks import Pcolormesh, Line
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ class TestAnimate:
         save_dir, ds = create_test_file
         animation = ds['n'].isel(y=1).bout.animate2D(y='z', save_as="%s/test" % save_dir)
 
-        assert isinstance(animation, Imshow)
+        assert isinstance(animation, Pcolormesh)
 
     def test_animate1D(self, create_test_file):
 
