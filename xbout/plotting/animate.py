@@ -6,6 +6,7 @@ import animatplot as amp
 from .utils import plot_separatrix
 from matplotlib.animation import PillowWriter
 
+
 def animate_imshow(data, animate_over='t', x=None, y=None, animate=True,
                    vmin=None, vmax=None, fps=10, save_as=None,
                    sep_pos=None, ax=None, **kwargs):
