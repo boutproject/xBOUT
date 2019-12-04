@@ -7,7 +7,7 @@ import animatplot as amp
 from .utils import _decompose_regions, plot_separatrices, plot_targets
 
 
-def animate_poloidal(da, *, ax=None, animate_over = 't', separatrix=True, targets=True,
+def animate_poloidal(da, *, ax=None, animate_over='t', separatrix=True, targets=True,
                      add_limiter_hatching=True, cmap=None, vmin=None, vmax=None,
                      animate=True, save_as=None, fps=10, controls=True, **kwargs):
     """
@@ -120,8 +120,8 @@ from matplotlib.animation import PillowWriter
 
 
 def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
-                   vmin=None, vmax=None, vsymmetric=False, fps=10, save_as=None,
-                   ax=None, controls=True, **kwargs):
+                       vmin=None, vmax=None, vsymmetric=False, fps=10, save_as=None,
+                       ax=None, controls=True, **kwargs):
     """
     Plots a color plot which is animated with time over the specified
     coordinate.
