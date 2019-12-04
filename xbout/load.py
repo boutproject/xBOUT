@@ -38,7 +38,7 @@ except ValueError:
 
 
 def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
-                     geometry=None, chunks={},
+                     geometry=None, gridfilepath=None, chunks={},
                      keep_xboundaries=True, keep_yboundaries=False,
                      run_name=None, info=True):
     """
@@ -67,6 +67,9 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         To define a new type of geometry you need to use the
         `register_geometry` decorator. You are encouraged to do this for your
         own BOUT++ physics module, to apply relevant normalisations.
+    gridfilepath : str, optional
+        The path to a grid file, containing any variables needed to apply the geometry
+        specified by the 'geometry' option, which are not contained in the dump files.
     keep_xboundaries : bool, optional
         If true, keep x-direction boundary cells (the cells past the physical
         edges of the grid, where boundary conditions are set); increases the
@@ -125,8 +128,17 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     if geometry:
         if info:
             print("Applying {} geometry conventions".format(geometry))
+
+        if gridfilepath is not None:
+            grid = _open_grid(gridfilepath, chunks=chunks,
+                              keep_xboundaries=keep_xboundaries,
+                              keep_yboundaries=keep_yboundaries,
+                              mxg=ds.metadata['MXG'])
+        else:
+            grid = None
+
         # Update coordinates to match particular geometry of grid
-        ds = geometries.apply_geometry(ds, geometry)
+        ds = geometries.apply_geometry(ds, geometry, grid=grid)
     else:
         if info:
             warn("No geometry type found, no coordinates will be added")
@@ -199,7 +211,7 @@ def _expand_filepaths(datapath):
              " `file_cache_maxsize` global option to {} to accommodate this. "
              "Recommend using `xr.set_options(file_cache_maxsize=NUM)`"
              " to explicitly set this to a large enough value."
-             .format(str(len(filepaths))), UserWarning)
+             .format(str(len(filepaths))))
         xr.set_options(file_cache_maxsize=len(filepaths))
 
     return filepaths, filetype
@@ -426,10 +438,13 @@ def _get_limit(side, dim, keep_boundaries, boundaries, guards):
     else:
         limit = None
 
+    if limit == 0:
+        # 0 would give incorrect result as an upper limit
+        limit = None
     return limit
 
 
-def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries):
+def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
     """
     Opens a single grid file. Implements slightly different logic for
     boundaries to deal with different conventions in a BOUT grid file.
@@ -448,12 +463,11 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries):
         # pytest warnings capture - doesn't match strings containing brackets
         warn(
             "Will drop all variables containing the dimensions {} because "
-            "they are not recognised".format(str(unrecognised_dims)[1:-1]),
-            UserWarning)
+            "they are not recognised".format(str(unrecognised_dims)[1:-1]))
         grid = grid.drop_dims(unrecognised_dims)
 
     if not keep_xboundaries:
-        xboundaries = int(grid.metadata['MXG'])
+        xboundaries = mxg
         if xboundaries > 0:
             grid = grid.isel(x=slice(xboundaries, -xboundaries, None))
     if not keep_yboundaries:
