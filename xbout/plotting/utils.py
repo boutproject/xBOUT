@@ -147,6 +147,12 @@ def _decompose_regions(da):
 
     return regions
 
+def _is_core_only(da):
+
+    _, _, _, _, ix1, ix2, _, nx, _, _ = _get_seps(da)
+
+    return (ix1 >= nx and ix2 >= nx)
+
 
 def plot_separatrices(da, ax):
     """Plot separatrices"""
