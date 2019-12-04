@@ -58,21 +58,23 @@ def animate_imshow(data, animate_over='t', x=None, y=None, animate=True,
         raise ValueError("Dimension animate_over={} is not present in the data"
                          .format(animate_over))
 
-    try:
-        if x is None and y is None:
-            x, y = spatial_dims
-        elif x is None:
+    if x is None and y is None:
+        x, y = spatial_dims
+    elif x is None:
+        try:
             spatial_dims.remove(y)
-            x = spatial_dims[0]
-        elif y is None:
+        except ValueError:
+            raise ValueError("Dimension {} is not present in the data" .format(y))
+        x = spatial_dims[0]
+    elif y is None:
+        try:
             spatial_dims.remove(x)
-            y = spatial_dims[0]
+        except ValueError:
+            raise ValueError("Dimension {} is not present in the data" .format(x))
+        y = spatial_dims[0]
 
-        # Use (y, x) here so we transpose by default for imshow
-        data = data.transpose(animate_over, y, x)
-    except ValueError:
-        raise ValueError("Dimensions {} or {} are not present in the data"
-                         .format(x, y))
+    # Use (y, x) here so we transpose by default for imshow
+    data = data.transpose(animate_over, y, x)
 
     # Load values eagerly otherwise for some reason the plotting takes
     # 100's of times longer - for some reason animatplot does not deal
