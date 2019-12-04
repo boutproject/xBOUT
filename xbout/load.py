@@ -231,10 +231,10 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
             selection[dim] = indexer
 
     try:
-         version = ds['BOUT_VERSION']
+        version = ds['BOUT_VERSION']
     except KeyError:
-         # If BOUT Version is not saved in the dataset
-         version = 0
+        # If BOUT Version is not saved in the dataset
+        version = 0
 
     # Subtraction of z-dimensional data occurs in boutdata.collect
     # if BOUT++ version is old - same feature added here
