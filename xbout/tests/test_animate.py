@@ -35,7 +35,7 @@ class TestAnimate:
 
         animation = ds['n'].isel(x=1).bout.animate2D(save_as="%s/testyz" % save_dir)
 
-        assert isinstance(animation, Imshow)
+        assert isinstance(animation, Pcolormesh)
 
         assert animation.ax.get_xlabel() == 'y'
         assert animation.ax.get_ylabel() == 'z'
@@ -48,7 +48,7 @@ class TestAnimate:
 
         animation = ds['n'].isel(z=3).bout.animate2D(save_as="%s/testxy" % save_dir)
 
-        assert isinstance(animation, Imshow)
+        assert isinstance(animation, Pcolormesh)
         assert animation.ax.get_xlabel() == 'x'
         assert animation.ax.get_ylabel() == 'y'
 
