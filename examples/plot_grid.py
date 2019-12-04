@@ -1,23 +1,18 @@
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 
-from xbout import open_grid
+from xbout import open_boutdataset
 
 
-file = '/home/tegn500/Documents/Work/Code/xBOUT/examples/data/disconnected-double-null.grd.nc'
-salpha = '/home/tegn500/Documents/Work/Code/Scripts/analyse_STORM/pylib/tomnicholas/salpha/grid.nc'
-grid = open_grid(file, geometry='toroidal')
+# We do not distribute binary files with xBOUT, so you need to provide your own gridfile,
+# for example one created using Hypnotoad.
+gridfilepath = 'grid.nc'
+grid = open_boutdataset(gridfilepath, geometry='toroidal')
 
-fig, ax = plt.subplots()
+grid['psi_poloidal'].bout.contourf()
+grid['psi_poloidal'].bout.contour()
+grid['psi_poloidal'].bout.pcolormesh()
+grid['psi_poloidal'].bout.pcolormesh(shading='gouraud')
 
-grid['psi'].bout.contourf(ax=ax)
-
-#x = grid['R'].values.flat
-#y = grid['Z'].values.flat
-#z = grid['psi'].values.flat
-#tri = ax.tricontourf(x, y, z)
-
-#ax.separatrices()
-#ax.limiters()
-#ax.branch_cuts()
+grid['psi_poloidal'].bout.regions()
 
 plt.show()
