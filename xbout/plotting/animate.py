@@ -52,11 +52,6 @@ def animate_poloidal(da, *, ax=None, animate_over='t', separatrix=True, targets=
     if len(da.dims) != 3:
         raise ValueError("da must be 2+1D (t,x,y)")
 
-    # TODO work out how to auto-set the aspect ratio of the plot correctly
-    height = da.coords[y].max() - da.coords[y].min()
-    width = da.coords[x].max() - da.coords[x].min()
-    aspect = height / width
-
     if ax is None:
         fig, ax = plt.subplots()
     else:
