@@ -32,7 +32,7 @@ def _separate_metadata(ds):
                    if not any(dim in ['t', 'x', 'y', 'z'] for dim in ds[var].dims)]
 
     # Save metadata as a dictionary
-    metadata_vals = [np.asscalar(ds[var].values) for var in scalar_vars]
+    metadata_vals = [ds[var].values.item() for var in scalar_vars]
     metadata = dict(zip(scalar_vars, metadata_vals))
 
     return ds.drop(scalar_vars), metadata

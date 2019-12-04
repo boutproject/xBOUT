@@ -57,10 +57,6 @@ class TestOpenGrid:
         assert_equal(result, example_grid)
         result.close()
 
-    @pytest.mark.skip
-    def test_open_grid_merge_ds(self):
-        ...
-
     def test_open_grid_apply_geometry(self, create_example_grid_file):
         @register_geometry(name="Schwarzschild")
         def add_schwarzschild_coords(ds, coordinates=None):

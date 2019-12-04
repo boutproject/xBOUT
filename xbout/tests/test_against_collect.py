@@ -1,66 +1,147 @@
 import pytest
-
 import numpy.testing as npt
 
 from xbout import open_boutdataset
-from .test_load import create_bout_ds_list
-
 from xbout.load import collect as new_collect
-from boutdata import collect as old_collect
 
+from .test_load import create_bout_ds, create_bout_ds_list, METADATA_VARS
 
-@pytest.fixture
-def create_test_file(tmpdir_factory):
-    def _foo(nxpe, nype):
-        # Create temp dir for test files
-        save_dir = tmpdir_factory.mktemp("test_data")
-
-        # Generate test data
-        ds_list, file_list = create_bout_ds_list("data", nxpe=nxpe, nype=nype,
-                                             syn_data_type="linear")
-
-        for ds, file_name in zip(ds_list, file_list):
-            ds.to_netcdf(str(save_dir.join(str(file_name))))
-
-        return save_dir
-    return _foo
-
+boutdata = pytest.importorskip("boutdata", reason="boutdata is not available")
+old_collect = boutdata.collect
 
 class TestAccuracyAgainstOldCollect:
-    # @pytest.mark.skip
-    def test_single_file(self, create_test_file):
 
-        save_dir = create_test_file(nxpe=1,nype=1)
+    def test_single_file(self, tmpdir_factory):
+
+        # Create temp directory for files
+        test_dir = tmpdir_factory.mktemp("test_data")
+
+        # Generate some test data
+        generated_ds = create_bout_ds(syn_data_type="linear")
+        generated_ds.to_netcdf(str(test_dir.join("BOUT.dmp.0.nc")))
 
         var = 'n'
-        expected = old_collect(var, path=save_dir, prefix='data', xguards=False)
+        expected = old_collect(var, path=test_dir, xguards=True, yguards=False)
 
-        actual = new_collect(var, path=save_dir, prefix='data', xguards=False)
+        # Test against new standard - open_boutdataset
+        ds = open_boutdataset(test_dir.join("BOUT.dmp.0.nc"))
+        actual = ds[var].values
+
+        assert expected.shape == actual.shape
+        npt.assert_equal(actual, expected)
+
+        # Test against backwards compatible collect function
+        actual = new_collect(var, path=test_dir, xguards=True, yguards=False)
 
         assert expected.shape == actual.shape
         npt.assert_equal(actual, expected)
 
 
-   # @pytest.mark.skip
-    def test_multiple_files_along_x(self, create_test_file):
+    def test_multiple_files_along_x(self, tmpdir_factory):
 
-        save_dir = create_test_file(nxpe=3, nype=3)
+        # Create temp directory for files
+        test_dir = tmpdir_factory.mktemp("test_data")
+
+        # Generate some test data
+        ds_list, file_list = create_bout_ds_list("BOUT.dmp", nxpe=3, nype=1,
+                                                 syn_data_type="linear")
+        for temp_ds, file_name in zip(ds_list, file_list):
+            temp_ds.to_netcdf(str(test_dir.join(str(file_name))))
 
         var = 'n'
-        expected = old_collect(var, path=save_dir, prefix='data', xguards=False)
+        expected = old_collect(var, path=test_dir,
+                           prefix='BOUT.dmp', xguards=True)
 
-        actual = new_collect(var, path=save_dir, prefix='data', xguards=False)
+        # Test against new standard - open_boutdataset
+        ds = open_boutdataset(test_dir.join('BOUT.dmp.*.nc'))
+        actual = ds[var].values
 
-        print(expected.shape, actual.shape)
+        assert expected.shape == actual.shape
+        npt.assert_equal(actual, expected)
+
+        # Test against backwards compatible collect function
+        actual = new_collect(var, path=test_dir, prefix='BOUT.dmp', xguards=True)
+
+        assert expected.shape == actual.shape
+        npt.assert_equal(actual, expected)
+
+    def test_multiple_files_along_y(self, tmpdir_factory):
+
+        # Create temp directory for files
+        test_dir = tmpdir_factory.mktemp("test_data")
+
+        # Generate some test data
+        ds_list, file_list = create_bout_ds_list("BOUT.dmp", nxpe=1, nype=3,
+                                                 syn_data_type="linear")
+        for temp_ds, file_name in zip(ds_list, file_list):
+            temp_ds.to_netcdf(str(test_dir.join(str(file_name))))
+
+        var = 'n'
+        expected = old_collect(var, path=test_dir,
+                           prefix='BOUT.dmp', xguards=True)
+
+        # Test against new standard - .open_boutdataset
+        ds = open_boutdataset(test_dir.join('BOUT.dmp.*.nc'))
+        actual = ds[var].values
+
+        assert expected.shape == actual.shape
+        npt.assert_equal(actual, expected)
+
+        # Test against backwards compatible collect function
+        actual = new_collect(var, path=test_dir, prefix='BOUT.dmp', xguards=True)
 
         assert expected.shape == actual.shape
         npt.assert_equal(actual, expected)
 
 
-    @pytest.mark.skip
-    def test_metadata(self):
-        ...
+    def test_multiple_files_along_xy(self, tmpdir_factory):
 
+        # Create temp directory for files
+        test_dir = tmpdir_factory.mktemp("test_data")
+
+        # Generate some test data
+        ds_list, file_list = create_bout_ds_list("BOUT.dmp", nxpe=3, nype=3,
+                                                 syn_data_type="linear")
+        for temp_ds, file_name in zip(ds_list, file_list):
+            temp_ds.to_netcdf(str(test_dir.join(str(file_name))))
+
+        var = 'n'
+        expected = old_collect(var, path=test_dir,
+                           prefix='BOUT.dmp', xguards=True)
+
+        # Test against new standard - .open_boutdataset
+        ds = open_boutdataset(test_dir.join('BOUT.dmp.*.nc'))
+        actual = ds[var].values
+
+        assert expected.shape == actual.shape
+        npt.assert_equal(actual, expected)
+
+        # Test against backwards compatible collect function
+        actual = new_collect(var, path=test_dir, prefix='BOUT.dmp', xguards=True)
+
+        assert expected.shape == actual.shape
+        npt.assert_equal(actual, expected)
+
+
+    def test_metadata(self, tmpdir_factory):
+        # Create temp directory for files
+        test_dir = tmpdir_factory.mktemp("test_data")
+
+        # Generate some test data
+        generated_ds = create_bout_ds(syn_data_type="linear")
+        generated_ds.to_netcdf(str(test_dir.join("BOUT.dmp.0.nc")))
+
+        ds = open_boutdataset(test_dir.join('BOUT.dmp.*.nc'))
+
+        for v in METADATA_VARS:
+            expected = old_collect(v, path=test_dir)
+            # Check metadata against new standard - open_boutdataset
+            actual = ds.bout.metadata[v]
+            npt.assert_equal(actual, expected)
+
+            # Check against backwards compatible collect function
+            actual = new_collect(v, path=test_dir)
+            npt.assert_equal(actual, expected)
 
 @pytest.mark.skip
 class test_speed_against_old_collect:
