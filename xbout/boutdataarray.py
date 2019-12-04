@@ -91,8 +91,8 @@ class BoutDataArrayAccessor:
             else:
                 print("{} data passed has {} dimensions - will use "
                       "animatplot.blocks.Pcolormesh()".format(variable, str(n_dims)))
-                pcolormesh_block = animate_pcolormesh(data=data, animate_over=animate_over,
-                                                      x=x, y=y,
+                pcolormesh_block = animate_pcolormesh(data=data,
+                                                      animate_over=animate_over, x=x, y=y,
                                                       animate=animate, fps=fps,
                                                       save_as=save_as, ax=ax, **kwargs)
                 return pcolormesh_block
