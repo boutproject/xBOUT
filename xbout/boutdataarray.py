@@ -38,7 +38,7 @@ class BoutDataArrayAccessor:
             text += "Options:\n{}".format(styled(self.options))
         return text
 
-    def animate2D(self, animate_over='t', x='x', y='y', animate=True,
+    def animate2D(self, animate_over='t', x=None, y=None, animate=True,
                   fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
         """
         Plots a color plot which is animated with time over the specified
@@ -52,9 +52,11 @@ class BoutDataArrayAccessor:
         animate_over : str, optional
             Dimension over which to animate
         x : str, optional
-            Dimension to use on the x axis, default is 'x'
+            Dimension to use on the x axis, default is None - then use the first spatial
+            dimension of the data
         y : str, optional
-            Dimension to use on the y axis, default is 'y'
+            Dimension to use on the y axis, default is None - then use the second spatial
+            dimension of the data
         sep_pos : int, optional
             Radial position at which to plot the separatrix
         fps : int, optional
