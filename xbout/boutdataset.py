@@ -9,6 +9,7 @@ import numpy as np
 from dask.diagnostics import ProgressBar
 
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
+from .plotting.utils import _create_norm
 
 
 @register_dataset_accessor('bout')
@@ -165,8 +166,8 @@ class BoutDatasetAccessor:
         return
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
-                     nrows=None, ncols=None, poloidal_plot=False,
-                     subplots_adjust=None, vmin=None, vmax=None, **kwargs):
+                     nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
+                     vmin=None, vmax=None, logscale=None, **kwargs):
         """
         Parameters
         ----------
@@ -180,6 +181,12 @@ class BoutDatasetAccessor:
             Minimum value for color scale, per variable if a sequence is given
         vmax : float or sequence of floats
             Maximum value for color scale, per variable if a sequence is given
+        logscale : bool or float, optional
+            If True, default to a logarithmic color scale instead of a linear one.
+            If a non-bool type is passed it is treated as a float used to set the linear
+            threshold of a symmetric logarithmic scale as
+            linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
+            passed.
         """
 
         nvars = len(variables)
@@ -228,18 +235,27 @@ class BoutDatasetAccessor:
                 blocks.append(animate_line(data=data, ax=ax, animate_over=animate_over,
                                            animate=False, **kwargs))
             elif ndims == 3:
+                if this_vmin is None:
+                    this_vmin = data.min().values
+                if this_vmax is None:
+                    this_vmax = data.max().values
+
+                norm = _create_norm(logscale, kwargs.get('norm', None), this_vmin,
+                                    this_vmax)
+
                 if poloidal_plot:
                     var_blocks = animate_poloidal(data, ax=ax,
                                                   animate_over=animate_over,
                                                   animate=False, vmin=this_vmin,
-                                                  vmax=this_vmax, **kwargs)
+                                                  vmax=this_vmax, norm=norm, **kwargs)
                     for block in var_blocks:
                         blocks.append(block)
                 else:
                     blocks.append(animate_pcolormesh(data=data, ax=ax,
                                                      animate_over=animate_over,
                                                      animate=False, vmin=this_vmin,
-                                                     vmax=this_vmax, **kwargs))
+                                                     vmax=this_vmax, norm=norm,
+                                                     **kwargs))
             else:
                 raise ValueError("Unsupported number of dimensions "
                                  + str(ndims) + ". Dims are " + str(v.dims))

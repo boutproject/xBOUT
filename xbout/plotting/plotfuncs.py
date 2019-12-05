@@ -6,7 +6,8 @@ import numpy as np
 
 import xarray as xr
 
-from .utils import _decompose_regions, _is_core_only, plot_separatrices, plot_targets
+from .utils import (_create_norm, _decompose_regions, _is_core_only, plot_separatrices,
+                    plot_targets)
 
 
 def regions(da, ax=None, **kwargs):
@@ -113,28 +114,6 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
     if vmax is None:
         vmax = da.max().values
 
-    def create_norm(norm):
-        if logscale:
-            if norm is not None:
-                raise ValueError("norm and logscale cannot both be passed at the same "
-                                 "time.")
-            if vmin*vmax > 0:
-                # vmin and vmax have the same sign, so can use standard log-scale
-                norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax)
-            else:
-                # vmin and vmax have opposite signs, so use symmetrical logarithmic scale
-                if not isinstance(logscale, bool):
-                    linear_scale = logscale
-                else:
-                    linear_scale = 1.e-5
-                linear_threshold = min(abs(vmin), abs(vmax)) * linear_scale
-                norm = matplotlib.colors.SymLogNorm(linear_threshold, vmin=vmin,
-                                                    vmax=vmax)
-        elif norm is None:
-            norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-
-        return norm
-
     # set up 'levels' if needed
     if method is xr.plot.contourf or method is xr.plot.contour:
         levels = kwargs.get('levels', 7)
@@ -164,7 +143,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
     # separate region, which would not make sense.
     if method is xr.plot.contourf:
         # create colorbar
-        norm = create_norm(norm)
+        norm = _create_norm(logscale, norm, vmin, vmax)
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         # make colorbar have only discrete levels
         # average the levels so that colors in the colorbar represent the intervals
@@ -189,7 +168,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         kwargs['vmax'] = vmax
 
         # create colorbar
-        norm = create_norm(norm)
+        norm = _create_norm(logscale, norm, vmin, vmax)
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cmap = sm.get_cmap()
