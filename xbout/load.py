@@ -172,7 +172,7 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
         Name of the variable
     xind, yind, zind, tind : int, slice or list of int, optional
         Range of X, Y, Z or time indices to collect. Either a single
-        index to collect, a list containing [start, end] (inclusive
+        index to collect, a list containing [start, end, step (optional)] (inclusive
         end), or a slice object (usual python indexing). Default is to
         fetch all indices
     path : str, optional
@@ -220,8 +220,12 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
         if isinstance(ind, int):
             indexer = [ind]
         elif isinstance(ind, list):
-            start, end = ind
-            indexer = slice(start, end)
+            try:
+                start, end, step = ind
+                indexer = slice(start, end, step)
+            except ValueError:
+                start, end = ind
+                indexer = slice(start, end)
         elif ind is not None:
             indexer = ind
         else:
