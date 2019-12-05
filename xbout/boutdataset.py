@@ -174,6 +174,23 @@ class BoutDatasetAccessor:
             have only 3 dimensions. It is possible to pass BoutDataArrays to
             allow more flexible plots, e.g. with different variables being
             plotted against different axes.
+        animate_over : str, optional
+            Dimension over which to animate
+        save_as : str, optional
+            If passed, a gif is created with this filename
+        show : bool, optional
+            Call pyplot.show() to display the animation
+        fps : float, optional
+            Indicates the number of frames per second to play
+        nrows : int, optional
+            Specify the number of rows of plots
+        ncols : int, optional
+            Specify the number of columns of plots
+        poloidal_plot : bool, optional
+            If set to True, make all 2D animations in the poloidal plane instead of using
+            grid coordinates
+        subplots_adjust : dict, optional
+            Arguments passed to fig.subplots_adjust()()
         vmin : float or sequence of floats
             Minimum value for color scale, per variable if a sequence is given
         vmax : float or sequence of floats
@@ -184,6 +201,8 @@ class BoutDatasetAccessor:
             threshold of a symmetric logarithmic scale as
             linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
             passed.
+        **kwargs : dict, optional
+            Additional keyword arguments are passed on to each animation function
         """
 
         nvars = len(variables)
