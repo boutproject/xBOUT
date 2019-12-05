@@ -37,8 +37,9 @@ def regions(da, ax=None, **kwargs):
 
 
 def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
-                   add_limiter_hatching=True, gridlines=None, cmap=None, vmin=None,
-                   vmax=None, aspect=None, **kwargs):
+                   add_limiter_hatching=True, gridlines=None, cmap=None,
+                   norm = None, logscale=None, vmin=None, vmax=None,
+                   aspect=None, **kwargs):
     """
     Make a 2D plot using an xarray method, taking into account branch cuts (X-points).
 
@@ -64,6 +65,15 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         stride when plotting grid lines (to reduce the number on the plot)
     cmap : Matplotlib colormap, optional
         Color map to use for the plot
+    norm : matplotlib.colors.Normalize instance, optional
+        Normalization to use for the color scale.
+        Cannot be set at the same time as 'logscale'
+    logscale : bool or float, optional
+        If True, default to a logarithmic color scale instead of a linear one.
+        If a non-bool type is passed it is treated as a float used to set the linear
+        threshold of a symmetric logarithmic scale as
+        linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is passed.
+        Cannot be set at the same time as 'norm'
     vmin : float, optional
         Minimum value for the color scale
     vmax : float, optional
@@ -103,8 +113,41 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
     if vmax is None:
         vmax = da.max().values
 
+    def create_norm(norm):
+        if logscale:
+            if norm is not None:
+                raise ValueError("norm and logscale cannot both be passed at the same "
+                                 "time.")
+            if vmin*vmax > 0:
+                # vmin and vmax have the same sign, so can use standard log-scale
+                norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax)
+            else:
+                # vmin and vmax have opposite signs, so use symmetrical logarithmic scale
+                if not isinstance(logscale, bool):
+                    linear_scale = logscale
+                else:
+                    linear_scale = 1.e-5
+                linear_threshold = min(abs(vmin), abs(vmax)) * linear_scale
+                norm = matplotlib.colors.SymLogNorm(linear_threshold, vmin=vmin,
+                                                    vmax=vmax)
+        elif norm is None:
+            norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+
+        return norm
+
     # set up 'levels' if needed
     if method is xr.plot.contourf or method is xr.plot.contour:
+        levels = kwargs.get('levels', 7)
+        if isinstance(levels, np.int):
+            levels = np.linspace(vmin, vmax, levels, endpoint=True)
+            # put levels back into kwargs
+            kwargs['levels'] = levels
+        else:
+            levels = np.array(list(levels))
+            kwargs['levels'] = levels
+            vmin = np.min(levels)
+            vmax = np.max(levels)
+
         levels = kwargs.get('levels', 7)
         if isinstance(levels, np.int):
             levels = np.linspace(vmin, vmax, levels, endpoint=True)
@@ -121,7 +164,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
     # separate region, which would not make sense.
     if method is xr.plot.contourf:
         # create colorbar
-        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+        norm = create_norm(norm)
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         # make colorbar have only discrete levels
         # average the levels so that colors in the colorbar represent the intervals
@@ -146,7 +189,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         kwargs['vmax'] = vmax
 
         # create colorbar
-        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+        norm = create_norm(norm)
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cmap = sm.get_cmap()
