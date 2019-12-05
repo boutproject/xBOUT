@@ -1,8 +1,7 @@
 import pytest
 import numpy.testing as npt
 
-from xbout import open_boutdataset
-from xbout.load import collect as new_collect
+from xbout import open_boutdataset, collect as new_collect
 
 from .test_load import create_bout_ds, create_bout_ds_list, METADATA_VARS
 
