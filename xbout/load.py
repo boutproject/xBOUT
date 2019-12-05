@@ -244,7 +244,7 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
     # if BOUT++ version is old - same feature added here
     if (version < 3.5) and ('z' in dims):
         zsize = int(ds['nz']) - 1
-        selection['z'] = slice(zsize)
+        ds = ds.isel(z=slice(zsize))
 
     if selection:
         ds = ds.isel(selection)
