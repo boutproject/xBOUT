@@ -179,18 +179,17 @@ class TestAccuracyAgainstOldCollect:
 
         var = 'n'
         indexers = ["tind", "xind", "yind", "zind"]
-        ind_list = [[0, 4, 2], [0, 4]]
+        ind_arg = [0, 4]
 
         for kwarg in indexers:
-            for ind_arg in ind_list:
-                # Extracting a the first index of each dimension for comparison
-                expected = old_collect(var, path=test_dir, **{kwarg: ind_arg})
+            # Extracting a the first index of each dimension for comparison
+            expected = old_collect(var, path=test_dir, **{kwarg: ind_arg})
 
-                # Test against backwards compatible collect function
-                actual = new_collect(var, path=test_dir, **{kwarg: ind_arg})
+            # Test against backwards compatible collect function
+            actual = new_collect(var, path=test_dir, **{kwarg: ind_arg})
 
-                assert expected.shape == actual.shape
-                npt.assert_equal(actual, expected)
+            assert expected.shape == actual.shape
+            npt.assert_equal(actual, expected)
 
     def test_new_collect_indexing_slice(self, tmpdir_factory):
         # Create temp directory for files
