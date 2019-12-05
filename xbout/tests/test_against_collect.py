@@ -142,7 +142,6 @@ class TestAccuracyAgainstOldCollect:
             actual = new_collect(v, path=test_dir)
             npt.assert_equal(actual, expected)
 
-
     def test_new_collect_indexing_int(self, tmpdir_factory):
         # Create temp directory for files
         test_dir = tmpdir_factory.mktemp("test_data")
@@ -167,7 +166,6 @@ class TestAccuracyAgainstOldCollect:
 
             assert expected.shape == actual.shape
             npt.assert_equal(actual, expected)
-
 
     def test_new_collect_indexing_list(self, tmpdir_factory):
         # Create temp directory for files
@@ -207,7 +205,7 @@ class TestAccuracyAgainstOldCollect:
 
         var = 'n'
         indexers = ["tind", "xind", "yind", "zind"]
-        ind_list = [slice(0,4,2), slice(0,4)]
+        ind_list = [slice(0, 4, 2), slice(0, 4)]
 
         for kwarg in indexers:
             for ind_arg in ind_list:
