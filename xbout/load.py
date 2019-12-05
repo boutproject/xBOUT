@@ -156,6 +156,98 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     return ds
 
 
+def collect(varname, xind=None, yind=None, zind=None, tind=None,
+            path=".", yguards=False, xguards=True, info=True, prefix="BOUT.dmp"):
+
+    from os.path import join
+
+    """
+
+    Extract the data pertaining to a specified variable in a BOUT++ data set
+
+
+    Parameters
+    ----------
+    varname : str
+        Name of the variable
+    xind, yind, zind, tind : int, slice or list of int, optional
+        Range of X, Y, Z or time indices to collect. Either a single
+        index to collect, a list containing [start, end] (inclusive
+        end), or a slice object (usual python indexing). Default is to
+        fetch all indices
+    path : str, optional
+        Path to data files (default: ".")
+    prefix : str, optional
+        File prefix (default: "BOUT.dmp")
+    yguards : bool, optional
+        Collect Y boundary guard cells? (default: False)
+    xguards : bool, optional
+        Collect X boundary guard cells? (default: True)
+        (Set to True to be consistent with the definition of nx)
+    info : bool, optional
+        Print information about collect? (default: True)
+
+    Notes
+    ----------
+    strict : This option found in boutdata.collect() is not present in this function
+             it is assumed that the varname given is correct, if variable does not exist
+             the function will fail
+    tind_auto : This option is not required when using _auto_open_mfboutdataset as an
+             automatic failure if datasets are different lengths is included
+
+    Returns
+    ----------
+    ds : numpy.ndarray
+
+    """
+
+    datapath = join(path, prefix + "*.nc")
+
+    ds = _auto_open_mfboutdataset(datapath, keep_xboundaries=xguards,
+                                  keep_yboundaries=yguards, info=info)
+
+    if varname not in ds:
+        raise KeyError("No variable, {} was found in {}.".format(varname, datapath))
+
+    dims = list(ds.dims)
+    inds = [tind, xind, yind, zind]
+
+    selection = {}
+
+    # Convert indexing values to an isel suitable format
+    for dim, ind in zip(dims, inds):
+
+        if isinstance(ind, int):
+            indexer = [ind]
+        elif isinstance(ind, list):
+            start, end = ind
+            indexer = slice(start, end+1)
+        elif ind is not None:
+            indexer = ind
+        else:
+            indexer = None
+
+        if indexer:
+            selection[dim] = indexer
+
+    try:
+        version = ds['BOUT_VERSION']
+    except KeyError:
+        # If BOUT Version is not saved in the dataset
+        version = 0
+
+    # Subtraction of z-dimensional data occurs in boutdata.collect
+    # if BOUT++ version is old - same feature added here
+    if (version < 3.5) and ('z' in dims):
+        zsize = int(ds['nz']) - 1
+        ds = ds.isel(z=slice(zsize))
+
+    if selection:
+        ds = ds.isel(selection)
+
+    return ds[varname].values
+
+
 def _is_dump_files(datapath):
     """
     If there is only one file, and it's not got a time dimension, assume it's a
