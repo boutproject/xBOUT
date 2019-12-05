@@ -6,7 +6,8 @@ import numpy as np
 
 import xarray as xr
 
-from .utils import _decompose_regions, _is_core_only, plot_separatrices, plot_targets
+from .utils import (_create_norm, _decompose_regions, _is_core_only, plot_separatrices,
+                    plot_targets)
 
 
 def regions(da, ax=None, **kwargs):
@@ -37,8 +38,9 @@ def regions(da, ax=None, **kwargs):
 
 
 def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
-                   add_limiter_hatching=True, gridlines=None, cmap=None, vmin=None,
-                   vmax=None, aspect=None, **kwargs):
+                   add_limiter_hatching=True, gridlines=None, cmap=None,
+                   norm = None, logscale=None, vmin=None, vmax=None,
+                   aspect=None, **kwargs):
     """
     Make a 2D plot using an xarray method, taking into account branch cuts (X-points).
 
@@ -67,6 +69,15 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         grid-lines and the 'y' entry for the poloidal grid lines.
     cmap : Matplotlib colormap, optional
         Color map to use for the plot
+    norm : matplotlib.colors.Normalize instance, optional
+        Normalization to use for the color scale.
+        Cannot be set at the same time as 'logscale'
+    logscale : bool or float, optional
+        If True, default to a logarithmic color scale instead of a linear one.
+        If a non-bool type is passed it is treated as a float used to set the linear
+        threshold of a symmetric logarithmic scale as
+        linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is passed.
+        Cannot be set at the same time as 'norm'
     vmin : float, optional
         Minimum value for the color scale
     vmax : float, optional
@@ -119,12 +130,23 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
             vmin = np.min(levels)
             vmax = np.max(levels)
 
+        levels = kwargs.get('levels', 7)
+        if isinstance(levels, np.int):
+            levels = np.linspace(vmin, vmax, levels, endpoint=True)
+            # put levels back into kwargs
+            kwargs['levels'] = levels
+        else:
+            levels = np.array(list(levels))
+            kwargs['levels'] = levels
+            vmin = np.min(levels)
+            vmax = np.max(levels)
+
     # Need to create a colorscale that covers the range of values in the whole array.
     # Using the add_colorbar argument would create a separate color scale for each
     # separate region, which would not make sense.
     if method is xr.plot.contourf:
         # create colorbar
-        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+        norm = _create_norm(logscale, norm, vmin, vmax)
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         # make colorbar have only discrete levels
         # average the levels so that colors in the colorbar represent the intervals
@@ -149,7 +171,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         kwargs['vmax'] = vmax
 
         # create colorbar
-        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+        norm = _create_norm(logscale, norm, vmin, vmax)
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cmap = sm.get_cmap()
