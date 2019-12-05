@@ -6,6 +6,7 @@ from xarray import register_dataarray_accessor
 
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
+from .plotting.utils import _create_norm
 
 
 @register_dataarray_accessor('bout')
@@ -39,7 +40,7 @@ class BoutDataArrayAccessor:
         return text
 
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
-                  save_as=None, ax=None, poloidal_plot=False, **kwargs):
+                  save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):
         """
         Plots a color plot which is animated with time over the specified
         coordinate.
@@ -68,6 +69,12 @@ class BoutDataArrayAccessor:
         poloidal_plot : bool, optional
             Use animate_poloidal to make a plot in R-Z coordinates (input field must be
             (t,x,y))
+        logscale : bool or float, optional
+            If True, default to a logarithmic color scale instead of a linear one.
+            If a non-bool type is passed it is treated as a float used to set the linear
+            threshold of a symmetric logarithmic scale as
+            linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
+            passed.
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (e.g. imshow for 2D plots).
@@ -76,7 +83,12 @@ class BoutDataArrayAccessor:
         data = self.data
         variable = data.name
         n_dims = len(data.dims)
+
         if n_dims == 3:
+            vmin = kwargs['vmin'] if 'vmin' in kwargs else data.min().values
+            vmax = kwargs['vmax'] if 'vmax' in kwargs else data.max().values
+            kwargs['norm'] = _create_norm(logscale, kwargs.get('norm', None), vmin, vmax)
+ 
             if poloidal_plot:
                 print("{} data passed has {} dimensions - making poloidal plot with "
                       "animate_poloidal()".format(variable, str(n_dims)))

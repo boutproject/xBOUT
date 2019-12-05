@@ -67,7 +67,8 @@ def animate_poloidal(da, *, ax=None, animate_over='t', separatrix=True, targets=
     kwargs['vmax'] = vmax
 
     # create colorbar
-    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    norm = (kwargs['norm'] if 'norm' in kwargs
+            else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax))
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
     cmap = sm.get_cmap()
