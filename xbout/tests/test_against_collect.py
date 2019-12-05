@@ -149,7 +149,8 @@ class TestAccuracyAgainstOldCollect:
 
         # Generate some test data
         ds_list, file_list = create_bout_ds_list("BOUT.dmp", nxpe=3, nype=3,
-                                                  syn_data_type="linear")
+                                                 syn_data_type="linear")
+
         for temp_ds, file_name in zip(ds_list, file_list):
             temp_ds.to_netcdf(str(test_dir.join(str(file_name))))
 
@@ -159,10 +160,10 @@ class TestAccuracyAgainstOldCollect:
 
         for kwarg in indexers:
             # Extracting a the first index of each dimension for comparison
-            expected = old_collect(var, path=test_dir, **{kwarg:ind_arg})
+            expected = old_collect(var, path=test_dir, **{kwarg: ind_arg})
 
             # Test against backwards compatible collect function
-            actual = new_collect(var, path=test_dir, **{kwarg:ind_arg})
+            actual = new_collect(var, path=test_dir, **{kwarg: ind_arg})
 
             assert expected.shape == actual.shape
             npt.assert_equal(actual, expected)
@@ -174,7 +175,7 @@ class TestAccuracyAgainstOldCollect:
 
         # Generate some test data
         ds_list, file_list = create_bout_ds_list("BOUT.dmp", nxpe=3, nype=3,
-                                                   syn_data_type="linear")
+                                                 syn_data_type="linear")
         for temp_ds, file_name in zip(ds_list, file_list):
             temp_ds.to_netcdf(str(test_dir.join(str(file_name))))
 
@@ -185,10 +186,10 @@ class TestAccuracyAgainstOldCollect:
         for kwarg in indexers:
             for ind_arg in ind_list:
                 # Extracting a the first index of each dimension for comparison
-                expected = old_collect(var, path=test_dir, **{kwarg:ind_arg})
+                expected = old_collect(var, path=test_dir, **{kwarg: ind_arg})
 
                 # Test against backwards compatible collect function
-                actual = new_collect(var, path=test_dir, **{kwarg:ind_arg})
+                actual = new_collect(var, path=test_dir, **{kwarg: ind_arg})
 
                 assert expected.shape == actual.shape
                 npt.assert_equal(actual, expected)
@@ -199,7 +200,8 @@ class TestAccuracyAgainstOldCollect:
 
         # Generate some test data
         ds_list, file_list = create_bout_ds_list("BOUT.dmp", nxpe=3, nype=3,
-                                                    syn_data_type="linear")
+                                                 syn_data_type="linear")
+
         for temp_ds, file_name in zip(ds_list, file_list):
             temp_ds.to_netcdf(str(test_dir.join(str(file_name))))
 
@@ -210,10 +212,10 @@ class TestAccuracyAgainstOldCollect:
         for kwarg in indexers:
             for ind_arg in ind_list:
                 # Extracting a the first index of each dimension for comparison
-                expected = old_collect(var, path=test_dir, **{kwarg:ind_arg})
+                expected = old_collect(var, path=test_dir, **{kwarg: ind_arg})
 
                 # Test against backwards compatible collect function
-                actual = new_collect(var, path=test_dir, **{kwarg:ind_arg})
+                actual = new_collect(var, path=test_dir, **{kwarg: ind_arg})
 
                 assert expected.shape == actual.shape
                 npt.assert_equal(actual, expected)
