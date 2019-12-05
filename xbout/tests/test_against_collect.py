@@ -142,6 +142,82 @@ class TestAccuracyAgainstOldCollect:
             actual = new_collect(v, path=test_dir)
             npt.assert_equal(actual, expected)
 
+
+    def test_new_collect_indexing_int(self, tmpdir_factory):
+        # Create temp directory for files
+        test_dir = tmpdir_factory.mktemp("test_data")
+
+        # Generate some test data
+        ds_list, file_list = create_bout_ds_list("BOUT.dmp", nxpe=3, nype=3,
+                                                  syn_data_type="linear")
+        for temp_ds, file_name in zip(ds_list, file_list):
+            temp_ds.to_netcdf(str(test_dir.join(str(file_name))))
+
+        var = 'n'
+        indexers = ["tind", "xind", "yind", "zind"]
+        ind_arg = 0
+
+        for kwarg in indexers:
+            # Extracting a the first index of each dimension for comparison
+            expected = old_collect(var, path=test_dir, **{kwarg:ind_arg})
+
+            # Test against backwards compatible collect function
+            actual = new_collect(var, path=test_dir, **{kwarg:ind_arg})
+
+            assert expected.shape == actual.shape
+            npt.assert_equal(actual, expected)
+
+
+    def test_new_collect_indexing_list(self, tmpdir_factory):
+        # Create temp directory for files
+        test_dir = tmpdir_factory.mktemp("test_data")
+
+        # Generate some test data
+        ds_list, file_list = create_bout_ds_list("BOUT.dmp", nxpe=3, nype=3,
+                                                   syn_data_type="linear")
+        for temp_ds, file_name in zip(ds_list, file_list):
+            temp_ds.to_netcdf(str(test_dir.join(str(file_name))))
+
+        var = 'n'
+        indexers = ["tind", "xind", "yind", "zind"]
+        ind_list = [[0, 4, 2], [0, 4]]
+
+        for kwarg in indexers:
+            for ind_arg in ind_list:
+                # Extracting a the first index of each dimension for comparison
+                expected = old_collect(var, path=test_dir, **{kwarg:ind_arg})
+
+                # Test against backwards compatible collect function
+                actual = new_collect(var, path=test_dir, **{kwarg:ind_arg})
+
+                assert expected.shape == actual.shape
+                npt.assert_equal(actual, expected)
+
+    def test_new_collect_indexing_slice(self, tmpdir_factory):
+        # Create temp directory for files
+        test_dir = tmpdir_factory.mktemp("test_data")
+
+        # Generate some test data
+        ds_list, file_list = create_bout_ds_list("BOUT.dmp", nxpe=3, nype=3,
+                                                    syn_data_type="linear")
+        for temp_ds, file_name in zip(ds_list, file_list):
+            temp_ds.to_netcdf(str(test_dir.join(str(file_name))))
+
+        var = 'n'
+        indexers = ["tind", "xind", "yind", "zind"]
+        ind_list = [slice(0,4,2), slice(0,4)]
+
+        for kwarg in indexers:
+            for ind_arg in ind_list:
+                # Extracting a the first index of each dimension for comparison
+                expected = old_collect(var, path=test_dir, **{kwarg:ind_arg})
+
+                # Test against backwards compatible collect function
+                actual = new_collect(var, path=test_dir, **{kwarg:ind_arg})
+
+                assert expected.shape == actual.shape
+                npt.assert_equal(actual, expected)
+
 @pytest.mark.skip
 class test_speed_against_old_collect:
     ...
