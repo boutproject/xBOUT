@@ -127,8 +127,7 @@ def animate_line(data, animate_over='t', animate=True,
     """
     Plots a line plot which is animated with time.
 
-    Currently only supports 1D+1 data, which it plots with xarray's
-    wrapping of matplotlib's plot.
+    Currently only supports 1D+1 data, which it plots with animatplot's Line animation.
 
     Parameters
     ----------
