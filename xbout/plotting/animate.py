@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import animatplot as amp
 
 from .utils import _decompose_regions, plot_separatrices, plot_targets
+from matplotlib.animation import PillowWriter
 
 
 def animate_poloidal(da, *, ax=None, animate_over='t', separatrix=True, targets=True,
@@ -110,9 +111,6 @@ def animate_poloidal(da, *, ax=None, animate_over='t', separatrix=True, targets=
         anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return blocks
-
-from .utils import plot_separatrix
-from matplotlib.animation import PillowWriter
 
 
 def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
