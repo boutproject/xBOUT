@@ -107,7 +107,7 @@ def animate_poloidal(da, *, ax=None, animate_over='t', separatrix=True, targets=
 
         if not save_as:
             save_as = "{}_over_{}".format(da.name, animate_over)
-        anim.save(save_as + '.gif', writer='imagemagick')
+        anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return blocks
 
