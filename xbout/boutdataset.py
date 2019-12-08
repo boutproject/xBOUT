@@ -189,9 +189,9 @@ class BoutDatasetAccessor:
             Specify the number of rows of plots
         ncols : int, optional
             Specify the number of columns of plots
-        poloidal_plot : bool, optional
+        poloidal_plot : bool or sequence of bool, optional
             If set to True, make all 2D animations in the poloidal plane instead of using
-            grid coordinates
+            grid coordinates, per variable if sequence is given
         subplots_adjust : dict, optional
             Arguments passed to fig.subplots_adjust()()
         vmin : float or sequence of floats
@@ -228,6 +228,13 @@ class BoutDatasetAccessor:
             fig.subplots_adjust(**subplots_adjust)
 
         try:
+            if len(poloidal_plot) != len(variables):
+                raise ValueError('if poloidal_plot is a sequence, it must have the same '
+                                 'number of elements as "variables"')
+        except TypeError:
+            poloidal_plot = [poloidal_plot] * len(variables)
+
+        try:
             if len(vmin) != len(variables):
                 raise ValueError('if vmin is a sequence, it must have the same number '
                                  'of elements as "variables"')
@@ -249,8 +256,9 @@ class BoutDatasetAccessor:
             logscale = [logscale] * len(variables)
 
         blocks = []
-        for v, ax, this_vmin, this_vmax, this_logscale in zip(variables, axes.flatten(),
-                                                              vmin, vmax, logscale):
+        for this in zip(variables, axes.flatten(), poloidal_plot, vmin, vmax, logscale):
+
+            v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale = this
 
             if isinstance(v, str):
                 v = self.data[v]
@@ -271,7 +279,7 @@ class BoutDatasetAccessor:
                 norm = _create_norm(this_logscale, kwargs.get('norm', None), this_vmin,
                                     this_vmax)
 
-                if poloidal_plot:
+                if this_poloidal_plot:
                     var_blocks = animate_poloidal(data, ax=ax,
                                                   animate_over=animate_over,
                                                   animate=False, vmin=this_vmin,
