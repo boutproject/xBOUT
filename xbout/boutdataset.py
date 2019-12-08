@@ -195,12 +195,13 @@ class BoutDatasetAccessor:
             Minimum value for color scale, per variable if a sequence is given
         vmax : float or sequence of floats
             Maximum value for color scale, per variable if a sequence is given
-        logscale : bool or float, optional
+        logscale : bool or float, sequence of bool or float, optional
             If True, default to a logarithmic color scale instead of a linear one.
             If a non-bool type is passed it is treated as a float used to set the linear
             threshold of a symmetric logarithmic scale as
             linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
             passed.
+            Per variable if sequence is given.
         **kwargs : dict, optional
             Additional keyword arguments are passed on to each animation function
         """
@@ -237,8 +238,16 @@ class BoutDatasetAccessor:
         except TypeError:
             vmax = [vmax] * len(variables)
 
+        try:
+            if len(logscale) != len(variables):
+                raise ValueError('if logscale is a sequence, it must have the '
+                                 'same number of elements as "variables"')
+        except TypeError:
+            logscale = [logscale] * len(variables)
+
         blocks = []
-        for v, ax, this_vmin, this_vmax in zip(variables, axes.flatten(), vmin, vmax):
+        for v, ax, this_vmin, this_vmax, this_logscale in zip(variables, axes.flatten(),
+                                                              vmin, vmax, logscale):
 
             if isinstance(v, str):
                 v = self.data[v]
@@ -256,7 +265,7 @@ class BoutDatasetAccessor:
                 if this_vmax is None:
                     this_vmax = data.max().values
 
-                norm = _create_norm(logscale, kwargs.get('norm', None), this_vmin,
+                norm = _create_norm(this_logscale, kwargs.get('norm', None), this_vmin,
                                     this_vmax)
 
                 if poloidal_plot:
