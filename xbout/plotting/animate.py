@@ -266,7 +266,7 @@ def animate_line(data, animate_over='t', animate=True,
     if (t_read is animate_over):
         pass
     else:
-        data = data.transpose(x_read, animate_over)
+        data = data.transpose(animate_over, t_read)
 
     # Load values eagerly otherwise for some reason the plotting takes
     # 100's of times longer - for some reason animatplot does not deal
