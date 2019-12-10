@@ -2,8 +2,11 @@ language: python
 python:
   - "3.6"
   - "3.7"
+env:
+  - PIP_PACKAGES="setuptools pip pytest pytest-cov coverage codecov boutdata xarray!=0.14.0"
+  - PIP_PACKAGES="setuptools pip pytest pytest-cov coverage codecov boutdata xarray==0.12.2 dask==1.0.0 natsort==5.5.0 matplotlib==3.1.1 animatplot==0.4.0 netcdf4==1.4.2 Pillow==6.1.0" # test with oldest supported version of packages
 install:
-  - pip install --upgrade setuptools pip pytest pytest-cov coverage codecov boutdata "xarray!=0.14.0"
+  - pip install --upgrade ${PIP_PACKAGES}
   - pip install -r requirements.txt
   - pip install -e .
 script:
