@@ -242,9 +242,10 @@ class BoutDatasetAccessor:
         logscale = _expand_list_arg(logscale, 'logscale')
 
         blocks = []
-        for this in zip(variables, axes.flatten(), poloidal_plot, vmin, vmax, logscale):
+        for subplot_args in zip(variables, axes.flatten(), poloidal_plot, vmin, vmax,
+                                logscale):
 
-            v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale = this
+            v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale = subplot_args
 
             if isinstance(v, str):
                 v = self.data[v]
