@@ -59,9 +59,12 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         Draw solid lines at the target surfaces
     add_limiter_hatching : bool, optional
         Draw hatched areas at the targets
-    gridlines : bool or int, optional
+    gridlines : bool, int or slice or dict of bool, int or slice, optional
         If True, draw grid lines on the plot. If an int is passed, it is used as the
-        stride when plotting grid lines (to reduce the number on the plot)
+        stride when plotting grid lines (to reduce the number on the plot). If a slice is
+        passed it is used to select the grid lines to plot.
+        If a dict is passed, the 'x' entry (bool, int or slice) is used for the radial
+        grid-lines and the 'y' entry for the poloidal grid lines.
     cmap : Matplotlib colormap, optional
         Color map to use for the plot
     vmin : float, optional
@@ -175,10 +178,20 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         fig.colorbar(artists[0], ax=ax, extend=extend)
 
     if gridlines is not None:
-        if gridlines is True:
-            gridlines = (1, 1)
-        if not isinstance(gridlines, collections.Sequence):
-            gridlines = (gridlines, gridlines)
+        # convert gridlines to dict
+        if not isinstance(gridlines, dict):
+            gridlines = {'x': gridlines, 'y': gridlines}
+
+        for key in gridlines:
+            value = gridlines[key]
+            if value is True:
+                gridlines[key] = slice(None)
+            elif isinstance(value, int):
+                gridlines[key] = slice(0, None, value)
+            elif not value is None:
+                if not isinstance(value, slice):
+                    raise ValueError('Argument passed to gridlines must be bool, int or '
+                                     'slice. Got ' + str(value))
         R_global = da['R']
         R_global.attrs['metadata'] = da.metadata
 
@@ -189,8 +202,11 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         Z_regions = _decompose_regions(da['Z'])
 
         for R, Z in zip(R_regions, Z_regions):
-            plt.plot(R[::gridlines[0], :].T, Z[::gridlines[0], :].T, color='k', lw=0.1)
-            plt.plot(R[:, ::gridlines[1]], Z[:, ::gridlines[1]], color='k', lw=0.1)
+            if 'x' in gridlines and gridlines['x'] is not None:
+                plt.plot(R[:, gridlines['y']], Z[:, gridlines['y']], color='k', lw=0.1)
+            if 'y' in gridlines and gridlines['y'] is not None:
+                plt.plot(R[gridlines['y'], :].T, Z[gridlines['y'], :].T, color='k',
+                         lw=0.1)
 
     ax.set_title(da.name)
 
