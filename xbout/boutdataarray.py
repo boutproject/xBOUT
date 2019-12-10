@@ -88,7 +88,7 @@ class BoutDataArrayAccessor:
             vmin = kwargs['vmin'] if 'vmin' in kwargs else data.min().values
             vmax = kwargs['vmax'] if 'vmax' in kwargs else data.max().values
             kwargs['norm'] = _create_norm(logscale, kwargs.get('norm', None), vmin, vmax)
- 
+
             if poloidal_plot:
                 print("{} data passed has {} dimensions - making poloidal plot with "
                       "animate_poloidal()".format(variable, str(n_dims)))
@@ -104,8 +104,8 @@ class BoutDataArrayAccessor:
                 print("{} data passed has {} dimensions - will use "
                       "animatplot.blocks.Pcolormesh()".format(variable, str(n_dims)))
                 pcolormesh_block = animate_pcolormesh(data=data,
-                                                      animate_over=animate_over, x=x, y=y,
-                                                      animate=animate, fps=fps,
+                                                      animate_over=animate_over, x=x,
+                                                      y=y, animate=animate, fps=fps,
                                                       save_as=save_as, ax=ax, **kwargs)
                 return pcolormesh_block
         else:
