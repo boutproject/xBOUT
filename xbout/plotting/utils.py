@@ -20,8 +20,7 @@ def _create_norm(logscale, norm, vmin, vmax):
             else:
                 linear_scale = 1.e-5
             linear_threshold = min(abs(vmin), abs(vmax)) * linear_scale
-            norm = mpl.colors.SymLogNorm(linear_threshold, vmin=vmin,
-                                                vmax=vmax)
+            norm = mpl.colors.SymLogNorm(linear_threshold, vmin=vmin, vmax=vmax)
     elif norm is None:
         norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
 

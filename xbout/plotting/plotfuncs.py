@@ -39,8 +39,8 @@ def regions(da, ax=None, **kwargs):
 
 def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                    add_limiter_hatching=True, gridlines=None, cmap=None,
-                   norm = None, logscale=None, vmin=None, vmax=None,
-                   aspect=None, **kwargs):
+                   norm=None, logscale=None, vmin=None, vmax=None, aspect=None,
+                   **kwargs):
     """
     Make a 2D plot using an xarray method, taking into account branch cuts (X-points).
 
@@ -210,7 +210,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                 gridlines[key] = slice(None)
             elif isinstance(value, int):
                 gridlines[key] = slice(0, None, value)
-            elif not value is None:
+            elif value is not None:
                 if not isinstance(value, slice):
                     raise ValueError('Argument passed to gridlines must be bool, int or '
                                      'slice. Got ' + str(value))
