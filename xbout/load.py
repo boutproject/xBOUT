@@ -347,6 +347,35 @@ def _read_splitting(filepath, info=True):
     mxsub = get_scalar(ds, 'MXSUB', default=ds.dims['x'] - 2 * mxg)
     mysub = get_scalar(ds, 'MYSUB', default=ds.dims['y'] - 2 * myg)
 
+    # Check whether this is a single file squashed from the multiple output files of a
+    # parallel run (i.e. NXPE*NYPE > 1 even though there is only a single file to read).
+    nx = ds['nx'].values
+    ny = ds['ny'].values
+    nx_file = ds.dims['x']
+    ny_file = ds.dims['y']
+    if nxpe > 1 or nype > 1:
+        # if nxpe = nype = 1, was only one process anyway, so no need to check for
+        # squashing
+        if nx_file == nx or nx_file == nx - 2*mxg:
+            has_xboundaries = (nx_file == nx)
+            if not has_xboundaries:
+                mxg = 0
+
+            # Check if there are two divertor targets present
+            if ds['jyseps1_2'] > ds['jyseps2_1']:
+                upper_target_cells = myg
+            else:
+                upper_target_cells = 0
+            if ny_file == ny or ny_file == ny + 2*myg + 2*upper_target_cells:
+                # This file contains all the points, possibly including guard cells
+
+                has_yboundaries = not (ny_file == ny)
+                if not has_yboundaries:
+                    myg = 0
+
+                nxpe = 1
+                nype = 1
+
     # Avoid trying to open this file twice
     ds.close()
 
@@ -447,6 +476,10 @@ def _infer_contains_boundaries(ds, nxpe, nype):
     Uses the processor indices and BOUT++'s topology indices to work out whether this
     dataset contains boundary cells, and on which side.
     """
+
+    if nxpe*nype == 1:
+        # single file, always contains boundaries
+        return {'x': True, 'y': True}, {'x': True, 'y': True}
 
     try:
         xproc = int(ds['PE_XIND'])
