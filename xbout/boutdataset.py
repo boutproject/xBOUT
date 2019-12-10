@@ -1,10 +1,15 @@
+import collections
 from pprint import pformat as prettyformat
 from functools import partial
 
 from xarray import register_dataset_accessor, save_mfdataset, merge
+import animatplot as amp
+from matplotlib import pyplot as plt
+import numpy as np
 from dask.diagnostics import ProgressBar
 
-
+from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
+from .plotting.utils import _create_norm
 @register_dataset_accessor('bout')
 class BoutDatasetAccessor:
     """
@@ -157,6 +162,135 @@ class BoutDatasetAccessor:
         with ProgressBar():
             save_mfdataset(restart_datasets, paths, compute=True)
         return
+
+    def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
+                     nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
+                     vmin=None, vmax=None, logscale=None, **kwargs):
+        """
+        Parameters
+        ----------
+        variables : list of str or BoutDataArray
+            The variables to plot. For any string passed, the corresponding
+            variable in this DataSet is used - then the calling DataSet must
+            have only 3 dimensions. It is possible to pass BoutDataArrays to
+            allow more flexible plots, e.g. with different variables being
+            plotted against different axes.
+        animate_over : str, optional
+            Dimension over which to animate
+        save_as : str, optional
+            If passed, a gif is created with this filename
+        show : bool, optional
+            Call pyplot.show() to display the animation
+        fps : float, optional
+            Indicates the number of frames per second to play
+        nrows : int, optional
+            Specify the number of rows of plots
+        ncols : int, optional
+            Specify the number of columns of plots
+        poloidal_plot : bool or sequence of bool, optional
+            If set to True, make all 2D animations in the poloidal plane instead of using
+            grid coordinates, per variable if sequence is given
+        subplots_adjust : dict, optional
+            Arguments passed to fig.subplots_adjust()()
+        vmin : float or sequence of floats
+            Minimum value for color scale, per variable if a sequence is given
+        vmax : float or sequence of floats
+            Maximum value for color scale, per variable if a sequence is given
+        logscale : bool or float, sequence of bool or float, optional
+            If True, default to a logarithmic color scale instead of a linear one.
+            If a non-bool type is passed it is treated as a float used to set the linear
+            threshold of a symmetric logarithmic scale as
+            linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
+            passed.
+            Per variable if sequence is given.
+        **kwargs : dict, optional
+            Additional keyword arguments are passed on to each animation function
+        """
+
+        nvars = len(variables)
+
+        if nrows is None and ncols is None:
+            ncols = int(np.ceil(np.sqrt(nvars)))
+            nrows = int(np.ceil(nvars/ncols))
+        elif nrows is None:
+            nrows = int(np.ceil(nvars/ncols))
+        elif ncols is None:
+            ncols = int(np.ceil(nvars/nrows))
+        else:
+            if nrows*ncols < nvars:
+                raise ValueError('Not enough rows*columns to fit all variables')
+
+        fig, axes = plt.subplots(nrows, ncols, squeeze=False)
+
+        if subplots_adjust is not None:
+            fig.subplots_adjust(**subplots_adjust)
+
+        def _expand_list_arg(arg, arg_name):
+            if isinstance(arg, collections.Sequence):
+                if len(arg) != len(variables):
+                    raise ValueError('if %s is a sequence, it must have the same '
+                                     'number of elements as "variables"' % arg_name)
+            else:
+                arg = [arg] * len(variables)
+            return arg
+        poloidal_plot = _expand_list_arg(poloidal_plot, 'poloidal_plot')
+        vmin = _expand_list_arg(vmin, 'vmin')
+        vmax = _expand_list_arg(vmax, 'vmax')
+        logscale = _expand_list_arg(logscale, 'logscale')
+
+        blocks = []
+        for subplot_args in zip(variables, axes.flatten(), poloidal_plot, vmin, vmax,
+                                logscale):
+
+            v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale = subplot_args
+
+            if isinstance(v, str):
+                v = self.data[v]
+
+            data = v.bout.data
+            ndims = len(data.dims)
+            ax.set_title(data.name)
+
+            if ndims == 2:
+                blocks.append(animate_line(data=data, ax=ax, animate_over=animate_over,
+                                           animate=False, **kwargs))
+            elif ndims == 3:
+                if this_vmin is None:
+                    this_vmin = data.min().values
+                if this_vmax is None:
+                    this_vmax = data.max().values
+
+                norm = _create_norm(this_logscale, kwargs.get('norm', None), this_vmin,
+                                    this_vmax)
+
+                if this_poloidal_plot:
+                    var_blocks = animate_poloidal(data, ax=ax,
+                                                  animate_over=animate_over,
+                                                  animate=False, vmin=this_vmin,
+                                                  vmax=this_vmax, norm=norm, **kwargs)
+                    for block in var_blocks:
+                        blocks.append(block)
+                else:
+                    blocks.append(animate_pcolormesh(data=data, ax=ax,
+                                                     animate_over=animate_over,
+                                                     animate=False, vmin=this_vmin,
+                                                     vmax=this_vmax, norm=norm,
+                                                     **kwargs))
+            else:
+                raise ValueError("Unsupported number of dimensions "
+                                 + str(ndims) + ". Dims are " + str(v.dims))
+
+        timeline = amp.Timeline(np.arange(v.sizes[animate_over]), fps=fps)
+        anim = amp.Animation(blocks, timeline)
+        anim.controls(timeline_slider_args={'text': animate_over})
+
+        if save_as is not None:
+            anim.save(save_as + '.gif', writer='imagemagick')
+
+        if show:
+            plt.show()
+
+        return anim
 
 
 def _find_time_dependent_vars(data):
