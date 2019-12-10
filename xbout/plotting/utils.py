@@ -1,7 +1,30 @@
 import warnings
 
+import matplotlib as mpl
 import numpy as np
 import xarray as xr
+
+
+def _create_norm(logscale, norm, vmin, vmax):
+    if logscale:
+        if norm is not None:
+            raise ValueError("norm and logscale cannot both be passed at the same "
+                             "time.")
+        if vmin*vmax > 0:
+            # vmin and vmax have the same sign, so can use standard log-scale
+            norm = mpl.colors.LogNorm(vmin=vmin, vmax=vmax)
+        else:
+            # vmin and vmax have opposite signs, so use symmetrical logarithmic scale
+            if not isinstance(logscale, bool):
+                linear_scale = logscale
+            else:
+                linear_scale = 1.e-5
+            linear_threshold = min(abs(vmin), abs(vmax)) * linear_scale
+            norm = mpl.colors.SymLogNorm(linear_threshold, vmin=vmin, vmax=vmax)
+    elif norm is None:
+        norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+
+    return norm
 
 
 def plot_separatrix(da, sep_pos, ax, radial_coord='x'):
