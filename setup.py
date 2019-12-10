@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 with open("README.md", 'r') as f:
     long_description = f.read()
@@ -10,6 +10,16 @@ with open("xbout/_version.py") as f:
 name = 'xBOUT'
 version = version_dict['__version__']
 release = version
+
+extras_require = {
+  'calc': ['numpy >= 1.13.0', 'scipy >= 1.3.0', 'dask >= 2.2.0',
+           'statsmodels >= 0.10.1', 'xrft', 'xhistogram'],
+  'docs': ['sphinx >= 1.4'],
+}
+
+packages = ['xbout', 'xbout.calc']
+
+tests = [p + '.tests' for p in packages]
 
 setup(
     name=name,
@@ -29,10 +39,8 @@ setup(
         'netcdf4>=1.4.0',
         'Pillow>=6.1.0'
     ],
-    extras_require={
-        'tests': ['pytest >= 3.3.0'],
-        'docs': ['sphinx >= 1.4'],
-    },
+    extras_require=extras_require,
+    tests_require=['pytest >= 3.3.0'],
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[
@@ -47,7 +55,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Topic :: Scientific/Engineering :: Visualization"
     ],
-    packages=find_packages(),
+    packages=packages + tests,
     include_package_data=True,
     command_options={
         'build_sphinx': {
