@@ -152,7 +152,8 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     # Record which dimensions 't', 'x', and 'y' were renamed to.
     ds.metadata['bout_tdim'] = coordinates['t']
-    ds.metadata['bout_xdim'] = coordinates['x']
+    # x dimension not renamed, so this is still 'x'
+    ds.metadata['bout_xdim'] = 'x'
     ds.metadata['bout_ydim'] = coordinates['y']
 
     # If full data (not just grid file) then toroidal dim will be present
