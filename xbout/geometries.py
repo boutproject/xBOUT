@@ -102,6 +102,7 @@ def _set_default_toroidal_coordinates(coordinates):
         coordinates = {}
 
     # Replace any values that have not been passed in with defaults
+    coordinates['t'] = coordinates.get('t', 't')
     coordinates['x'] = coordinates.get('x', 'psi_poloidal')
     coordinates['y'] = coordinates.get('y', 'theta')
     coordinates['z'] = coordinates.get('z', 'zeta')
@@ -132,6 +133,9 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
                                  "open_boutdataset().")
             ds[v] = grid[v]
 
+    # Rename 't' if user requested it
+    ds = ds.rename(t=coordinates['t'])
+
     # Change names of dimensions to Orthogonal Toroidal ones
     ds = ds.rename(y=coordinates['y'])
 
@@ -146,6 +150,11 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     ds = ds.set_coords(coordinates['x'])
     ds[coordinates['x']].attrs['units'] = 'Wb'
 
+    # Record which dimensions 't', 'x', and 'y' were renamed to.
+    ds.metadata['bout_tdim'] = coordinates['t']
+    ds.metadata['bout_xdim'] = coordinates['x']
+    ds.metadata['bout_ydim'] = coordinates['y']
+
     # If full data (not just grid file) then toroidal dim will be present
     if 'z' in ds.dims:
         ds = ds.rename(z=coordinates['z'])
@@ -153,6 +162,9 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         phi = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=nz),
                            dims=coordinates['z'])
         ds = ds.assign_coords(**{coordinates['z']: phi})
+
+        # Record which dimension 'z' was renamed to.
+        ds.metadata['bout_zdim'] = coordinates['z']
 
     # Add 2D Cylindrical coordinates
     if ('R' not in ds) and ('Z' not in ds):
