@@ -66,7 +66,7 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)])
+                                                    ds['n'].isel(y=1, z=2)])
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -77,7 +77,7 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(y=2, z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                          ds['n'].isel(y=1, z=2)])
+                                                         ds['n'].isel(y=1, z=2)])
 
         assert isinstance(animation.blocks[0], Line)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -88,8 +88,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(t=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                    animate_over='x')
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   animate_over='x')
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -100,8 +100,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                    save_as="%s/test" % save_dir)
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   save_as="%s/test" % save_dir)
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -112,8 +112,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                    fps=42)
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   fps=42)
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -125,8 +125,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                    nrows=2)
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   nrows=2)
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -137,8 +137,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                    ncols=3)
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   ncols=3)
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -150,8 +150,8 @@ class TestAnimate:
 
         with pytest.raises(ValueError):
             animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                         ds['n'].isel(y=1, z=2)],
-                                                        nrows=2, ncols=1)
+                                                        ds['n'].isel(y=1, z=2)],
+                                                       nrows=2, ncols=1)
 
     @pytest.mark.skip(reason='test data for plot_poloidal needs more work')
     def test_animate_list_poloidal_plot(self, create_test_file):
@@ -183,8 +183,8 @@ class TestAnimate:
         ds = apply_geometry(ds, 'toroidal')
 
         animation = ds.isel(zeta=3).bout.animate_list(['n', ds['T'].isel(zeta=3),
-                                                        ds['n'].isel(theta=1, zeta=2)],
-                                                       poloidal_plot=True)
+                                                       ds['n'].isel(theta=1, zeta=2)],
+                                                      poloidal_plot=True)
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -195,9 +195,9 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                    subplots_adjust={'hspace': 4,
-                                                                     'wspace': 5})
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   subplots_adjust={'hspace': 4,
+                                                                    'wspace': 5})
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -208,8 +208,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                     vmin=-0.1)
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   vmin=-0.1)
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -220,8 +220,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                    vmin=[0., 0.1, 0.2])
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   vmin=[0., 0.1, 0.2])
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -232,8 +232,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                     vmax=1.1)
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   vmax=1.1)
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -244,8 +244,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                    vmax=[1., 1.1, 1.2])
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   vmax=[1., 1.1, 1.2])
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -256,8 +256,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                    logscale=True)
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   logscale=True)
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -268,8 +268,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                    logscale=1.e-2)
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   logscale=1.e-2)
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -280,8 +280,8 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
-                                                     ds['n'].isel(y=1, z=2)],
-                                                    logscale=[True, 1.e-2, False])
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   logscale=[True, 1.e-2, False])
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
