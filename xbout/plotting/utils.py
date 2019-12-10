@@ -74,15 +74,15 @@ def _decompose_regions(da):
     ystart = 0  # Y index to start the next section
     if j11 >= 0:
         # plot lower inner leg
-        region1 = da.isel(**{y: slice(ystart, (j11 + 1))})
+        region1 = da.isel(y=slice(ystart, (j11 + 1)))
 
         yind = [j11, j22 + 1]
-        region2 = da.isel(**{x: slice(0, ix1), y:yind})
+        region2 = da.isel(x=slice(0, ix1), y=yind)
 
-        region3 = da.isel(**{x: slice(ix1, None), y: slice(j11, (j11 + 2))})
+        region3 = da.isel(x=slice(ix1, None), y=slice(j11, (j11 + 2)))
 
         yind = [j22, j11 + 1]
-        region4 = da.isel(**{x: slice(0, ix1), y: yind})
+        region4 = da.isel(x=slice(0, ix1), y=yind)
 
         regions.extend([region1, region2, region3, region4])
 
@@ -90,7 +90,7 @@ def _decompose_regions(da):
 
     if j21 + 1 > ystart:
         # Inner SOL
-        region5 = da.isel(**{y: slice(ystart, (j21 + 1))})
+        region5 = da.isel(y=slice(ystart, (j21 + 1)))
         regions.append(region5)
 
         ystart = j21 + 1
@@ -99,19 +99,19 @@ def _decompose_regions(da):
         # Contains upper PF region
 
         # Inner leg
-        region6 = da.isel(**{x: slice(ix1, None), y: slice(j21, (j21 + 2))})
-        region7 = da.isel(**{y: slice(ystart, nin)})
+        region6 = da.isel(x=slice(ix1, None), y=slice(j21, (j21 + 2)))
+        region7 = da.isel(y=slice(ystart, nin))
 
         # Outer leg
-        region8 = da.isel(**{y: slice(nin, (j12 + 1))})
-        region9 = da.isel(**{x: slice(ix1, None), y: slice(j12, (j12 + 2))})
+        region8 = da.isel(y=slice(nin, (j12 + 1)))
+        region9 = da.isel(x=slice(ix1, None), y=slice(j12, (j12 + 2)))
 
         yind = [j21, j12 + 1]
 
-        region10 = da.isel(**{x: slice(0, ix1), y: yind})
+        region10 = da.isel(x=slice(0, ix1), y=yind)
 
         yind = [j21 + 1, j12]
-        region11 = da.isel(**{x: slice(0, ix1), y: yind})
+        region11 = da.isel(x=slice(0, ix1), y=yind)
 
         regions.extend([region6, region7, region8,
                         region9, region10, region11])
@@ -122,29 +122,29 @@ def _decompose_regions(da):
 
     if j22 + 1 > ystart:
         # Outer SOL
-        region12 = da.isel(**{y: slice(ystart, (j22 + 1))})
+        region12 = da.isel(y=slice(ystart, (j22 + 1)))
         regions.append(region12)
 
         ystart = j22 + 1
 
     if j22 + 1 < ny:
         # Outer leg
-        region13 = da.isel(**{x: slice(ix1, None), y: slice(j22, (j22 + 2))})
-        region14 = da.isel(**{y: slice(ystart, ny)})
+        region13 = da.isel(x=slice(ix1, None), y=slice(j22, (j22 + 2)))
+        region14 = da.isel(y=slice(ystart, ny))
 
         # X-point regions
-        corner1 = da.isel(**{x: ix1-1, y: j11})
-        corner2 = da.isel(**{x: ix1, y: j11})
-        corner3 = da.isel(**{x: ix1, y: j11+1})
-        corner4 = da.isel(**{x: ix1-1, y: j11+1})
+        corner1 = da.isel(x=ix1-1, y=j11)
+        corner2 = da.isel(x=ix1, y=j11)
+        corner3 = da.isel(x=ix1, y=j11+1)
+        corner4 = da.isel(x=ix1-1, y=j11+1)
 
         xregion_lower = xr.concat([corner1, corner2, corner3, corner4],
                                   dim='dim1')
 
-        corner5 = da.isel(**{x: ix1-1, y: j22+1})
-        corner6 = da.isel(**{x: ix1, y: j22+1})
-        corner7 = da.isel(**{x: ix1, y: j22})
-        corner8 = da.isel(**{x: ix1-1, y: j22})
+        corner5 = da.isel(x=ix1-1, y=j22+1)
+        corner6 = da.isel(x=ix1, y=j22+1)
+        corner7 = da.isel(x=ix1, y=j22)
+        corner8 = da.isel(x=ix1-1, y=j22)
 
         xregion_upper = xr.concat([corner5, corner6, corner7, corner8],
                                   dim='dim1')
@@ -159,18 +159,18 @@ def _decompose_regions(da):
 
     if j21 > j11 and j12 > j21 and j22 > j12:
         # X-point regions
-        corner1 = da.isel(**{x: ix1-1, y: j12})
-        corner2 = da.isel(**{x: ix1, y: j12})
-        corner3 = da.isel(**{x: ix1, y: j12+1})
-        corner4 = da.isel(**{x: ix1-1, y: j12+1})
+        corner1 = da.isel(x=ix1-1, y=j12)
+        corner2 = da.isel(x=ix1, y=j12)
+        corner3 = da.isel(x=ix1, y=j12+1)
+        corner4 = da.isel(x=ix1-1, y=j12+1)
 
         xregion_lower = xr.concat([corner1, corner2, corner3, corner4],
                                   dim='dim1')
 
-        corner5 = da.isel(**{x: ix1-1, y: j21+1})
-        corner6 = da.isel(**{x: ix1, y: j21+1})
-        corner7 = da.isel(**{x: ix1, y: j21})
-        corner8 = da.isel(**{x: ix1-1, y: j21})
+        corner5 = da.isel(x=ix1-1, y=j21+1)
+        corner6 = da.isel(x=ix1, y=j21+1)
+        corner7 = da.isel(x=ix1, y=j21)
+        corner8 = da.isel(x=ix1-1, y=j21)
 
         xregion_upper = xr.concat([corner5, corner6, corner7, corner8],
                                   dim='dim1')
