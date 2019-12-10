@@ -34,7 +34,7 @@ Requirements
   - ``dask[array] >= 1.0.0``
   - ``natsort >= 5.5.0``
   - ``matplotlib >= 2.2``
-  - ``animatplot >= 0.3``
+  - ``animatplot >= 0.4.0``
   - ``netcdf4 >= 1.4.0``
 - All dependencies can be installed by running:
 
