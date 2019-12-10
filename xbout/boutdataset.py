@@ -1,3 +1,4 @@
+import collections
 from pprint import pformat as prettyformat
 from functools import partial
 
@@ -227,33 +228,18 @@ class BoutDatasetAccessor:
         if subplots_adjust is not None:
             fig.subplots_adjust(**subplots_adjust)
 
-        try:
-            if len(poloidal_plot) != len(variables):
-                raise ValueError('if poloidal_plot is a sequence, it must have the same '
-                                 'number of elements as "variables"')
-        except TypeError:
-            poloidal_plot = [poloidal_plot] * len(variables)
-
-        try:
-            if len(vmin) != len(variables):
-                raise ValueError('if vmin is a sequence, it must have the same number '
-                                 'of elements as "variables"')
-        except TypeError:
-            vmin = [vmin] * len(variables)
-
-        try:
-            if len(vmax) != len(variables):
-                raise ValueError('if vmin is a sequence, it must have the same number '
-                                 'of elements as "variables"')
-        except TypeError:
-            vmax = [vmax] * len(variables)
-
-        try:
-            if len(logscale) != len(variables):
-                raise ValueError('if logscale is a sequence, it must have the '
-                                 'same number of elements as "variables"')
-        except TypeError:
-            logscale = [logscale] * len(variables)
+        def _expand_list_arg(arg, arg_name):
+            if isinstance(arg, collections.Sequence):
+                if len(arg) != len(variables):
+                    raise ValueError('if %s is a sequence, it must have the same '
+                                     'number of elements as "variables"' % arg_name)
+            else:
+                arg = [arg] * len(variables)
+            return arg
+        poloidal_plot = _expand_list_arg(poloidal_plot, 'poloidal_plot')
+        vmin = _expand_list_arg(vmin, 'vmin')
+        vmax = _expand_list_arg(vmax, 'vmax')
+        logscale = _expand_list_arg(logscale, 'logscale')
 
         blocks = []
         for this in zip(variables, axes.flatten(), poloidal_plot, vmin, vmax, logscale):
