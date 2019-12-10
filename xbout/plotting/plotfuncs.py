@@ -228,14 +228,14 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                 # Small regions around X-point do not have segments in x- or y-directions,
                 # so skip
                 continue
-            if 'x' in gridlines and gridlines['x'] is not None:
+            if gridlines.get('x') is not None:
                 # transpose in case Dataset or DataArray has been transposed away from the usual
                 # form
                 dim_order = (da.metadata['bout_xdim'], da.metadata['bout_ydim'])
                 yarg = {da.metadata['bout_ydim']: gridlines['x']}
                 plt.plot(R.isel(**yarg).transpose(*dim_order),
                          Z.isel(**yarg).transpose(*dim_order), color='k', lw=0.1)
-            if 'y' in gridlines and gridlines['y'] is not None:
+            if gridlines.get('y') is not None:
                 xarg = {da.metadata['bout_xdim']: gridlines['y']}
                 # Need to plot transposed arrays to make gridlines that go in the
                 # y-direction
