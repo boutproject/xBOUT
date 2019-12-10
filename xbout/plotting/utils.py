@@ -64,8 +64,11 @@ def _decompose_regions(da):
     j11, j12, j21, j22, ix1, ix2, nin, _, ny, y_boundary_guards = _get_seps(da)
     regions = []
 
-    x, y = da.dims[-2:]
-    other_dims = da.dims[:-2]
+    x = da.dims[da.metadata['bout_xdim']]
+    y = da.dims[da.metadata['bout_ydim']]
+    other_dims = list(da.dims)
+    other_dims.remove(x)
+    other_dims.remove(y)
 
     ystart = 0  # Y index to start the next section
     if j11 >= 0:
