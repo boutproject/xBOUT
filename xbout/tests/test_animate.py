@@ -65,90 +65,90 @@ class TestAnimate:
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)])
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_1d_default(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(y=2, z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(y=2, z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                           ds['n'].isel(y=1, z=2)])
 
-        assert isinstance(animations.blocks[0], Line)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Line)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_animate_over(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(t=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(t=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                     animate_over='x')
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_save_as(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                     save_as="%s/test" % save_dir)
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_fps(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                     fps=42)
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_nrows(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                     nrows=2)
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_ncols(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                     ncols=3)
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_not_enough_nrowsncols(self, create_test_file):
 
         save_dir, ds = create_test_file
 
         with pytest.raises(ValueError):
-            animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+            animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                          ds['n'].isel(y=1, z=2)],
                                                         nrows=2, ncols=1)
 
@@ -181,107 +181,107 @@ class TestAnimate:
 
         ds = apply_geometry(ds, 'toroidal')
 
-        animations = ds.isel(zeta=3).bout.animate_list(['n', ds['T'].isel(zeta=3),
+        animation = ds.isel(zeta=3).bout.animate_list(['n', ds['T'].isel(zeta=3),
                                                         ds['n'].isel(theta=1, zeta=2)],
                                                        poloidal_plot=True)
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_subplots_adjust(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                     subplots_adjust={'hspace': 4,
                                                                      'wspace': 5})
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_vmin(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                      vmin=-0.1)
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_vmin_list(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                     vmin=[0., 0.1, 0.2])
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_vmax(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                      vmax=1.1)
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_vmax_list(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                     vmax=[1., 1.1, 1.2])
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_logscale(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                     logscale=True)
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_logscale_float(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                     logscale=1.e-2)
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
 
     def test_animate_list_logscale_list(self, create_test_file):
 
         save_dir, ds = create_test_file
 
-        animations = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
                                                      ds['n'].isel(y=1, z=2)],
                                                     logscale=[True, 1.e-2, False])
 
-        assert isinstance(animations.blocks[0], Pcolormesh)
-        assert isinstance(animations.blocks[1], Pcolormesh)
-        assert isinstance(animations.blocks[2], Line)
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert isinstance(animation.blocks[2], Line)
