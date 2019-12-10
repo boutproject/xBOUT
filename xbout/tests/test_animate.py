@@ -118,6 +118,7 @@ class TestAnimate:
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
+        assert animation.timeline.fps == 42
 
     def test_animate_list_nrows(self, create_test_file):
 
