@@ -204,8 +204,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         if not isinstance(gridlines, dict):
             gridlines = {'x': gridlines, 'y': gridlines}
 
-        for key in gridlines:
-            value = gridlines[key]
+        for key, value in gridlines:
             if value is True:
                 gridlines[key] = slice(None)
             elif isinstance(value, int):
@@ -213,7 +212,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
             elif value is not None:
                 if not isinstance(value, slice):
                     raise ValueError('Argument passed to gridlines must be bool, int or '
-                                     'slice. Got ' + str(value))
+                                     'slice. Got a ' + type(value) + ', ' + str(value))
         R_global = da['R']
         R_global.attrs['metadata'] = da.metadata
 
