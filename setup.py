@@ -25,7 +25,7 @@ setup(
         'dask[array]>=1.0.0',
         'natsort>=5.5.0',
         'matplotlib>=3.1.1',
-        'animatplot>=0.3',
+        'animatplot>=0.4.0',
         'netcdf4>=1.4.0',
         'Pillow>=6.1.0'
     ],
