@@ -287,9 +287,8 @@ def animate_line(data, animate_over='t', animate=True,
 
     line_block = amp.blocks.Line(image_data, ax=ax, **kwargs)
 
-    timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
-
     if animate:
+        timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
         anim = amp.Animation([line_block], timeline)
 
     # Add title and axis labels
