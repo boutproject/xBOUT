@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 import animatplot as amp
 
-from .utils import _decompose_regions, plot_separatrices, plot_targets
+from .utils import _decompose_regions, _is_core_only, plot_separatrices, plot_targets
 from matplotlib.animation import PillowWriter
 
 
@@ -92,6 +92,10 @@ def animate_poloidal(da, *, ax=None, animate_over='t', separatrix=True, targets=
     ax.set_title(da.name)
     ax.set_xlabel(x)
     ax.set_ylabel(y)
+
+    if _is_core_only(da):
+         separatrix = False
+         targets = False
 
     if separatrix:
         plot_separatrices(da, ax)
@@ -234,8 +238,7 @@ def animate_line(data, animate_over='t', animate=True,
     """
     Plots a line plot which is animated with time.
 
-    Currently only supports 1D+1 data, which it plots with xarray's
-    wrapping of matplotlib's plot.
+    Currently only supports 1D+1 data, which it plots with animatplot's Line animation.
 
     Parameters
     ----------

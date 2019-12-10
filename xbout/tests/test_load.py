@@ -169,7 +169,7 @@ def bout_xyt_example_files(tmpdir_factory):
 
 def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4, 7),
                             nxpe=4, nype=2, nt=1, guards={}, syn_data_type='random',
-                            grid=None):
+                            grid=None, squashed=False):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
 
@@ -178,8 +178,19 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
 
     save_dir = tmpdir_factory.mktemp("data")
 
-    ds_list, file_list = create_bout_ds_list(prefix=prefix, lengths=lengths, nxpe=nxpe, nype=nype, nt=nt,
-                                             guards=guards, syn_data_type=syn_data_type)
+    if squashed:
+        # create a single data-file, but alter the 'nxpe' and 'nype' variables, as if the
+        # file had been created by combining a set of BOUT.dmp.*.nc files
+        ds_list, file_list = create_bout_ds_list(prefix=prefix, lengths=lengths, nxpe=1,
+                                                 nype=1, nt=nt, guards=guards,
+                                                 syn_data_type=syn_data_type)
+        ds_list[0]['nxpe'] = nxpe
+        ds_list[0]['nype'] = nype
+    else:
+        ds_list, file_list = create_bout_ds_list(prefix=prefix, lengths=lengths,
+                                                 nxpe=nxpe, nype=nype, nt=nt,
+                                                 guards=guards,
+                                                 syn_data_type=syn_data_type)
 
     for ds, file_name in zip(ds_list, file_list):
         ds.to_netcdf(str(save_dir.join(str(file_name))))
@@ -190,7 +201,8 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
         grid_ds = create_bout_grid_ds(xsize=xsize, ysize=ysize, guards=guards)
         grid_ds.to_netcdf(str(save_dir.join(grid + ".nc")))
 
-    # Return a glob-like path to all files created, which has all file numbers replaced with a single asterix
+    # Return a glob-like path to all files created, which has all file numbers replaced
+    # with a single asterix
     path = str(save_dir.join(str(file_list[-1])))
 
     count = 1
@@ -389,6 +401,15 @@ class TestStripMetadata():
 class TestOpen:
     def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
+        expected = create_bout_ds()
+        xrt.assert_equal(actual.load(),
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                                       errors='ignore'))
+
+    def test_squashed_file(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1,
+                                      squashed=True)
         actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(),
