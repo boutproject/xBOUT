@@ -204,7 +204,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         if not isinstance(gridlines, dict):
             gridlines = {'x': gridlines, 'y': gridlines}
 
-        for key, value in gridlines:
+        for key, value in gridlines.items():
             if value is True:
                 gridlines[key] = slice(None)
             elif isinstance(value, int):
@@ -223,11 +223,25 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         Z_regions = _decompose_regions(da['Z'])
 
         for R, Z in zip(R_regions, Z_regions):
+            if (not da.metadata['bout_xdim'] in R.dims
+                    and not da.metadata['bout_ydim'] in R.dims):
+                # Small regions around X-point do not have segments in x- or y-directions,
+                # so skip
+                continue
             if 'x' in gridlines and gridlines['x'] is not None:
-                plt.plot(R[:, gridlines['y']], Z[:, gridlines['y']], color='k', lw=0.1)
+                # transpose in case Dataset or DataArray has been transposed away from the usual
+                # form
+                dim_order = (da.metadata['bout_xdim'], da.metadata['bout_ydim'])
+                yarg = {da.metadata['bout_ydim']: gridlines['x']}
+                plt.plot(R.isel(**yarg).transpose(*dim_order),
+                         Z.isel(**yarg).transpose(*dim_order), color='k', lw=0.1)
             if 'y' in gridlines and gridlines['y'] is not None:
-                plt.plot(R[gridlines['y'], :].T, Z[gridlines['y'], :].T, color='k',
-                         lw=0.1)
+                xarg = {da.metadata['bout_xdim']: gridlines['y']}
+                # Need to plot transposed arrays to make gridlines that go in the
+                # y-direction
+                dim_order = (da.metadata['bout_ydim'], da.metadata['bout_xdim'])
+                plt.plot(R.isel(**xarg).transpose(*dim_order),
+                         Z.isel(**yarg).transpose(*dim_order), color='k', lw=0.1)
 
     ax.set_title(da.name)
 
