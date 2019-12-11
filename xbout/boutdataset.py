@@ -5,6 +5,7 @@ from functools import partial
 from xarray import register_dataset_accessor, save_mfdataset, merge
 import animatplot as amp
 from matplotlib import pyplot as plt
+from matplotlib import PillowWriter
 import numpy as np
 from dask.diagnostics import ProgressBar
 
@@ -285,7 +286,7 @@ class BoutDatasetAccessor:
         anim.controls(timeline_slider_args={'text': animate_over})
 
         if save_as is not None:
-            anim.save(save_as + '.gif', writer='imagemagick')
+            anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
         if show:
             plt.show()
