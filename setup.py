@@ -19,6 +19,8 @@ extras_require = {
 
 packages = ['xbout', 'xbout.calc']
 
+modules = ['xbout.plotting']
+
 tests = [p + '.tests' for p in packages]
 
 setup(
@@ -55,7 +57,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Topic :: Scientific/Engineering :: Visualization"
     ],
-    packages=packages + tests,
+    packages=packages + tests + modules,
     include_package_data=True,
     command_options={
         'build_sphinx': {
