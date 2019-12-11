@@ -5,7 +5,7 @@ from functools import partial
 from xarray import register_dataset_accessor, save_mfdataset, merge
 import animatplot as amp
 from matplotlib import pyplot as plt
-from matplotlib import PillowWriter
+from matplotlib.animation import PillowWriter
 import numpy as np
 from dask.diagnostics import ProgressBar
 
