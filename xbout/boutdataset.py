@@ -212,10 +212,12 @@ class BoutDatasetAccessor:
         """
 
         nvars = len(variables)
+        std_format = False
 
         if nrows is None and ncols is None:
             ncols = int(np.ceil(np.sqrt(nvars)))
             nrows = int(np.ceil(nvars/ncols))
+            std_format = True
         elif nrows is None:
             nrows = int(np.ceil(nvars/ncols))
         elif ncols is None:
@@ -226,12 +228,11 @@ class BoutDatasetAccessor:
 
         fig, axes = plt.subplots(nrows, ncols, squeeze=False)
 
-        if not ((nvars % 2) == 0) or ((nvars + 1) % 2 == 0):
-            empty_cells = nvars // 3
+        ncells = nrows*ncols
 
-            for index in range(1,empty_cells+1):
-
-                fig.delaxes(axes[nrows-1, ncols-index])
+        if nvars < ncells and std_format:
+            for index in range(ncells-nvars):
+                fig.delaxes(axes[nrows-1, ncols-index-1])
 
         if subplots_adjust is not None:
             fig.subplots_adjust(**subplots_adjust)
