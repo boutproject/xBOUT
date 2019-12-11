@@ -152,9 +152,6 @@ def _decompose_regions(da):
 
         # re-arrange dimensions so that the new 'dim1' and 'dim2' are at the
         # end - ensures that a time dimension stays at the beginning
-        print('here dims', region15.dims, xregion_lower.dims, xregion_upper.dims)
-        print('corner dims', corner1.dims, corner2.dims, corner3.dims, corner4.dims)
-        print('x y', x, y)
         region15 = region15.transpose(*other_dims, 'dim2', 'dim1')
 
         regions.extend([region13, region14, region15])
