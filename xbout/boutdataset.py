@@ -226,7 +226,12 @@ class BoutDatasetAccessor:
 
         fig, axes = plt.subplots(nrows, ncols, squeeze=False)
 
-        fig.delaxes(axes[1,1])
+        if not ((nvars % 2) == 0) or ((nvars + 1) % 2 == 0):
+            empty_cells = nvars // 3
+
+            for index in range(1,empty_cells+1):
+
+                fig.delaxes(axes[nrows-1, ncols-index])
 
         if subplots_adjust is not None:
             fig.subplots_adjust(**subplots_adjust)
@@ -250,10 +255,10 @@ class BoutDatasetAccessor:
 
             v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale = subplot_args
 
-            #divider = make_axes_locatable(ax)
-           # cax = divider.append_axes("right", size="5%", pad=0.1)
-            cax=None
-           # ax.set_aspect("equal")
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.1)
+
+            ax.set_aspect("equal")
 
             if isinstance(v, str):
                 v = self.data[v]
@@ -295,7 +300,7 @@ class BoutDatasetAccessor:
         anim = amp.Animation(blocks, timeline)
         anim.controls(timeline_slider_args={'text': animate_over})
 
-        plt.tight_layout()
+        fig.tight_layout()
 
         if save_as is not None:
             anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
