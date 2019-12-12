@@ -70,6 +70,25 @@ class TestPathHandling:
 
         assert actual_filepaths == expected_filepaths
 
+    @pytest.mark.parametrize("ii, jj", [(1, 1), (1, 4), (3, 1), (5, 3), (1, 12),
+                                        (3, 111)])
+    def test_glob_expansion_brackets(self, tmpdir, ii, jj):
+        files_dir = tmpdir.mkdir("data")
+        filepaths = []
+        for i in range(ii):
+            example_run_dir = files_dir.mkdir('run' + str(i))
+            for j in range(jj):
+                example_file = example_run_dir.join('example.' + str(j) + '.nc')
+                example_file.write("content")
+                filepaths.append(Path(str(example_file)))
+        expected_filepaths = natsorted(filepaths,
+                                       key=lambda filepath: str(filepath))
+
+        path = Path(str(files_dir.join('run[1-9]/example.*.nc')))
+        actual_filepaths = _expand_wildcards(path)
+
+        assert actual_filepaths == expected_filepaths[jj:]
+
     def test_no_files(self, tmpdir):
         files_dir = tmpdir.mkdir("data")
 
