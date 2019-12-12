@@ -133,7 +133,7 @@ this repository too.
 
 Things which definitely need to be included (see the 1.0 milestone):
 
-- [ ] More tests, both with
+- [x] More tests, both with
  and against the original
 `boutdata.collect()`
 - [ ] Speed test against old collect
@@ -144,12 +144,13 @@ Things which would be nice and I plan to do:
 [issue](https://github.com/TomNicholas/xBOUT/issues/3))
 - [ ] Real-space coordinates
 - [ ] Variable names and units (following CF conventions)
+- [ ] Unit-aware arrays
 - [ ] Variable normalisations
 
 Things which might require a fair amount of effort by another developer but
 could be very powerful:
 
-- [ ] Using real-space coordinates to create tokamak-shaped plots
+- [x] Using real-space coordinates to create tokamak-shaped plots
 - [ ] Support for staggered grids using xgcm
 - [ ] Support for encoding topology using xgcm
 - [ ] API for applying BoutCore operations (hopefully using `xr.apply_ufunc`)
