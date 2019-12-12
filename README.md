@@ -30,7 +30,7 @@ git clone https://github.com/boutproject/xBOUT.git
 Once cloned navigate to the xBOUT directory and run the following command:
 
 ```bash
-+pip3 install --user ./
+pip3 install --user ./
 ```
 
 ### Loading your data
