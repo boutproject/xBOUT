@@ -207,8 +207,9 @@ class BoutDatasetAccessor:
             linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
             passed.
             Per variable if sequence is given.
-        titles : sequence of str
-            Custom titles for each plot
+        titles : sequence of str or None, optional
+            Custom titles for each plot. Pass None in the sequence to use the default for
+            a certain variable
         **kwargs : dict, optional
             Additional keyword arguments are passed on to each animation function
         """
