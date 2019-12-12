@@ -212,12 +212,10 @@ class BoutDatasetAccessor:
         """
 
         nvars = len(variables)
-        std_format = False
 
         if nrows is None and ncols is None:
             ncols = int(np.ceil(np.sqrt(nvars)))
             nrows = int(np.ceil(nvars/ncols))
-            std_format = True
         elif nrows is None:
             nrows = int(np.ceil(nvars/ncols))
         elif ncols is None:
@@ -230,7 +228,7 @@ class BoutDatasetAccessor:
 
         ncells = nrows*ncols
 
-        if nvars < ncells and std_format:
+        if nvars < ncells:
             for index in range(ncells-nvars):
                 fig.delaxes(axes[nrows-1, ncols-index-1])
 
