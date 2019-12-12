@@ -482,6 +482,15 @@ class TestOpen:
         save_dir = tmpdir_factory.mktemp('data')
         actual.bout.save(str(save_dir.join('boutdata.nc')))
 
+    def test_drop_vars(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1,
+                                      syn_data_type='stepped')
+        ds = open_boutdataset(datapath=path, keep_xboundaries=False,
+                              drop_variables=['T'])
+
+        assert 'T' not in ds.keys()
+        assert 'n' in ds.keys()
+
     @pytest.mark.skip
     def test_combine_along_tx(self):
         ...
@@ -596,7 +605,7 @@ class TestTrim:
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
         actual = _trim(ds, guards={}, keep_boundaries={}, nxpe=1,
-                       nype=1)
+                       nype=1, drop_variables=None)
         xrt.assert_equal(actual, ds)
 
     def test_trim_guards(self):
@@ -604,7 +613,7 @@ class TestTrim:
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding['source'] = 'folder0/BOUT.dmp.0.nc'
         actual = _trim(ds, guards={'time': 2}, keep_boundaries={},
-                       nxpe=1, nype=1)
+                       nxpe=1, nype=1, drop_variables=None)
         selection = {'time': slice(2, -2)}
         expected = ds.isel(**selection)
         xrt.assert_equal(expected, actual)
@@ -727,7 +736,8 @@ class TestTrim:
         ds['jyseps2_1'] = 8
         ds['jyseps1_2'] = 8
 
-        actual = _trim(ds, guards={'x': 2}, keep_boundaries={'x': True}, nxpe=1, nype=1)
+        actual = _trim(ds, guards={'x': 2}, keep_boundaries={'x': True}, nxpe=1, nype=1,
+                       drop_variables=None)
         expected = ds  # Should be unchanged
         xrt.assert_equal(expected, actual)
 
@@ -741,7 +751,8 @@ class TestTrim:
         ds['jyseps2_1'] = 8
         ds['jyseps1_2'] = 8
 
-        actual = _trim(ds, guards={'y': 2}, keep_boundaries={'y': True}, nxpe=1, nype=1)
+        actual = _trim(ds, guards={'y': 2}, keep_boundaries={'y': True}, nxpe=1, nype=1,
+                       drop_variables=None)
         expected = ds  # Should be unchanged
         xrt.assert_equal(expected, actual)
 
@@ -762,7 +773,8 @@ class TestTrim:
         ds['ny_inner'] = 8
         ds['MYSUB'] = 4
 
-        actual = _trim(ds, guards={'y': 2}, keep_boundaries={'y': True}, nxpe=1, nype=4)
+        actual = _trim(ds, guards={'y': 2}, keep_boundaries={'y': True}, nxpe=1, nype=4,
+                       drop_variables=None)
         expected = ds  # Should be unchanged
         if not lower:
             expected = expected.isel(y=slice(2, None, None))
@@ -780,7 +792,8 @@ class TestTrim:
 
         for v in _BOUT_PER_PROC_VARIABLES:
             ds[v] = 42.
-        ds = _trim(ds, guards={}, keep_boundaries={}, nxpe=1, nype=1)
+        ds = _trim(ds, guards={}, keep_boundaries={}, nxpe=1, nype=1,
+                   drop_variables=None)
 
         expected = create_test_data(0)
         xrt.assert_equal(ds, expected)
