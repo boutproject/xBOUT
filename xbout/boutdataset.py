@@ -225,12 +225,13 @@ class BoutDatasetAccessor:
                 raise ValueError('Not enough rows*columns to fit all variables')
 
         fig, axes = plt.subplots(nrows, ncols, squeeze=False)
+        axes = axes.flatten()
 
         ncells = nrows*ncols
 
         if nvars < ncells:
             for index in range(ncells-nvars):
-                fig.delaxes(axes[nrows-1, ncols-index-1])
+                fig.delaxes(axes[ncells - index - 1])
 
         if subplots_adjust is not None:
             fig.subplots_adjust(**subplots_adjust)
@@ -249,7 +250,7 @@ class BoutDatasetAccessor:
         logscale = _expand_list_arg(logscale, 'logscale')
 
         blocks = []
-        for subplot_args in zip(variables, axes.flatten(), poloidal_plot, vmin, vmax,
+        for subplot_args in zip(variables, axes, poloidal_plot, vmin, vmax,
                                 logscale):
 
             v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale = subplot_args
