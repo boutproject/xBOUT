@@ -8,9 +8,10 @@ from .utils import _decompose_regions, _is_core_only, plot_separatrices, plot_ta
 from matplotlib.animation import PillowWriter
 
 
-def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True, targets=True,
-                     add_limiter_hatching=True, cmap=None, vmin=None, vmax=None,
-                     animate=True, save_as=None, fps=10, controls=True, **kwargs):
+def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True,
+                     targets=True, add_limiter_hatching=True, cmap=None, vmin=None,
+                     vmax=None, animate=True, save_as=None, fps=10, controls=True,
+                     **kwargs):
     """
     Make a 2D plot in R-Z coordinates using animatplotlib's Pcolormesh, taking into
     account branch cuts (X-points).
