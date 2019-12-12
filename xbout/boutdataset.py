@@ -6,6 +6,9 @@ from xarray import register_dataset_accessor, save_mfdataset, merge
 import animatplot as amp
 from matplotlib import pyplot as plt
 from matplotlib.animation import PillowWriter
+
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 import numpy as np
 from dask.diagnostics import ProgressBar
 
@@ -223,6 +226,12 @@ class BoutDatasetAccessor:
 
         fig, axes = plt.subplots(nrows, ncols, squeeze=False)
 
+        ncells = nrows*ncols
+
+        if nvars < ncells:
+            for index in range(ncells-nvars):
+                fig.delaxes(axes[nrows-1, ncols-index-1])
+
         if subplots_adjust is not None:
             fig.subplots_adjust(**subplots_adjust)
 
@@ -245,6 +254,11 @@ class BoutDatasetAccessor:
 
             v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale = subplot_args
 
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.1)
+
+            ax.set_aspect("equal")
+
             if isinstance(v, str):
                 v = self.data[v]
 
@@ -265,14 +279,14 @@ class BoutDatasetAccessor:
                                     this_vmax)
 
                 if this_poloidal_plot:
-                    var_blocks = animate_poloidal(data, ax=ax,
+                    var_blocks = animate_poloidal(data, ax=ax, cax=cax,
                                                   animate_over=animate_over,
                                                   animate=False, vmin=this_vmin,
                                                   vmax=this_vmax, norm=norm, **kwargs)
                     for block in var_blocks:
                         blocks.append(block)
                 else:
-                    blocks.append(animate_pcolormesh(data=data, ax=ax,
+                    blocks.append(animate_pcolormesh(data=data, ax=ax, cax=cax,
                                                      animate_over=animate_over,
                                                      animate=False, vmin=this_vmin,
                                                      vmax=this_vmax, norm=norm,
@@ -284,6 +298,8 @@ class BoutDatasetAccessor:
         timeline = amp.Timeline(np.arange(v.sizes[animate_over]), fps=fps)
         anim = amp.Animation(blocks, timeline)
         anim.controls(timeline_slider_args={'text': animate_over})
+
+        fig.tight_layout()
 
         if save_as is not None:
             anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))

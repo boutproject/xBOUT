@@ -8,9 +8,10 @@ from .utils import _decompose_regions, _is_core_only, plot_separatrices, plot_ta
 from matplotlib.animation import PillowWriter
 
 
-def animate_poloidal(da, *, ax=None, animate_over='t', separatrix=True, targets=True,
-                     add_limiter_hatching=True, cmap=None, vmin=None, vmax=None,
-                     animate=True, save_as=None, fps=10, controls=True, **kwargs):
+def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True,
+                     targets=True, add_limiter_hatching=True, cmap=None, vmin=None,
+                     vmax=None, animate=True, save_as=None, fps=10, controls=True,
+                     **kwargs):
     """
     Make a 2D plot in R-Z coordinates using animatplotlib's Pcolormesh, taking into
     account branch cuts (X-points).
@@ -73,7 +74,7 @@ def animate_poloidal(da, *, ax=None, animate_over='t', separatrix=True, targets=
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
     cmap = sm.get_cmap()
-    fig.colorbar(sm, ax=ax)
+    fig.colorbar(sm, ax=ax, cax=cax)
 
     ax.set_aspect('equal')
 
@@ -119,7 +120,7 @@ def animate_poloidal(da, *, ax=None, animate_over='t', separatrix=True, targets=
 
 def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
                        vmin=None, vmax=None, vsymmetric=False, fps=10, save_as=None,
-                       ax=None, controls=True, **kwargs):
+                       ax=None, cax=None, controls=True, **kwargs):
     """
     Plots a color plot which is animated with time over the specified
     coordinate.
@@ -213,7 +214,7 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
         timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
         anim = amp.Animation([pcolormesh_block], timeline)
 
-    cbar = plt.colorbar(pcolormesh_block.quad, ax=ax)
+    cbar = plt.colorbar(pcolormesh_block.quad, ax=ax, cax=cax)
     cbar.ax.set_ylabel(variable)
 
     # Add title and axis labels
