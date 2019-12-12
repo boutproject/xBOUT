@@ -71,7 +71,7 @@ class BoutDatasetAccessor:
         else:
             to_save = self.data[variables]
 
-        if savepath is './boutdata.nc':
+        if savepath == './boutdata.nc':
             print("Will save data into the current working directory, named as"
                   " boutdata_[var].nc")
         if savepath is None:
