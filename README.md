@@ -32,6 +32,10 @@ Once cloned navigate to the xBOUT directory and run the following command:
 ```bash
 pip3 install --user ./
 ```
+or
+```bash
+python3 setup.py install
+```
 
 ### Loading your data
 
