@@ -169,7 +169,7 @@ class BoutDatasetAccessor:
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
                      nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
-                     vmin=None, vmax=None, logscale=None, **kwargs):
+                     vmin=None, vmax=None, logscale=None, titles=None, **kwargs):
         """
         Parameters
         ----------
@@ -207,6 +207,8 @@ class BoutDatasetAccessor:
             linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
             passed.
             Per variable if sequence is given.
+        titles : sequence of str
+            Custom titles for each plot
         **kwargs : dict, optional
             Additional keyword arguments are passed on to each animation function
         """
@@ -248,12 +250,14 @@ class BoutDatasetAccessor:
         vmin = _expand_list_arg(vmin, 'vmin')
         vmax = _expand_list_arg(vmax, 'vmax')
         logscale = _expand_list_arg(logscale, 'logscale')
+        titles = _expand_list_arg(titles, 'titles')
 
         blocks = []
         for subplot_args in zip(variables, axes, poloidal_plot, vmin, vmax,
-                                logscale):
+                                logscale, titles):
 
-            v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale = subplot_args
+            (v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale,
+             this_title) = subplot_args
 
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.1)
@@ -295,6 +299,10 @@ class BoutDatasetAccessor:
             else:
                 raise ValueError("Unsupported number of dimensions "
                                  + str(ndims) + ". Dims are " + str(v.dims))
+
+            if this_title is not None:
+                # Replace default title with user-specified one
+                ax.set_title(this_title)
 
         timeline = amp.Timeline(np.arange(v.sizes[animate_over]), fps=fps)
         anim = amp.Animation(blocks, timeline)
