@@ -14,6 +14,25 @@ for common BOUT++ analysis and plotting tasks.
 Currently only in alpha (until 1.0 released) so please report any bugs,
 and feel free to raise issues asking questions or making suggestions.
 
+ 
+### Installation
+
+To install xBOUT on your system you must first clone the repository using:
+
+```bash
+git clone git@github.com:boutproject/xBOUT.git
+```
+or
+```bash
+git clone https://github.com/boutproject/xBOUT.git
+```
+
+Once cloned navigate to the xBOUT directory and run the following command:
+
+```bash
++pip3 install --user ./
+```
+
 ### Loading your data
 
 The function `open_boutdataset()` uses xarray & dask to collect BOUT++
