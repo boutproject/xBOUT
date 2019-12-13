@@ -286,3 +286,18 @@ class TestAnimate:
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
+
+    def test_animate_list_titles_list(self, create_test_file):
+
+        save_dir, ds = create_test_file
+
+        animation = ds.isel(z=3).bout.animate_list(['n', ds['T'].isel(x=2),
+                                                    ds['n'].isel(y=1, z=2)],
+                                                   titles=['a', None, 'b'])
+
+        assert isinstance(animation.blocks[0], Pcolormesh)
+        assert animation.blocks[0].ax.title.get_text() == 'a'
+        assert isinstance(animation.blocks[1], Pcolormesh)
+        assert animation.blocks[1].ax.title.get_text() == 'T'
+        assert isinstance(animation.blocks[2], Line)
+        assert animation.blocks[2].ax.title.get_text() == 'b'
