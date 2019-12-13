@@ -245,7 +245,12 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
     if selection:
         ds = ds.isel(selection)
 
-    return ds[varname].values
+    result = ds[varname].values
+
+    # Close netCDF files to ensure they are not locked if collect is called again
+    ds.close()
+
+    return result
 
 
 def _is_dump_files(datapath):
