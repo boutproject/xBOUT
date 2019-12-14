@@ -17,7 +17,8 @@ and feel free to raise issues asking questions or making suggestions.
  
 ### Installation
 
-To install xBOUT on your system you must first clone the repository using:
+xBOUT is not currently on pip or conda. Therefore to install xBOUT on 
+your system you must first clone the repository using:
 
 ```bash
 git clone git@github.com:boutproject/xBOUT.git
@@ -36,6 +37,14 @@ or
 ```bash
 python3 setup.py install
 ```
+
+You can run the tests by navigating to the `/xBOUT/` directory and
+entering `pytest`.
+
+xBOUT requires other python packages, which will be installed when you 
+run one of the above install commands if they are not already installed on 
+your system.
+
 
 ### Loading your data
 
@@ -114,24 +123,6 @@ There is included an example of a
 `StormDataset` which contains all the data from a
 [STORM](https://github.com/boutproject/STORM) simulation, as well as
 extra calculated quantities which are specific to the STORM module.
-
-
-
-### Installation
-
-Currently not on pip or conda, so you will need to clone this repo and
-install using `python setup.py`
-You can run the tests by navigating to the `/xBOUT/` directory and
-entering `pytest`.
-
-Requires xarray v0.12.2 or later.
-
-You will also need to install [dask](https://dask.org/),
-as described in the xarray documentation
-[here](http://xarray.pydata.org/en/stable/installing.html#for-parallel-computing),
-as well as [natsort](https://github.com/SethMMorton/natsort)
-and [animatplot](https://github.com/t-makaro/animatplot).
-
 
 
 ### Contributing
