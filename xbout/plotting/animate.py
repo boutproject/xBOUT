@@ -29,6 +29,10 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
         Draw solid lines at the target surfaces
     add_limiter_hatching : bool, optional
         Draw hatched areas at the targets
+    save_as : True or str, optional
+        If str is passed, save the animation as save_as+'.gif'.
+        If True is passed, save the animation with a default name,
+        '<variable name>_over_<animate_over>.gif'
     **kwargs : optional
         Additional arguments are passed on to method
 
@@ -111,9 +115,10 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
         if controls:
             anim.controls(timeline_slider_args={'text': animate_over})
 
-        if not save_as:
-            save_as = "{}_over_{}".format(da.name, animate_over)
-        anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
+        if save_as is not None:
+            if save_as is True:
+                save_as = "{}_over_{}".format(da.name, animate_over)
+            anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return blocks
 
@@ -145,8 +150,10 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
     vmax : float, optional
         Maximum value to use for colorbar. Default is to use maximum value of
         data across whole timeseries.
-    save_as: str, optional
-        Filename to give to the resulting gif
+    save_as : True or str, optional
+        If str is passed, save the animation as save_as+'.gif'.
+        If True is passed, save the animation with a default name,
+        '<variable name>_over_<animate_over>.gif'
     fps : int, optional
         Frames per second of resulting gif
     kwargs : dict, optional
@@ -226,9 +233,10 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
         if controls:
             anim.controls(timeline_slider_args={'text': animate_over})
 
-        if not save_as:
-            save_as = "{}_over_{}".format(variable, animate_over)
-        anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
+        if save_as is not None:
+            if save_as is True:
+                save_as = "{}_over_{}".format(variable, animate_over)
+            anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return pcolormesh_block
 
@@ -254,8 +262,10 @@ def animate_line(data, animate_over='t', animate=True,
         data across whole timeseries.
     sep_pos : int, optional
         Radial position at which to plot the separatrix
-    save_as: str, optional
-        Filename to give to the resulting gif
+    save_as : True or str, optional
+        If str is passed, save the animation as save_as+'.gif'.
+        If True is passed, save the animation with a default name,
+        '<variable name>_over_<animate_over>.gif'
     fps : int, optional
         Frames per second of resulting gif
     kwargs : dict, optional
@@ -308,8 +318,9 @@ def animate_line(data, animate_over='t', animate=True,
         if controls:
             anim.controls(timeline_slider_args={'text': animate_over})
 
-        if not save_as:
-            save_as = "{}_over_{}".format(variable, animate_over)
-        anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
+        if save_as is not None:
+            if save_as is True:
+                save_as = "{}_over_{}".format(variable, animate_over)
+            anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return line_block
