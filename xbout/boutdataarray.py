@@ -115,8 +115,8 @@ class BoutDataArrayAccessor:
                 "Data passed has an unsupported number of dimensions "
                 "({})".format(str(n_dims)))
 
-    def animate1D(self, animate_over='t', x='x', y='y', animate=True,
-                  fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
+    def animate1D(self, animate_over='t', animate=True, fps=10, save_as=None,
+                  sep_pos=None, ax=None, **kwargs):
         """
         Plots a line plot which is animated over time over the specified coordinate.
 
