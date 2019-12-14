@@ -58,12 +58,14 @@ class BoutDataArrayAccessor:
         y : str, optional
             Dimension to use on the y axis, default is None - then use the second spatial
             dimension of the data
-        sep_pos : int, optional
-            Radial position at which to plot the separatrix
+        animate : bool, optional
+            If set to false, do not create the animation, just return the block or blocks
         fps : int, optional
             Frames per second of resulting gif
-        save_as : str, optional
-            Filename to give to the resulting gif
+        save_as : True or str, optional
+            If str is passed, save the animation as save_as+'.gif'.
+            If True is passed, save the animation with a default name,
+            '<variable name>_over_<animate_over>.gif'
         ax : matplotlib.pyplot.axes object, optional
             Axis on which to plot the gif
         poloidal_plot : bool, optional
@@ -77,7 +79,7 @@ class BoutDataArrayAccessor:
             passed.
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
-            (e.g. imshow for 2D plots).
+            (animatplot.blocks.Pcolormesh).
         """
 
         data = self.data
@@ -115,6 +117,32 @@ class BoutDataArrayAccessor:
 
     def animate1D(self, animate_over='t', x='x', y='y', animate=True,
                   fps=10, save_as=None, sep_pos=None, ax=None, **kwargs):
+        """
+        Plots a line plot which is animated over time over the specified coordinate.
+
+        Currently only supports 1D+1 data, which it plots with animatplot's wrapping of
+        matplotlib's plot.
+
+        Parameters
+        ----------
+        animate_over : str, optional
+            Dimension over which to animate
+        fps : int, optional
+            Frames per second of resulting gif
+        save_as : True or str, optional
+            If str is passed, save the animation as save_as+'.gif'.
+            If True is passed, save the animation with a default name,
+            '<variable name>_over_<animate_over>.gif'
+        sep_pos : int, optional
+            Radial position at which to plot the separatrix
+        ax : Axes, optional
+            A matplotlib axes instance to plot to. If None, create a new
+            figure and axes, and plot to that
+        kwargs : dict, optional
+            Additional keyword arguments are passed on to the plotting function
+            (animatplot.blocks.Line).
+        """
+
         data = self.data
         variable = data.name
         n_dims = len(data.dims)
