@@ -17,10 +17,11 @@ class BoutOptions(BoutOptionsParser):
         super().__init__()
 
         # Initialise options by reading file
-        absfilepaths = self.read(filepath)
-        if len(absfilepaths) == 0:
-            raise FileNotFoundError(f"No file found at {Path(filepath)}")
-        self.filepath = Path(absfilepaths[0])
+        # Insert section header on 1st line to avoid MissingSectionHeaderError
+        with open(filepath, 'r') as original:
+            modified = "[top]\n" + original.read()
+            self.read_string(modified)
+        self.filepath = Path(filepath)
 
     def to_flat_dict(self):
         return {section: self.items(section) for section in self.sections()}

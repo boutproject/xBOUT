@@ -32,8 +32,9 @@ def example_options_file(tmpdir_factory):
                           'inner_boundary_flags': '1',
                           'outer_boundary_flags': '16',
                           'include_yguards': 'false'}
-    options['storm'] = {'B_0': '0.24   # Tesla',
-                        'T_e0': '15    # eV'}
+    options['storm'] = {'B_0': '0.24          # Tesla',
+                        'T_e0': '15           # eV',
+                        'isothermal': 'true   # switch'}
 
     # Create temporary directory
     save_dir = tmpdir_factory.mktemp("inputdata")
@@ -43,13 +44,20 @@ def example_options_file(tmpdir_factory):
     with open(optionsfilepath, 'w') as optionsfile:
         options.write(optionsfile)
 
+    # Remove the first (and default) section headers to emulate BOUT.inp file format
+    # TODO do this without opening file 3 times
+    with open(optionsfilepath, 'r') as fin:
+        data = fin.read().splitlines(True)
+    with open(optionsfilepath, 'w') as fout:
+        fout.writelines(data[4:])
+
     return Path(optionsfilepath)
 
 
 class TestReadFile:
     def test_no_file(self):
         with pytest.raises(FileNotFoundError):
-            BoutOptions('./')
+            BoutOptions('./wrong.inp')
 
     def test_open_real_example(self):
         # TODO this absolute filepath is sensitive to the directory the tests are run from?
@@ -66,16 +74,37 @@ class TestReadFile:
         assert opts_repr == f"BoutOptions('{example_options_file}')"
 
 
-@pytest.mark.skip
 class TestAccess:
-    def test_get_sections(self):
-        ...
-
-    def test_get_values(self):
-        ...
+    def test_get_sections(self, example_options_file):
+        opts = BoutOptions(example_options_file)
+        assert opts.sections() == ['top', 'mesh', 'mesh:ddx',
+                                   'laplace', 'storm']
 
     def test_get_nested_section(self):
         ...
+
+    def test_get_str_values(self, example_options_file):
+        opts = BoutOptions(example_options_file)
+        assert opts['laplace']['type'] == 'cyclic'
+        assert opts['laplace'].get('type') == 'cyclic'
+
+    @pytest.mark.xfail(reason='Type conversions not yet implemented')
+    def test_get_int_values(self, example_options_file):
+        opts = BoutOptions(example_options_file)
+        assert opts['mesh']['nx'] == 484
+        assert opts['mesh'].get('nx') == 484
+
+    @pytest.mark.xfail(reason='Type conversions not yet implemented')
+    def test_get_float_values(self, example_options_file):
+        opts = BoutOptions(example_options_file)
+        assert opts['mesh']['Lx'] == 400.0
+        assert opts['mesh'].get('Lx') == 400.0
+
+    @pytest.mark.xfail(reason='Type conversions not yet implemented')
+    def test_get_bool_values(self, example_options_file):
+        opts = BoutOptions(example_options_file)
+        assert opts['storm']['isothermal'] == True
+        assert opts['storm'].get('isothermal') == True
 
 
 @pytest.mark.skip
