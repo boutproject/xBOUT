@@ -1,0 +1,143 @@
+timestep              = 80                 # Timestep length of outputted data
+nout                  = 2000                # Number of outputted timesteps
+
+#nxpe = 4
+
+MZ                    = 256                 # Number of Z points
+zmin                  = 0
+zmax                  = 23.873241           # 23.873241*2pi = 150, z is fracs of 2pi, so Lz = 150
+myg                   = 0                   # No need for Y communications
+
+[mesh:ddx]
+first                 = C2
+second                = C2
+upwind                = C2
+
+[mesh:ddz]
+first                 = C2
+second                = C2
+upwind                = C2
+
+[mesh]
+Ly                    = 2000.0             # ~4m
+Lx                    = 400.0
+
+nx                    = 484                # including 4 guard cells
+ny                    = 1                  # excluding guard cells
+dx                    = Lx/(nx-4)
+dy                    = Ly/ny 
+
+[laplace]
+type                  = cyclic
+global_flags          = 0 
+inner_boundary_flags  = 1
+outer_boundary_flags  = 16
+include_yguards       = false
+
+[solver]
+type=cvode
+#timestep = 0.00000001    # Suggested init timestep for numerical methods
+mxstep = 100000000       # max steps before result is deemed not to converge
+#ATOL =   1e-12          # Absolute tolerance
+#RTOL =   1e-5           # Relative tolerance
+
+[storm]
+B_0                   = 0.24                # Tesla
+T_e0                  = 15                  # eV
+T_i0                  = 30                  # eV
+m_i                   = 2                   # Atomic Units
+q                     = 6.2                 # Dimensionless
+R_c                   = 1.5                 # m
+n_0                   = 0.5e13              # m-3
+Z                     = 1                   # Dimensionless
+loglambda             = -1                  # Dimensionless
+
+# If these parameters are specified, they will be used instead of the values calculated from the primary parameters above.
+# Using ESEL-like dissipation parameters form Militello 2013
+#mu_n0                 = 0.0121  # Will use nominal value of ~0.01
+#mu_vort0              = 5.0
+mu_vort_core           = 5.0
+#mu                    = 1000
+#nu_parallel0          = 0.07
+#kappa0                = 0.0440
+#kappa0_perp           = 0.0440
+#g0                    = 0.002862
+
+ixsep                 = 200                  # Radial position of separatrix
+
+n_bg                  = 0.01
+T_bg                  = 0.01
+
+L                     = mesh:Ly
+bracket               = 2                   # 0 = std, 1 = simple, 2 = arakawa
+isothermal            = false                # switch for isothermal simulations
+boussinesq            = true                # switch for solution with boussinesq approx (without requires multigrid)
+blob_sim              = false               # switch for blob_sim
+SOL_closure           = heuristic           # choice of 2d closure
+sheath_linear         = false               # switch to linearise sheath terms
+unit_bg               = false                # loss terms cause decay of fluctuations back to a background of n=1
+initial_noise         = true                # switch to add random noise to trigger instabilities
+uniform_diss_paras    = true
+driftwaves            = false
+
+[All]
+#scale = 0.0 
+#xs_opt = 3
+#zs_opt = 3
+#bndry_all = neumann
+
+[n]
+scale = 1.0
+sep_loc = 0.33333
+#sep_loc = storm:ixsep/(mesh:nx-4)
+falloff = 0.20
+bg = storm:n_bg
+#         initial bg in core  initial bg in sep     initial exp decay in sep
+function = H(sep_loc-x)*1.0 + H(x-sep_loc)*(bg + (1-bg)*exp(-(x-sep_loc)/falloff))
+bndry_xin = neumann_o2(0.0)
+bndry_xout = neumann_o2(0.0)
+
+[T]
+scale = 1.0
+sep_loc = 0.33333
+#sep_loc = storm:ixsep/(mesh:nx-4)
+falloff = 0.20
+bg = storm:T_bg
+#   	     initial bg in core  initial bg in sep     initial exp decay in sep
+function = H(sep_loc-x)*1.0 + H(x-sep_loc)*(bg + (1-bg)*exp(-(x-sep_loc)/falloff))
+bndry_xin = neumann_o2(0.0)     # Fix logT = 0.0, so T = 1.0 on inner boundary
+bndry_xout = neumann_o2(0.0)
+
+[vort]
+scale = 1.0
+function = 0.0
+#xs_opt = 3
+#zs_opt = 3
+bndry_xin = neumann(0.0)
+bndry_xout = neumann(0.0) 
+
+[B]         # Magnetic field 
+scale = 1.0
+function = 1.0 ; 
+
+##################################################################
+[S]       # Density source
+Ly                    = mesh:Ly
+scale                 = 1.0             # No sources, instead n & T are fixed to non-zero values on inner boundary
+turb_smag             = 11.0
+turb_swidth           = 0.01666666
+s_loc                 = 0.1                                                                                    # Fraction of distance along x to place centre of turbulence source
+function              = turb_smag*exp(-((x-s_loc)/turb_swidth)^2.0) / Ly
+
+[S_E]       # Temperature source
+Ly                    = mesh:Ly
+scale                 = 1.0             # No sources, instead n	& T are	fixed to non-zero values on inner boundary
+turb_smag             = 20.0    
+turb_swidth           = 0.01666666
+s_loc                 = 0.1                                                                                    # Fraction of distance along x to place centre of turbulence source
+function              = turb_smag*exp(-((x-s_loc)/turb_swidth)^2.0) / Ly
+
+[uE]
+bndry_xin             = neumann_o2
+bndry_xout            = neumann_o2
+
