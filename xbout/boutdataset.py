@@ -245,7 +245,7 @@ class BoutDatasetAccessor:
             fig.subplots_adjust(**subplots_adjust)
 
         def _expand_list_arg(arg, arg_name):
-            if isinstance(arg, collections.Sequence):
+            if isinstance(arg, collections.Sequence) and not isinstance(arg, str):
                 if len(arg) != len(variables):
                     raise ValueError('if %s is a sequence, it must have the same '
                                      'number of elements as "variables"' % arg_name)
