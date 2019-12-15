@@ -169,7 +169,8 @@ class BoutDatasetAccessor:
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
                      nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
-                     vmin=None, vmax=None, logscale=None, titles=None, **kwargs):
+                     vmin=None, vmax=None, logscale=None, titles=None, aspect='equal',
+                     **kwargs):
         """
         Parameters
         ----------
@@ -210,6 +211,8 @@ class BoutDatasetAccessor:
         titles : sequence of str or None, optional
             Custom titles for each plot. Pass None in the sequence to use the default for
             a certain variable
+        aspect : str or None, or sequence of str or None, optional
+            Argument to set_aspect() for each plot
         **kwargs : dict, optional
             Additional keyword arguments are passed on to each animation function
         """
@@ -252,18 +255,19 @@ class BoutDatasetAccessor:
         vmax = _expand_list_arg(vmax, 'vmax')
         logscale = _expand_list_arg(logscale, 'logscale')
         titles = _expand_list_arg(titles, 'titles')
+        aspect = _expand_list_arg(aspect, 'aspect')
 
         blocks = []
         for subplot_args in zip(variables, axes, poloidal_plot, vmin, vmax,
-                                logscale, titles):
+                                logscale, titles, aspect):
 
             (v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale,
-             this_title) = subplot_args
+             this_title, this_aspect) = subplot_args
 
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.1)
 
-            ax.set_aspect("equal")
+            ax.set_aspect(this_aspect)
 
             if isinstance(v, str):
                 v = self.data[v]
@@ -288,7 +292,8 @@ class BoutDatasetAccessor:
                     var_blocks = animate_poloidal(data, ax=ax, cax=cax,
                                                   animate_over=animate_over,
                                                   animate=False, vmin=this_vmin,
-                                                  vmax=this_vmax, norm=norm, **kwargs)
+                                                  vmax=this_vmax, norm=norm,
+                                                  aspect=this_aspect, **kwargs)
                     for block in var_blocks:
                         blocks.append(block)
                 else:
