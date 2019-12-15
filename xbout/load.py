@@ -1,3 +1,4 @@
+from copy import copy
 from warnings import warn
 from pathlib import Path
 from functools import partial
@@ -555,13 +556,32 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
     boundaries to deal with different conventions in a BOUT grid file.
     """
 
+    acceptable_dims = ['x', 'y', 'z']
+
+    # Passing 'chunks' with dimensions that are not present in the dataset causes an
+    # error. A gridfile will be missing 't' and may be missing 'z' dimensions that dump
+    # files have, so we must remove them from 'chunks'.
+    unrecognised_chunk_dims = list(set(chunks.keys()) - set(acceptable_dims))
+    chunks = copy(chunks)
+    for dim in unrecognised_chunk_dims:
+        del chunks[dim]
+
     gridfilepath = Path(datapath)
-    grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath),
-                           chunks=chunks)
+    try:
+        grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath),
+                               chunks=chunks)
+    except ValueError as e:
+        if str(e) == "some chunks keys are not dimensions on this object: ['z']":
+            # If chunks contained 'z' but the gridfile did not, still want to open, so
+            # remove 'z' from the local chunks, and continue
+            del chunks['z']
+            grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath),
+                                   chunks=chunks)
+        else:
+            raise
 
     # TODO find out what 'yup_xsplit' etc are in the doublenull storm file John gave me
     # For now drop any variables with extra dimensions
-    acceptable_dims = ['t', 'x', 'y', 'z']
     unrecognised_dims = list(set(grid.dims) - set(acceptable_dims))
     if len(unrecognised_dims) > 0:
         # Weird string formatting is a workaround to deal with possible bug in
