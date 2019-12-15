@@ -14,6 +14,8 @@ from dask.diagnostics import ProgressBar
 
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
+
+
 @register_dataset_accessor('bout')
 class BoutDatasetAccessor:
     """
