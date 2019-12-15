@@ -170,7 +170,7 @@ class BoutDatasetAccessor:
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
                      nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
                      vmin=None, vmax=None, logscale=None, titles=None, aspect='equal',
-                     **kwargs):
+                     tight_layout=False, **kwargs):
         """
         Parameters
         ----------
@@ -213,6 +213,8 @@ class BoutDatasetAccessor:
             a certain variable
         aspect : str or None, or sequence of str or None, optional
             Argument to set_aspect() for each plot
+        tight_layout : bool, optional
+            If set to True, call tight_layout() on the figure
         **kwargs : dict, optional
             Additional keyword arguments are passed on to each animation function
         """
@@ -314,7 +316,8 @@ class BoutDatasetAccessor:
         anim = amp.Animation(blocks, timeline)
         anim.controls(timeline_slider_args={'text': animate_over})
 
-        fig.tight_layout()
+        if tight_layout:
+            fig.tight_layout()
 
         if save_as is not None:
             anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
