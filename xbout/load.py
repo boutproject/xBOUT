@@ -567,18 +567,10 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
         del chunks[dim]
 
     gridfilepath = Path(datapath)
-    try:
-        grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath),
-                               chunks=chunks)
-    except ValueError as e:
-        if str(e) == "some chunks keys are not dimensions on this object: ['z']":
-            # If chunks contained 'z' but the gridfile did not, still want to open, so
-            # remove 'z' from the local chunks, and continue
-            del chunks['z']
-            grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath),
-                                   chunks=chunks)
-        else:
-            raise
+    grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath))
+    if 'z' in chunks and 'z' not in grid.dims:
+        del chunks['z']
+    grid.chunk(chunks)
 
     # TODO find out what 'yup_xsplit' etc are in the doublenull storm file John gave me
     # For now drop any variables with extra dimensions
