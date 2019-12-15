@@ -11,7 +11,7 @@ from matplotlib.animation import PillowWriter
 def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True,
                      targets=True, add_limiter_hatching=True, cmap=None, vmin=None,
                      vmax=None, animate=True, save_as=None, fps=10, controls=True,
-                     **kwargs):
+                     aspect='equal', **kwargs):
     """
     Make a 2D plot in R-Z coordinates using animatplotlib's Pcolormesh, taking into
     account branch cuts (X-points).
@@ -48,6 +48,8 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
         Frame rate for the animation
     controls : bool, optional
         If False, do not add the timeline and pause button to the animation
+    aspect : str or None, optional
+        Argument to set_aspect()
     **kwargs : optional
         Additional arguments are passed on to the animation method
         animatplot.blocks.Pcolormesh
@@ -96,7 +98,7 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
     cmap = sm.get_cmap()
     fig.colorbar(sm, ax=ax, cax=cax)
 
-    ax.set_aspect('equal')
+    ax.set_aspect(aspect)
 
     regions = _decompose_regions(da)
 
