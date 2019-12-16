@@ -15,6 +15,10 @@ from numpy import (pi, sin, cos, tan, arccos as acos, arcsin as asin,
                    round, abs)
 
 
+# TODO rewrite using pathlib
+# TODO make forced lowercase optional
+# TODO ability to read from/write to nested dictionary
+
 class BoutOptions:
     """This class represents a tree structure. Each node (BoutOptions
     object) can have several sub-nodes (sections), and several
@@ -52,12 +56,15 @@ class BoutOptions:
 
     """
 
+    # TODO instead of storing itself, make sections separate classes?
     def __init__(self, name="root", parent=None):
         self._sections = {}
         self._keys = {}
         self._name = name
         self._parent = parent
 
+    # TODO get_section should not also be a setter!
+    # separate set_section method?
     def get_section(self, name):
         """
         Return a section object. If the section does not exist then it is
@@ -102,6 +109,9 @@ class BoutOptions:
         """
         return self.get_section(name)
 
+    # TODO .get() method with optional evaluation
+
+    # TODO comment stripping here
     def __getitem__(self, key):
         """
         First check if it's a section, then a value
@@ -122,16 +132,18 @@ class BoutOptions:
             return
         self._keys[key.lower()] = value
 
+    # TODO give this a new name which can't be confused with filepath
     def path(self):
-        """Returns the path of this section, joining together names of
+        """
+        Returns the path of this section, joining together names of
         parents
-
         """
 
         if self._parent:
             return self._parent.path() + ":" + self._name
         return self._name
 
+    # TODO this should return a dict of pairs: (section, list of keys)
     def keys(self):
         """Returns all keys, including sections and values
 
@@ -150,6 +162,8 @@ class BoutOptions:
         """
         return self._keys.keys()
 
+    # TODO an .items() method like configparser
+
     def as_dict(self):
         """Return a nested dictionary of all the options.
 
@@ -158,9 +172,11 @@ class BoutOptions:
         dicttree.update({name:self[name].as_dict() for name in self.sections()})
         return dicttree
 
+    # TODO more intuitive definition of length
     def __len__(self):
         return len(self._sections) + len(self._keys)
 
+    # TODO this should yield pairs: (section key, section)
     def __iter__(self):
         """Iterates over all keys. First values, then sections
 
@@ -183,6 +199,7 @@ class BoutOptions:
             text += indent + " |- " + self._sections[s].__str__(indent+" |  ")
         return text
 
+    # TODO import configparser's interpolation classes?
     def evaluate_scalar(self, name):
         """
         Evaluate (recursively) scalar expressions
@@ -234,6 +251,7 @@ class BoutOptions:
 
         return expression
 
+    # TODO option to write out comments - would allow for roundtripping
     def write(self, filename=None, overwrite=False):
         """ Write to BOUT++ options file
 
@@ -316,6 +334,7 @@ class BoutOptionsFile(BoutOptions):
 
     """
 
+    # TODO options to read grid size from Dataset
     def __init__(self, filename="BOUT.inp", name="root",
                  gridfilename=None, nx=None, ny=None, nz=None):
         super().__init__(self, name)
@@ -347,10 +366,12 @@ class BoutOptionsFile(BoutOptions):
                     except KeyError:
                         pass
             elif nx or ny:
+                errmsg = "{} not specified. If either nx or ny are given, " \
+                         "then both must be."
                 if nx is None:
-                    raise ValueError("nx not specified. If either nx or ny are given, then both must be.")
+                    raise ValueError(errmsg.format(nx))
                 if ny is None:
-                    raise ValueError("ny not specified. If either nx or ny are given, then both must be.")
+                    raise ValueError(errmsg.format(ny))
                 self.nx = nx
                 self.ny = ny
             else:
@@ -408,6 +429,7 @@ class BoutOptionsFile(BoutOptions):
                                 f"exception occured: {str(msg)}\n"
                                 "Evaluating non-scalar options not available")
 
+    # TODO better exception handling (import from configparser?)
     def _read_file(self, f):
         # Go through each line in the file
         section = self  # Start with root section
@@ -461,7 +483,7 @@ class BoutOptionsFile(BoutOptions):
                     section[line[:eqpos].strip()] = value
 
     def __repr__(self):
-        # TODO Add grid-related options to this
+        # TODO Add grid-related options
         return f"BoutOptionsFile('{self.filepath}')"
 
     def evaluate(self, name):

@@ -78,7 +78,7 @@ class TestAccess:
         sections = BoutOptionsFile(example_options_file).sections()
 
         # TODO for now ignore problem of nesting
-        sections.remove('mesh:ddx')
+        #sections.remove('mesh:ddx')
         assert sections == ['top', 'mesh', 'laplace', 'storm']
 
     def test_get_str_values(self, example_options_file):
