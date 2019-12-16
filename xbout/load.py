@@ -570,7 +570,7 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
     grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath))
     if 'z' in chunks and 'z' not in grid.dims:
         del chunks['z']
-    grid.chunk(chunks)
+    grid = grid.chunk(chunks)
 
     # TODO find out what 'yup_xsplit' etc are in the doublenull storm file John gave me
     # For now drop any variables with extra dimensions
