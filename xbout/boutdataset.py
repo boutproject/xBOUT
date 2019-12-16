@@ -170,7 +170,7 @@ class BoutDatasetAccessor:
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
                      nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
                      vmin=None, vmax=None, logscale=None, titles=None, aspect='equal',
-                     tight_layout=False, **kwargs):
+                     controls=True, tight_layout=False, **kwargs):
         """
         Parameters
         ----------
@@ -213,6 +213,8 @@ class BoutDatasetAccessor:
             a certain variable
         aspect : str or None, or sequence of str or None, optional
             Argument to set_aspect() for each plot
+        controls : bool, optional
+            If set to False, do not show the time-slider or pause button
         tight_layout : bool, optional
             If set to True, call tight_layout() on the figure
         **kwargs : dict, optional
@@ -314,7 +316,8 @@ class BoutDatasetAccessor:
 
         timeline = amp.Timeline(np.arange(v.sizes[animate_over]), fps=fps)
         anim = amp.Animation(blocks, timeline)
-        anim.controls(timeline_slider_args={'text': animate_over})
+        if controls:
+            anim.controls(timeline_slider_args={'text': animate_over})
 
         if tight_layout:
             fig.tight_layout()
