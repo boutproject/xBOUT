@@ -14,6 +14,8 @@ from dask.diagnostics import ProgressBar
 
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
+
+
 @register_dataset_accessor('bout')
 class BoutDatasetAccessor:
     """
@@ -49,7 +51,8 @@ class BoutDatasetAccessor:
     #  self.prefix)
 
     def save(self, savepath='./boutdata.nc', filetype='NETCDF4',
-             variables=None, save_dtype=None, separate_vars=False):
+             variables=None, save_dtype=None, separate_vars=False,
+             compute=True):
         """
         Save data variables to a netCDF file.
 
@@ -63,6 +66,13 @@ class BoutDatasetAccessor:
             If this is true then every variable which depends on time will be saved into a different output file.
             The files are labelled by the name of the variable. Variables which don't depend on time will be present in
             every output file.
+        compute : bool, optional
+            If false, returns a `dask.delayed` object which can be executed later. Default is true.
+        
+        Returns
+        -------
+        dask.delayed
+            If compute=false, returns task as a `dask.delayed object`.
         """
 
         if variables is None:
@@ -124,17 +134,25 @@ class BoutDatasetAccessor:
                 path = Path(savepath)
                 var_savepath = str(path.parent / path.stem) + '_' \
                                + str(var) + path.suffix
-                print('Saving ' + var + ' data...')
-                with ProgressBar():
-                    single_var_ds.to_netcdf(path=str(var_savepath),
-                                            format=filetype, compute=True)
+                
+                if compute:
+                    print('Saving ' + var + ' data...')
+                    with ProgressBar():
+                        task = single_var_ds.to_netcdf(path=str(var_savepath),
+                                                       format=filetype, compute=True)
+                else:
+                    task = single_var_ds.to_netcdf(path=str(var_savepath),
+                                                   format=filetype, compute=False)
+                    return task
         else:
             # Save data to a single file
-            print('Saving data...')
-            with ProgressBar():
-                to_save.to_netcdf(path=savepath, format=filetype, compute=True)
-
-        return
+            if compute:
+                print('Saving data...')
+                with ProgressBar():
+                    to_save.to_netcdf(path=savepath, format=filetype, compute=True)
+            else:
+                task = to_save.to_netcdf(path=savepath, format=filetype, compute=False)
+                return task
 
     def to_restart(self, savepath='.', nxpe=None, nype=None,
                    original_splitting=False):
@@ -165,7 +183,6 @@ class BoutDatasetAccessor:
                                                        nxpe, nype)
         with ProgressBar():
             save_mfdataset(restart_datasets, paths, compute=True)
-        return
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
                      nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
