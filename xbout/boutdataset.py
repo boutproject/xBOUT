@@ -215,8 +215,10 @@ class BoutDatasetAccessor:
             Argument to set_aspect() for each plot
         controls : bool, optional
             If set to False, do not show the time-slider or pause button
-        tight_layout : bool, optional
+        tight_layout : bool or dict, optional
             If set to False, don't call tight_layout() on the figure.
+            If a dict is passed, the dict entries are passed as arguments to
+            tight_layout()
         **kwargs : dict, optional
             Additional keyword arguments are passed on to each animation function
         """
@@ -318,7 +320,9 @@ class BoutDatasetAccessor:
         anim = amp.Animation(blocks, timeline)
 
         if tight_layout:
-            fig.tight_layout()
+            if not isinstance(tight_layout, dict):
+                tight_layout = {}
+            fig.tight_layout(**tight_layout)
 
         if controls:
             anim.controls(timeline_slider_args={'text': animate_over})
