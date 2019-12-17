@@ -1,6 +1,7 @@
 import collections
 from pprint import pformat as prettyformat
 from functools import partial
+import warnings
 
 from xarray import register_dataset_accessor, save_mfdataset, merge
 import animatplot as amp
@@ -169,7 +170,8 @@ class BoutDatasetAccessor:
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
                      nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
-                     vmin=None, vmax=None, logscale=None, titles=None, **kwargs):
+                     vmin=None, vmax=None, logscale=None, titles=None, aspect='equal',
+                     controls=True, tight_layout=True, **kwargs):
         """
         Parameters
         ----------
@@ -210,6 +212,14 @@ class BoutDatasetAccessor:
         titles : sequence of str or None, optional
             Custom titles for each plot. Pass None in the sequence to use the default for
             a certain variable
+        aspect : str or None, or sequence of str or None, optional
+            Argument to set_aspect() for each plot
+        controls : bool, optional
+            If set to False, do not show the time-slider or pause button
+        tight_layout : bool or dict, optional
+            If set to False, don't call tight_layout() on the figure.
+            If a dict is passed, the dict entries are passed as arguments to
+            tight_layout()
         **kwargs : dict, optional
             Additional keyword arguments are passed on to each animation function
         """
@@ -240,7 +250,7 @@ class BoutDatasetAccessor:
             fig.subplots_adjust(**subplots_adjust)
 
         def _expand_list_arg(arg, arg_name):
-            if isinstance(arg, collections.Sequence):
+            if isinstance(arg, collections.Sequence) and not isinstance(arg, str):
                 if len(arg) != len(variables):
                     raise ValueError('if %s is a sequence, it must have the same '
                                      'number of elements as "variables"' % arg_name)
@@ -252,18 +262,19 @@ class BoutDatasetAccessor:
         vmax = _expand_list_arg(vmax, 'vmax')
         logscale = _expand_list_arg(logscale, 'logscale')
         titles = _expand_list_arg(titles, 'titles')
+        aspect = _expand_list_arg(aspect, 'aspect')
 
         blocks = []
         for subplot_args in zip(variables, axes, poloidal_plot, vmin, vmax,
-                                logscale, titles):
+                                logscale, titles, aspect):
 
             (v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale,
-             this_title) = subplot_args
+             this_title, this_aspect) = subplot_args
 
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.1)
 
-            ax.set_aspect("equal")
+            ax.set_aspect(this_aspect)
 
             if isinstance(v, str):
                 v = self.data[v]
@@ -288,7 +299,8 @@ class BoutDatasetAccessor:
                     var_blocks = animate_poloidal(data, ax=ax, cax=cax,
                                                   animate_over=animate_over,
                                                   animate=False, vmin=this_vmin,
-                                                  vmax=this_vmax, norm=norm, **kwargs)
+                                                  vmax=this_vmax, norm=norm,
+                                                  aspect=this_aspect, **kwargs)
                     for block in var_blocks:
                         blocks.append(block)
                 else:
@@ -307,9 +319,18 @@ class BoutDatasetAccessor:
 
         timeline = amp.Timeline(np.arange(v.sizes[animate_over]), fps=fps)
         anim = amp.Animation(blocks, timeline)
-        anim.controls(timeline_slider_args={'text': animate_over})
 
-        fig.tight_layout()
+        if tight_layout:
+            if subplots_adjust is not None:
+                warnings.warn('tight_layout argument to animate_list() is True, but '
+                              'subplots_adjust argument is not None. subplots_adjust '
+                              'is being ignored.')
+            if not isinstance(tight_layout, dict):
+                tight_layout = {}
+            fig.tight_layout(**tight_layout)
+
+        if controls:
+            anim.controls(timeline_slider_args={'text': animate_over})
 
         if save_as is not None:
             anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
