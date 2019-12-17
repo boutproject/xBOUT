@@ -1,6 +1,7 @@
 import collections
 from pprint import pformat as prettyformat
 from functools import partial
+import warnings
 
 from xarray import register_dataset_accessor, save_mfdataset, merge
 import animatplot as amp
@@ -320,6 +321,10 @@ class BoutDatasetAccessor:
         anim = amp.Animation(blocks, timeline)
 
         if tight_layout:
+            if subplots_adjust is not None:
+                warnings.warn('tight_layout argument to animate_list() is True, but '
+                              'subplots_adjust argument is not None. subplots_adjust '
+                              'is being ignored.')
             if not isinstance(tight_layout, dict):
                 tight_layout = {}
             fig.tight_layout(**tight_layout)
