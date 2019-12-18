@@ -77,6 +77,10 @@ class TestSection:
 
         assert sect['naulin'].lineage() == 'laplace:naulin'
 
+    def test_print(self, example_section):
+        sect = example_section
+        sect['naulin'] = {'iterations': '1000'}
+
 
 @pytest.fixture
 def example_options_tree():
@@ -143,7 +147,6 @@ class TestAccess:
         assert opts['laplace']['type'] == 'cyclic'
         assert opts['laplace'].get('type') == 'cyclic'
 
-    @pytest.mark.xfail(reason="Nesting not yet implemented")
     def test_get_nested_section_values(self, example_options_tree):
         opts = OptionsTree(example_options_tree)
         assert opts['mesh']['ddx']['upwind'] == 'C2'

@@ -15,10 +15,7 @@ from numpy import (pi, sin, cos, tan, arccos as acos, arcsin as asin,
 
 SECTION_DELIM = ':'
 COMMENT_DELIM = '#'
-
-
-from pprint import PrettyPrinter
-pp = PrettyPrinter()
+INDENT_STR = '|-- '
 
 
 class Section(UserDict):
@@ -151,16 +148,16 @@ class Section(UserDict):
         return self._find_sections([self])
 
     def __str__(self):
-        # TODO this needs to know the overall depth
+        depth = self.lineage().count(SECTION_DELIM)
+        indent = INDENT_STR * depth
 
-        namestr = f"[{self.name}]\n"
-        indent = "|-- "
+        text = indent + f"[{self.name}]\n"
         for key, val in self.items():
             if isinstance(val, Section):
-                datastr
+                text += str(val)
             else:
-                datastr = indent.join(indent + f"{key} = {val}\n")
-        return namestr + datastr
+                text += indent + INDENT_STR + f"{key} = {val}\n"
+        return text
 
     def _write(self, file, evaluate=False, keep_comments=True):
         """
@@ -185,6 +182,19 @@ class Section(UserDict):
             else:
                 line = f"{key} = {val}\n"
                 file.write(line)
+
+
+    #def _write(self):
+        """
+        text = f"[{self.lineage()}]\n"
+        indent = "|-- "
+        for key, val in self.items():
+            if not isinstance(val, Section):
+                text += indent + f"{key} = {val}\n"
+            else:
+                text += str(val)
+        return text
+        """
 
     def __repr__(self):
         return f"Section(name='{self.name}', parent='{self._parent}', " \
