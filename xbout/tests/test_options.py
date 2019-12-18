@@ -134,8 +134,9 @@ def example_options_file():
 class TestAccess:
     def test_get_sections(self, example_options_tree):
         sections = OptionsTree(example_options_tree).sections()
-        sect_names = [section.lineage() for section in sections]
-        assert sect_names == ['root', 'mesh', 'mesh:ddx', 'laplace', 'storm']
+        lineages = [section.lineage() for section in sections]
+        assert lineages == ['root', 'root:mesh', 'root:mesh:ddx',
+                            'root:laplace', 'root:storm']
 
     def test_get_str_values(self, example_options_tree):
         opts = OptionsTree(example_options_tree)

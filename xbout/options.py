@@ -124,9 +124,9 @@ class Section(UserDict):
         str
         """
         if self._parent is None or self._parent == 'root':
-            return self.name + SECTION_DELIM
+            return self.name
         else:
-            return self._parent.lineage() + self.name
+            return self._parent.lineage() + SECTION_DELIM + self.name
 
     def _find_sections(self, sections):
         """
@@ -136,10 +136,19 @@ class Section(UserDict):
         for key in self.keys():
             val = self[key]
             if isinstance(val, Section):
-                #print(repr(val))
                 sections.append(val)
                 sections = val._find_sections(sections)
         return sections
+
+    def sections(self):
+        """
+        Returns a list of all sections contained, including nested ones.
+
+        Returns
+        -------
+        list of Section objects
+        """
+        return self._find_sections([self])
 
     def __str__(self):
         # TODO this needs to know the overall depth
@@ -218,18 +227,6 @@ class OptionsTree(Section):
         super().__init__(name='root', data=data, parent=None)
 
     # TODO .sections(), .as_dict(), str,
-
-    def sections(self):
-        """
-        Returns a list of all sections contained, including nested ones.
-
-        Returns
-        -------
-        list of Section objects
-        """
-        sections = self._find_sections([self])
-        #pp.pprint(sections)
-        return [section.lineage() for section in sections]
 
     def write_to(self, file, evaluate=False, keep_comments=True):
         """
