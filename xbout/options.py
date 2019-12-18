@@ -17,6 +17,10 @@ SECTION_DELIM = ':'
 COMMENT_DELIM = '#'
 
 
+from pprint import PrettyPrinter
+pp = PrettyPrinter()
+
+
 class Section(UserDict):
     """
     Section of an options file.
@@ -29,21 +33,24 @@ class Section(UserDict):
     name : str
         Name of the section
     data : dict, optional
-    parent : BoutOptionsParser or Section
-        A parent Section or BoutOptionsParser object
+    parent : str or Section
+        A parent section
     """
 
     # Inheriting from UserDict gives keys, items, values, iter, del, & len
     # methods already, and the data attribute for storing the contents
 
-    def __init__(self, name, data=None, parent=None):
+    def __init__(self, name, parent=None, data=None):
         if data is None: data = {}
         super().__init__(data)
 
-        # TODO should name be optional?
         self.name = name
         # TODO check if parent has a section with the same name?
         self._parent = parent
+        if isinstance(parent, Section):
+            self.parent = parent.name
+        else:
+            self.parent = parent
 
     def __getitem__(self, key):
         return self.get(key, evaluate=True, keep_comments=False)
@@ -78,9 +85,11 @@ class Section(UserDict):
             value, *comment = line.split(COMMENT_DELIM)
             value = value.rstrip()
 
+            # TODO evaluation
             if evaluate:
                 # value = self._evaluate(value)
-                raise NotImplementedError
+                #raise NotImplementedError
+                ...
 
             return value
 
@@ -101,18 +110,47 @@ class Section(UserDict):
         """
 
         if isinstance(value, dict):
-            value = Section(name=key, data=value)
+            value = Section(name=key, parent=self, data=value)
         if not isinstance(value, Section):
             value = str(value)
         self.data[key] = value
+
+    def lineage(self):
+        """
+        Returns the full route to this section by working back up the tree.
+
+        Returns
+        -------
+        str
+        """
+        if self._parent is None or self._parent == 'root':
+            return self.name + SECTION_DELIM
+        else:
+            return self._parent.lineage() + self.name
+
+    def _find_sections(self, sections):
+        """
+        Recursively find a list of all the section objects below this one, and
+        append them to the list passed before returning them all.
+        """
+        for key in self.keys():
+            val = self[key]
+            if isinstance(val, Section):
+                #print(repr(val))
+                sections.append(val)
+                sections = val._find_sections(sections)
+        return sections
 
     def __str__(self):
         # TODO this needs to know the overall depth
 
         namestr = f"[{self.name}]\n"
         indent = "|-- "
-        datastr = indent.join(indent + f"{key} = {val}\n"
-                          for key, val in self.items())
+        for key, val in self.items():
+            if isinstance(val, Section):
+                datastr
+            else:
+                datastr = indent.join(indent + f"{key} = {val}\n")
         return namestr + datastr
 
     def _write(self, file, evaluate=False, keep_comments=True):
@@ -139,7 +177,9 @@ class Section(UserDict):
                 line = f"{key} = {val}\n"
                 file.write(line)
 
-    # TODO .sections(), repr?
+    def __repr__(self):
+        return f"Section(name='{self.name}', parent='{self._parent}', " \
+               f"data={self.data})"
 
 
 class OptionsTree(Section):
@@ -175,9 +215,21 @@ class OptionsTree(Section):
     """
 
     def __init__(self, data=None):
-        super().__init__(name='root', data=data)
+        super().__init__(name='root', data=data, parent=None)
 
     # TODO .sections(), .as_dict(), str,
+
+    def sections(self):
+        """
+        Returns a list of all sections contained, including nested ones.
+
+        Returns
+        -------
+        list of Section objects
+        """
+        sections = self._find_sections([self])
+        #pp.pprint(sections)
+        return [section.lineage() for section in sections]
 
     def write_to(self, file, evaluate=False, keep_comments=True):
         """
@@ -227,11 +279,12 @@ class OptionsFile(OptionsTree):
     def _read(self, filepath, lower):
         with open(filepath, 'r') as f:
             # TODO add in first section header?
-            #for line in f:
-            #    if is_section(line):
+            #for l in f:
+            #    line = Line(l)
+            #    if line.is_section():
             #        name
-            #        self.data[name] = Section(name, data)
-            #    elif is_comment(line):
+            #        self.data[name] = Section(name, parent, data)
+            #    elif line.is_comment() or line.is_empty()
             #        continue
             #    else:
             data = None
