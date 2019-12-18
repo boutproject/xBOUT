@@ -19,6 +19,129 @@ from numpy import (pi, sin, cos, tan, arccos as acos, arcsin as asin,
 # TODO make forced lowercase optional
 # TODO ability to read from/write to nested dictionary
 
+class BoutOptionsParser:
+    """
+    Tree of options, representing the contents of an input file.
+
+    This class represents a tree structure. Each section (Section object) can
+    have multiple sub-sections, and each section stores the options as multiple
+    key-value pairs.
+
+    Examples
+    --------
+
+    >>> opts = BoutOptions()  # Create a root
+
+    Specify value of a key in a section "test"
+
+    >>> opts["test"]["key"] = 4
+
+    Get the value of a key in a section "test"
+    If the section does not exist then a KeyError is raised
+
+    >>> print(opts["test"]["key"])
+    4
+
+    To pretty print the options
+
+    >>> print(opts)
+    root
+     |- test
+     |   |- key = 4
+
+    """
+    ...
+
+
+class Section:
+    """
+    Section of an input file.
+
+    This section can have multiple sub-sections, and each section stores the
+    options as multiple key-value pairs.
+
+    Parameters
+    ----------
+    name : str
+        Name of the section
+    parent : BoutOptionsParser or Section
+        A parent Section or BoutOptionsParser object
+    """
+
+    def __init__(self, name=None, contents=None, parent=None):
+        self.name = name
+        # TODO check if parent has a section with the same name?
+        self._parent = parent
+        if contents is None:
+            self._contents = {}
+        else:
+            self._contents = contents
+
+    def get(self, key, evaluate=True, keep_comments=False):
+        """
+        Fetch the value stored under a certain key.
+
+        Parameters
+        ----------
+        key : str
+        evaluate : bool, optional (default: True)
+            If true, attempts to evaluate the value as an expression by
+            substituting in other values from the options file. Other values
+            are specified by key, or by section:key.
+            If false, will return value as an unmodified string.
+        keep_comments :
+            If false, will strip off any inline comments, delimited by '#', and
+            any whitespace before returning.
+            If true, will return the whole line.
+        """
+
+        if evaluate and keep_comments:
+            raise ValueError("Cannot keep comments and evaluate the contents.")
+
+        line = self._contents[key]
+        if keep_comments or isinstance(line, Section):
+            return line
+        else:
+            value, comment, = line.split('#')  # any comment will be discarded
+            # TODO remove whitespace?
+
+            if evaluate:
+                raise NotImplementedError
+            else:
+                return value
+
+    def __getitem__(self, key):
+        return self.get(key, evaluate=True, keep_comments=False)
+
+    def set(self, key, value):
+        """
+        Store a value under a certain key.
+
+        Will attempt to cast the value to a string (unless it's a new section).
+
+        Parameters
+        ----------
+        key : str
+        value : str
+        """
+
+        if not isinstance(value, Section):
+            value = str(value)
+        self._contents[key] = value
+
+    def __setitem__(self, key, value):
+        self.set(key, value)
+
+    def keys(self):
+        """
+        Returns a list of all the keys for this section.
+
+        Returns
+        -------
+        list
+        """
+        return self._contents.keys()
+
 class BoutOptions:
     """This class represents a tree structure. Each node (BoutOptions
     object) can have several sub-nodes (sections), and several
