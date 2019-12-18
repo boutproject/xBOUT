@@ -168,31 +168,19 @@ class Section(UserDict):
         on that nested section.
         """
 
-        section_header = f"[{self.path()}]\n"
-        file.write(section_header)
+        if self.name is not None and self.name != 'root':
+            section_header = f"[{self.lineage()}]\n"
+            file.write(section_header)
 
         for key in self.keys():
-            val = self.get(key, evaluate, keep_comments)
+            entry = self.get(key, evaluate, keep_comments)
 
-            if isinstance(val, Section):
+            if isinstance(entry, Section):
                 # Recursively write sections
-                val._write(file, evaluate, keep_comments)
+                file.write("\n")
+                entry._write(file, evaluate, keep_comments)
             else:
-                line = f"{key} = {val}\n"
-                file.write(line)
-
-
-    #def _write(self):
-        """
-        text = f"[{self.lineage()}]\n"
-        indent = "|-- "
-        for key, val in self.items():
-            if not isinstance(val, Section):
-                text += indent + f"{key} = {val}\n"
-            else:
-                text += str(val)
-        return text
-        """
+                file.write(f"{key} = {entry}\n")
 
     def __repr__(self):
         return f"Section(name='{self.name}', parent='{self.parent}', " \
@@ -234,7 +222,7 @@ class OptionsTree(Section):
     def __init__(self, data=None):
         super().__init__(name='root', data=data, parent=None)
 
-    # TODO .sections(), .as_dict(), str,
+    # TODO .as_dict() ?
 
     def write_to(self, file, evaluate=False, keep_comments=True, lower=False):
         """
@@ -252,11 +240,30 @@ class OptionsTree(Section):
             If false, will strip off any inline comments, delimited by '#', and
             any whitespace before writing.
             If true, will write out the whole line.
+
+        Returns
+        -------
+        filepath : str
+            Full path of output file written to
         """
 
         with open(Path(file), 'w') as f:
             self._write(file=f)
-            # TODO strip first section header
+        return str(Path(file).resolve())
+
+    def _read_from(self, filepath, lower):
+        with open(filepath, 'r') as f:
+            # TODO add in first section header?
+            #for l in f:
+            #    line = Line(l)
+            #    if line.is_section():
+            #        name
+            #        self.data[name] = Section(name, parent, data)
+            #    elif line.is_comment() or line.is_empty()
+            #        continue
+            #    else:
+            data = None
+        return data, str(filepath.resolve())
 
 
 class OptionsFile(OptionsTree):
@@ -278,22 +285,8 @@ class OptionsFile(OptionsTree):
     # TODO gridfile stuff?
 
     def __init__(self, file, lower=False):
-        contents, self.file = self._read(Path(file), lower)
+        contents, self.file = self._read_from(Path(file), lower)
         super().__init__(data=contents)
-
-    def _read(self, filepath, lower):
-        with open(filepath, 'r') as f:
-            # TODO add in first section header?
-            #for l in f:
-            #    line = Line(l)
-            #    if line.is_section():
-            #        name
-            #        self.data[name] = Section(name, parent, data)
-            #    elif line.is_comment() or line.is_empty()
-            #        continue
-            #    else:
-            data = None
-        return data, str(filepath.resolve())
 
     def write(self, evaluate=False, keep_comments=True):
         """

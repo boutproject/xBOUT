@@ -6,11 +6,6 @@ import pytest
 from xbout.options import Section, OptionsTree, OptionsFile
 
 
-from pprint import PrettyPrinter
-
-pp = PrettyPrinter()
-
-
 @pytest.fixture
 def example_section():
     contents = {'type': 'cyclic',
@@ -92,6 +87,47 @@ class TestSection:
                           |-- |-- iterations = 1000
                           """)
         assert str(sect) == expected
+
+    def test_write(self, example_section, tmpdir_factory):
+        sect = example_section
+        sect['naulin'] = {'iterations': '1000'}
+        file = tmpdir_factory.mktemp("write_data").join('write_test.inp')
+
+        with open(file, 'w') as f:
+            sect._write(f)
+
+        with open(file, 'r') as f:
+            result = file.read()
+        expected = dedent("""\
+                          [laplace]
+                          type = cyclic
+                          global_flags = 0
+                          inner_boundary_flags = 1
+                          outer_boundary_flags = 16  # dirichlet
+                          include_yguards = false
+                          
+                          [laplace:naulin]
+                          iterations = 1000
+                          """)
+        assert result == expected
+
+    def test_write_root(self, tmpdir_factory):
+        sect = Section(name='root', parent=None,
+                       data={'timestep': '80  # Timestep length',
+                             'nout': '2000  # Number of timesteps'})
+        file = tmpdir_factory.mktemp("write_data").join('write_test.inp')
+
+        with open(file, 'w') as f:
+            sect._write(f)
+
+        with open(file, 'r') as f:
+            result = file.read()
+        expected = dedent("""\
+                          timestep = 80  # Timestep length
+                          nout = 2000  # Number of timesteps
+                          """)
+        assert result == expected
+
 
 @pytest.fixture
 def example_options_tree():
