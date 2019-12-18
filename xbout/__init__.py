@@ -1,6 +1,6 @@
 from .load import open_boutdataset, collect
 
-from .options import BoutOptionsFile
+from .options import OptionsFile
 
 from . import geometries
 from .geometries import register_geometry, REGISTERED_GEOMETRIES

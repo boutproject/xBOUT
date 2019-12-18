@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from xbout.options import OptionsTree, OptionsFile
+from xbout.options import Section, OptionsTree, OptionsFile
 
 
 @pytest.fixture
@@ -53,42 +53,97 @@ def example_options_file(tmpdir_factory):
     return Path(optionsfilepath)
 
 
+@pytest.fixture
+def example_section():
+    contents = {'type': 'cyclic',
+                'global_flags': '0',
+                'inner_boundary_flags': '1',
+                'outer_boundary_flags': '16  # dirichlet',
+                'include_yguards': 'false'}
+    return Section(name='laplace', data=contents)
+
+
+class TestSection:
+    def test_create_section(self, example_section):
+        sect = example_section
+        assert sect.name == 'laplace'
+        assert sect.data == {'type': 'cyclic',
+                             'global_flags': '0',
+                             'inner_boundary_flags': '1',
+                             'outer_boundary_flags': '16  # dirichlet',
+                             'include_yguards': 'false'}
+
+    def test_get(self, example_section):
+        sect = example_section
+        assert sect.get('type', evaluate=False) == 'cyclic'
+
+        assert sect.get('outer_boundary_flags', evaluate=False) == '16'
+        with_comment = sect.get('outer_boundary_flags', evaluate=False,
+                                keep_comments=True)
+        assert with_comment == '16  # dirichlet'
+
+
+    @pytest.mark.xfail(reason="Evaluate not yet implemented")
+    def test_getitem(self, example_section):
+        sect = example_section
+        assert sect['type'] == 'cyclic'
+        assert sect['outer_boundary_flags'] == '16'
+
+    def test_set(self, example_section):
+        sect = example_section
+        sect.set('max', '10000')
+        assert sect.get('max', evaluate=False) == '10000'
+
+        sect['min'] = '100'
+        assert sect.get('min', evaluate=False) == '100'
+
+    def test_nested(self, example_section):
+        sect = example_section
+        nested = Section('naulin', {'iterations': '1000'})
+        sect['naulin'] = nested
+
+        assert isinstance(sect.get('naulin'), Section)
+        assert sect.get('naulin').get('iterations', evaluate=False) == '1000'
+
+        with pytest.raises(NotImplementedError):
+            assert sect['naulin']['iterations'] == '1000'
+
 class TestReadFile:
     def test_no_file(self):
         with pytest.raises(FileNotFoundError):
-            BoutOptionsFile('./wrong.inp')
+            OptionsFile('./wrong.inp')
 
     def test_open_real_example(self):
         # TODO this absolute filepath is sensitive to the directory the tests are run from?
         example_inp_path = Path.cwd() / './xbout/tests/data/options/BOUT.inp'
-        opts = BoutOptionsFile(example_inp_path)
+        opts = OptionsFile(example_inp_path)
         assert opts.filepath.name == 'BOUT.inp'
 
     def test_open(self, example_options_file):
-        opts = BoutOptionsFile(example_options_file)
+        opts = OptionsFile(example_options_file)
         assert opts.filepath.name == 'BOUT.inp'
 
     def test_repr(self, example_options_file):
-        opts_repr = repr(BoutOptionsFile(example_options_file))
-        assert opts_repr == f"BoutOptionsFile('{example_options_file}')"
+        opts_repr = repr(OptionsFile(example_options_file))
+        assert opts_repr == f"OptionsFile('{example_options_file}')"
 
 
 class TestAccess:
     def test_get_sections(self, example_options_file):
-        sections = BoutOptionsFile(example_options_file).sections()
+        sections = OptionsFile(example_options_file).sections()
 
         # TODO for now ignore problem of nesting
         #sections.remove('mesh:ddx')
         assert sections == ['top', 'mesh', 'laplace', 'storm']
 
     def test_get_str_values(self, example_options_file):
-        opts = BoutOptionsFile(example_options_file)
+        opts = OptionsFile(example_options_file)
         assert opts['laplace']['type'] == 'cyclic'
         assert opts['laplace'].get('type') == 'cyclic'
 
     @pytest.mark.xfail(reason="Nesting not yet implemented")
     def test_get_nested_section_values(self, example_options_file):
-        opts = BoutOptionsFile(example_options_file)
+        opts = OptionsFile(example_options_file)
         assert opts['mesh']['ddx']['upwind'] == 'C2'
         assert opts['mesh']['ddx'].get('upwind') == 'C2'
 
@@ -96,17 +151,17 @@ class TestAccess:
 @pytest.mark.xfail(reason='Type conversions not yet implemented')
 class TestTypeConversion:
     def test_get_int_values(self, example_options_file):
-        opts = BoutOptionsFile(example_options_file)
+        opts = OptionsFile(example_options_file)
         assert opts['mesh']['nx'] == 484
         assert opts['mesh'].get('nx') == 484
 
     def test_get_float_values(self, example_options_file):
-        opts = BoutOptionsFile(example_options_file)
+        opts = OptionsFile(example_options_file)
         assert opts['mesh']['Lx'] == 400.0
         assert opts['mesh'].get('Lx') == 400.0
 
     def test_get_bool_values(self, example_options_file):
-        opts = BoutOptionsFile(example_options_file)
+        opts = OptionsFile(example_options_file)
         assert opts['storm']['isothermal'] == True
         assert opts['storm'].get('isothermal') == True
 

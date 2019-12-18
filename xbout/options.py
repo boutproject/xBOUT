@@ -74,14 +74,15 @@ class Section(UserDict):
         if keep_comments or isinstance(line, Section):
             return line
         else:
-            # any comment will be discarded
-            value, comment, = line.split(COMMENT_DELIM)
-            # TODO remove whitespace?
+            # any comment will be discarded, along with any trailing whitespace
+            value, *comment = line.split(COMMENT_DELIM)
+            value = value.rstrip()
 
             if evaluate:
+                # value = self._evaluate(value)
                 raise NotImplementedError
-            else:
-                return value
+
+            return value
 
     def __setitem__(self, key, value):
         self.set(key, value)
@@ -139,7 +140,6 @@ class Section(UserDict):
                 file.write(line)
 
     # TODO .sections(), repr?
-
 
 
 class OptionsTree(Section):
