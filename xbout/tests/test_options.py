@@ -1,4 +1,5 @@
 from pathlib import Path
+from textwrap import dedent
 
 import pytest
 
@@ -80,7 +81,17 @@ class TestSection:
     def test_print(self, example_section):
         sect = example_section
         sect['naulin'] = {'iterations': '1000'}
-
+        expected = dedent("""\
+                          [laplace]
+                          |-- type = cyclic
+                          |-- global_flags = 0
+                          |-- inner_boundary_flags = 1
+                          |-- outer_boundary_flags = 16
+                          |-- include_yguards = false
+                          |-- [naulin]
+                          |-- |-- iterations = 1000
+                          """)
+        assert str(sect) == expected
 
 @pytest.fixture
 def example_options_tree():

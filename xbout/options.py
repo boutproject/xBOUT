@@ -30,8 +30,8 @@ class Section(UserDict):
     name : str
         Name of the section
     data : dict, optional
-    parent : str or Section
-        A parent section
+    parent : str, Section or None
+        The parent Section
     """
 
     # Inheriting from UserDict gives keys, items, values, iter, del, & len
@@ -149,14 +149,12 @@ class Section(UserDict):
 
     def __str__(self):
         depth = self.lineage().count(SECTION_DELIM)
-        indent = INDENT_STR * depth
-
-        text = indent + f"[{self.name}]\n"
+        text = INDENT_STR * depth + f"[{self.name}]\n"
         for key, val in self.items():
             if isinstance(val, Section):
                 text += str(val)
             else:
-                text += indent + INDENT_STR + f"{key} = {val}\n"
+                text += INDENT_STR * (depth+1) + f"{key} = {val}\n"
         return text
 
     def _write(self, file, evaluate=False, keep_comments=True):
@@ -197,7 +195,7 @@ class Section(UserDict):
         """
 
     def __repr__(self):
-        return f"Section(name='{self.name}', parent='{self._parent}', " \
+        return f"Section(name='{self.name}', parent='{self.parent}', " \
                f"data={self.data})"
 
 
@@ -238,7 +236,7 @@ class OptionsTree(Section):
 
     # TODO .sections(), .as_dict(), str,
 
-    def write_to(self, file, evaluate=False, keep_comments=True):
+    def write_to(self, file, evaluate=False, keep_comments=True, lower=False):
         """
         Writes out contents to a file, following the format of a BOUT.inp file.
 
