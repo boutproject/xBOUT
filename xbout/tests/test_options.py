@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from xbout.options import BoutOptions, BoutOptionsFile
+from xbout.options import OptionsTree, OptionsFile
 
 
 @pytest.fixture
@@ -13,7 +13,7 @@ def example_options_file(tmpdir_factory):
     """
 
     # Create options file
-    options = BoutOptions()
+    options = OptionsTree()
 
     # Fill it with example data
     options['top'] = {'timestep': '80',

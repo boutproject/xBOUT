@@ -33,12 +33,11 @@ class Section(UserDict):
         A parent Section or BoutOptionsParser object
     """
 
-    # Inheriting from UserDict gives iter, del, len methods already, and the
-    # data attribute for storing the contents
+    # Inheriting from UserDict gives keys, items, values, iter, del, & len
+    # methods already, and the data attribute for storing the contents
 
     def __init__(self, name, data=None, parent=None):
-        if data is None:
-            data = {}
+        if data is None: data = {}
         super().__init__(data)
 
         # TODO should name be optional?
@@ -68,6 +67,7 @@ class Section(UserDict):
         """
 
         if evaluate and keep_comments:
+            # TODO relax this?
             raise ValueError("Cannot keep comments and evaluate the contents.")
 
         line = self.data[key]
@@ -111,13 +111,38 @@ class Section(UserDict):
         namestr = f"[{self.name}]\n"
         indent = "|-- "
         datastr = indent.join(indent + f"{key} = {val}\n"
-                          for key, val in self.data.items())
+                          for key, val in self.items())
         return namestr + datastr
 
-    # TODO .keys(), .items(), .values(), .sections(), repr?
+    def _write(self, file, evaluate=False, keep_comments=True):
+        """
+        Writes out a single section to an open file object as
+        [...:parent:section]
+        key = value     # comment
+        ...
+
+        If it encounters a nested section it will recursively call this method
+        on that nested section.
+        """
+
+        section_header = f"[{self.path()}]\n"
+        file.write(section_header)
+
+        for key in self.keys():
+            val = self.get(key, evaluate, keep_comments)
+
+            if isinstance(val, Section):
+                # Recursively write sections
+                val._write(file, evaluate, keep_comments)
+            else:
+                line = f"{key} = {val}\n"
+                file.write(line)
+
+    # TODO .sections(), repr?
 
 
-class BoutOptionsTree(Section):
+
+class OptionsTree(Section):
     """
     Tree of options, with the same structure as a complete BOUT++ input file.
 
@@ -128,7 +153,7 @@ class BoutOptionsTree(Section):
     Examples
     --------
 
-    >>> opts = BoutOptionsTree()  # Create a root
+    >>> opts = OptionsTree()  # Create a root
 
     Specify value of a key in a section "test"
 
@@ -154,7 +179,7 @@ class BoutOptionsTree(Section):
 
     # TODO .sections(), .as_dict(), str,
 
-    def write(self, file, evaluate=False, keep_comments=True):
+    def write_to(self, file, evaluate=False, keep_comments=True):
         """
         Writes out contents to a file, following the format of a BOUT.inp file.
 
@@ -173,10 +198,11 @@ class BoutOptionsTree(Section):
         """
 
         with open(Path(file), 'w') as f:
-            ...
+            self._write(file=f)
+            # TODO strip first section header
 
 
-class BoutOptionsFile(BoutOptionsTree):
+class OptionsFile(OptionsTree):
     """
     The full contents of a particular BOUT++ input file.
 
@@ -199,7 +225,36 @@ class BoutOptionsFile(BoutOptionsTree):
         super().__init__(data=contents)
 
     def _read(self, filepath, lower):
+        with open(filepath, 'r') as f:
+            # TODO add in first section header?
+            #for line in f:
+            #    if is_section(line):
+            #        name
+            #        self.data[name] = Section(name, data)
+            #    elif is_comment(line):
+            #        continue
+            #    else:
+            data = None
         return data, str(filepath.resolve())
+
+    def write(self, evaluate=False, keep_comments=True):
+        """
+        Writes out contents to the file, following the BOUT.inp format.
+
+        Parameters
+        ----------
+        evaluate : bool, optional (default: True)
+            If true, attempts to evaluate the value as an expression by
+            substituting in other values from the options file, before writing.
+            Other values are specified by key, or by section:key.
+            If false, will write value as an unmodified string.
+        keep_comments : bool, optional (default: False)
+            If false, will strip off any inline comments, delimited by '#', and
+            any whitespace before writing.
+            If true, will write out the whole line.
+        """
+
+        self.write_to(self.file, evaluate, keep_comments)
 
     def __repr__(self):
         # TODO Add grid-related options
