@@ -1,6 +1,8 @@
 from pathlib import Path
 from textwrap import dedent
 
+import numpy as np
+
 import pytest
 
 from xbout.options import Section, OptionsTree, OptionsFile
@@ -28,14 +30,13 @@ class TestSection:
 
     def test_get(self, example_section):
         sect = example_section
-        assert sect.get('type', evaluate=False) == 'cyclic'
+        assert sect.get('type') == 'cyclic'
 
-        assert sect.get('outer_boundary_flags', evaluate=False) == '16'
+        assert sect.get('outer_boundary_flags') == '16'
         with_comment = sect.get('outer_boundary_flags', evaluate=False,
                                 keep_comments=True)
         assert with_comment == '16  # dirichlet'
 
-    @pytest.mark.xfail(reason="Evaluate not yet implemented")
     def test_getitem(self, example_section):
         sect = example_section
         assert sect['type'] == 'cyclic'
@@ -44,10 +45,10 @@ class TestSection:
     def test_set(self, example_section):
         sect = example_section
         sect.set('max', '10000')
-        assert sect.get('max', evaluate=False) == '10000'
+        assert sect.get('max') == '10000'
 
         sect['min'] = '100'
-        assert sect.get('min', evaluate=False) == '100'
+        assert sect.get('min') == '100'
 
     def test_set_nested(self, example_section):
         sect = example_section
@@ -55,7 +56,7 @@ class TestSection:
         sect['naulin'] = nested
 
         assert isinstance(sect.get('naulin'), Section)
-        assert sect.get('naulin').get('iterations', evaluate=False) == '1000'
+        assert sect.get('naulin').get('iterations') == '1000'
         assert sect['naulin']['iterations'] == '1000'
 
     def test_set_nested_as_dict(self, example_section):
@@ -221,23 +222,33 @@ class TestReadFile:
         assert opts_repr == f"OptionsFile('{example_options_file}')"
 
 
-
-@pytest.mark.xfail(reason='Type conversions not yet implemented')
 class TestTypeConversion:
     def test_get_int_values(self, example_options_tree):
-        opts = OptionsFile(example_options_tree)
-        assert opts['mesh']['nx'] == 484
-        assert opts['mesh'].get('nx') == 484
+        opts = OptionsTree(example_options_tree)
+        assert opts['mesh'].get('nx', evaluate=True) == 484
 
     def test_get_float_values(self, example_options_tree):
-        opts = OptionsFile(example_options_tree)
-        assert opts['mesh']['Lx'] == 400.0
-        assert opts['mesh'].get('Lx') == 400.0
+        opts = OptionsTree(example_options_tree)
+        assert opts['mesh'].get('Lx', evaluate=True) == 400.0
 
     def test_get_bool_values(self, example_options_tree):
-        opts = OptionsFile(example_options_tree)
-        assert opts['storm']['isothermal'] == True
-        assert opts['storm'].get('isothermal') == True
+        opts = OptionsTree(example_options_tree)
+        assert opts['storm'].get('isothermal', evaluate=True) == True
+
+
+class TestEvaluation:
+    def test_eval_arithmetic(self):
+        params = Section(name='params', data={'T0': '5 * 10**18'})
+        assert params.get('T0', evaluate=True) == 5 * 10**18
+
+    def test_eval_powers(self):
+        params = Section(name='params', data={'n0': '10^18'})
+        assert params.get('n0', evaluate=True) == 10**18
+
+    # TODO generalise this to test other numpy imports
+    def test_eval_numpy(self):
+        params = Section(name='params', data={'angle': 'sin(pi/2)'})
+        assert params.get('angle', evaluate=True) == np.sin(np.pi/2)
 
 
 @pytest.mark.skip
@@ -247,11 +258,6 @@ class TestWriting:
 
 @pytest.mark.skip
 class TestRoundTrip:
-    ...
-
-
-@pytest.mark.skip
-class TestEval:
     ...
 
 

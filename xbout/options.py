@@ -2,8 +2,7 @@ from collections import UserDict
 from pathlib import Path
 
 
-# These are imported to be used by 'eval' in
-# BoutOptions.evaluate_scalar() and BoutOptionsFile.evaluate().
+# These are imported to be used by 'evaluate=True' in Section.get().
 # Change the names to match those used by C++/BOUT++
 from numpy import (pi, sin, cos, tan, arccos as acos, arcsin as asin,
                    arctan as atan, arctan2 as atan2, sinh, cosh, tanh,
@@ -16,6 +15,30 @@ from numpy import (pi, sin, cos, tan, arccos as acos, arcsin as asin,
 SECTION_DELIM = ':'
 COMMENT_DELIM = '#'
 INDENT_STR = '|-- '
+BOOLEAN_STATES = {'true': True, 'on': True,
+                  'false': False, 'off': False}
+
+
+def evaluation(value):
+    """
+
+
+    Parameters
+    ----------
+    value : str
+
+    """
+
+
+    # TODO substitution of other keys
+
+    if '^' in value:
+        value = value.replace('^', '**')
+
+    if value.lower() in BOOLEAN_STATES:
+        return BOOLEAN_STATES[value.lower()]
+    else:
+        return eval(value)
 
 
 class Section(UserDict):
@@ -50,16 +73,16 @@ class Section(UserDict):
             self.parent = parent
 
     def __getitem__(self, key):
-        return self.get(key, evaluate=True, keep_comments=False)
+        return self.get(key, evaluate=False, keep_comments=False)
 
-    def get(self, key, evaluate=True, keep_comments=False):
+    def get(self, key, evaluate=False, keep_comments=False):
         """
         Fetch the value stored under a certain key.
 
         Parameters
         ----------
         key : str
-        evaluate : bool, optional (default: True)
+        evaluate : bool, optional (default: False)
             If true, attempts to evaluate the value as an expression by
             substituting in other values from the options file. Other values
             are specified by key, or by section:key.
@@ -82,13 +105,10 @@ class Section(UserDict):
             value, *comment = line.split(COMMENT_DELIM)
             value = value.rstrip()
 
-            # TODO evaluation
             if evaluate:
-                # value = self._evaluate(value)
-                #raise NotImplementedError
-                ...
-
-            return value
+                return evaluation(value)
+            else:
+                return value
 
     def __setitem__(self, key, value):
         self.set(key, value)
@@ -231,7 +251,7 @@ class OptionsTree(Section):
         Parameters
         ----------
         file
-        evaluate : bool, optional (default: True)
+        evaluate : bool, optional (default: False)
             If true, attempts to evaluate the value as an expression by
             substituting in other values from the options file, before writing.
             Other values are specified by key, or by section:key.
@@ -294,7 +314,7 @@ class OptionsFile(OptionsTree):
 
         Parameters
         ----------
-        evaluate : bool, optional (default: True)
+        evaluate : bool, optional (default: False)
             If true, attempts to evaluate the value as an expression by
             substituting in other values from the options file, before writing.
             Other values are specified by key, or by section:key.
