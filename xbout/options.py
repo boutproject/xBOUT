@@ -13,7 +13,7 @@ from numpy import (pi, sin, cos, tan, arccos as acos, arcsin as asin,
 # TODO ability to read from/write to nested dictionary
 
 SECTION_DELIM = ':'
-COMMENT_DELIM = '#'
+COMMENT_DELIM = ['#', ';']
 INDENT_STR = '|-- '
 BOOLEAN_STATES = {'true': True, 'on': True,
                   'false': False, 'off': False}
@@ -102,8 +102,9 @@ class Section(UserDict):
             return line
         else:
             # any comment will be discarded, along with any trailing whitespace
-            value, *comment = line.split(COMMENT_DELIM)
-            value = value.rstrip()
+            for delim in COMMENT_DELIM:
+                line, *comments = line.split(delim)
+            value = line.rstrip()
 
             if evaluate:
                 return evaluation(value)

@@ -14,7 +14,7 @@ def example_section():
                 'global_flags': '0',
                 'inner_boundary_flags': '1',
                 'outer_boundary_flags': '16  # dirichlet',
-                'include_yguards': 'false'}
+                'include_yguards': 'false  ; another comment'}
     return Section(name='laplace', data=contents)
 
 
@@ -26,16 +26,25 @@ class TestSection:
                              'global_flags': '0',
                              'inner_boundary_flags': '1',
                              'outer_boundary_flags': '16  # dirichlet',
-                             'include_yguards': 'false'}
+                             'include_yguards': 'false  ; another comment'}
 
     def test_get(self, example_section):
         sect = example_section
         assert sect.get('type') == 'cyclic'
 
+    def test_get_comments(self, example_section):
+        sect = example_section
+        # Comments marked by '#'
         assert sect.get('outer_boundary_flags') == '16'
         with_comment = sect.get('outer_boundary_flags', evaluate=False,
                                 keep_comments=True)
         assert with_comment == '16  # dirichlet'
+
+        # Comments marked by ';'
+        assert sect.get('include_yguards') == 'false'
+        with_other_comment = sect.get('include_yguards', evaluate=False,
+                                      keep_comments=True)
+        assert with_other_comment == 'false  ; another comment'
 
     def test_getitem(self, example_section):
         sect = example_section
@@ -105,7 +114,7 @@ class TestSection:
                           global_flags = 0
                           inner_boundary_flags = 1
                           outer_boundary_flags = 16  # dirichlet
-                          include_yguards = false
+                          include_yguards = false  ; another comment
                           
                           [laplace:naulin]
                           iterations = 1000
