@@ -10,35 +10,23 @@ from numpy import (pi, sin, cos, tan, arccos as acos, arcsin as asin,
                    exp, log, log10, power as pow, sqrt, ceil, floor,
                    round, abs)
 
+# TODO file reader
+# TODO substitution of keys within strings
+# TODO Sanitise some of the weirder things BOUT's option parser does:
+#  - Detect escaped arithmetic symbols (+-*/^), dot (.), or brackets ((){}[]) in option names
+#  - Detect escaping through backquotes in option names (`2ndvalue`)
+#  - Evaluate numletter as num*letter (and numbracket as num*bracket)
+#  - Substitute unicode representation of pi
+#  - Ensure option names don't contain ':' or '='
+#  - Check if all expressions are rounded to nearest integer?!
 # TODO ability to read from/write to nested dictionary
+
 
 SECTION_DELIM = ':'
 COMMENT_DELIM = ['#', ';']
 INDENT_STR = '|-- '
 BOOLEAN_STATES = {'true': True, 'on': True,
                   'false': False, 'off': False}
-
-
-def evaluation(value):
-    """
-
-
-    Parameters
-    ----------
-    value : str
-
-    """
-
-
-    # TODO substitution of other keys
-
-    if '^' in value:
-        value = value.replace('^', '**')
-
-    if value.lower() in BOOLEAN_STATES:
-        return BOOLEAN_STATES[value.lower()]
-    else:
-        return eval(value)
 
 
 class Section(UserDict):
@@ -107,7 +95,7 @@ class Section(UserDict):
             value = line.rstrip()
 
             if evaluate:
-                return evaluation(value)
+                return self.evaluate(value)
             else:
                 return value
 
@@ -206,6 +194,30 @@ class Section(UserDict):
     def __repr__(self):
         return f"Section(name='{self.name}', parent='{self.parent}', " \
                f"data={self.data})"
+
+    # TODO could this be a class method, or static method?
+    def evaluate(self, value, substitute=True):
+        """
+        Evaluates the string using eval, as it would when read in BOUT++.
+
+        Parameters
+        ----------
+        value : str
+        substitute : bool (default: True)
+
+        """
+
+        # TODO substitution of other keys
+        #if substitute:
+        #    value = self._substitute_keys_within(value)
+
+        if value.lower() in BOOLEAN_STATES:
+            # Treat booleans separately to cover lowercase 'true' etc.
+            return BOOLEAN_STATES[value.lower()]
+        else:
+            if '^' in value:
+                value = value.replace('^', '**')
+            return eval(value)
 
 
 class OptionsTree(Section):
@@ -330,4 +342,4 @@ class OptionsFile(OptionsTree):
 
     def __repr__(self):
         # TODO Add grid-related options
-        return f"BoutOptionsFile('{self.file}')"
+        return f"OptionsFile(file='{self.file}')"
