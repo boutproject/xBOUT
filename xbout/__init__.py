@@ -1,6 +1,7 @@
 from .load import open_boutdataset, collect
 
 from .options import OptionsFile
+evaluate = OptionsFile.evaluate
 
 from . import geometries
 from .geometries import register_geometry, REGISTERED_GEOMETRIES

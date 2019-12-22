@@ -142,8 +142,7 @@ class TestSection:
 @pytest.fixture
 def example_options_tree():
     """
-    Mocks up a temporary example BOUT.inp (or BOUT.settings) file, and returns
-    the path to it.
+    Mocks up a temporary example BOUT.inp (or BOUT.settings) tree
     """
 
     # Create options file
@@ -260,6 +259,90 @@ class TestEvaluation:
         assert params.get('angle', evaluate=True) == np.sin(np.pi/2)
 
 
+@pytest.fixture
+def example_options_tree_with_substitution():
+    """
+    Mocks up a temporary example BOUT.inp (or BOUT.settings) tree,
+    containing variables which need to be substituted with values from
+    other sections
+    """
+
+    # Create options file
+    options = OptionsTree()
+
+    # Fill it with example data
+    options.data = {'timestep': '80',
+                    'nout': '2000    # Number of outputted timesteps'}
+
+    # Substitutions only within section
+    options['mesh'] = {'Ly': '2000.0   # ~4m',
+                       'Lx': '400.0',
+                       'nx': '484      # including 4 guard cells',
+                       'dx': 'Lx/(nx-4)',
+                       'dy': 'Ly'}
+
+    # Substitute from section above
+    options['mesh']['ddx'] = {'first': 'C2',
+                              'length': 'mesh:Lx*2',
+                              'num': '3'}
+
+    # TODO Substitute from section below
+    options['model'] = {}
+    #options['model']['energy'] = ''
+    #options['model']['magnetic_energy'] = 'B_0^2'
+
+    # Substitute from arbitrary section
+    options['model']['storm'] = {'B_0': '0.24          # Tesla',
+                                 'T_e0': '15           # eV',
+                                 'L_parallel': 'mesh:ddx:num * 10',
+                                 'isothermal': 'true   # switch'}
+
+    # Self-referencing substution
+    options['apples'] = {'green': 'lemons:yellow'}
+    options['lemons'] = {'yellow': 'apples:green'}
+
+    return options
+
+
+@pytest.mark.xfail  
+class TestSubstitution:
+    def test_substitute_from_section(self, example_options_tree_with_substitution):
+        opts = example_options_tree_with_substitution
+        ly = opts['mesh']['Ly']
+        assert opts['mesh'].get('dy', substitute=True) == ly
+
+    def test_substitute_from_parent_section(self, example_options_tree_with_substitution):
+        opts = example_options_tree_with_substitution
+        lx = opts['mesh']['Lx']
+        assert opts['mesh']['ddx'].get('length', substitute=True) == f"{lx}*2"
+
+    @pytest.mark.skip
+    def test_substitute_from_child_section(self, example_options_tree_with_substitution):
+        opts = example_options_tree_with_substitution
+        lx = opts['mesh']['Lx']
+        assert opts['mesh']['ddx'].get('length', substitute=True) == f"{lx}*2"
+
+    def test_substitute_from_arbitrary_section(self, example_options_tree_with_substitution):
+        opts = example_options_tree_with_substitution
+        ddx = opts['mesh']['ddx']['num']
+        assert opts['model']['storm'].get('L_parallel', substitute=True) == f"{ddx} * 10"
+
+    def test_two_substitutions_required(self, example_options_tree_with_substitution):
+        opts = example_options_tree_with_substitution
+        assert opts['mesh'].get('dx', substitute=True) == '400.0/(484-4)'
+
+    def test_substitute_requires_substitution(self, example_options_tree_with_substitution):
+        ...
+
+    @pytest.mark.skip
+    def test_contains_colon_but_no_substitute_found(self, example_options_tree_with_substitution):
+        with pytest.raises(InterpolationError): #?
+            ...
+
+    def test_detect_infinite_substitution_cycle(self, example_options_tree_with_substitution):
+        ...
+
+
 @pytest.mark.skip
 class TestWriting:
     ...
@@ -267,9 +350,4 @@ class TestWriting:
 
 @pytest.mark.skip
 class TestRoundTrip:
-    ...
-
-
-@pytest.mark.skip
-class TestSubstitution:
     ...

@@ -63,17 +63,20 @@ class Section(UserDict):
     def __getitem__(self, key):
         return self.get(key, evaluate=False, keep_comments=False)
 
-    def get(self, key, evaluate=False, keep_comments=False):
+    def get(self, key, substitute=False, evaluate=False, keep_comments=False):
         """
         Fetch the value stored under a certain key.
 
         Parameters
         ----------
         key : str
+        substitute : bool, optional (default: False)
+            If value contains other values, referenced as `section:key`, will
+            substitute them in to the value string.
         evaluate : bool, optional (default: False)
             If true, attempts to evaluate the value as an expression by
             substituting in other values from the options file. Other values
-            are specified by key, or by section:key.
+            are specified by key, or by section:key. Also sets substitute=True.
             If false, will return value as an unmodified string.
         keep_comments : bool, optional (default: False)
             If false, will strip off any inline comments, delimited by '#', and
@@ -93,6 +96,9 @@ class Section(UserDict):
             for delim in COMMENT_DELIM:
                 line, *comments = line.split(delim)
             value = line.rstrip()
+
+            if substitute or evaluate:
+                value = self._substitute_keys_within(value)
 
             if evaluate:
                 return self.evaluate(value)
@@ -166,7 +172,8 @@ class Section(UserDict):
                 text += INDENT_STR * (depth+1) + f"{key} = {val}\n"
         return text
 
-    def _write(self, file, evaluate=False, keep_comments=True):
+    def _write(self, file, substitute=False, evaluate=False,
+               keep_comments=True):
         """
         Writes out a single section to an open file object as
         [...:parent:section]
@@ -182,12 +189,12 @@ class Section(UserDict):
             file.write(section_header)
 
         for key in self.keys():
-            entry = self.get(key, evaluate, keep_comments)
+            entry = self.get(key, substitute, evaluate, keep_comments)
 
             if isinstance(entry, Section):
                 # Recursively write sections
                 file.write("\n")
-                entry._write(file, evaluate, keep_comments)
+                entry._write(file, substitute, evaluate, keep_comments)
             else:
                 file.write(f"{key} = {entry}\n")
 
@@ -195,21 +202,15 @@ class Section(UserDict):
         return f"Section(name='{self.name}', parent='{self.parent}', " \
                f"data={self.data})"
 
-    # TODO could this be a class method, or static method?
-    def evaluate(self, value, substitute=True):
+    @staticmethod
+    def evaluate(value):
         """
-        Evaluates the string using eval, as it would when read in BOUT++.
+        Evaluates the string using eval, following the conventions of BOUT++.
 
         Parameters
         ----------
         value : str
-        substitute : bool (default: True)
-
         """
-
-        # TODO substitution of other keys
-        #if substitute:
-        #    value = self._substitute_keys_within(value)
 
         if value.lower() in BOOLEAN_STATES:
             # Treat booleans separately to cover lowercase 'true' etc.
@@ -218,6 +219,21 @@ class Section(UserDict):
             if '^' in value:
                 value = value.replace('^', '**')
             return eval(value)
+
+    def _substitute_keys_within(self, value):
+        # Detect if any colons
+
+        # Parse candidate keys contained
+
+        # Loop over candidate keys
+            # Search for matches in whole tree
+            # If found, replace, if not, throw error
+
+        # If any keys left?
+            # Check none of them point to this value (i.e. no cycles)
+            # Call _substitute_keys again
+        # Otherwise return ready for evaluation
+        return value
 
 
 class OptionsTree(Section):
@@ -257,7 +273,8 @@ class OptionsTree(Section):
 
     # TODO .as_dict() ?
 
-    def write_to(self, file, evaluate=False, keep_comments=True, lower=False):
+    def write_to(self, file, substitute=False, evaluate=False,
+                 keep_comments=True, lower=False):
         """
         Writes out contents to a file, following the format of a BOUT.inp file.
 
@@ -281,7 +298,8 @@ class OptionsTree(Section):
         """
 
         with open(Path(file), 'w') as f:
-            self._write(file=f)
+            self._write(file=f, substitute=False, evaluate=False,
+                        keep_comments=True)
         return str(Path(file).resolve())
 
     def _read_from(self, filepath, lower):
@@ -290,6 +308,7 @@ class OptionsTree(Section):
             #for l in f:
             #    line = Line(l)
             #    if line.is_section():
+            #
             #        name
             #        self.data[name] = Section(name, parent, data)
             #    elif line.is_comment() or line.is_empty()
@@ -321,7 +340,7 @@ class OptionsFile(OptionsTree):
         contents, self.file = self._read_from(Path(file), lower)
         super().__init__(data=contents)
 
-    def write(self, evaluate=False, keep_comments=True):
+    def write(self, substitute=False, evaluate=False, keep_comments=True):
         """
         Writes out contents to the file, following the BOUT.inp format.
 
@@ -338,7 +357,7 @@ class OptionsFile(OptionsTree):
             If true, will write out the whole line.
         """
 
-        self.write_to(self.file, evaluate, keep_comments)
+        self.write_to(self.file, substitute, evaluate, keep_comments)
 
     def __repr__(self):
         # TODO Add grid-related options
