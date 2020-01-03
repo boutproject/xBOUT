@@ -1,6 +1,7 @@
 import collections
 from pprint import pformat as prettyformat
 from functools import partial
+from pathlib import Path
 
 from xarray import register_dataset_accessor, save_mfdataset, merge
 import animatplot as amp
@@ -66,6 +67,13 @@ class BoutDatasetAccessor:
         pre_load : bool, optional
             When saving separate variables, will load each variable into memory before
             saving to file, which can be considerably faster.
+
+        Examples
+        --------
+        If `separate_vars=True`, then multiple files will be created. These can
+        all be opened and merged in one go using a call of the form:
+        
+        ds = xr.open_mfdataset('boutdata_*.nc', combine='nested', concat_dim=None)
         """
 
         if variables is None:
@@ -122,6 +130,9 @@ class BoutDatasetAccessor:
                 time_independent_data = [to_save[time_ind_var] for
                                          time_ind_var in time_independent_vars]
                 single_var_ds = merge([to_save[var], *time_independent_data])
+
+                # Add the attrs back on
+                single_var_ds.attrs = to_save.attrs
 
                 if pre_load:
                     single_var_ds.load()
