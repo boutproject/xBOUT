@@ -89,6 +89,9 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     drop_variables : sequence, optional
         Drop variables in this list before merging. Allows user to ignore variables from
         a particular physics model that are not consistent between processors.
+    parallel : bool, optional
+        If true will perform the file opening and trimming steps in parallel
+        using dask. (Passed on to xarray.open_mfdataset)
 
     Returns
     -------
@@ -103,7 +106,8 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         ds = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
                                       keep_xboundaries=keep_xboundaries,
                                       keep_yboundaries=keep_yboundaries,
-                                      drop_variables=drop_variables)
+                                      drop_variables=drop_variables,
+                                      parallel=parallel)
     else:
         # Its a grid file
         ds = _open_grid(datapath, chunks=chunks,
@@ -277,7 +281,7 @@ def _is_dump_files(datapath):
 
 def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
                              keep_xboundaries=False, keep_yboundaries=False,
-                             drop_variables=None):
+                             drop_variables=None, parallel=False):
     filepaths, filetype = _expand_filepaths(datapath)
 
     # Open just one file to read processor splitting
@@ -292,7 +296,7 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
 
     ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims, combine='nested',
                            data_vars='minimal', preprocess=_preprocess, engine=filetype,
-                           chunks=chunks)
+                           chunks=chunks, parallel=parallel)
 
     return ds
 
