@@ -49,7 +49,7 @@ class BoutDatasetAccessor:
     #  self.prefix)
 
     def save(self, savepath='./boutdata.nc', filetype='NETCDF4',
-             variables=None, save_dtype=None, separate_vars=False):
+             variables=None, save_dtype=None, separate_vars=False, pre_load=False):
         """
         Save data variables to a netCDF file.
 
@@ -63,6 +63,9 @@ class BoutDatasetAccessor:
             If this is true then every variable which depends on time will be saved into a different output file.
             The files are labelled by the name of the variable. Variables which don't depend on time will be present in
             every output file.
+        pre_load : bool, optional
+            When saving separate variables, will load each variable into memory before
+            saving to file, which can be considerably faster.
         """
 
         if variables is None:
@@ -112,12 +115,16 @@ class BoutDatasetAccessor:
                   .format(str(time_dependent_vars)))
 
             # Save each one to separate file
+            # TODO perform the save in parallel with save_mfdataset?
             for var in time_dependent_vars:
                 # Group variables so that there is only one time-dependent
                 # variable saved in each file
                 time_independent_data = [to_save[time_ind_var] for
                                          time_ind_var in time_independent_vars]
                 single_var_ds = merge([to_save[var], *time_independent_data])
+
+                if pre_load:
+                    single_var_ds.load()
 
                 # Include the name of the variable in the name of the saved
                 # file
