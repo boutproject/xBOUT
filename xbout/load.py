@@ -13,8 +13,9 @@ from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype
 
 _BOUT_PER_PROC_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
                             'wtime_comms', 'wtime_io', 'wtime_per_rhs',
-                            'wtime_per_rhs_e', 'wtime_per_rhs_i', 'PE_XIND', 'PE_YIND',
-                            'MYPE']
+                            'wtime_per_rhs_e', 'wtime_per_rhs_i', 
+                            'iteration', 'hist_hi', 'tt',
+                            'PE_XIND', 'PE_YIND', 'MYPE']
 
 
 # This code should run whenever any function from this module is imported
