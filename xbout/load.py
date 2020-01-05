@@ -294,7 +294,9 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
                            data_vars='minimal', preprocess=_preprocess, engine=filetype,
                            chunks=chunks)
 
-    return ds
+    # Remove any duplicate time values from concatenation
+    _, unique_indices = np.unique(ds['t_array'], return_index=True)
+    return ds.isel(t=unique_indices)
 
 
 def _expand_filepaths(datapath):
