@@ -15,6 +15,8 @@ from dask.diagnostics import ProgressBar
 
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
+
+
 @register_dataset_accessor('bout')
 class BoutDatasetAccessor:
     """
@@ -61,12 +63,13 @@ class BoutDatasetAccessor:
         variables : list of str, optional
             Variables from the dataset to save. Default is to save all of them.
         separate_vars: bool, optional
-            If this is true then every variable which depends on time will be saved into a different output file.
-            The files are labelled by the name of the variable. Variables which don't depend on time will be present in
-            every output file.
+            If this is true then every variable which depends on time (but not
+            solely on time) will be saved into a different output file.
+            The files are labelled by the name of the variable. Variables which
+            don't meet this criterion will be present in every output file.
         pre_load : bool, optional
-            When saving separate variables, will load each variable into memory before
-            saving to file, which can be considerably faster.
+            When saving separate variables, will load each variable into memory
+            before saving to file, which can be considerably faster.
 
         Examples
         --------
@@ -113,23 +116,22 @@ class BoutDatasetAccessor:
             dict_to_attrs(da, key='metadata')
 
         if separate_vars:
-            # Save each time-dependent variable to a different netCDF file
+            # Save each major variable to a different netCDF file
 
-            # Determine which variables are time-dependent
-            time_dependent_vars, time_independent_vars = \
-                _find_time_dependent_vars(to_save)
+            # Determine which variables are "major"
+            # Defined as time-dependent, but not solely time-dependent
+            major_vars, minor_vars = _find_major_vars(to_save)
 
             print("Will save the variables {} separately"
-                  .format(str(time_dependent_vars)))
+                  .format(str(major_vars)))
 
             # Save each one to separate file
             # TODO perform the save in parallel with save_mfdataset?
-            for var in time_dependent_vars:
+            for major_var in major_vars:
                 # Group variables so that there is only one time-dependent
                 # variable saved in each file
-                time_independent_data = [to_save[time_ind_var] for
-                                         time_ind_var in time_independent_vars]
-                single_var_ds = merge([to_save[var], *time_independent_data])
+                minor_data = [to_save[minor_var] for minor_var in minor_vars]
+                single_var_ds = merge([to_save[major_var], *minor_data])
 
                 # Add the attrs back on
                 single_var_ds.attrs = to_save.attrs
@@ -141,8 +143,8 @@ class BoutDatasetAccessor:
                 # file
                 path = Path(savepath)
                 var_savepath = str(path.parent / path.stem) + '_' \
-                               + str(var) + path.suffix
-                print('Saving ' + var + ' data...')
+                               + str(major_var) + path.suffix
+                print('Saving ' + major_var + ' data...')
                 with ProgressBar():
                     single_var_ds.to_netcdf(path=str(var_savepath),
                                             format=filetype, compute=True)
@@ -338,7 +340,15 @@ class BoutDatasetAccessor:
         return anim
 
 
-def _find_time_dependent_vars(data):
-    evolving_vars = set(var for var in data.data_vars if 't' in data[var].dims)
-    time_independent_vars = set(data.data_vars) - set(evolving_vars)
-    return list(evolving_vars), list(time_independent_vars)
+def _find_major_vars(data):
+    """
+    Splits data into those variables likely to require a lot of storage space
+    (defined as those which depend on time and at least one other dimension).
+    These are normally the variables of physical interest.
+    """
+
+    # TODO Use an Ordered Set instead to preserve order of variables in files?
+    major_vars = set(var for var in data.data_vars
+                     if ('t' in data[var].dims) and data[var].dims != ('t', ))
+    minor_vars = set(data.data_vars) - set(major_vars)
+    return list(major_vars), list(minor_vars)
