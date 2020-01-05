@@ -5,6 +5,7 @@ from functools import partial
 import configparser
 
 import xarray as xr
+from numpy import unique
 
 from natsort import natsorted
 
@@ -295,7 +296,7 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
                            chunks=chunks)
 
     # Remove any duplicate time values from concatenation
-    _, unique_indices = np.unique(ds['t_array'], return_index=True)
+    _, unique_indices = unique(ds['t_array'], return_index=True)
     return ds.isel(t=unique_indices)
 
 
