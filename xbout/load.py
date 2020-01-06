@@ -1,3 +1,4 @@
+from copy import copy
 from warnings import warn
 from pathlib import Path
 from functools import partial
@@ -324,7 +325,7 @@ def _expand_wildcards(path):
     """Return list of filepaths matching wildcard"""
 
     # Find first parent directory which does not contain a wildcard
-    base_dir = next(parent for parent in path.parents if '*' not in str(parent))
+    base_dir = Path(path.root)
 
     # Find path relative to parent
     search_pattern = str(path.relative_to(base_dir))
@@ -556,13 +557,24 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
     boundaries to deal with different conventions in a BOUT grid file.
     """
 
+    acceptable_dims = ['x', 'y', 'z']
+
+    # Passing 'chunks' with dimensions that are not present in the dataset causes an
+    # error. A gridfile will be missing 't' and may be missing 'z' dimensions that dump
+    # files have, so we must remove them from 'chunks'.
+    grid_chunks = copy(chunks)
+    unrecognised_chunk_dims = list(set(grid_chunks.keys()) - set(acceptable_dims))
+    for dim in unrecognised_chunk_dims:
+        del grid_chunks[dim]
+
     gridfilepath = Path(datapath)
-    grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath),
-                           chunks=chunks)
+    grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath))
+    if 'z' in grid_chunks and 'z' not in grid.dims:
+        del grid_chunks['z']
+    grid = grid.chunk(grid_chunks)
 
     # TODO find out what 'yup_xsplit' etc are in the doublenull storm file John gave me
     # For now drop any variables with extra dimensions
-    acceptable_dims = ['t', 'x', 'y', 'z']
     unrecognised_dims = list(set(grid.dims) - set(acceptable_dims))
     if len(unrecognised_dims) > 0:
         # Weird string formatting is a workaround to deal with possible bug in

@@ -11,7 +11,7 @@ from matplotlib.animation import PillowWriter
 def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True,
                      targets=True, add_limiter_hatching=True, cmap=None, vmin=None,
                      vmax=None, animate=True, save_as=None, fps=10, controls=True,
-                     **kwargs):
+                     aspect='equal', **kwargs):
     """
     Make a 2D plot in R-Z coordinates using animatplotlib's Pcolormesh, taking into
     account branch cuts (X-points).
@@ -23,19 +23,41 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
     ax : Axes, optional
         A matplotlib axes instance to plot to. If None, create a new
         figure and axes, and plot to that
+    cax : Axes, optional
+        Matplotlib axes instance where the colorbar will be plotted. If None, the default
+        position created by matplotlab.figure.Figure.colorbar() will be used.
     separatrix : bool, optional
         Add dashed lines showing separatrices
     targets : bool, optional
         Draw solid lines at the target surfaces
     add_limiter_hatching : bool, optional
         Draw hatched areas at the targets
+    cmap : matplotlib.colors.Colormap instance, optional
+        Colors to use for the plot
+    vmin : float, optional
+        Minimum value for the color scale
+    vmax : float, optional
+        Maximum value for the color scale
+    animate : bool, optional
+        If set to false, do not create the animation, just return the blocks
+    save_as : True or str, optional
+        If str is passed, save the animation as save_as+'.gif'.
+        If True is passed, save the animation with a default name,
+        '<variable name>_over_<animate_over>.gif'
+    fps : float, optional
+        Frame rate for the animation
+    controls : bool, optional
+        If False, do not add the timeline and pause button to the animation
+    aspect : str or None, optional
+        Argument to set_aspect()
     **kwargs : optional
-        Additional arguments are passed on to method
+        Additional arguments are passed on to the animation method
+        animatplot.blocks.Pcolormesh
 
-    ###Returns
-    ###-------
-    ###artists
-    ###    List of the contourf instances
+    Returns
+    -------
+    blocks
+        List of animatplot.blocks.Pcolormesh instances
     """
 
     # TODO generalise this
@@ -76,7 +98,7 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
     cmap = sm.get_cmap()
     fig.colorbar(sm, ax=ax, cax=cax)
 
-    ax.set_aspect('equal')
+    ax.set_aspect(aspect)
 
     regions = _decompose_regions(da)
 
@@ -111,9 +133,10 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
         if controls:
             anim.controls(timeline_slider_args={'text': animate_over})
 
-        if not save_as:
-            save_as = "{}_over_{}".format(da.name, animate_over)
-        anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
+        if save_as is not None:
+            if save_as is True:
+                save_as = "{}_over_{}".format(da.name, animate_over)
+            anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return blocks
 
@@ -139,19 +162,33 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
     y : str, optional
         Dimension to use on the y axis, default is None - then use the second spatial
         dimension of the data
+    animate : bool, optional
+        If set to false, do not create the animation, just return the block
     vmin : float, optional
         Minimum value to use for colorbar. Default is to use minimum value of
         data across whole timeseries.
     vmax : float, optional
         Maximum value to use for colorbar. Default is to use maximum value of
         data across whole timeseries.
-    save_as: str, optional
-        Filename to give to the resulting gif
+    vsymmetric : bool, optional
+        If set to true, make the color-scale symmetric
     fps : int, optional
         Frames per second of resulting gif
+    save_as : True or str, optional
+        If str is passed, save the animation as save_as+'.gif'.
+        If True is passed, save the animation with a default name,
+        '<variable name>_over_<animate_over>.gif'
+    ax : Axes, optional
+        A matplotlib axes instance to plot to. If None, create a new
+        figure and axes, and plot to that
+    cax : Axes, optional
+        Matplotlib axes instance where the colorbar will be plotted. If None, the default
+        position created by matplotlab.figure.Figure.colorbar() will be used.
+    controls : bool, optional
+        If False, do not add the timeline and pause button to the animation
     kwargs : dict, optional
-        Additional keyword arguments are passed on to the plotting function
-        (e.g. imshow for 2D plots).
+        Additional keyword arguments are passed on to the animation function
+        animatplot.blocks.Pcolormesh
     """
 
     variable = data.name
@@ -226,9 +263,10 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
         if controls:
             anim.controls(timeline_slider_args={'text': animate_over})
 
-        if not save_as:
-            save_as = "{}_over_{}".format(variable, animate_over)
-        anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
+        if save_as is not None:
+            if save_as is True:
+                save_as = "{}_over_{}".format(variable, animate_over)
+            anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return pcolormesh_block
 
@@ -246,21 +284,30 @@ def animate_line(data, animate_over='t', animate=True,
     data : xarray.DataArray
     animate_over : str, optional
         Dimension over which to animate
+    animate : bool, optional
+        If set to false, do not create the animation, just return the block
     vmin : float, optional
         Minimum value to use for colorbar. Default is to use minimum value of
         data across whole timeseries.
     vmax : float, optional
         Maximum value to use for colorbar. Default is to use maximum value of
         data across whole timeseries.
-    sep_pos : int, optional
-        Radial position at which to plot the separatrix
-    save_as: str, optional
-        Filename to give to the resulting gif
     fps : int, optional
         Frames per second of resulting gif
+    save_as : True or str, optional
+        If str is passed, save the animation as save_as+'.gif'.
+        If True is passed, save the animation with a default name,
+        '<variable name>_over_<animate_over>.gif'
+    sep_pos : int, optional
+        Radial position at which to plot the separatrix
+    ax : Axes, optional
+        A matplotlib axes instance to plot to. If None, create a new
+        figure and axes, and plot to that
+    controls : bool, optional
+        If False, do not add the timeline and pause button to the animation
     kwargs : dict, optional
         Additional keyword arguments are passed on to the plotting function
-        (e.g. imshow for 2D plots).
+        animatplot.blocks.Line
     """
 
     variable = data.name
@@ -308,8 +355,9 @@ def animate_line(data, animate_over='t', animate=True,
         if controls:
             anim.controls(timeline_slider_args={'text': animate_over})
 
-        if not save_as:
-            save_as = "{}_over_{}".format(variable, animate_over)
-        anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
+        if save_as is not None:
+            if save_as is True:
+                save_as = "{}_over_{}".format(variable, animate_over)
+            anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
 
     return line_block

@@ -70,3 +70,16 @@ class TestOpenGrid:
         # clean up
         del REGISTERED_GEOMETRIES["Schwarzschild"]
         result.close()
+
+    def test_open_grid_chunks(self, create_example_grid_file):
+        example_grid = create_example_grid_file
+        result = open_boutdataset(datapath=example_grid, chunks={'x': 4, 'y': 5})
+        assert_equal(result, open_dataset(example_grid))
+        result.close()
+
+    def test_open_grid_chunks_not_in_grid(self, create_example_grid_file):
+        example_grid = create_example_grid_file
+        result = open_boutdataset(datapath=example_grid,
+                                  chunks={'anonexistantdimension': 5})
+        assert_equal(result, open_dataset(example_grid))
+        result.close()
