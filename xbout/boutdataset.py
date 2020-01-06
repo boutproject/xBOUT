@@ -3,6 +3,7 @@ from pprint import pformat as prettyformat
 from functools import partial
 from pathlib import Path
 import warnings
+import gc
 
 from xarray import register_dataset_accessor, save_mfdataset, merge
 import animatplot as amp
@@ -149,6 +150,11 @@ class BoutDatasetAccessor:
                 with ProgressBar():
                     single_var_ds.to_netcdf(path=str(var_savepath),
                                             format=filetype, compute=True)
+
+                # Force memory deallocation to limit RAM usage
+                single_var_ds.close()
+                del single_var_ds
+                gc.collect()
         else:
             # Save data to a single file
             print('Saving data...')
