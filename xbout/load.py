@@ -16,8 +16,8 @@ from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype
 _BOUT_PER_PROC_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
                             'wtime_comms', 'wtime_io', 'wtime_per_rhs',
                             'wtime_per_rhs_e', 'wtime_per_rhs_i', 
-                            'iteration', 'hist_hi', 'tt',
-                            'PE_XIND', 'PE_YIND', 'MYPE']
+                            'hist_hi', 'tt', 'PE_XIND', 'PE_YIND', 'MYPE']
+_BOUT_TIME_DEPENDENT_META_VARS = ['iteration']
 
 
 # This code should run whenever any function from this module is imported
@@ -123,6 +123,10 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         # bool attributes
         metadata['keep_xboundaries'] = int(keep_xboundaries)
         metadata['keep_yboundaries'] = int(keep_yboundaries)
+        if 'iteration' in ds:
+            # Collect just stores most recent iteration as a scalar
+            metadata['iteration'] = int(ds['iteration'].max())
+            ds =  ds.drop('iteration')
         ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
 
     if inputfilepath:
@@ -299,7 +303,8 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
                           nxpe=nxpe, nype=nype, drop_variables=drop_variables)
 
     ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims, combine='nested',
-                           data_vars='minimal', preprocess=_preprocess, engine=filetype,
+                           data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
+                           preprocess=_preprocess, engine=filetype,
                            chunks=chunks)
 
     # Remove any duplicate time values from concatenation
