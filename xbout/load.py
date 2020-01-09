@@ -126,7 +126,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         if 'iteration' in ds:
             # Collect just stores most recent iteration as a scalar
             metadata['iteration'] = int(ds['iteration'].max())
-            ds =  ds.drop('iteration')
+            ds = ds.drop('iteration')
         ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
 
     if inputfilepath:
