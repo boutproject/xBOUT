@@ -129,6 +129,8 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
             if var in ds:
                 # Assume different processors in x & y have same iteration etc.
                 latest_top_left = {dim: 0 for dim in ds[var].dims}
+                if 't' in ds[var].dims:
+                    latest_top_left['t'] = -1
                 ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
 
     if inputfilepath:
@@ -254,10 +256,6 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
     except KeyError:
         # If BOUT Version is not saved in the dataset
         version = 0
-
-    # Collect just stores iteration from BOUT.dmp.0 as a scalar
-    latest_top_left = {dim: 0 for dim in ds['iteration'].dims}
-    ds['iteration'] = ds['iteration'].isel(latest_top_left).squeeze(drop=True)
 
     # Subtraction of z-dimensional data occurs in boutdata.collect
     # if BOUT++ version is old - same feature added here
