@@ -13,7 +13,8 @@ from natsort import natsorted
 
 from xbout.load import (_check_filetype, _expand_wildcards, _expand_filepaths,
                         _arrange_for_concatenation, _trim, _infer_contains_boundaries,
-                        open_boutdataset, _BOUT_PER_PROC_VARIABLES)
+                        open_boutdataset, _BOUT_PER_PROC_VARIABLES,
+                        _BOUT_TIME_DEPENDENT_META_VARS)
 from xbout.utils import _separate_metadata
 
 
@@ -400,7 +401,7 @@ def create_bout_grid_ds(xsize=2, ysize=4, guards={}):
 METADATA_VARS = ['BOUT_VERSION', 'NXPE', 'NYPE', 'NZPE', 'MXG', 'MYG', 'nx', 'ny', 'nz',
                  'MZ', 'MXSUB', 'MYSUB', 'MZSUB', 'ixseps1', 'ixseps2', 'jyseps1_1',
                  'jyseps1_2', 'jyseps2_1', 'jyseps2_2', 'ny_inner', 'zperiod', 'ZMIN',
-                 'ZMAX', 'dz', 'iteration']
+                 'ZMAX', 'dz']
 
 
 class TestStripMetadata():
@@ -411,7 +412,8 @@ class TestStripMetadata():
 
         ds, metadata = _separate_metadata(original)
 
-        assert original.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+        assert original.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES
+                             + _BOUT_TIME_DEPENDENT_META_VARS,
                              errors='ignore').equals(ds)
         assert metadata['NXPE'] == 1
 
@@ -423,7 +425,8 @@ class TestOpen:
         actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(),
-                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES
+                                       + _BOUT_TIME_DEPENDENT_META_VARS,
                                        errors='ignore'))
 
     def test_squashed_file(self, tmpdir_factory, bout_xyt_example_files):
@@ -432,7 +435,8 @@ class TestOpen:
         actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(),
-                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES
+                                       + _BOUT_TIME_DEPENDENT_META_VARS,
                                        errors='ignore'))
 
     def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):

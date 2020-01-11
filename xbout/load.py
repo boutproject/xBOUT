@@ -16,8 +16,8 @@ from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype
 _BOUT_PER_PROC_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
                             'wtime_comms', 'wtime_io', 'wtime_per_rhs',
                             'wtime_per_rhs_e', 'wtime_per_rhs_i', 
-                            'iteration', 'hist_hi', 'tt',
-                            'PE_XIND', 'PE_YIND', 'MYPE']
+                            'hist_hi', 'tt', 'PE_XIND', 'PE_YIND', 'MYPE']
+_BOUT_TIME_DEPENDENT_META_VARS = ['iteration']
 
 
 # This code should run whenever any function from this module is imported
@@ -43,7 +43,8 @@ except ValueError:
 def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
                      geometry=None, gridfilepath=None, chunks={},
                      keep_xboundaries=True, keep_yboundaries=False,
-                     run_name=None, info=True, drop_variables=None):
+                     run_name=None, info=True, drop_variables=None,
+                     pre_squashed=False):
     """
     Load a dataset from a set of BOUT output files, including the input options
     file. Can also load from a grid file.
@@ -91,33 +92,46 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     drop_variables : sequence, optional
         Drop variables in this list before merging. Allows user to ignore variables from
         a particular physics model that are not consistent between processors.
+    pre_squashed :  bool, optional
+        Set true when loading from data which was saved as separate variables
+        using ds.bout.save().
 
     Returns
     -------
     ds : xarray.Dataset
     """
 
-    # TODO handle possibility that we are loading a previously saved (and trimmed) dataset
-
-    # Determine if file is a grid file or data dump files
-    if _is_dump_files(datapath):
-        # Gather pointers to all numerical data from BOUT++ output files
-        ds = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
-                                      keep_xboundaries=keep_xboundaries,
-                                      keep_yboundaries=keep_yboundaries,
-                                      drop_variables=drop_variables)
+    if pre_squashed:
+        ds = xr.open_mfdataset(datapath, chunks=chunks, combine='nested',
+                               concat_dim=None)
     else:
-        # Its a grid file
-        ds = _open_grid(datapath, chunks=chunks,
-                        keep_xboundaries=keep_xboundaries,
-                        keep_yboundaries=keep_yboundaries)
+        # Determine if file is a grid file or data dump files
+        if _is_dump_files(datapath):
+            # Gather pointers to all numerical data from BOUT++ output files
+            ds = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
+                                          keep_xboundaries=keep_xboundaries,
+                                          keep_yboundaries=keep_yboundaries,
+                                          drop_variables=drop_variables)
+        else:
+            # Its a grid file
+            ds = _open_grid(datapath, chunks=chunks,
+                            keep_xboundaries=keep_xboundaries,
+                            keep_yboundaries=keep_yboundaries)
 
-    ds, metadata = _separate_metadata(ds)
-    # Store as ints because netCDF doesn't support bools, so we can't save bool
-    # attributes
-    metadata['keep_xboundaries'] = int(keep_xboundaries)
-    metadata['keep_yboundaries'] = int(keep_yboundaries)
-    ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
+        ds, metadata = _separate_metadata(ds)
+        # Store as ints because netCDF doesn't support bools, so we can't save
+        # bool attributes
+        metadata['keep_xboundaries'] = int(keep_xboundaries)
+        metadata['keep_yboundaries'] = int(keep_yboundaries)
+        ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
+
+        for var in _BOUT_TIME_DEPENDENT_META_VARS:
+            if var in ds:
+                # Assume different processors in x & y have same iteration etc.
+                latest_top_left = {dim: 0 for dim in ds[var].dims}
+                if 't' in ds[var].dims:
+                    latest_top_left['t'] = -1
+                ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
 
     if inputfilepath:
         # Use Ben's options class to store all input file options
@@ -293,7 +307,8 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
                           nxpe=nxpe, nype=nype, drop_variables=drop_variables)
 
     ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims, combine='nested',
-                           data_vars='minimal', preprocess=_preprocess, engine=filetype,
+                           data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
+                           preprocess=_preprocess, engine=filetype,
                            chunks=chunks)
 
     # Remove any duplicate time values from concatenation
