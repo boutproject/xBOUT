@@ -43,8 +43,7 @@ except ValueError:
 def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
                      geometry=None, gridfilepath=None, chunks={},
                      keep_xboundaries=True, keep_yboundaries=False,
-                     run_name=None, info=True, drop_variables=None,
-                     pre_squashed=False):
+                     run_name=None, info=True, pre_squashed=False, **kwargs):
     """
     Load a dataset from a set of BOUT output files, including the input options
     file. Can also load from a grid file.
@@ -89,12 +88,12 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         Useful if you are going to open multiple simulations and compare the
         results.
     info : bool, optional
-    drop_variables : sequence, optional
-        Drop variables in this list before merging. Allows user to ignore variables from
-        a particular physics model that are not consistent between processors.
     pre_squashed :  bool, optional
         Set true when loading from data which was saved as separate variables
         using ds.bout.save().
+    kwargs : optional
+        Keyword arguments are passed down to `xarray.open_mfdataset`, which in
+        turn extra kwargs down to `xarray.open_dataset`.
 
     Returns
     -------
@@ -103,7 +102,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
 
     if pre_squashed:
         ds = xr.open_mfdataset(datapath, chunks=chunks, combine='nested',
-                               concat_dim=None)
+                               concat_dim=None, **kwargs)
     else:
         # Determine if file is a grid file or data dump files
         if _is_dump_files(datapath):
@@ -111,7 +110,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
             ds = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
                                           keep_xboundaries=keep_xboundaries,
                                           keep_yboundaries=keep_yboundaries,
-                                          drop_variables=drop_variables)
+                                          **kwargs)
         else:
             # Its a grid file
             ds = _open_grid(datapath, chunks=chunks,
@@ -293,7 +292,7 @@ def _is_dump_files(datapath):
 
 def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
                              keep_xboundaries=False, keep_yboundaries=False,
-                             drop_variables=None):
+                             **kwargs):
     filepaths, filetype = _expand_filepaths(datapath)
 
     # Open just one file to read processor splitting
@@ -304,12 +303,12 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
     _preprocess = partial(_trim, guards={'x': mxg, 'y': myg},
                           keep_boundaries={'x': keep_xboundaries,
                                            'y': keep_yboundaries},
-                          nxpe=nxpe, nype=nype, drop_variables=drop_variables)
+                          nxpe=nxpe, nype=nype)
 
     ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims, combine='nested',
                            data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
                            preprocess=_preprocess, engine=filetype,
-                           chunks=chunks)
+                           chunks=chunks, **kwargs)
 
     # Remove any duplicate time values from concatenation
     _, unique_indices = unique(ds['t_array'], return_index=True)
@@ -454,7 +453,7 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     return paths_grid, concat_dims
 
 
-def _trim(ds, *, guards, keep_boundaries, nxpe, nype, drop_variables):
+def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
     """
     Trims all guard (and optionally boundary) cells off a single dataset read from a
     single BOUT dump file, to prepare for concatenation.
@@ -491,9 +490,6 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype, drop_variables):
                            guards)
         selection[dim] = slice(lower, upper)
     trimmed_ds = ds.isel(**selection)
-
-    if drop_variables is not None:
-        trimmed_ds = trimmed_ds.drop(drop_variables, errors='ignore')
 
     # Ignore FieldPerps for now
     for name in trimmed_ds:
