@@ -5,7 +5,7 @@ from pathlib import Path
 import warnings
 import gc
 
-from xarray import register_dataset_accessor, save_mfdataset, merge
+import xarray as xr
 import animatplot as amp
 from matplotlib import pyplot as plt
 from matplotlib.animation import PillowWriter
@@ -19,7 +19,7 @@ from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
 
 
-@register_dataset_accessor('bout')
+@xr.register_dataset_accessor('bout')
 class BoutDatasetAccessor:
     """
     Contains BOUT-specific methods to use on BOUT++ datasets opened using
@@ -133,7 +133,7 @@ class BoutDatasetAccessor:
                 # Group variables so that there is only one time-dependent
                 # variable saved in each file
                 minor_data = [to_save[minor_var] for minor_var in minor_vars]
-                single_var_ds = merge([to_save[major_var], *minor_data])
+                single_var_ds = xr.merge([to_save[major_var], *minor_data])
 
                 # Add the attrs back on
                 single_var_ds.attrs = to_save.attrs
@@ -191,7 +191,7 @@ class BoutDatasetAccessor:
         restart_datasets, paths = _split_into_restarts(self.data, savepath,
                                                        nxpe, nype)
         with ProgressBar():
-            save_mfdataset(restart_datasets, paths, compute=True)
+            xr.save_mfdataset(restart_datasets, paths, compute=True)
         return
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
