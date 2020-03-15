@@ -133,6 +133,85 @@ class BoutDataArrayAccessor:
         result["direction_y"] = "Standard"
         return result
 
+    def fromRegion(self, region, with_guards=None):
+        """
+        Get a logically-rectangular section of data from a certain region.
+        Includes guard cells from neighbouring regions.
+
+        Parameters
+        ----------
+        region : str
+            Region to get data for
+        with_guards : int or dict of int, optional
+            Number of guard cells to include, by default use MXG and MYG from BOUT++. Pass
+            a dict to set different numbers for different coordinates.
+        """
+
+        region = self.data.regions[region]
+        xcoord = self.data.metadata['bout_xdim']
+        ycoord = self.data.metadata['bout_ydim']
+
+        if with_guards is None:
+            mxg = self.data.metadata['MXG']
+            myg = self.data.metadata['MYG']
+        else:
+            try:
+                try:
+                    mxg = with_guards[xcoord]
+                except KeyError:
+                    mxg = self.data.metadata['MXG']
+                try:
+                    myg = with_guards[ycoord]
+                except KeyError:
+                    myg = self.data.metadata['MYG']
+            except TypeError:
+                mxg = with_guards
+                myg = with_guards
+
+        xslice, yslice = region.getSlices()
+        da = self.data.isel(**{xcoord: xslice, ycoord: yslice})
+
+        if mxg > 0:
+            # get guard cells from x-neighbour regions
+            if region.connection_inner is not None:
+                da_inner = self.data.bout.fromRegion(region.connection_inner,
+                                                     with_guards={xcoord: 0, ycoord:0})
+
+                # select just the points we need to fill the guard cells of da
+                da_inner = da_inner.isel(**{xcoord: slice(-mxg, None)})
+
+                da = xr.concat((da_inner, da), xcoord)
+            if region.connection_outer is not None:
+                da_outer = self.data.bout.fromRegion(region.connection_outer,
+                                                     with_guards={xcoord: 0, ycoord:0})
+
+                # select just the points we need to fill the guard cells of da
+                da_outer = da_outer.isel(**{xcoord: slice(mxg)})
+
+                da = xr.concat((da, da_outer), xcoord)
+
+        if myg > 0:
+            # get guard cells from y-neighbour regions
+            if region.connection_lower is not None:
+                da_lower = self.data.bout.fromRegion(region.connection_lower,
+                                                     with_guards={xcoord: mxg, ycoord:0})
+
+                # select just the points we need to fill the guard cells of da
+                da_lower = da_lower.isel(**{ycoord: slice(-myg, None)})
+
+                da = xr.concat((da_lower, da), ycoord)
+            if region.connection_upper is not None:
+                da_upper = self.data.bout.fromRegion(region.connection_upper,
+                                                     with_guards={xcoord: mxg, ycoord:0})
+
+                # select just the points we need to fill the guard cells of da
+                da_upper = da_upper.isel(**{ycoord: slice(myg)})
+
+                da = xr.concat((da, da_upper), ycoord)
+
+        return da
+
+
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):
         """

@@ -4,7 +4,9 @@ from textwrap import dedent
 import xarray as xr
 import numpy as np
 
+from .region import Region, _create_regions_toroidal
 from .utils import _set_attrs_on_all_vars
+
 REGISTERED_GEOMETRIES = {}
 
 
@@ -65,6 +67,9 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         updated_ds = add_geometry_coords(ds, grid=grid)
     else:
         updated_ds = add_geometry_coords(ds)
+
+    updated_ds = _create_regions_toroidal(updated_ds)
+
     return updated_ds
 
 
