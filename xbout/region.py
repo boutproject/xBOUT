@@ -49,6 +49,54 @@ class Region:
 
         return slice(xi, xo), slice(yl, yu)
 
+    def getInnerGuardsSlices(self, mxg):
+        """
+        Return x- and y-dimension slices that select mxg guard cells on the inner-x side
+        of this region from the global DataArray.
+
+        Parameters
+        ----------
+        mxg : int
+            Number of guard cells
+        """
+        return slice(self.xinner - mxg, self.xinner), slice(self.ylower, self.yupper)
+
+    def getOuterGuardsSlices(self, mxg):
+        """
+        Return x- and y-dimension slices that select mxg guard cells on the outer-x side
+        of this region from the global DataArray.
+
+        Parameters
+        ----------
+        mxg : int
+            Number of guard cells
+        """
+        return slice(self.xouter, self.xouter + mxg), slice(self.ylower, self.yupper)
+
+    def getLowerGuardsSlices(self, myg):
+        """
+        Return x- and y-dimension slices that select myg guard cells on the lower-y side
+        of this region from the global DataArray.
+
+        Parameters
+        ----------
+        myg : int
+            Number of guard cells
+        """
+        return slice(self.xinner, self.xouter), slice(self.ylower - myg, self.ylower)
+
+    def getUpperGuardsSlices(self, myg):
+        """
+        Return x- and y-dimension slices that select myg guard cells on the upper-y side
+        of this region from the global DataArray.
+
+        Parameters
+        ----------
+        myg : int
+            Number of guard cells
+        """
+        return slice(self.xinner, self.xouter), slice(self.yupper, self.yupper + myg)
+
 
 def _in_range(val, lower, upper):
     if val < lower:

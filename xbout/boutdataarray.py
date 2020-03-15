@@ -180,6 +180,15 @@ class BoutDataArrayAccessor:
                 # select just the points we need to fill the guard cells of da
                 da_inner = da_inner.isel(**{xcoord: slice(-mxg, None)})
 
+                if xcoord in da.coords:
+                    # Use local coordinates for neighbouring region, not communicated ones
+                    # Note, at the moment this should do nothing, because all neigbours in the
+                    # x-direction are contiguous in the global array anyway, but included to
+                    # be future-proof
+                    xslice, yslice = region.getInnerGuardsSlices(mxg)
+                    new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
+                    da_inner = da_inner.assign_coords(**{xcoord: new_xcoord})
+
                 da = xr.concat((da_inner, da), xcoord)
             if region.connection_outer is not None:
                 da_outer = self.data.bout.fromRegion(region.connection_outer,
@@ -187,6 +196,15 @@ class BoutDataArrayAccessor:
 
                 # select just the points we need to fill the guard cells of da
                 da_outer = da_outer.isel(**{xcoord: slice(mxg)})
+
+                if xcoord in da.coords:
+                    # Use local coordinates for neighbouring region, not communicated ones
+                    # Note, at the moment this should do nothing, because all neigbours in the
+                    # x-direction are contiguous in the global array anyway, but included to
+                    # be future-proof
+                    xslice, yslice = region.getOuterGuardsSlices(mxg)
+                    new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
+                    da_outer = da_outer.assign_coords(**{xcoord: new_xcoord})
 
                 da = xr.concat((da, da_outer), xcoord)
 
@@ -199,6 +217,12 @@ class BoutDataArrayAccessor:
                 # select just the points we need to fill the guard cells of da
                 da_lower = da_lower.isel(**{ycoord: slice(-myg, None)})
 
+                if ycoord in da.coords:
+                    # Use local coordinates for neighbouring region, not communicated ones
+                    xslice, yslice = region.getLowerGuardsSlices(myg)
+                    new_ycoord = self.data[ycoord].isel(**{ycoord:yslice})
+                    da_lower = da_lower.assign_coords(**{ycoord: new_ycoord})
+
                 da = xr.concat((da_lower, da), ycoord)
             if region.connection_upper is not None:
                 da_upper = self.data.bout.fromRegion(region.connection_upper,
@@ -206,6 +230,12 @@ class BoutDataArrayAccessor:
 
                 # select just the points we need to fill the guard cells of da
                 da_upper = da_upper.isel(**{ycoord: slice(myg)})
+
+                if ycoord in da.coords:
+                    # Use local coordinates for neighbouring region, not communicated ones
+                    xslice, yslice = region.getUpperGuardsSlices(myg)
+                    new_ycoord = self.data[ycoord].isel(**{ycoord:yslice})
+                    da_upper = da_upper.assign_coords(**{ycoord: new_ycoord})
 
                 da = xr.concat((da, da_upper), ycoord)
 
