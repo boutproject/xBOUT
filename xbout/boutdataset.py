@@ -78,6 +78,123 @@ class BoutDatasetAccessor:
                 self.data[aligned_name] = self.data[name].bout.toFieldAligned()
             return self.data[aligned_name]
 
+    def setupParallelInterp(self, n=8):
+        """
+        Set parameters and do some initialisation for parallel interpolation.
+
+        At present this only supports output on a regular grid (constant spacing in y).
+        This is what Hypnotoad grids provide, but is not a requirement of BOUT++.
+
+        Parameters
+        -----------
+        n : int, optional
+            Factor to increase parallel resolution by
+        """
+
+        ds = self.data
+        ds.metadata['fine_interpolation_factor'] = n
+        for da in ds.values():
+            da.metadata['fine_interpolation_factor'] = n
+
+        return ds
+
+    def getHighParallelResRegion(self, var, region, n=None, toroidal_points=None,
+                                 method='cubic'):
+        """
+        Interpolate in the parallel direction to get a higher resolution version of the
+        variable in a certain region
+
+        Parameters
+        ----------
+        var : str
+            Name of the variable to interpolate
+        region : str
+            The region to calculate the output in
+        n : int, optional
+            The factor to increase the resolution by. Defaults to the value set by
+            BoutDataset.setupParallelInterp(), or 10 if that has not been called.
+        toroidal_points : int or sequence of int, optional
+            If int, number of toroidal points to output, applies a stride to toroidal
+            direction to save memory usage. If sequence of int, the indexes of toroidal
+            points for the output.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataArray.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+        """
+
+        ds = self.data
+        xcoord = ds.metadata['bout_xdim']
+        ycoord = ds.metadata['bout_ydim']
+        zcoord = ds.metadata['bout_zdim']
+
+        try:
+            da = ds[var + '_' + region + '_fine']
+            if isinstance(toroidal_points, int):
+                if len(da[zcoord]) != toroidal_points:
+                    raise KeyError
+            else:
+                if ds[zcoord][toroidal_points] != da[zcoord]:
+                    raise KeyError
+            return da
+        except KeyError:
+            pass
+
+        da = ds[var]
+        if zcoord in da.dims and da.direction_y != 'Aligned':
+            aligned_input = False
+            da = ds.bout.getFieldAligned(var)
+        else:
+            aligned_input = True
+
+        if n is None:
+            try:
+                n = self.data.metadata['fine_interpolation_factor']
+            except KeyError:
+                n = 10
+
+        da = da.bout.fromRegion(region.name, with_guards={xcoord: 0, ycoord: 2})
+        da = da.chunk({ycoord: None})
+        dy = ds['dy'].bout.fromRegion(region.name, with_guards={xcoord: 0, ycoord: 2})
+
+        ny_local = len(da[ycoord])
+        if region.connection_lower is None:
+            ystart = da[ycoord][0] - dy.isel(**{xcoord: 0, ycoord:0})/2.
+        else:
+            ystart = da[ycoord][2] - dy.isel(**{xcoord: 0, ycoord:2})/2.
+            ny_local -= 2
+        if region.connection_upper is None:
+            yend = da[ycoord][-1] + dy.isel(**{xcoord: 0, ycoord:-1})/2.
+        else:
+            yend = da[ycoord][-3] + dy.isel(**{xcoord: 0, ycoord:-3})/2.
+            ny_local -= 2
+
+        ny_fine = n*ny_local + 1
+        y_fine = np.linspace(ystart, yend, ny_fine)
+
+        da = da.interp({ycoord: y_fine.data}, assume_sorted=True, method=method)
+
+        if not aligned_input:
+            # Want output in non-aligned coordinates
+            da = da.bout.fromFieldAligned(
+                    ds.bout.getHighParallelResRegion(var='zShift', region=region.name,
+                                                     n=n, method=method)
+                 )
+
+        if toroidal_points is not None:
+            if isinstance(toroidal_points, int):
+                nz = len(da[zcoord])
+                zstride = nz//toroidal_points
+                da = da.isel(**{zcoord: slice(None, None, zstride)})
+            else:
+                da = da.isel(**{zcoord: toroidal_points})
+
+        da.name = var + '_' + region.name + '_fine'
+
+        ds[var + '_' + region.name + '_fine'] = da
+
+        return da
+
     def save(self, savepath='./boutdata.nc', filetype='NETCDF4',
              variables=None, save_dtype=None, separate_vars=False, pre_load=False):
         """
