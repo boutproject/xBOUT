@@ -141,8 +141,10 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     # Add 1D Orthogonal Toroidal coordinates
     ny = ds.dims[coordinates['y']]
-    theta = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=ny),
-                         dims=coordinates['y'])
+    # dy should always be constant in x, so it is safe to slice to x=0
+    dy = ds['dy'].isel(x=0)
+    # calculate theta at the centre of each cell
+    theta = dy.cumsum(keep_attrs=True) - dy/2.
     ds = ds.assign_coords(**{coordinates['y']: theta})
 
     # TODO automatically make this coordinate 1D in simplified cases?
