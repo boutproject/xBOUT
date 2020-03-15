@@ -160,7 +160,8 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     if 'z' in ds.dims:
         ds = ds.rename(z=coordinates['z'])
         nz = ds.dims[coordinates['z']]
-        phi = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=nz),
+        phi = xr.DataArray(np.linspace(start=ds.metadata['ZMIN'],
+                                       stop=2 * np.pi * ds.metadata['ZMAX'], num=nz),
                            dims=coordinates['z'])
         ds = ds.assign_coords(**{coordinates['z']: phi})
 
