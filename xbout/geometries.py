@@ -146,15 +146,21 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     ds = ds.rename(y=coordinates['y'])
 
     # Add 1D Orthogonal Toroidal coordinates
+    # Make index 'x' a coordinate, useful for handling global indexing
+    nx = ds.dims['x']
+    ds = ds.assign_coords(x=np.arange(nx))
     ny = ds.dims[coordinates['y']]
-    # dy should always be constant in x, so it is safe to slice to x=0
+    # dy should always be constant in x, so it is safe to slice to x=0.
     # [The y-coordinate has to be a 1d coordinate that labels x-z slices of the grid
     # (similarly x-coordinate is 1d coordinate that labels y-z slices and z-coordinate is
     # a 1d coordinate that labels x-y slices). A coordinate might have different values
     # in disconnected regions, but there are no branch-cuts allowed in the x-direction in
     # BOUT++ (at least for the momement), so the y-coordinate has to be 1d and
     # single-valued. Therefore similarly dy has to be 1d and single-valued.]
-    dy = ds['dy'].isel(x=0)
+    # Need drop=True so that the result does not have an x-coordinate value which prevents
+    # it being added as a coordinate.
+    dy = ds['dy'].isel(x=0, drop=True)
+
     # calculate theta at the centre of each cell
     theta = dy.cumsum(keep_attrs=True) - dy/2.
     ds = ds.assign_coords(**{coordinates['y']: theta})
