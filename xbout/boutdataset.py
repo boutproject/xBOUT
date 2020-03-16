@@ -1,6 +1,7 @@
 import collections
 from pprint import pformat as prettyformat
 from functools import partial
+from itertools import chain
 from pathlib import Path
 import warnings
 import gc
@@ -103,9 +104,12 @@ class BoutDatasetAccessor:
             raise NotImplementedError("Haven't decided how to write options "
                                       "file back out yet")
         else:
-            # Delete placeholders for options on each variable
-            for var in to_save.data_vars:
-                del to_save[var].attrs['options']
+            # Delete placeholders for options on each variable and coordinate
+            for var in chain(to_save.data_vars, to_save.coords):
+                try:
+                    del to_save[var].attrs['options']
+                except KeyError:
+                    pass
 
         # Store the metadata as individual attributes instead because
         # netCDF can't handle storing arbitrary objects in attrs
@@ -113,9 +117,12 @@ class BoutDatasetAccessor:
             for key, value in obj.attrs.pop(key).items():
                 obj.attrs[key] = value
         dict_to_attrs(to_save, 'metadata')
-        # Must do this for all variables in dataset too
-        for varname, da in to_save.data_vars.items():
-            dict_to_attrs(da, key='metadata')
+        # Must do this for all variables and coordinates in dataset too
+        for varname, da in chain(to_save.data_vars.items(), to_save.coords.items()):
+            try:
+                dict_to_attrs(da, key='metadata')
+            except KeyError:
+                pass
 
         if separate_vars:
             # Save each major variable to a different netCDF file
