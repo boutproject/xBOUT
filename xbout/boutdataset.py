@@ -99,7 +99,7 @@ class BoutDatasetAccessor:
         return ds
 
     def getHighParallelResRegion(self, var, region, n=None, toroidal_points=None,
-                                 method='cubic'):
+                                 method='cubic', caching=True):
         """
         Interpolate in the parallel direction to get a higher resolution version of the
         variable in a certain region
@@ -121,6 +121,9 @@ class BoutDatasetAccessor:
             The interpolation method to use. Options from xarray.DataArray.interp(),
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
             'cubic'.
+        caching : bool, optional
+            Save the interpolated results in the Dataset (the default). Can be set to
+            False to save memory.
         """
 
         ds = self.data
@@ -176,6 +179,7 @@ class BoutDatasetAccessor:
 
         if not aligned_input:
             # Want output in non-aligned coordinates
+            # Note: always caching zShift as storing a single Field2D is not expensive
             da = da.bout.fromFieldAligned(
                     ds.bout.getHighParallelResRegion(var='zShift', region=region.name,
                                                      n=n, method=method)
@@ -191,7 +195,8 @@ class BoutDatasetAccessor:
 
         da.name = var + '_' + region.name + '_fine'
 
-        ds[var + '_' + region.name + '_fine'] = da
+        if caching:
+            ds[var + '_' + region.name + '_fine'] = da
 
         return da
 
