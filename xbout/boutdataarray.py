@@ -373,7 +373,7 @@ class BoutDataArrayAccessor:
         return da
 
     def highParallelResRegion(self, region, n=None, toroidal_points=None,
-                              method='cubic', caching=True):
+                              method='cubic'):
         """
         Interpolate in the parallel direction to get a higher resolution version of the
         variable in a certain region
@@ -393,9 +393,6 @@ class BoutDataArrayAccessor:
             The interpolation method to use. Options from xarray.DataArray.interp(),
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
             'cubic'.
-        caching : bool, optional
-            Save the interpolated results in the Dataset (the default). Can be set to
-            False to save memory.
         """
 
         da = self.data
@@ -403,19 +400,6 @@ class BoutDataArrayAccessor:
         xcoord = da.metadata['bout_xdim']
         ycoord = da.metadata['bout_ydim']
         zcoord = da.metadata['bout_zdim']
-
-        if region.da_highres is not None:
-            result = region.da_highres
-            # as long as requested toroidal_points match the cached version, can return
-            # cached version
-            if isinstance(toroidal_points, int):
-                if len(result[zcoord]) == toroidal_points:
-                    return result
-            else:
-                if da[zcoord][toroidal_points] == result[zcoord]:
-                    return result
-            # toroidal_points did not match, so need to re-calculate
-            region.da_highres = None
 
         if zcoord in da.dims and da.direction_y != 'Aligned':
             aligned_input = False
@@ -440,7 +424,6 @@ class BoutDataArrayAccessor:
 
         if not aligned_input:
             # Want output in non-aligned coordinates
-            # Note: always caching zShift as storing a single Field2D is not expensive
             da = da.bout.fromFieldAligned()
 
         if toroidal_points is not None:
@@ -450,9 +433,6 @@ class BoutDataArrayAccessor:
                 da = da.isel(**{zcoord: slice(None, None, zstride)})
             else:
                 da = da.isel(**{zcoord: toroidal_points})
-
-        if caching:
-            region.da_highres = da
 
         return da
 
@@ -475,9 +455,6 @@ class BoutDataArrayAccessor:
             The interpolation method to use. Options from xarray.DataArray.interp(),
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
             'cubic'.
-        caching : bool, optional
-            Save the interpolated results in the Dataset (the default). Can be set to
-            False to save memory.
 
         Returns
         -------
