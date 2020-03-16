@@ -10,6 +10,7 @@ from xarray import register_dataarray_accessor
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 from .plotting.utils import _create_norm
+from .region import Region
 
 
 @register_dataarray_accessor('bout')
@@ -239,8 +240,9 @@ class BoutDataArrayAccessor:
 
                 da = xr.concat((da, da_upper), ycoord)
 
-        return da
+        da.attrs['region'] = region
 
+        return da
 
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):
