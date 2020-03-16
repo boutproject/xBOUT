@@ -52,6 +52,7 @@ class Region:
         self.connection_outer = connect_outer
         self.connection_lower = connect_lower
         self.connection_upper = connect_upper
+        self.da_highres = None
 
         if ds is not None:
             # calculate start and end coordinates

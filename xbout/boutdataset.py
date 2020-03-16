@@ -127,21 +127,23 @@ class BoutDatasetAccessor:
         """
 
         ds = self.data
+        region = ds.regions[region]
         xcoord = ds.metadata['bout_xdim']
         ycoord = ds.metadata['bout_ydim']
         zcoord = ds.metadata['bout_zdim']
 
-        try:
-            da = ds[var + '_' + region + '_fine']
+        if region.da_highres is not None:
+            result = region.da_highres
+            # as long as requested toroidal_points match the cached version, can return
+            # cached version
             if isinstance(toroidal_points, int):
-                if len(da[zcoord]) != toroidal_points:
-                    raise KeyError
+                if len(result[zcoord]) == toroidal_points:
+                    return result
             else:
-                if ds[zcoord][toroidal_points] != da[zcoord]:
-                    raise KeyError
-            return da
-        except KeyError:
-            pass
+                if result[zcoord] == ds[zcoord][toroidal_points]:
+                    return result
+            # toroidal_points did not match, so need to re-calculate
+            region.da_highres = None
 
         da = ds[var]
         if zcoord in da.dims and da.direction_y != 'Aligned':
@@ -193,10 +195,8 @@ class BoutDatasetAccessor:
             else:
                 da = da.isel(**{zcoord: toroidal_points})
 
-        da.name = var + '_' + region.name + '_fine'
-
         if caching:
-            ds[var + '_' + region.name + '_fine'] = da
+            region.da_highres = da
 
         return da
 
