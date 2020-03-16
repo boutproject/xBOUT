@@ -192,10 +192,16 @@ def _get_topology(ds):
         return 'single-null'
 
     if jys11 == jys21 and jys12 == jys22:
-        return 'xpoint'
+        if jys11 < nyinner -1 and jys22 > nyinner:
+            return 'xpoint'
+        else:
+            raise ValueError('Currently unsupported topology')
 
     if ixs1 == ixs2:
-        return 'connected-double-null'
+        if jys21 < nyinner -1 and jys21 > nyinner:
+            return 'connected-double-null'
+        else:
+            raise ValueError('Currently unsupported topology')
 
     return 'disconnected-double-null'
 
