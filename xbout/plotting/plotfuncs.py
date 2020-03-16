@@ -26,10 +26,10 @@ def regions(da, ax=None, **kwargs):
     if ax is None:
         fig, ax = plt.subplots()
 
-    regions = _decompose_regions(da)
+    da_regions = _decompose_regions(da)
 
-    colored_regions = [xr.full_like(region, fill_value=num / len(regions))
-                       for num, region in enumerate(regions)]
+    colored_regions = [xr.full_like(da_region, fill_value=num / len(regions))
+                       for num, da_region in enumerate(da_regions)]
 
     return [region.plot.pcolormesh(x=x, y=y, vmin=0, vmax=1, cmap='tab20',
                                    infer_intervals=False, add_colorbar=False, ax=ax,
@@ -181,12 +181,12 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         if 'infer_intervals' not in kwargs:
             kwargs['infer_intervals'] = False
 
-    regions = _decompose_regions(da)
+    da_regions = _decompose_regions(da)
 
     # Plot all regions on same axis
-    add_labels = [True] + [False] * (len(regions) - 1)
+    add_labels = [True] + [False] * (len(da_regions) - 1)
     artists = [method(region, x=x, y=y, ax=ax, add_colorbar=False, add_labels=add_label,
-               cmap=cmap, **kwargs) for region, add_label in zip(regions, add_labels)]
+               cmap=cmap, **kwargs) for region, add_label in zip(da_regions, add_labels)]
 
     if method is xr.plot.contour:
         # using extend='neither' guarantees that the ends of the colorbar will be
