@@ -109,7 +109,7 @@ class BoutDataArrayAccessor:
         return self.data.copy(data=data_shifted)
 
 
-    def toFieldAligned(self, zShift):
+    def toFieldAligned(self):
         """
         Transform DataArray to field-aligned coordinates, which are shifted with respect
         to the base coordinates by an angle zShift
@@ -117,12 +117,12 @@ class BoutDataArrayAccessor:
         if self.data.direction_y != "Standard":
             raise ValueError("Cannot shift a " + self.direction_y + " type field to "
                              + "field-aligned coordinates")
-        result = self._shiftZ(zShift)
+        result = self._shiftZ(self.data['zShift'])
         result["direction_y"] = "Aligned"
         return result
 
 
-    def fromFieldAligned(self, zShift):
+    def fromFieldAligned(self):
         """
         Transform DataArray from field-aligned coordinates, which are shifted with respect
         to the base coordinates by an angle zShift
@@ -130,7 +130,7 @@ class BoutDataArrayAccessor:
         if self.data.direction_y != "Aligned":
             raise ValueError("Cannot shift a " + self.direction_y + " type field to "
                              + "field-aligned coordinates")
-        result = self._shiftZ(-zShift)
+        result = self._shiftZ(-self.data['zShift'])
         result["direction_y"] = "Standard"
         return result
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,

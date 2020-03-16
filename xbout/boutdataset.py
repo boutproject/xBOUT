@@ -55,6 +55,10 @@ class BoutDatasetAccessor:
     #  self.prefix)
 
     def getFieldAligned(self, name):
+        """
+        Get a field-aligned version of a variable, calculating (and caching in the
+        Dataset) if necessary
+        """
         aligned_name = name + '_aligned'
         try:
             result = self.data[aligned_name]
@@ -63,8 +67,7 @@ class BoutDatasetAccessor:
                                  "has direction_y=" + result.direction_y)
             return result
         except KeyError:
-            self.data[aligned_name] = self.data[name].bout.toFieldAligned(
-                                                             self.data['zShift'])
+            self.data[aligned_name] = self.data[name].bout.toFieldAligned()
             return self.data[aligned_name]
 
     def save(self, savepath='./boutdata.nc', filetype='NETCDF4',
