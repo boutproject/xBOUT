@@ -372,6 +372,103 @@ class BoutDataArrayAccessor:
 
         return da
 
+    def highParallelResRegion(self, region, n=None, toroidal_points=None,
+                              method='cubic', caching=True):
+        """
+        Interpolate in the parallel direction to get a higher resolution version of the
+        variable in a certain region
+
+        Parameters
+        ----------
+        region : str
+            The region to calculate the output in
+        n : int, optional
+            The factor to increase the resolution by. Defaults to the value set by
+            BoutDataset.setupParallelInterp(), or 10 if that has not been called.
+        toroidal_points : int or sequence of int, optional
+            If int, number of toroidal points to output, applies a stride to toroidal
+            direction to save memory usage. If sequence of int, the indexes of toroidal
+            points for the output.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataArray.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+        caching : bool, optional
+            Save the interpolated results in the Dataset (the default). Can be set to
+            False to save memory.
+        """
+
+        da = self.data
+        region = da.regions[region]
+        xcoord = da.metadata['bout_xdim']
+        ycoord = da.metadata['bout_ydim']
+        zcoord = da.metadata['bout_zdim']
+
+        if region.da_highres is not None:
+            result = region.da_highres
+            # as long as requested toroidal_points match the cached version, can return
+            # cached version
+            if isinstance(toroidal_points, int):
+                if len(result[zcoord]) == toroidal_points:
+                    return result
+            else:
+                if da[zcoord][toroidal_points] == result[zcoord]:
+                    return result
+            # toroidal_points did not match, so need to re-calculate
+            region.da_highres = None
+
+        if zcoord in da.dims and da.direction_y != 'Aligned':
+            aligned_input = False
+            da = da.bout.toFieldAligned()
+        else:
+            aligned_input = True
+
+        if n is None:
+            try:
+                n = self.data.metadata['fine_interpolation_factor']
+            except KeyError:
+                n = 10
+
+        da = da.bout.fromRegion(region.name, with_guards={xcoord: 0, ycoord: 2})
+        da = da.chunk({ycoord: None})
+        dy = da['dy'].bout.fromRegion(region.name, with_guards={xcoord: 0, ycoord: 2})
+
+        ny_local = len(da[ycoord])
+        if region.connection_lower is None:
+            ystart = da[ycoord][0] - dy.isel(**{xcoord: 0, ycoord:0})/2.
+        else:
+            ystart = da[ycoord][2] - dy.isel(**{xcoord: 0, ycoord:2})/2.
+            ny_local -= 2
+        if region.connection_upper is None:
+            yend = da[ycoord][-1] + dy.isel(**{xcoord: 0, ycoord:-1})/2.
+        else:
+            yend = da[ycoord][-3] + dy.isel(**{xcoord: 0, ycoord:-3})/2.
+            ny_local -= 2
+
+        ny_fine = n*ny_local + 1
+        y_fine = np.linspace(ystart, yend, ny_fine)
+
+        da = da.interp({ycoord: y_fine.data}, assume_sorted=True, method=method)
+
+        if not aligned_input:
+            # Want output in non-aligned coordinates
+            # Note: always caching zShift as storing a single Field2D is not expensive
+            da = da.bout.fromFieldAligned()
+
+        if toroidal_points is not None:
+            if isinstance(toroidal_points, int):
+                nz = len(da[zcoord])
+                zstride = nz//toroidal_points
+                da = da.isel(**{zcoord: slice(None, None, zstride)})
+            else:
+                da = da.isel(**{zcoord: toroidal_points})
+
+        if caching:
+            region.da_highres = da
+
+        return da
+
+
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):
         """
