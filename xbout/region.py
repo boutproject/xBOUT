@@ -1,6 +1,6 @@
-from .utils import _set_attrs_on_all_vars
-
 import numpy as np
+
+from .utils import _set_attrs_on_all_vars
 
 
 class Region:
