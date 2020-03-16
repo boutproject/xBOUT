@@ -448,7 +448,8 @@ class BoutDataArrayAccessor:
         ny_fine = n*ny_local + 1
         y_fine = np.linspace(ystart, yend, ny_fine)
 
-        da = da.interp({ycoord: y_fine.data}, assume_sorted=True, method=method)
+        da = da.interp({ycoord: y_fine.data}, assume_sorted=True, method=method,
+                       kwargs={'fill_value': 'extrapolate'})
 
         if not aligned_input:
             # Want output in non-aligned coordinates
