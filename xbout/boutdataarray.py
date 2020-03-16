@@ -416,8 +416,22 @@ class BoutDataArrayAccessor:
         da = da.bout.fromRegion(region.name, with_guards={xcoord: 0, ycoord: 2})
         da = da.chunk({ycoord: None})
 
-        ny_fine = n*region.ny + 1
-        y_fine = np.linspace(region.ylower, region.yupper, ny_fine)
+        ny_fine = n*region.ny
+        dy = (region.yupper - region.ylower)/ny_fine
+
+        myg = da.metadata['MYG']
+        if da.metadata['keep_yboundaries'] and region.connection_lower is None:
+            ybndry_lower = myg
+        else:
+            ybndry_lower = 0
+        if da.metadata['keep_yboundaries'] and region.connection_upper is None:
+            ybndry_upper = myg
+        else:
+            ybndry_upper = 0
+
+        y_fine = np.linspace(region.ylower - (ybndry_lower - 0.5)*dy,
+                             region.yupper + (ybndry_upper - 0.5)*dy,
+                             ny_fine + ybndry_lower + ybndry_upper)
 
         da = da.interp({ycoord: y_fine.data}, assume_sorted=True, method=method,
                        kwargs={'fill_value': 'extrapolate'})
