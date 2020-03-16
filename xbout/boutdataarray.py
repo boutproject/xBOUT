@@ -457,6 +457,38 @@ class BoutDataArrayAccessor:
         return da
 
 
+    def highParallelRes(self, **kwargs):
+        """
+        Interpolate in the parallel direction to get a higher resolution version of the
+        variable.
+
+        Parameters
+        ----------
+        n : int, optional
+            The factor to increase the resolution by. Defaults to the value set by
+            BoutDataset.setupParallelInterp(), or 10 if that has not been called.
+        toroidal_points : int or sequence of int, optional
+            If int, number of toroidal points to output, applies a stride to toroidal
+            direction to save memory usage. If sequence of int, the indexes of toroidal
+            points for the output.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataArray.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+        caching : bool, optional
+            Save the interpolated results in the Dataset (the default). Can be set to
+            False to save memory.
+
+        Returns
+        -------
+        A dict whose keys are the names of regions and whose values are the
+        high-resolution data of the variable in those regions.
+        """
+
+        return {region: self.highParallelResRegion(region, **kwargs)
+                for region in self.data.regions}
+
+
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):
         """
