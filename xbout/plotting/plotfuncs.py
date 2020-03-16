@@ -1,5 +1,3 @@
-import collections
-
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -29,7 +27,7 @@ def regions(da, ax=None, **kwargs):
     da_regions = _decompose_regions(da)
 
     colored_regions = [xr.full_like(da_region, fill_value=num / len(regions))
-                       for num, da_region in enumerate(da_regions)]
+                       for num, da_region in enumerate(da_regions.values())]
 
     return [region.plot.pcolormesh(x=x, y=y, vmin=0, vmax=1, cmap='tab20',
                                    infer_intervals=False, add_colorbar=False, ax=ax,
@@ -186,7 +184,8 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
     # Plot all regions on same axis
     add_labels = [True] + [False] * (len(da_regions) - 1)
     artists = [method(region, x=x, y=y, ax=ax, add_colorbar=False, add_labels=add_label,
-               cmap=cmap, **kwargs) for region, add_label in zip(da_regions, add_labels)]
+               cmap=cmap, **kwargs)
+               for region, add_label in zip(da_regions.values(), add_labels)]
 
     if method is xr.plot.contour:
         # using extend='neither' guarantees that the ends of the colorbar will be
@@ -214,8 +213,8 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                     raise ValueError('Argument passed to gridlines must be bool, int or '
                                      'slice. Got a ' + type(value) + ', ' + str(value))
 
-        R_regions = [da_region['R'] for da_region in da_regions]
-        Z_regions = [da_region['Z'] for da_region in da_regions]
+        R_regions = [da_region['R'] for da_region in da_regions.values()]
+        Z_regions = [da_region['Z'] for da_region in da_regions.values()]
 
         for R, Z in zip(R_regions, Z_regions):
             if (not da.metadata['bout_xdim'] in R.dims
@@ -247,9 +246,9 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         targets = False
 
     if separatrix:
-        plot_separatrices(da, ax)
+        plot_separatrices(da_regions, ax)
 
     if targets:
-        plot_targets(da, ax, hatching=add_limiter_hatching)
+        plot_targets(da_regions, ax, hatching=add_limiter_hatching)
 
     return artists

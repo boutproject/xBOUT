@@ -104,7 +104,7 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
 
     # Plot all regions on same axis
     blocks = []
-    for da_region in da_regions:
+    for da_region in da_regions.values():
         # Load values eagerly otherwise for some reason the plotting takes
         # 100's of times longer - for some reason animatplot does not deal
         # well with dask arrays!
@@ -121,10 +121,10 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
          targets = False
 
     if separatrix:
-        plot_separatrices(da, ax)
+        plot_separatrices(da_regions, ax)
 
     if targets:
-        plot_targets(da, ax, hatching=add_limiter_hatching)
+        plot_targets(da_regions, ax, hatching=add_limiter_hatching)
 
     if animate:
         timeline = amp.Timeline(np.arange(da.sizes[animate_over]), fps=fps)

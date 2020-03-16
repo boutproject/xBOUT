@@ -61,12 +61,14 @@ def plot_separatrix(da, sep_pos, ax, radial_coord='x'):
 
 def _decompose_regions(da):
 
-    return [da.bout.fromRegion(region, with_guards=1) for region in da.regions]
+    return {region: da.bout.fromRegion(region, with_guards=1) for region in da.regions}
 
 
 def _is_core_only(da):
 
-    _, _, _, _, ix1, ix2, _, nx, _, _ = _get_seps(da)
+    nx = da.metadata['nx']
+    ix1 = da.metadata['ixseps1']
+    ix2 = da.metadata['ixseps2']
 
     return (ix1 >= nx and ix2 >= nx)
 
@@ -291,7 +293,7 @@ def _get_perp_vec(u1, u2, magnitude=0.04):
     return wx, wy
 
 
-def _get_seps(da):
+def _get_seps(da, *, from_region=False):
 
     nx = da.metadata['nx']
     ix1 = da.metadata['ixseps1']
@@ -310,29 +312,33 @@ def _get_seps(da):
     j22 = da.metadata['jyseps2_2']
     nin = da.metadata.get('ny_inner', j12)
 
-    ny_array = len(da['theta'])
-
     if da.metadata['keep_yboundaries']:
         y_boundary_guards = da.metadata['MYG']
     else:
         y_boundary_guards = 0
 
-    if ny_array == ny:
-        # No y-boundary cells, or keep_yboundaries is False
-        if y_boundary_guards > 0 and da.metadata['keep_yboundaries']:
-            raise ValueError('keep_yboundaries is True and y_boundary_guards={}, which '
-                             'is greater than 0, but data does not havy y-boundary '
-                             'cells.')
-        y_boundary_guards = 0
-    elif j12 == j21 and ny_array == ny + 2*y_boundary_guards:
-        # single-null with guard cells
-        pass
-    elif j12 > j21 and ny_array == ny + 4*y_boundary_guards:
-        # double-null with guard cells
-        pass
-    else:
-        print('j21={}, j12={}, ny_array={}, ny={}'.format(j21, j12, ny_array, ny))
-        raise ValueError("Unrecognized combination of ny/jyseps")
+    if not from_region:
+        # If da is only part of the data (from a particular region), then we cannot
+        # calculate ny_array from it, so have to skip these checks
+
+        ny_array = len(da['theta'])
+
+        if ny_array == ny:
+            # No y-boundary cells, or keep_yboundaries is False
+            if y_boundary_guards > 0 and da.metadata['keep_yboundaries']:
+                raise ValueError('keep_yboundaries is True and y_boundary_guards={}, which '
+                                 'is greater than 0, but data does not havy y-boundary '
+                                 'cells.')
+            y_boundary_guards = 0
+        elif j12 == j21 and ny_array == ny + 2*y_boundary_guards:
+            # single-null with guard cells
+            pass
+        elif j12 > j21 and ny_array == ny + 4*y_boundary_guards:
+            # double-null with guard cells
+            pass
+        else:
+            print('j21={}, j12={}, ny_array={}, ny={}'.format(j21, j12, ny_array, ny))
+            raise ValueError("Unrecognized combination of ny/jyseps")
 
     # translate topology indices - ones from BOUT++ do not include boundary cells
     if j21 == j12:
