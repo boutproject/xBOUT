@@ -12,6 +12,7 @@ from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 from .plotting.utils import _create_norm
 from .region import Region
+from .utils import _update_metadata_increased_resolution
 
 
 @register_dataarray_accessor('bout')
@@ -435,6 +436,8 @@ class BoutDataArrayAccessor:
 
         da = da.interp({ycoord: y_fine.data}, assume_sorted=True, method=method,
                        kwargs={'fill_value': 'extrapolate'})
+
+        da = _update_metadata_increased_resolution(da, n)
 
         if not aligned_input:
             # Want output in non-aligned coordinates

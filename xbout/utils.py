@@ -42,3 +42,34 @@ def _separate_metadata(ds):
     metadata = dict(zip(scalar_vars, metadata_vals))
 
     return ds.drop(scalar_vars), metadata
+
+def _update_metadata_increased_resolution(da, n):
+    """
+    Update the metadata variables to account for a y-direction resolution increased by a
+    factor n.
+
+    Parameters
+    ----------
+    da : DataArray
+        The variable to update
+    n : int
+        The factor to increase the y-resolution by
+    """
+
+    # Take deepcopy to ensure we do not alter metadata of other variables
+    da.attrs['metadata'] = deepcopy(da.metadata)
+
+    def update_jyseps(name):
+        da.metadata[name] = n*(da.metadata[name] + 1) - 1
+    update_jyseps('jyseps1_1')
+    update_jyseps('jyseps2_1')
+    update_jyseps('jyseps1_2')
+    update_jyseps('jyseps2_2')
+
+    def update_ny(name):
+        da.metadata[name] = n*da.metadata[name]
+    update_ny('ny')
+    update_ny('ny_inner')
+    update_ny('MYSUB')
+
+    return da
