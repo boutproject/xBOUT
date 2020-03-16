@@ -178,7 +178,13 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         ds = ds.rename(Rxy='R', Zxy='Z')
         ds = ds.set_coords(('R', 'Z'))
     else:
-        ds.set_coords(('Rxy', 'Zxy'))
+        ds = ds.set_coords(('Rxy', 'Zxy'))
+
+    # Add zShift as a coordinate, so that it gets interpolated along with a variable
+    try:
+        ds = ds.set_coords('zShift')
+    except KeyError:
+        pass
 
     return ds
 
