@@ -344,9 +344,9 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     ds['ixseps1'] = nx
     ds['ixseps2'] = nx
     ds['jyseps1_1'] = 0
-    ds['jyseps1_2'] = ny
     ds['jyseps2_1'] = ny//2 - 1
-    ds['jyseps2_2'] = ny//2 - 1
+    ds['jyseps1_2'] = ny//2 - 1
+    ds['jyseps2_2'] = ny
     ds['ny_inner'] = ny//2
 
     one = DataArray(np.ones((x_length, y_length)), dims=['x', 'y'])
