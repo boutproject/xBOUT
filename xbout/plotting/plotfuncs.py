@@ -213,20 +213,17 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                 if not isinstance(value, slice):
                     raise ValueError('Argument passed to gridlines must be bool, int or '
                                      'slice. Got a ' + type(value) + ', ' + str(value))
-        R_global = da['R']
-        R_global.attrs['metadata'] = da.metadata
 
-        Z_global = da['Z']
-        Z_global.attrs['metadata'] = da.metadata
-
-        R_regions = _decompose_regions(da['R'])
-        Z_regions = _decompose_regions(da['Z'])
+        R_regions = [da_region['R'] for da_region in da_regions]
+        Z_regions = [da_region['Z'] for da_region in da_regions]
 
         for R, Z in zip(R_regions, Z_regions):
             if (not da.metadata['bout_xdim'] in R.dims
                     and not da.metadata['bout_ydim'] in R.dims):
                 # Small regions around X-point do not have segments in x- or y-directions,
                 # so skip
+                ## Currently this region does not exist, but there is a small white gap at
+                ## the X-point, so we might add it back in future
                 continue
             if gridlines.get('x') is not None:
                 # transpose in case Dataset or DataArray has been transposed away from the usual
