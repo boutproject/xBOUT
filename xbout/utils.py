@@ -1,10 +1,16 @@
+from copy import deepcopy
+
 import numpy as np
 
 
-def _set_attrs_on_all_vars(ds, key, attr_data):
+def _set_attrs_on_all_vars(ds, key, attr_data, copy=False):
     ds.attrs[key] = attr_data
-    for da in ds.values():
-        da.attrs[key] = attr_data
+    if copy:
+        for da in ds.values():
+            da.attrs[key] = deepcopy(attr_data)
+    else:
+        for da in ds.values():
+            da.attrs[key] = attr_data
     return ds
 
 
