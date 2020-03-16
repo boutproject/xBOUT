@@ -16,8 +16,10 @@ class Region:
         self.name = name
         self.xinner_ind = xinner_ind
         self.xouter_ind = xouter_ind
+        self.nx = xouter_ind - xinner_ind
         self.ylower_ind = ylower_ind
         self.yupper_ind = yupper_ind
+        self.ny = yupper_ind - ylower_ind
         self.connection_inner = connect_inner
         self.connection_outer = connect_outer
         self.connection_lower = connect_lower
