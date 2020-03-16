@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import numpy as np
 
 from .utils import _set_attrs_on_all_vars
@@ -13,6 +15,30 @@ class Region:
     def __init__(self, *, name, ds=None, xinner_ind=None, xouter_ind=None,
                  ylower_ind=None, yupper_ind=None, connect_inner=None, connect_outer=None,
                  connect_lower=None, connect_upper=None):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of the region
+        ds : BoutDataset, optional
+            Dataset to get variables to calculate coordinates from
+        xinner_ind : int, optional
+            Global x-index of the inner points of this region
+        xouter_ind : int, optional
+            Global x-index of the points just beyond the outer edge of this region
+        ylower_ind : int, optional
+            Global y-index of the lower points of this region
+        yupper_ind : int, optional
+            Global y-index of the points just beyond the upper edge of this region
+        connect_inner : str, optional
+            The region inside this one in the x-direction
+        connect_outer : str, optional
+            The region outside this one in the x-direction
+        connect_lower : str, optional
+            The region below this one in the y-direction
+        connect_upper : str, optional
+            The region above this one in the y-direction
+        """
         self.name = name
         self.xinner_ind = xinner_ind
         self.xouter_ind = xouter_ind
@@ -233,7 +259,7 @@ def _create_regions_toroidal(ds):
     ny += 4*ybndry
 
     # Note, include guard cells in the created regions, fill them later
-    regions = {}
+    regions = OrderedDict()
     if topology == 'disconnected-double-null':
         regions['lower_inner_PFR'] = Region(
                 name='lower_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
