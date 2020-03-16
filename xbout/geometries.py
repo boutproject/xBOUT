@@ -68,8 +68,6 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     else:
         updated_ds = add_geometry_coords(ds)
 
-    updated_ds = _create_regions_toroidal(updated_ds)
-
     return updated_ds
 
 
@@ -196,6 +194,8 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         ds = ds.set_coords('zShift')
     except KeyError:
         pass
+
+    ds = _create_regions_toroidal(ds)
 
     return ds
 
