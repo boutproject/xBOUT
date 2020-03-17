@@ -439,6 +439,11 @@ class BoutDataArrayAccessor:
 
         da = _update_metadata_increased_resolution(da, n)
 
+        # Remove regions which have incorrect information for the high-resolution grid.
+        # New regions will be generated when creating a new Dataset in
+        # BoutDataset.getHighParallelResVars
+        del da.attrs['regions']
+
         if not aligned_input:
             # Want output in non-aligned coordinates
             da = da.bout.fromFieldAligned()
