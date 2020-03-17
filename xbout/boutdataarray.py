@@ -475,12 +475,13 @@ class BoutDataArrayAccessor:
 
         Returns
         -------
-        A dict whose keys are the names of regions and whose values are the
-        high-resolution data of the variable in those regions.
+        A new Dataset containing a high-resolution version of the variable.
         """
 
-        return {region: self.highParallelResRegion(region, **kwargs)
-                for region in self.data.regions}
+        return xr.combine_by_coords(
+                [self.highParallelResRegion(region, **kwargs).to_dataset()
+                    for region in self.data.regions]
+                )
 
 
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
