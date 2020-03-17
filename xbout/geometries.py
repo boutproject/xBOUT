@@ -4,6 +4,7 @@ from textwrap import dedent
 import xarray as xr
 import numpy as np
 
+from .utils import _set_attrs_on_all_vars
 REGISTERED_GEOMETRIES = {}
 
 
@@ -43,6 +44,8 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     ------
     UnregisteredGeometryError
     """
+
+    ds = _set_attrs_on_all_vars(ds, 'geometry', geometry_name)
 
     try:
         add_geometry_coords = REGISTERED_GEOMETRIES[geometry_name]
