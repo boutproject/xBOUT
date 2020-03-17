@@ -412,7 +412,7 @@ class BoutDataArrayAccessor:
             try:
                 n = self.data.metadata['fine_interpolation_factor']
             except KeyError:
-                n = 10
+                n = 8
 
         da = da.bout.fromRegion(region.name, with_guards={xcoord: 0, ycoord: 2})
         da = da.chunk({ycoord: None})
