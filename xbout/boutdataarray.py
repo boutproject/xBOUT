@@ -41,8 +41,8 @@ class BoutDataArrayAccessor:
 
     def to_dataset(self):
         """
-        Convert a DataArray to a Dataset, copying the attributes from the DataArray to the
-        Dataset.
+        Convert a DataArray to a Dataset, copying the attributes from the DataArray to
+        the Dataset.
         """
         da = self.data
         ds = da.to_dataset()

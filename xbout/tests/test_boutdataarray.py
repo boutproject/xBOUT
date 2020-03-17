@@ -5,6 +5,7 @@ from xarray.core.utils import dict_equiv
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout import open_boutdataset
 
+
 class TestBoutDataArrayMethods:
 
     def test_to_dataset(self, tmpdir_factory, bout_xyt_example_files):
