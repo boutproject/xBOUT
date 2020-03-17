@@ -8,8 +8,8 @@ class TestUtils:
 
     def test__set_attrs_on_all_vars(self):
         ds = Dataset()
-        ds['a'] = DataArray()
-        ds['b'] = DataArray()
+        ds['a'] = DataArray([0.])
+        ds['b'] = DataArray([1.])
 
         _set_attrs_on_all_vars(ds, 'i', 42)
         _set_attrs_on_all_vars(ds, 'metadata', {'x': 3})
@@ -26,8 +26,8 @@ class TestUtils:
 
     def test__set_attrs_on_all_vars_copy(self):
         ds = Dataset()
-        ds['a'] = DataArray()
-        ds['b'] = DataArray()
+        ds['a'] = DataArray([0.])
+        ds['b'] = DataArray([1.])
 
         _set_attrs_on_all_vars(ds, 'metadata', {'x': 3}, copy=True)
 
