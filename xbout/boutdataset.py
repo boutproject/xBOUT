@@ -78,16 +78,13 @@ class BoutDatasetAccessor:
                 self.data[aligned_name] = self.data[name].bout.toFieldAligned()
             return self.data[aligned_name]
 
-    def setupParallelInterp(self, n=8):
+    def resetParallelInterpFactor(self, n):
         """
-        Set parameters and do some initialisation for parallel interpolation.
-
-        At present this only supports output on a regular grid (constant spacing in y).
-        This is what Hypnotoad grids provide, but is not a requirement of BOUT++.
+        Set the default factor to increase resolution when doing parallel interpolation.
 
         Parameters
         -----------
-        n : int, optional
+        n : int
             Factor to increase parallel resolution by
         """
 
