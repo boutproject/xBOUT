@@ -350,7 +350,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
 
     ds['zperiod'] = 1
     ds['ZMIN'] = 0.
-    ds['ZMAX'] = 2.*np.pi
+    ds['ZMAX'] = 1.
     ds['g11'] = one
     ds['g22'] = one
     ds['g33'] = one
