@@ -483,10 +483,22 @@ class BoutDataArrayAccessor:
         A new Dataset containing a high-resolution version of the variable.
         """
 
-        return xr.combine_by_coords(
-                [self.highParallelResRegion(region, **kwargs).to_dataset()
+        # xr.combine_by_coords does not keep attrs at the moment. See
+        # https://github.com/pydata/xarray/issues/3865
+        # For now just copy the attrs from the first region. Can remove this workaround
+        # when the xarray issue is fixed. Should be able to use just:
+        #return xr.combine_by_coords(
+        #        [self.highParallelResRegion(region, **kwargs).bout.to_dataset()
+        #            for region in self.data.regions]
+        #        )
+
+        parts = [self.highParallelResRegion(region, **kwargs).bout.to_dataset()
                     for region in self.data.regions]
-                )
+
+        result = xr.combine_by_coords(parts)
+        result.attrs = parts[0].attrs
+
+        return result
 
 
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
