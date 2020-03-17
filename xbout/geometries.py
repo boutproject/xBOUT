@@ -121,85 +121,95 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates)
 
-    # Check whether coordinates names conflict with variables in ds
-    bad_names = [name for name in coordinates.values() if name in ds]
-    if bad_names:
-        raise ValueError("Coordinate names {} clash with variables in the dataset. "
-                         "Register a different geometry to provide alternative names. "
-                         "It may be useful to use the 'coordinates' argument to "
-                         "add_toroidal_geometry_coords() for this.".format(bad_names))
+    # If the coordinates already exist, we are re-applying the geometry and do not need to
+    # add them again.
+    # Ignore coordinates['z'] because ds might be Field2D-type without a z-dimension, and
+    # if the other coordinates all match for a Field3D-type ds, we must actually be
+    # re-applying the geometry.
+    # Ignore coordinates['t'] because we do not rename 't' or make a t-coordinate
+    if not np.all([c in ds.coords or c == coordinates['z'] or c == coordinates['t']
+                   for c in coordinates.values()]):
 
-    # Get extra geometry information from grid file if it's not in the dump files
-    needed_variables = ['psixy', 'Rxy', 'Zxy']
-    for v in needed_variables:
-        if v not in ds:
-            if grid is None:
-                raise ValueError("Grid file is required to provide %s. Pass the grid "
-                                 "file name as the 'gridfilepath' argument to "
-                                 "open_boutdataset().")
-            ds[v] = grid[v]
+        # Check whether coordinates names conflict with variables in ds
+        bad_names = [name for name in coordinates.values() if name in ds and name not in
+                ds.coords]
+        if bad_names:
+            raise ValueError("Coordinate names {} clash with variables in the dataset. "
+                             "Register a different geometry to provide alternative names. "
+                             "It may be useful to use the 'coordinates' argument to "
+                             "add_toroidal_geometry_coords() for this.".format(bad_names))
 
-    # Rename 't' if user requested it
-    ds = ds.rename(t=coordinates['t'])
+        # Get extra geometry information from grid file if it's not in the dump files
+        needed_variables = ['psixy', 'Rxy', 'Zxy']
+        for v in needed_variables:
+            if v not in ds:
+                if grid is None:
+                    raise ValueError("Grid file is required to provide %s. Pass the grid "
+                                     "file name as the 'gridfilepath' argument to "
+                                     "open_boutdataset().")
+                ds[v] = grid[v]
 
-    # Change names of dimensions to Orthogonal Toroidal ones
-    ds = ds.rename(y=coordinates['y'])
+        # Rename 't' if user requested it
+        ds = ds.rename(t=coordinates['t'])
 
-    # Add 1D Orthogonal Toroidal coordinates
-    # Make index 'x' a coordinate, useful for handling global indexing
-    nx = ds.dims['x']
-    ds = ds.assign_coords(x=np.arange(nx))
-    ny = ds.dims[coordinates['y']]
-    # dy should always be constant in x, so it is safe to slice to x=0.
-    # [The y-coordinate has to be a 1d coordinate that labels x-z slices of the grid
-    # (similarly x-coordinate is 1d coordinate that labels y-z slices and z-coordinate is
-    # a 1d coordinate that labels x-y slices). A coordinate might have different values
-    # in disconnected regions, but there are no branch-cuts allowed in the x-direction in
-    # BOUT++ (at least for the momement), so the y-coordinate has to be 1d and
-    # single-valued. Therefore similarly dy has to be 1d and single-valued.]
-    # Need drop=True so that the result does not have an x-coordinate value which
-    # prevents it being added as a coordinate.
-    dy = ds['dy'].isel(x=0, drop=True)
+        # Change names of dimensions to Orthogonal Toroidal ones
+        ds = ds.rename(y=coordinates['y'])
 
-    # calculate theta at the centre of each cell
-    theta = dy.cumsum(keep_attrs=True) - dy/2.
-    ds = ds.assign_coords(**{coordinates['y']: theta})
+        # Add 1D Orthogonal Toroidal coordinates
+        # Make index 'x' a coordinate, useful for handling global indexing
+        nx = ds.dims['x']
+        ds = ds.assign_coords(x=np.arange(nx))
+        ny = ds.dims[coordinates['y']]
+        # dy should always be constant in x, so it is safe to slice to x=0.
+        # [The y-coordinate has to be a 1d coordinate that labels x-z slices of the grid
+        # (similarly x-coordinate is 1d coordinate that labels y-z slices and
+        # z-coordinate is a 1d coordinate that labels x-y slices). A coordinate might
+        # have different values in disconnected regions, but there are no branch-cuts
+        # allowed in the x-direction in BOUT++ (at least for the momement), so the
+        # y-coordinate has to be 1d and single-valued. Therefore similarly dy has to be
+        # 1d and single-valued.] Need drop=True so that the result does not have an
+        # x-coordinate value which prevents it being added as a coordinate.
+        dy = ds['dy'].isel(x=0, drop=True)
 
-    # TODO automatically make this coordinate 1D in simplified cases?
-    ds = ds.rename(psixy=coordinates['x'])
-    ds = ds.set_coords(coordinates['x'])
-    ds[coordinates['x']].attrs['units'] = 'Wb'
+        # calculate theta at the centre of each cell
+        theta = dy.cumsum(keep_attrs=True) - dy/2.
+        ds = ds.assign_coords(**{coordinates['y']: theta})
 
-    # Record which dimensions 't', 'x', and 'y' were renamed to.
-    ds.metadata['bout_tdim'] = coordinates['t']
-    # x dimension not renamed, so this is still 'x'
-    ds.metadata['bout_xdim'] = 'x'
-    ds.metadata['bout_ydim'] = coordinates['y']
+        # TODO automatically make this coordinate 1D in simplified cases?
+        ds = ds.rename(psixy=coordinates['x'])
+        ds = ds.set_coords(coordinates['x'])
+        ds[coordinates['x']].attrs['units'] = 'Wb'
 
-    # If full data (not just grid file) then toroidal dim will be present
-    if 'z' in ds.dims:
-        ds = ds.rename(z=coordinates['z'])
-        nz = ds.dims[coordinates['z']]
-        phi = xr.DataArray(np.linspace(start=ds.metadata['ZMIN'],
-                                       stop=2 * np.pi * ds.metadata['ZMAX'], num=nz),
-                           dims=coordinates['z'])
-        ds = ds.assign_coords(**{coordinates['z']: phi})
+        # Record which dimensions 't', 'x', and 'y' were renamed to.
+        ds.metadata['bout_tdim'] = coordinates['t']
+        # x dimension not renamed, so this is still 'x'
+        ds.metadata['bout_xdim'] = 'x'
+        ds.metadata['bout_ydim'] = coordinates['y']
 
-        # Record which dimension 'z' was renamed to.
-        ds.metadata['bout_zdim'] = coordinates['z']
+        # If full data (not just grid file) then toroidal dim will be present
+        if 'z' in ds.dims:
+            ds = ds.rename(z=coordinates['z'])
+            nz = ds.dims[coordinates['z']]
+            phi = xr.DataArray(np.linspace(start=ds.metadata['ZMIN'],
+                                           stop=2 * np.pi * ds.metadata['ZMAX'], num=nz),
+                               dims=coordinates['z'])
+            ds = ds.assign_coords(**{coordinates['z']: phi})
 
-    # Add 2D Cylindrical coordinates
-    if ('R' not in ds) and ('Z' not in ds):
-        ds = ds.rename(Rxy='R', Zxy='Z')
-        ds = ds.set_coords(('R', 'Z'))
-    else:
-        ds = ds.set_coords(('Rxy', 'Zxy'))
+            # Record which dimension 'z' was renamed to.
+            ds.metadata['bout_zdim'] = coordinates['z']
 
-    # Add zShift as a coordinate, so that it gets interpolated along with a variable
-    try:
-        ds = ds.set_coords('zShift')
-    except KeyError:
-        pass
+        # Add 2D Cylindrical coordinates
+        if ('R' not in ds) and ('Z' not in ds):
+            ds = ds.rename(Rxy='R', Zxy='Z')
+            ds = ds.set_coords(('R', 'Z'))
+        else:
+            ds = ds.set_coords(('Rxy', 'Zxy'))
+
+        # Add zShift as a coordinate, so that it gets interpolated along with a variable
+        try:
+            ds = ds.set_coords('zShift')
+        except KeyError:
+            pass
 
     ds = _create_regions_toroidal(ds)
 
@@ -211,32 +221,35 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates)
 
-    # Add 'hthe' from grid file, needed below for radial coordinate
-    if 'hthe' not in ds:
-        hthe_from_grid = True
-        if grid is None:
-            raise ValueError("Grid file is required to provide %s. Pass the grid "
-                             "file name as the 'gridfilepath' argument to "
-                             "open_boutdataset().")
-        ds['hthe'] = grid['hthe']
-    else:
-        hthe_from_grid = False
-
     ds = add_toroidal_geometry_coords(ds, coordinates=coordinates, grid=grid)
 
-    # Add 1D radial coordinate
-    if 'r' in ds:
-        raise ValueError("Cannot have variable 'r' in dataset when using "
-                         "geometry='s-alpha'")
-    ds['r'] = ds['hthe'].isel({coordinates['y']: 0}).squeeze(drop=True)
-    ds['r'].attrs['units'] = 'm'
-    # remove x-index coordinate, don't need when we have 'r' as a radial coordinate
-    ds = ds.drop('x')
-    ds = ds.set_coords('r')
-    ds = ds.rename(x='r')
+    # If 'r' already in ds.coords, then we are re-applying this geometry so can skip this
+    # part
+    if 'r' not in ds.coords:
+        # Add 'hthe' from grid file, needed below for radial coordinate
+        if 'hthe' not in ds:
+            hthe_from_grid = True
+            if grid is None:
+                raise ValueError("Grid file is required to provide %s. Pass the grid "
+                                 "file name as the 'gridfilepath' argument to "
+                                 "open_boutdataset().")
+            ds['hthe'] = grid['hthe']
+        else:
+            hthe_from_grid = False
 
-    if hthe_from_grid:
-        # remove hthe because it does not have correct metadata
-        del ds['hthe']
+        # Add 1D radial coordinate
+        if 'r' in ds:
+            raise ValueError("Cannot have variable 'r' in dataset when using "
+                             "geometry='s-alpha'")
+        ds['r'] = ds['hthe'].isel({coordinates['y']: 0}).squeeze(drop=True)
+        ds['r'].attrs['units'] = 'm'
+        # remove x-index coordinate, don't need when we have 'r' as a radial coordinate
+        ds = ds.drop('x')
+        ds = ds.set_coords('r')
+        ds = ds.rename(x='r')
+
+        if hthe_from_grid:
+            # remove hthe because it does not have correct metadata
+            del ds['hthe']
 
     return ds
