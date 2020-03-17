@@ -72,6 +72,12 @@ class Region:
             self.ylower = dy_cumsum[ylower_ind] - dy[ylower_ind]/2.
             self.yupper = dy_cumsum[yupper_ind - 1] + dy[yupper_ind - 1]/2.
 
+    def __repr__(self):
+        result = "<xbout.region.Region>\n"
+        for attr, val in vars(self).items():
+            result += "\t" + attr + "\t" + str(val) + "\n"
+        return result
+
     def getSlices(self, mxg=0, myg=0):
         """
         Return x- and y-dimension slices that select this region from the global
