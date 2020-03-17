@@ -398,6 +398,7 @@ class BoutDataArrayAccessor:
 
         da = self.data
         region = da.regions[region]
+        tcoord = da.metadata['bout_tdim']
         xcoord = da.metadata['bout_xdim']
         ycoord = da.metadata['bout_ydim']
         zcoord = da.metadata['bout_zdim']
@@ -438,6 +439,20 @@ class BoutDataArrayAccessor:
                        kwargs={'fill_value': 'extrapolate'})
 
         da = _update_metadata_increased_resolution(da, n)
+
+        # Add dy to da as a coordinate. This will only be temporary, once we have combined
+        # the regions together, we will demote dy to a regular variable
+        dy_array = xr.DataArray(np.full([da.sizes[xcoord], da.sizes[ycoord]], dy),
+                                dims=[xcoord, ycoord])
+        # need a view of da with only x- and y-dimensions, unfortunately no neat way to do
+        # this with isel
+        da_2d = da
+        if tcoord in da.sizes:
+            da_2d = da_2d.isel(**{tcoord: 0}, drop=True)
+        if zcoord in da.sizes:
+            da_2d = da_2d.isel(**{zcoord: 0}, drop=True)
+        dy_array = da_2d.copy(data=dy_array)
+        da = da.assign_coords(dy=dy_array)
 
         # Remove regions which have incorrect information for the high-resolution grid.
         # New regions will be generated when creating a new Dataset in
