@@ -463,7 +463,7 @@ class BoutDataArrayAccessor:
             # Want output in non-aligned coordinates
             da = da.bout.fromFieldAligned()
 
-        if toroidal_points is not None:
+        if toroidal_points is not None and zcoord in da.sizes:
             if isinstance(toroidal_points, int):
                 nz = len(da[zcoord])
                 zstride = nz//toroidal_points
