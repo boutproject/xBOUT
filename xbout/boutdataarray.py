@@ -90,7 +90,7 @@ class BoutDataArrayAccessor:
         for dim in phases.dims:
             extra_dims.remove(dim)
         phases = phases.expand_dims(extra_dims)
-        phases = phases.transpose(*fft_dims)
+        phases = phases.transpose(*fft_dims, transpose_coords=True)
 
         data_shifted_fft = data_fft * np.exp(phases.values)
 

@@ -220,7 +220,7 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
             raise ValueError("Dimension {} is not present in the data" .format(x))
         y = spatial_dims[0]
 
-    data = data.transpose(animate_over, y, x)
+    data = data.transpose(animate_over, y, x, transpose_coords=True)
 
     # Load values eagerly otherwise for some reason the plotting takes
     # 100's of times longer - for some reason animatplot does not deal
@@ -317,7 +317,7 @@ def animate_line(data, animate_over='t', animate=True,
     if (t_read is animate_over):
         pass
     else:
-        data = data.transpose(animate_over, t_read)
+        data = data.transpose(animate_over, t_read, transpose_coords=True)
 
     # Load values eagerly otherwise for some reason the plotting takes
     # 100's of times longer - for some reason animatplot does not deal

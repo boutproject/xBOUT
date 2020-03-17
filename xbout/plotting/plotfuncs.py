@@ -229,15 +229,17 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                 # form
                 dim_order = (da.metadata['bout_xdim'], da.metadata['bout_ydim'])
                 yarg = {da.metadata['bout_ydim']: gridlines['x']}
-                plt.plot(R.isel(**yarg).transpose(*dim_order),
-                         Z.isel(**yarg).transpose(*dim_order), color='k', lw=0.1)
+                plt.plot(R.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                         Z.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                         color='k', lw=0.1)
             if gridlines.get('y') is not None:
                 xarg = {da.metadata['bout_xdim']: gridlines['y']}
                 # Need to plot transposed arrays to make gridlines that go in the
                 # y-direction
                 dim_order = (da.metadata['bout_ydim'], da.metadata['bout_xdim'])
-                plt.plot(R.isel(**xarg).transpose(*dim_order),
-                         Z.isel(**yarg).transpose(*dim_order), color='k', lw=0.1)
+                plt.plot(R.isel(**xarg).transpose(*dim_order, transpose_coords=True),
+                         Z.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                         color='k', lw=0.1)
 
     ax.set_title(da.name)
 
