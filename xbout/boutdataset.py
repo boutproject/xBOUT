@@ -16,6 +16,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from dask.diagnostics import ProgressBar
 
+from .geometries import apply_geometry
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
 
@@ -94,6 +95,61 @@ class BoutDatasetAccessor:
             da.metadata['fine_interpolation_factor'] = n
 
         return ds
+
+    def getHighParallelResVars(self, variables, **kwargs):
+        """
+        Interpolate in the parallel direction to get a higher resolution version of one
+        or more variables.
+
+        Parameters
+        ----------
+        variables : str or sequence of str
+            The names of the variables to interpolate
+        n : int, optional
+            The factor to increase the resolution by. Defaults to the value set by
+            BoutDataset.setupParallelInterp(), or 10 if that has not been called.
+        toroidal_points : int or sequence of int, optional
+            If int, number of toroidal points to output, applies a stride to toroidal
+            direction to save memory usage. If sequence of int, the indexes of toroidal
+            points for the output.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataArray.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+
+        Returns
+        -------
+        A new Dataset containing a high-resolution versions of the variables. The new
+        Dataset is a valid BoutDataset, although containing only the specified variables.
+        """
+        if isinstance(variables, str):
+            ds = self.data[variables].bout.highParallelRes(**kwargs)
+        else:
+            # Need to start with a Dataset with attrs as merge() drops the attrs of the
+            # passed-in argument.
+            ds = self.data[variables[0]].bout.highParallelRes(**kwargs)
+            for var in variables[1:]:
+                ds.merge(self.data[var].bout.highParallelRes(**kwargs))
+
+        # Add extra variables needed to make this a valid Dataset
+        ds['dx'] = self.data['dx'].bout.highParallelRes(**kwargs)['dx']
+
+        # dy needs to be compatible with the new poloidal coordinate
+        # dy was created as a coordinate in BoutDataArray.highParallelResRegion, here just
+        # need to demote back to a regular variable.
+        ds = ds.reset_coords('dy')
+
+        # Apply geometry
+        try:
+            ds = apply_geometry(ds, ds.geometry)
+        except AttributeError as e:
+            # if no geometry was originally applied, then ds has no geometry attribute and
+            # we can continue without applying geometry here
+            if str(e) != "'Dataset' object has no attribute 'geometry'":
+                raise
+
+        return ds
+
 
     def save(self, savepath='./boutdata.nc', filetype='NETCDF4',
              variables=None, save_dtype=None, separate_vars=False, pre_load=False):
