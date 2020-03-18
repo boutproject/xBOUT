@@ -1,11 +1,12 @@
 import collections
 from pprint import pformat as prettyformat
 from functools import partial
+from itertools import chain
 from pathlib import Path
 import warnings
 import gc
 
-from xarray import register_dataset_accessor, save_mfdataset, merge
+import xarray as xr
 import animatplot as amp
 from matplotlib import pyplot as plt
 from matplotlib.animation import PillowWriter
@@ -19,7 +20,7 @@ from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
 
 
-@register_dataset_accessor('bout')
+@xr.register_dataset_accessor('bout')
 class BoutDatasetAccessor:
     """
     Contains BOUT-specific methods to use on BOUT++ datasets opened using
@@ -103,9 +104,12 @@ class BoutDatasetAccessor:
             raise NotImplementedError("Haven't decided how to write options "
                                       "file back out yet")
         else:
-            # Delete placeholders for options on each variable
-            for var in to_save.data_vars:
-                del to_save[var].attrs['options']
+            # Delete placeholders for options on each variable and coordinate
+            for var in chain(to_save.data_vars, to_save.coords):
+                try:
+                    del to_save[var].attrs['options']
+                except KeyError:
+                    pass
 
         # Store the metadata as individual attributes instead because
         # netCDF can't handle storing arbitrary objects in attrs
@@ -113,9 +117,12 @@ class BoutDatasetAccessor:
             for key, value in obj.attrs.pop(key).items():
                 obj.attrs[key] = value
         dict_to_attrs(to_save, 'metadata')
-        # Must do this for all variables in dataset too
-        for varname, da in to_save.data_vars.items():
-            dict_to_attrs(da, key='metadata')
+        # Must do this for all variables and coordinates in dataset too
+        for varname, da in chain(to_save.data_vars.items(), to_save.coords.items()):
+            try:
+                dict_to_attrs(da, key='metadata')
+            except KeyError:
+                pass
 
         if separate_vars:
             # Save each major variable to a different netCDF file
@@ -133,7 +140,7 @@ class BoutDatasetAccessor:
                 # Group variables so that there is only one time-dependent
                 # variable saved in each file
                 minor_data = [to_save[minor_var] for minor_var in minor_vars]
-                single_var_ds = merge([to_save[major_var], *minor_data])
+                single_var_ds = xr.merge([to_save[major_var], *minor_data])
 
                 # Add the attrs back on
                 single_var_ds.attrs = to_save.attrs
@@ -191,7 +198,7 @@ class BoutDatasetAccessor:
         restart_datasets, paths = _split_into_restarts(self.data, savepath,
                                                        nxpe, nype)
         with ProgressBar():
-            save_mfdataset(restart_datasets, paths, compute=True)
+            xr.save_mfdataset(restart_datasets, paths, compute=True)
         return
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,

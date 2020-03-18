@@ -39,6 +39,18 @@ class BoutDataArrayAccessor:
             text += "Options:\n{}".format(styled(self.options))
         return text
 
+    def to_dataset(self):
+        """
+        Convert a DataArray to a Dataset, copying the attributes from the DataArray to
+        the Dataset.
+        """
+        da = self.data
+        ds = da.to_dataset()
+
+        ds.attrs = da.attrs
+
+        return ds
+
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):
         """

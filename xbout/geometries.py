@@ -4,6 +4,7 @@ from textwrap import dedent
 import xarray as xr
 import numpy as np
 
+from .utils import _set_attrs_on_all_vars
 REGISTERED_GEOMETRIES = {}
 
 
@@ -43,6 +44,8 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     ------
     UnregisteredGeometryError
     """
+
+    ds = _set_attrs_on_all_vars(ds, 'geometry', geometry_name)
 
     try:
         add_geometry_coords = REGISTERED_GEOMETRIES[geometry_name]
@@ -141,8 +144,16 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     # Add 1D Orthogonal Toroidal coordinates
     ny = ds.dims[coordinates['y']]
-    theta = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=ny),
-                         dims=coordinates['y'])
+    # dy should always be constant in x, so it is safe to slice to x=0
+    # [The y-coordinate has to be a 1d coordinate that labels x-z slices of the grid
+    # (similarly x-coordinate is 1d coordinate that labels y-z slices and z-coordinate is
+    # a 1d coordinate that labels x-y slices). A coordinate might have different values
+    # in disconnected regions, but there are no branch-cuts allowed in the x-direction in
+    # BOUT++ (at least for the momement), so the y-coordinate has to be 1d and
+    # single-valued. Therefore similarly dy has to be 1d and single-valued.]
+    dy = ds['dy'].isel(x=0)
+    # calculate theta at the centre of each cell
+    theta = dy.cumsum(keep_attrs=True) - dy/2.
     ds = ds.assign_coords(**{coordinates['y']: theta})
 
     # TODO automatically make this coordinate 1D in simplified cases?
@@ -160,7 +171,8 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     if 'z' in ds.dims:
         ds = ds.rename(z=coordinates['z'])
         nz = ds.dims[coordinates['z']]
-        phi = xr.DataArray(np.linspace(start=0, stop=2 * np.pi, num=nz),
+        phi = xr.DataArray(np.linspace(start=ds.metadata['ZMIN'],
+                                       stop=2 * np.pi * ds.metadata['ZMAX'], num=nz),
                            dims=coordinates['z'])
         ds = ds.assign_coords(**{coordinates['z']: phi})
 

@@ -10,7 +10,7 @@ class TestGeometryRegistration:
     def test_unregistered_geometry(self):
         with pytest.raises(UnregisteredGeometryError,
                            match="tesseract is not a registered geometry"):
-            apply_geometry(ds=None, geometry_name="tesseract")
+            apply_geometry(ds=Dataset(), geometry_name="tesseract")
 
     def test_register_new_geometry(self):
         @register_geometry(name="Schwarzschild")
