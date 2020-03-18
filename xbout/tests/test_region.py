@@ -49,3 +49,26 @@ class TestRegion:
             ybndry = 0
         xrt.assert_identical(n.isel(theta=slice(ybndry, -ybndry)),
                              n_core.isel(theta=slice(ybndry, -ybndry)))
+
+    @pytest.mark.parametrize(params_guards, params_guards_values)
+    @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
+    def test_region_sol(self, tmpdir_factory, bout_xyt_example_files, guards,
+                        keep_xboundaries, keep_yboundaries):
+        # Note need to use more than (3*MXG,3*MYG) points per output file
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 7), nxpe=3,
+                                      nype=4, nt=1, guards=guards, grid='grid',
+                                      topology='sol')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_xboundaries=keep_xboundaries,
+                              keep_yboundaries=keep_yboundaries)
+
+        n = ds['n']
+
+        print(n.regions)
+        n_sol = n.bout.fromRegion('SOL')
+
+        # Remove attributes that are expected to be different
+        del n_sol.attrs['region']
+        xrt.assert_identical(n, n_sol)
