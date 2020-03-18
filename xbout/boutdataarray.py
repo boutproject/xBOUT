@@ -221,6 +221,15 @@ class BoutDataArrayAccessor:
                 if ycoord in da.coords:
                     # Use local coordinates for neighbouring region, not communicated ones
                     xslice, yslice = region.getLowerGuardsSlices(myg)
+
+                    if yslice.start < 0:
+                        # For core-only or limiter topologies, the lower-y slice may be out of
+                        # the global array bounds
+                        raise ValueError('Trying to fill a slice which is not present '
+                                + 'in the global array, so do not have coordinate '
+                                + 'values for it. Try setting keep_yboundaries=True '
+                                + 'when calling open_boutdataset.')
+
                     new_ycoord = self.data[ycoord].isel(**{ycoord:yslice})
                     da_lower = da_lower.assign_coords(**{ycoord: new_ycoord})
 
@@ -235,6 +244,15 @@ class BoutDataArrayAccessor:
                 if ycoord in da.coords:
                     # Use local coordinates for neighbouring region, not communicated ones
                     xslice, yslice = region.getUpperGuardsSlices(myg)
+
+                    if yslice.stop > self.data.sizes[ycoord]:
+                        # For core-only or limiter topologies, the upper-y slice may be out of
+                        # the global array bounds
+                        raise ValueError('Trying to fill a slice which is not present '
+                                + 'in the global array, so do not have coordinate '
+                                + 'values for it. Try setting keep_yboundaries=True '
+                                + 'when calling open_boutdataset.')
+
                     new_ycoord = self.data[ycoord].isel(**{ycoord:yslice})
                     da_upper = da_upper.assign_coords(**{ycoord: new_ycoord})
 
