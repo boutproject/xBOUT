@@ -230,14 +230,13 @@ class BoutDataArrayAccessor:
                                 + 'values for it. Try setting keep_yboundaries=True '
                                 + 'when calling open_boutdataset.')
 
-                    new_ycoord = self.data[ycoord].isel(**{ycoord:yslice})
+                    new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
                     da_lower = da_lower.assign_coords(**{ycoord: new_ycoord})
 
                 da = xr.concat((da_lower, da), ycoord)
             if region.connection_upper is not None:
                 da_upper = self.data.bout.fromRegion(region.connection_upper,
-                                                     with_guards={xcoord: mxg, ycoord:0})
-
+                                                     with_guards={xcoord: mxg, ycoord: 0})
                 # select just the points we need to fill the guard cells of da
                 da_upper = da_upper.isel(**{ycoord: slice(myg)})
 
@@ -253,7 +252,7 @@ class BoutDataArrayAccessor:
                                 + 'values for it. Try setting keep_yboundaries=True '
                                 + 'when calling open_boutdataset.')
 
-                    new_ycoord = self.data[ycoord].isel(**{ycoord:yslice})
+                    new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
                     da_upper = da_upper.assign_coords(**{ycoord: new_ycoord})
 
                 da = xr.concat((da, da_upper), ycoord)
