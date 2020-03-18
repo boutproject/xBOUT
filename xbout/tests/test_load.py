@@ -189,7 +189,7 @@ def bout_xyt_example_files(tmpdir_factory):
 
 def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4, 7),
                             nxpe=4, nype=2, nt=1, guards={}, syn_data_type='random',
-                            grid=None, squashed=False):
+                            grid=None, squashed=False, topology='core'):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
 
@@ -203,13 +203,14 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
         # file had been created by combining a set of BOUT.dmp.*.nc files
         ds_list, file_list = create_bout_ds_list(prefix=prefix, lengths=lengths, nxpe=1,
                                                  nype=1, nt=nt, guards=guards,
+                                                 topology=topology,
                                                  syn_data_type=syn_data_type)
         ds_list[0]['nxpe'] = nxpe
         ds_list[0]['nype'] = nype
     else:
         ds_list, file_list = create_bout_ds_list(prefix=prefix, lengths=lengths,
                                                  nxpe=nxpe, nype=nype, nt=nt,
-                                                 guards=guards,
+                                                 guards=guards, topology=topology,
                                                  syn_data_type=syn_data_type)
 
     for ds, file_name in zip(ds_list, file_list):
@@ -218,7 +219,8 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
     if grid is not None:
         xsize = lengths[1]*nxpe
         ysize = lengths[2]*nype
-        grid_ds = create_bout_grid_ds(xsize=xsize, ysize=ysize, guards=guards)
+        grid_ds = create_bout_grid_ds(xsize=xsize, ysize=ysize, guards=guards,
+                                      topology=topology)
         grid_ds.to_netcdf(str(save_dir.join(grid + ".nc")))
 
     # Return a glob-like path to all files created, which has all file numbers replaced
@@ -236,7 +238,7 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
 
 
 def create_bout_ds_list(prefix, lengths=(6, 2, 4, 7), nxpe=4, nype=2, nt=1, guards={},
-                        syn_data_type='random'):
+                        topology='core', syn_data_type='random'):
     """
     Mocks up a set of BOUT-like datasets.
 
@@ -260,7 +262,7 @@ def create_bout_ds_list(prefix, lengths=(6, 2, 4, 7), nxpe=4, nype=2, nt=1, guar
             lower_bndry_cells = {dim: guards.get(dim) for dim in guards.keys()}
 
             ds = create_bout_ds(syn_data_type=syn_data_type, num=num, lengths=lengths, nxpe=nxpe, nype=nype,
-                                xproc=i, yproc=j, guards=guards)
+                                xproc=i, yproc=j, guards=guards, topology=topology)
             ds_list.append(ds)
 
     # Sort this in order of num to remove any BOUT-specific structure
@@ -271,7 +273,7 @@ def create_bout_ds_list(prefix, lengths=(6, 2, 4, 7), nxpe=4, nype=2, nt=1, guar
 
 
 def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, nype=1,
-                   xproc=0, yproc=0, guards={}):
+                   xproc=0, yproc=0, guards={}, topology='core'):
 
     # Set the shape of the data in this dataset
     t_length, x_length, y_length, z_length = lengths
@@ -341,13 +343,71 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     ds['MXSUB'] = lengths[1]
     ds['MYSUB'] = lengths[2]
     ds['MZSUB'] = lengths[3]
-    ds['ixseps1'] = nx
-    ds['ixseps2'] = nx
-    ds['jyseps1_1'] = 0
-    ds['jyseps2_1'] = ny//2 - 1
-    ds['jyseps1_2'] = ny//2 - 1
-    ds['jyseps2_2'] = ny
-    ds['ny_inner'] = ny//2
+
+    if topology == 'core':
+        ds['ixseps1'] = nx
+        ds['ixseps2'] = nx
+        ds['jyseps1_1'] = 0
+        ds['jyseps2_1'] = ny//2 - 1
+        ds['jyseps1_2'] = ny//2 - 1
+        ds['jyseps2_2'] = ny
+        ds['ny_inner'] = ny//2
+    elif topology == 'sol':
+        ds['ixseps1'] = 0
+        ds['ixseps2'] = 0
+        ds['jyseps1_1'] = 0
+        ds['jyseps2_1'] = ny//2 - 1
+        ds['jyseps1_2'] = ny//2 - 1
+        ds['jyseps2_2'] = ny
+        ds['ny_inner'] = ny//2
+    elif topology == 'limiter':
+        ds['ixseps1'] = nx//2
+        ds['ixseps2'] = nx
+        ds['jyseps1_1'] = 0
+        ds['jyseps2_1'] = ny//2 - 1
+        ds['jyseps1_2'] = ny//2 - 1
+        ds['jyseps2_2'] = ny
+        ds['ny_inner'] = ny//2
+    elif topology == 'single-null':
+        if nype < 3:
+            raise ValueError('Not enough processors for single-null topology: '
+                             + 'nype=' + str(nype))
+        ds['ixseps1'] = nx//2
+        ds['ixseps2'] = nx
+        ds['jyseps1_1'] = MYSUB - 1
+        ds['jyseps2_1'] = ny//2 - 1
+        ds['jyseps1_2'] = ny//2 - 1
+        ds['jyseps2_2'] = ny - MYSUB - 1
+        ds['ny_inner'] = ny//2
+    elif topology == 'connected-double-null':
+        if nype < 6:
+            raise ValueError('Not enough processors for single-null topology: '
+                             + 'nype=' + str(nype))
+        ds['ixseps1'] = nx//2
+        ds['ixseps2'] = nx//2
+        ds['jyseps1_1'] = MYSUB - 1
+        ny_inner = 3*MYSUB
+        ds['ny_inner'] = ny_inner
+        ds['jyseps2_1'] = ny_inner - MYSUB - 1
+        ds['jyseps1_2'] = ny_inner + MYSUB - 1
+        ds['jyseps2_2'] = ny - MYSUB - 1
+    elif topology == 'disconnected-double-null':
+        if nype < 6:
+            raise ValueError('Not enough processors for single-null topology: '
+                             + 'nype=' + str(nype))
+        ds['ixseps1'] = nx//2
+        ds['ixseps2'] = nx//2 + 2*mxg
+        if ds['ixseps2'] >= nx:
+            raise ValueError('Not enough points in the x-direction. ixseps2='
+                             + str(ds['ixseps2']) + ' > nx=' + str(nx))
+        ds['jyseps1_1'] = MYSUB - 1
+        ny_inner = 3*MYSUB
+        ds['ny_inner'] = ny_inner
+        ds['jyseps2_1'] = ny_inner - MYSUB - 1
+        ds['jyseps1_2'] = ny_inner + MYSUB - 1
+        ds['jyseps2_2'] = ny - MYSUB - 1
+    else:
+        raise ValueError('Unrecognised topology=' + str(topology))
 
     one = DataArray(np.ones((x_length, y_length)), dims=['x', 'y'])
     zero = DataArray(np.zeros((x_length, y_length)), dims=['x', 'y'])
@@ -384,18 +444,33 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     return ds
 
 
-def create_bout_grid_ds(xsize=2, ysize=4, guards={}):
+def create_bout_grid_ds(xsize=2, ysize=4, guards={}, topology='core'):
 
     # Set the shape of the data in this dataset
     mxg = guards.get('x', 0)
     myg = guards.get('y', 0)
     xsize += 2*mxg
     ysize += 2*myg
+
+    # jyseps* from grid file only ever used to check topology when loading the grid file,
+    # so do not need to be consistent with the main dataset
+    jyseps2_1 = ysize//2
+    jyseps1_2 = jyseps2_1
+
+    if 'double-null' in topology:
+        # Has upper target as well
+        ysize += 2*myg
+
+        # make different from jyseps2_1 so double-null toplogy is recognised
+        jyseps1_2 += 1
+
     shape = (xsize, ysize)
 
     data = DataArray(np.ones(shape), dims=['x', 'y'])
 
-    ds = Dataset({'psixy': data, 'Rxy': data, 'Zxy': data, 'hthe': data})
+    ds = Dataset({'psixy': data, 'Rxy': data, 'Zxy': data, 'hthe': data,
+                  'y_boundary_guards': myg, 'jyseps2_1': jyseps2_1,
+                  'jyseps1_2': jyseps1_2})
 
     return ds
 
