@@ -245,6 +245,11 @@ def _create_regions_toroidal(ds):
     myg = ds.metadata['MYG']
     # keep_yboundaries is 1 if there are y-boundaries and 0 if there are not
     ybndry = ds.metadata['keep_yboundaries']*myg
+    if jys21 == jys12:
+        # No upper targets
+        ybndry_upper = 0
+    else:
+        ybndry_upper = ybndry
 
     # Make sure all sizes are sensible
     ixs1 = _in_range(ixs1, 0, nx)
@@ -265,10 +270,10 @@ def _create_regions_toroidal(ds):
         nx -= 2*mxg
     jys11 += ybndry
     jys21 += ybndry
-    nyinner += 2*ybndry
-    jys12 += 3*ybndry
-    jys22 += 3*ybndry
-    ny += 4*ybndry
+    nyinner += ybndry + ybndry_upper
+    jys12 += ybndry + 2*ybndry_upper
+    jys22 += ybndry + 2*ybndry_upper
+    ny += 2*ybndry + 2*ybndry_upper
 
     # Note, include guard cells in the created regions, fill them later
     regions = OrderedDict()
