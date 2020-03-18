@@ -243,6 +243,10 @@ def create_bout_ds_list(prefix, lengths=(6, 2, 4, 7), nxpe=4, nype=2, nt=1, guar
     Structured as though they were produced by a x-y parallelised run with multiple restarts.
     """
 
+    if nt != 1:
+        raise ValueError("nt > 1 means the time dimension is split over several "
+                         + "directories. This is not implemented yet.")
+
     file_list = []
     ds_list = []
     for i in range(nxpe):
