@@ -54,7 +54,6 @@ class BoutDataArrayAccessor:
 
         return ds
 
-
     def _shiftZ(self, zShift):
         """
         Shift a DataArray in the periodic, toroidal direction using FFTs.
@@ -96,18 +95,19 @@ class BoutDataArrayAccessor:
 
         if(nz % 2 == 0):
             nfft = nz // 2
-            data_shifted_fft[:,:,:,nfft] = data_shifted_fft[:,:,:,nfft].real
-            data_shifted_fft[:,:,:,nfft+1:] = np.conj(data_shifted_fft[:,:,:,nfft-1:0:-1])
+            data_shifted_fft[:, :, :, nfft] = data_shifted_fft[:, :, :, nfft].real
+            data_shifted_fft[:, :, :, nfft+1:] = np.conj(
+                    data_shifted_fft[:, :, :, nfft-1:0:-1])
         else:
-            nfft = (nz-1)//2
-            data_shifted_fft[:,:,:,nfft+1:] = np.conj(data_shifted_fft[:,:,:,nfft:0:-1])
+            nfft = (nz - 1)//2
+            data_shifted_fft[:, :, :, nfft+1:] = np.conj(
+                    data_shifted_fft[:, :, :, nfft:0:-1])
 
         data_shifted = np.fft.ifft(data_shifted_fft).real
 
         # Return a DataArray with the same attributes as self, but values from
         # data_shifted
         return self.data.copy(data=data_shifted)
-
 
     def toFieldAligned(self):
         """
@@ -121,11 +121,10 @@ class BoutDataArrayAccessor:
         result["direction_y"] = "Aligned"
         return result
 
-
     def fromFieldAligned(self):
         """
-        Transform DataArray from field-aligned coordinates, which are shifted with respect
-        to the base coordinates by an angle zShift
+        Transform DataArray from field-aligned coordinates, which are shifted with
+        respect to the base coordinates by an angle zShift
         """
         if self.data.direction_y != "Aligned":
             raise ValueError("Cannot shift a " + self.direction_y + " type field to "
@@ -133,6 +132,7 @@ class BoutDataArrayAccessor:
         result = self._shiftZ(-self.data['zShift'])
         result["direction_y"] = "Standard"
         return result
+
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):
         """
