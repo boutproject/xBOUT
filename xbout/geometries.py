@@ -229,6 +229,7 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
         # Add 'hthe' from grid file, needed below for radial coordinate
         if 'hthe' not in ds:
             hthe_from_grid = True
+            ycoord = 'y'
             if grid is None:
                 raise ValueError("Grid file is required to provide %s. Pass the grid "
                                  "file name as the 'gridfilepath' argument to "
@@ -236,12 +237,13 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
             ds['hthe'] = grid['hthe']
         else:
             hthe_from_grid = False
+            ycoord = coordinates['y']
 
         # Add 1D radial coordinate
         if 'r' in ds:
             raise ValueError("Cannot have variable 'r' in dataset when using "
                              "geometry='s-alpha'")
-        ds['r'] = ds['hthe'].isel({coordinates['y']: 0}).squeeze(drop=True)
+        ds['r'] = ds['hthe'].isel({ycoord: 0}).squeeze(drop=True)
         ds['r'].attrs['units'] = 'm'
         # remove x-index coordinate, don't need when we have 'r' as a radial coordinate
         ds = ds.drop('x')
