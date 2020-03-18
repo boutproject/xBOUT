@@ -438,8 +438,8 @@ def _create_regions_toroidal(ds):
                 name='core', ds=ds, xinner_ind=0, xouter_ind=ixs1, ylower_ind=ybndry,
                 yupper_ind=ny - ybndry)
         regions['SOL'] = Region(
-                name='SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx, ylower_ind=ybndry,
-                yupper_ind=ny - ybndry)
+                name='SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx, ylower_ind=0,
+                yupper_ind=ny)
         _create_connection_x(regions, 'core', 'SOL')
         _create_connection_y(regions, 'core', 'core')
     elif topology == 'core':
@@ -449,8 +449,8 @@ def _create_regions_toroidal(ds):
         _create_connection_y(regions, 'core', 'core')
     elif topology == 'sol':
         regions['SOL'] = Region(
-                name='SOL', ds=ds, xinner_ind=0, xouter_ind=nx, ylower_ind=ybndry,
-                yupper_ind=ny - ybndry)
+                name='SOL', ds=ds, xinner_ind=0, xouter_ind=nx, ylower_ind=0,
+                yupper_ind=ny)
     elif topology == 'xpoint':
         regions['lower_inner_PFR'] = Region(
                 name='lower_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
