@@ -7,6 +7,7 @@ from pathlib import Path
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout import BoutDatasetAccessor, open_boutdataset
+from xbout.geometries import apply_geometry
 
 
 EXAMPLE_OPTIONS_FILE_PATH = './xbout/tests/data/options/BOUT.inp'
@@ -54,6 +55,35 @@ class TestBoutDatasetMethods:
         ds.bout.extra_data = 'stored'
 
         print(ds.bout.extra_data)
+
+    def test_getFieldAligned(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
+        ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
+
+        ds['psixy'] = ds['x']
+        ds['Rxy'] = ds['x']
+        ds['Zxy'] = ds['y']
+
+        ds = apply_geometry(ds, 'toroidal')
+
+        n = ds['n']
+        n.attrs['direction_y'] = 'Standard'
+        n_aligned_from_array = n.bout.toFieldAligned()
+
+        # check n_aligned does not exist yet
+        try:
+            ds['n_aligned']
+            assert False
+        except KeyError:
+            pass
+
+        n_aligned_from_ds = ds.bout.getFieldAligned('n')
+        xrt.assert_allclose(n_aligned_from_ds, n_aligned_from_array)
+        xrt.assert_allclose(ds['n_aligned'], n_aligned_from_array)
+
+        # check getting the cached version
+        ds['n_aligned'] = ds['T']
+        xrt.assert_allclose(ds.bout.getFieldAligned('n'), ds['T'])
 
 
 class TestLoadInputFile:

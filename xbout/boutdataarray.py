@@ -1,5 +1,8 @@
+from copy import deepcopy
 from pprint import pformat as prettyformat
 from functools import partial
+
+import numpy as np
 
 import xarray as xr
 from xarray import register_dataarray_accessor
@@ -50,6 +53,85 @@ class BoutDataArrayAccessor:
         ds.attrs = da.attrs
 
         return ds
+
+    def _shiftZ(self, zShift):
+        """
+        Shift a DataArray in the periodic, toroidal direction using FFTs.
+
+        Parameters
+        ----------
+        zShift : DataArray
+            The angle to shift by
+        """
+        # Would be nice to use the xrft package for this, but xrft does not currently
+        # implement inverse Fourier transforms (although there is an open PR
+        # https://github.com/xgcm/xrft/pull/81 to add this).
+
+        nz = self.data.metadata['nz']
+
+        # Get axis position of dimension to transform
+        axis = self.data.dims.index(self.data.metadata['bout_zdim'])
+
+        # Create list the dimensions of FFT'd array
+        fft_dims = list(deepcopy(self.data.dims))
+        fft_dims[axis] = 'kz'
+
+        # Fourier transform to get the DataArray in k-space
+        data_fft = np.fft.fft(self.data.values, axis=axis)
+
+        # Complex phase for rotation by angle zShift
+        zperiod = 1./(self.data.metadata['ZMAX'] - self.data.metadata['ZMIN'])
+        kz = xr.DataArray(np.arange(0, nz*zperiod, zperiod), dims='kz')
+        phases = 1.j * zShift * kz
+
+        # Ensure dimensions are in correct order for numpy broadcasting
+        extra_dims = deepcopy(fft_dims)
+        for dim in phases.dims:
+            extra_dims.remove(dim)
+        phases = phases.expand_dims(extra_dims)
+        phases = phases.transpose(*fft_dims)
+
+        data_shifted_fft = data_fft * np.exp(phases.values)
+
+        if(nz % 2 == 0):
+            nfft = nz // 2
+            data_shifted_fft[:, :, :, nfft] = data_shifted_fft[:, :, :, nfft].real
+            data_shifted_fft[:, :, :, nfft+1:] = np.conj(
+                    data_shifted_fft[:, :, :, nfft-1:0:-1])
+        else:
+            nfft = (nz - 1)//2
+            data_shifted_fft[:, :, :, nfft+1:] = np.conj(
+                    data_shifted_fft[:, :, :, nfft:0:-1])
+
+        data_shifted = np.fft.ifft(data_shifted_fft).real
+
+        # Return a DataArray with the same attributes as self, but values from
+        # data_shifted
+        return self.data.copy(data=data_shifted)
+
+    def toFieldAligned(self):
+        """
+        Transform DataArray to field-aligned coordinates, which are shifted with respect
+        to the base coordinates by an angle zShift
+        """
+        if self.data.direction_y != "Standard":
+            raise ValueError("Cannot shift a " + self.direction_y + " type field to "
+                             + "field-aligned coordinates")
+        result = self._shiftZ(self.data['zShift'])
+        result["direction_y"] = "Aligned"
+        return result
+
+    def fromFieldAligned(self):
+        """
+        Transform DataArray from field-aligned coordinates, which are shifted with
+        respect to the base coordinates by an angle zShift
+        """
+        if self.data.direction_y != "Aligned":
+            raise ValueError("Cannot shift a " + self.direction_y + " type field to "
+                             + "field-aligned coordinates")
+        result = self._shiftZ(-self.data['zShift'])
+        result["direction_y"] = "Standard"
+        return result
 
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):

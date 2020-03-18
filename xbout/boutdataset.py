@@ -54,6 +54,30 @@ class BoutDatasetAccessor:
     #    return 'boutdata.BoutDataset(', {}, ',', {}, ')'.format(self.datapath,
     #  self.prefix)
 
+    def getFieldAligned(self, name, caching=True):
+        """
+        Get a field-aligned version of a variable, calculating (and caching in the
+        Dataset) if necessary
+
+        Parameters
+        ----------
+        name : str
+            Name of the variable to get field-aligned version of
+        caching : bool, optional
+            Save the field-aligned variable in the Dataset (default: True)
+        """
+        aligned_name = name + '_aligned'
+        try:
+            result = self.data[aligned_name]
+            if result.direction_y != 'Aligned':
+                raise ValueError(aligned_name + " exists, but is not field-aligned, it "
+                                 "has direction_y=" + result.direction_y)
+            return result
+        except KeyError:
+            if caching:
+                self.data[aligned_name] = self.data[name].bout.toFieldAligned()
+            return self.data[aligned_name]
+
     def save(self, savepath='./boutdata.nc', filetype='NETCDF4',
              variables=None, save_dtype=None, separate_vars=False, pre_load=False):
         """
