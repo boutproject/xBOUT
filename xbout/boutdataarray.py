@@ -151,6 +151,7 @@ class BoutDataArrayAccessor:
         region = self.data.regions[region]
         xcoord = self.data.metadata['bout_xdim']
         ycoord = self.data.metadata['bout_ydim']
+        keep_yboundaries = self.data.metadata['keep_yboundaries']
 
         if with_guards is None:
             mxg = self.data.metadata['MXG']
@@ -173,22 +174,63 @@ class BoutDataArrayAccessor:
         da = self.data.isel(**{xcoord: xslice, ycoord: yslice})
 
         if mxg > 0:
+            myg_da = self.data.metadata['MYG']
             # get guard cells from x-neighbour regions
             if region.connection_inner is not None:
                 da_inner = self.data.bout.fromRegion(region.connection_inner,
                                                      with_guards={xcoord: 0, ycoord:0})
 
+                if (myg_da > 0 and keep_yboundaries
+                        and region.connection_lower is not None
+                        and da_inner.region.connection_lower is None):
+                    # da_inner may have more points in the y-direction, because it has an
+                    # actual boundary, not a connection. Need to remove any extra points
+                    da_inner = da_inner.isel(**{ycoord: slice(myg_da, None)})
+                if (myg_da > 0 and keep_yboundaries
+                        and region.connection_upper is not None
+                        and da_inner.region.connection_upper is None):
+                    # da_inner may have more points in the y-direction, because it has an
+                    # actual boundary, not a connection. Need to remove any extra points
+                    da_inner = da_inner.isel(**{ycoord: slice(None, -myg_da)})
+
                 # select just the points we need to fill the guard cells of da
                 da_inner = da_inner.isel(**{xcoord: slice(-mxg, None)})
 
+                if (myg_da > 0 and keep_yboundaries
+                        and region.connection_lower is None
+                        and da_inner.region.connection_lower is not None):
+                    # da_inner may have fewer points in the y-direction, because it has a
+                    # connection, not an actual boundary. Need to get the extra points
+                    # from its connection
+                    da_inner_lower = self.data.bout.fromRegion(
+                                       da_inner.region.connection_lower, with_guards=0)
+                    da_inner_lower = da_inner_lower.isel(
+                            **{xcoord: slice(-mxg, None), ycoord: slice(-myg_da, None)})
+                    save_region = da_inner.region
+                    da_inner = xr.concat((da_inner_lower, da_inner), ycoord, join='exact')
+                    # xr.concat takes attributes from the first variable, but we need
+                    # da_inner's region
+                    da_inner.attrs['region'] = save_region
+                if (myg_da > 0 and keep_yboundaries
+                        and region.connection_upper is None
+                        and da_inner.region.connection_upper is not None):
+                    # da_inner may have fewer points in the y-direction, because it has a
+                    # connection, not an actual boundary. Need to get the extra points
+                    # from its connection
+                    da_inner_upper = self.data.bout.fromRegion(
+                                       da_inner.region.connection_upper, with_guards=0)
+                    da_inner_upper = da_inner_upper.isel(
+                            **{xcoord: slice(-mxg, None), ycoord: slice(myg_da)})
+                    da_inner = xr.concat((da_inner, da_inner_upper), ycoord, join='exact')
+                    # xr.concat takes attributes from the first variable, so region is OK
+
                 if xcoord in da.coords:
                     # Use local coordinates for neighbouring region, not communicated ones
-                    # Note, at the moment this should do nothing, because all neigbours in the
-                    # x-direction are contiguous in the global array anyway, but included to
-                    # be future-proof
                     xslice, yslice = region.getInnerGuardsSlices(mxg=mxg)
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
-                    da_inner = da_inner.assign_coords(**{xcoord: new_xcoord})
+                    new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
+                    da_inner = da_inner.assign_coords(
+                            **{xcoord: new_xcoord, ycoord: new_ycoord})
 
                 da = xr.concat((da_inner, da), xcoord, join='exact')
                 # xr.concat takes attributes from the first variable, but da should not
@@ -198,17 +240,57 @@ class BoutDataArrayAccessor:
                 da_outer = self.data.bout.fromRegion(region.connection_outer,
                                                      with_guards={xcoord: 0, ycoord:0})
 
+                if (myg_da > 0 and keep_yboundaries
+                        and region.connection_lower is not None
+                        and da_outer.region.connection_lower is None):
+                    # da_outer may have more points in the y-direction, because it has an
+                    # actual boundary, not a connection. Need to remove any extra points
+                    da_outer = da_outer.isel(**{ycoord: slice(myg_da, None)})
+                if (myg_da > 0 and keep_yboundaries
+                        and region.connection_upper is not None
+                        and da_outer.region.connection_upper is None):
+                    # da_outer may have more points in the y-direction, because it has an
+                    # actual boundary, not a connection. Need to remove any extra points
+                    da_outer = da_outer.isel(**{ycoord: slice(None, -myg_da)})
+
                 # select just the points we need to fill the guard cells of da
                 da_outer = da_outer.isel(**{xcoord: slice(mxg)})
 
+                if (myg_da > 0 and keep_yboundaries
+                        and region.connection_lower is None
+                        and da_outer.region.connection_lower is not None):
+                    # da_outer may have fewer points in the y-direction, because it has a
+                    # connection, not an actual boundary. Need to get the extra points
+                    # from its connection
+                    da_outer_lower = self.data.bout.fromRegion(
+                                       da_outer.region.connection_lower, with_guards=0)
+                    da_outer_lower = da_outer_lower.isel(
+                            **{xcoord: slice(-mxg, None), ycoord: slice(-myg_da, None)})
+                    save_region = da_outer.region
+                    da_outer = xr.concat((da_outer_lower, da_outer), ycoord, join='exact')
+                    # xr.concat takes attributes from the first variable, but we need
+                    # da_outer's region
+                    da_outer.attrs['region'] = save_region
+                if (myg_da > 0 and keep_yboundaries
+                        and region.connection_upper is None
+                        and da_outer.region.connection_upper is not None):
+                    # da_outer may have fewer points in the y-direction, because it has a
+                    # connection, not an actual boundary. Need to get the extra points
+                    # from its connection
+                    da_outer_upper = self.data.bout.fromRegion(
+                                       da_outer.region.connection_upper, with_guards=0)
+                    da_outer_upper = da_outer_upper.isel(
+                            **{xcoord: slice(-mxg, None), ycoord: slice(myg_da)})
+                    da_outer = xr.concat((da_outer, da_outer_upper), ycoord, join='exact')
+                    # xr.concat takes attributes from the first variable, so region is OK
+
                 if xcoord in da.coords:
                     # Use local coordinates for neighbouring region, not communicated ones
-                    # Note, at the moment this should do nothing, because all neigbours in the
-                    # x-direction are contiguous in the global array anyway, but included to
-                    # be future-proof
                     xslice, yslice = region.getOuterGuardsSlices(mxg=mxg)
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
-                    da_outer = da_outer.assign_coords(**{xcoord: new_xcoord})
+                    new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
+                    da_outer = da_outer.assign_coords(
+                            **{xcoord: new_xcoord, ycoord: new_ycoord})
 
                 da = xr.concat((da, da_outer), xcoord, join='exact')
                 # xr.concat takes attributes from the first variable, so region is OK
@@ -234,8 +316,10 @@ class BoutDataArrayAccessor:
                                 + 'values for it. Try setting keep_yboundaries=True '
                                 + 'when calling open_boutdataset.')
 
+                    new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
-                    da_lower = da_lower.assign_coords(**{ycoord: new_ycoord})
+                    da_lower = da_lower.assign_coords(
+                            **{xcoord: new_xcoord, ycoord: new_ycoord})
 
                 da = xr.concat((da_lower, da), ycoord, join='exact')
                 # xr.concat takes attributes from the first variable, but da should not
@@ -259,8 +343,10 @@ class BoutDataArrayAccessor:
                                 + 'values for it. Try setting keep_yboundaries=True '
                                 + 'when calling open_boutdataset.')
 
+                    new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
-                    da_upper = da_upper.assign_coords(**{ycoord: new_ycoord})
+                    da_upper = da_upper.assign_coords(
+                            **{xcoord: new_xcoord, ycoord: new_ycoord})
 
                 da = xr.concat((da, da_upper), ycoord, join='exact')
                 # xr.concat takes attributes from the first variable, so region is OK
