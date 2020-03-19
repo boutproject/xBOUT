@@ -383,7 +383,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
         ds['ny_inner'] = ny//2
     elif topology == 'connected-double-null':
         if nype < 6:
-            raise ValueError('Not enough processors for single-null topology: '
+            raise ValueError('Not enough processors for connected-double-null topology: '
                              + 'nype=' + str(nype))
         ds['ixseps1'] = nx//2
         ds['ixseps2'] = nx//2
@@ -395,8 +395,8 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
         ds['jyseps2_2'] = ny - MYSUB - 1
     elif topology == 'disconnected-double-null':
         if nype < 6:
-            raise ValueError('Not enough processors for single-null topology: '
-                             + 'nype=' + str(nype))
+            raise ValueError('Not enough processors for disconnected-double-null '
+                             + 'topology: nype=' + str(nype))
         ds['ixseps1'] = nx//2
         ds['ixseps2'] = nx//2 + 2*mxg
         if ds['ixseps2'] >= nx:
