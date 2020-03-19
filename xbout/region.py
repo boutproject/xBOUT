@@ -446,7 +446,7 @@ def _create_regions_toroidal(ds):
                 name='core', ds=ds, xinner_ind=0, xouter_ind=ixs1, ylower_ind=jys11 + 1,
                 yupper_ind=jys22 + 1)
         regions['SOL'] = Region(
-                name='SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx, ylower_ind=jys11 + 1,
+                name='SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx, ylower_ind=jys11 + 1,
                 yupper_ind=jys22 + 1)
         regions['outer_PFR'] = Region(
                 name='lower_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
