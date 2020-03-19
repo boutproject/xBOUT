@@ -190,7 +190,7 @@ class BoutDataArrayAccessor:
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     da_inner = da_inner.assign_coords(**{xcoord: new_xcoord})
 
-                da = xr.concat((da_inner, da), xcoord)
+                da = xr.concat((da_inner, da), xcoord, join='exact')
             if region.connection_outer is not None:
                 da_outer = self.data.bout.fromRegion(region.connection_outer,
                                                      with_guards={xcoord: 0, ycoord:0})
@@ -207,7 +207,7 @@ class BoutDataArrayAccessor:
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     da_outer = da_outer.assign_coords(**{xcoord: new_xcoord})
 
-                da = xr.concat((da, da_outer), xcoord)
+                da = xr.concat((da, da_outer), xcoord, join='exact')
 
         if myg > 0:
             # get guard cells from y-neighbour regions
@@ -233,7 +233,7 @@ class BoutDataArrayAccessor:
                     new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
                     da_lower = da_lower.assign_coords(**{ycoord: new_ycoord})
 
-                da = xr.concat((da_lower, da), ycoord)
+                da = xr.concat((da_lower, da), ycoord, join='exact')
             if region.connection_upper is not None:
                 da_upper = self.data.bout.fromRegion(region.connection_upper,
                                                      with_guards={xcoord: mxg, ycoord: 0})
@@ -255,7 +255,7 @@ class BoutDataArrayAccessor:
                     new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
                     da_upper = da_upper.assign_coords(**{ycoord: new_ycoord})
 
-                da = xr.concat((da, da_upper), ycoord)
+                da = xr.concat((da, da_upper), ycoord, join='exact')
 
         da.attrs['region'] = region
 
