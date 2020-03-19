@@ -232,7 +232,7 @@ def _get_topology(ds):
             raise ValueError('Currently unsupported topology')
 
     if ixs1 == ixs2:
-        if jys21 < nyinner -1 and jys21 > nyinner:
+        if jys21 < nyinner -1 and jys12 > nyinner:
             return 'connected-double-null'
         else:
             raise ValueError('Currently unsupported topology')
