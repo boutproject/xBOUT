@@ -66,7 +66,6 @@ class TestRegion:
 
         n = ds['n']
 
-        print(n.regions)
         n_sol = n.bout.fromRegion('SOL')
 
         # Remove attributes that are expected to be different
