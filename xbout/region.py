@@ -105,7 +105,7 @@ class Region:
 
         return slice(xi, xo), slice(yl, yu)
 
-    def getInnerGuardsSlices(self, mxg):
+    def getInnerGuardsSlices(self, *, mxg, myg=0):
         """
         Return x- and y-dimension slices that select mxg guard cells on the inner-x side
         of this region from the global DataArray.
@@ -114,11 +114,18 @@ class Region:
         ----------
         mxg : int
             Number of guard cells
+        myg : int, optional
+            Number of y-guard cells to include at the corners
         """
-        return slice(self.xinner_ind - mxg, self.xinner_ind), slice(self.ylower_ind,
-                self.yupper_ind)
+        ylower = self.ylower_ind
+        if self.connection_lower is not None:
+            ylower -= myg
+        yupper = self.yupper_ind
+        if self.connection_upper is not None:
+            yupper += myg
+        return slice(self.xinner_ind - mxg, self.xinner_ind), slice(ylower, yupper)
 
-    def getOuterGuardsSlices(self, mxg):
+    def getOuterGuardsSlices(self, *, mxg, myg=0):
         """
         Return x- and y-dimension slices that select mxg guard cells on the outer-x side
         of this region from the global DataArray.
@@ -127,11 +134,18 @@ class Region:
         ----------
         mxg : int
             Number of guard cells
+        myg : int, optional
+            Number of y-guard cells to include at the corners
         """
-        return slice(self.xouter_ind, self.xouter_ind + mxg), slice(self.ylower_ind,
-                self.yupper_ind)
+        ylower = self.ylower_ind
+        if self.connection_lower is not None:
+            ylower -= myg
+        yupper = self.yupper_ind
+        if self.connection_upper is not None:
+            yupper += myg
+        return slice(self.xouter_ind, self.xouter_ind + mxg), slice(ylower, yupper)
 
-    def getLowerGuardsSlices(self, myg):
+    def getLowerGuardsSlices(self, *, myg, mxg=0):
         """
         Return x- and y-dimension slices that select myg guard cells on the lower-y side
         of this region from the global DataArray.
@@ -140,11 +154,18 @@ class Region:
         ----------
         myg : int
             Number of guard cells
+        mxg : int, optional
+            Number of x-guard cells to include at the corners
         """
-        return slice(self.xinner_ind, self.xouter_ind), slice(self.ylower_ind - myg,
-                self.ylower_ind)
+        xinner = self.xinner_ind
+        if self.connection_inner is not None:
+            xinner -= mxg
+        xouter = self.xouter_ind
+        if self.connection_outer is not None:
+            xouter += mxg
+        return slice(xinner, xouter), slice(self.ylower_ind - myg, self.ylower_ind)
 
-    def getUpperGuardsSlices(self, myg):
+    def getUpperGuardsSlices(self, *, myg, mxg=0):
         """
         Return x- and y-dimension slices that select myg guard cells on the upper-y side
         of this region from the global DataArray.
@@ -153,9 +174,16 @@ class Region:
         ----------
         myg : int
             Number of guard cells
+        mxg : int, optional
+            Number of x-guard cells to include at the corners
         """
-        return slice(self.xinner_ind, self.xouter_ind), slice(self.yupper_ind,
-                self.yupper_ind + myg)
+        xinner = self.xinner_ind
+        if self.connection_inner is not None:
+            xinner -= mxg
+        xouter = self.xouter_ind
+        if self.connection_outer is not None:
+            xouter += mxg
+        return slice(xinner, xouter), slice(self.yupper_ind, self.yupper_ind + myg)
 
 
 def _in_range(val, lower, upper):
