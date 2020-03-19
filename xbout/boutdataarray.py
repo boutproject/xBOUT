@@ -186,7 +186,7 @@ class BoutDataArrayAccessor:
                     # Note, at the moment this should do nothing, because all neigbours in the
                     # x-direction are contiguous in the global array anyway, but included to
                     # be future-proof
-                    xslice, yslice = region.getInnerGuardsSlices(mxg)
+                    xslice, yslice = region.getInnerGuardsSlices(mxg=mxg)
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     da_inner = da_inner.assign_coords(**{xcoord: new_xcoord})
 
@@ -206,7 +206,7 @@ class BoutDataArrayAccessor:
                     # Note, at the moment this should do nothing, because all neigbours in the
                     # x-direction are contiguous in the global array anyway, but included to
                     # be future-proof
-                    xslice, yslice = region.getOuterGuardsSlices(mxg)
+                    xslice, yslice = region.getOuterGuardsSlices(mxg=mxg)
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     da_outer = da_outer.assign_coords(**{xcoord: new_xcoord})
 
@@ -224,7 +224,7 @@ class BoutDataArrayAccessor:
 
                 if ycoord in da.coords:
                     # Use local coordinates for neighbouring region, not communicated ones
-                    xslice, yslice = region.getLowerGuardsSlices(myg)
+                    xslice, yslice = region.getLowerGuardsSlices(mxg=mxg, myg=myg)
 
                     if yslice.start < 0:
                         # For core-only or limiter topologies, the lower-y slice may be out of
@@ -249,7 +249,7 @@ class BoutDataArrayAccessor:
 
                 if ycoord in da.coords:
                     # Use local coordinates for neighbouring region, not communicated ones
-                    xslice, yslice = region.getUpperGuardsSlices(myg)
+                    xslice, yslice = region.getUpperGuardsSlices(mxg=mxg, myg=myg)
 
                     if yslice.stop > self.data.sizes[ycoord]:
                         # For core-only or limiter topologies, the upper-y slice may be out of
