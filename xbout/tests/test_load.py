@@ -344,6 +344,8 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     ds['MYSUB'] = lengths[2]
     ds['MZSUB'] = lengths[3]
 
+    MYSUB = lengths[2]
+
     if topology == 'core':
         ds['ixseps1'] = nx
         ds['ixseps2'] = nx
