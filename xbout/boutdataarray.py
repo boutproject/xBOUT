@@ -191,6 +191,9 @@ class BoutDataArrayAccessor:
                     da_inner = da_inner.assign_coords(**{xcoord: new_xcoord})
 
                 da = xr.concat((da_inner, da), xcoord, join='exact')
+                # xr.concat takes attributes from the first variable, but da should not
+                # have a region yet
+                del da.attrs['region']
             if region.connection_outer is not None:
                 da_outer = self.data.bout.fromRegion(region.connection_outer,
                                                      with_guards={xcoord: 0, ycoord:0})
@@ -208,6 +211,7 @@ class BoutDataArrayAccessor:
                     da_outer = da_outer.assign_coords(**{xcoord: new_xcoord})
 
                 da = xr.concat((da, da_outer), xcoord, join='exact')
+                # xr.concat takes attributes from the first variable, so region is OK
 
         if myg > 0:
             # get guard cells from y-neighbour regions
@@ -234,6 +238,9 @@ class BoutDataArrayAccessor:
                     da_lower = da_lower.assign_coords(**{ycoord: new_ycoord})
 
                 da = xr.concat((da_lower, da), ycoord, join='exact')
+                # xr.concat takes attributes from the first variable, but da should not
+                # have a region yet
+                del da.attrs['region']
             if region.connection_upper is not None:
                 da_upper = self.data.bout.fromRegion(region.connection_upper,
                                                      with_guards={xcoord: mxg, ycoord: 0})
@@ -256,6 +263,7 @@ class BoutDataArrayAccessor:
                     da_upper = da_upper.assign_coords(**{ycoord: new_ycoord})
 
                 da = xr.concat((da, da_upper), ycoord, join='exact')
+                # xr.concat takes attributes from the first variable, so region is OK
 
         da.attrs['region'] = region
 
