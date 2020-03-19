@@ -398,7 +398,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
             raise ValueError('Not enough processors for disconnected-double-null '
                              + 'topology: nype=' + str(nype))
         ds['ixseps1'] = nx//2
-        ds['ixseps2'] = nx//2 + 2*mxg
+        ds['ixseps2'] = nx//2 + 4
         if ds['ixseps2'] >= nx:
             raise ValueError('Not enough points in the x-direction. ixseps2='
                              + str(ds['ixseps2']) + ' > nx=' + str(nx))
