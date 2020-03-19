@@ -220,7 +220,7 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
         xsize = lengths[1]*nxpe
         ysize = lengths[2]*nype
         grid_ds = create_bout_grid_ds(xsize=xsize, ysize=ysize, guards=guards,
-                                      topology=topology)
+                                      topology=topology, ny_inner=3*lengths[2])
         grid_ds.to_netcdf(str(save_dir.join(grid + ".nc")))
 
     # Return a glob-like path to all files created, which has all file numbers replaced
@@ -446,7 +446,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     return ds
 
 
-def create_bout_grid_ds(xsize=2, ysize=4, guards={}, topology='core'):
+def create_bout_grid_ds(xsize=2, ysize=4, guards={}, topology='core', ny_inner=0):
 
     # Set the shape of the data in this dataset
     mxg = guards.get('x', 0)
@@ -472,7 +472,7 @@ def create_bout_grid_ds(xsize=2, ysize=4, guards={}, topology='core'):
 
     ds = Dataset({'psixy': data, 'Rxy': data, 'Zxy': data, 'hthe': data,
                   'y_boundary_guards': myg, 'jyseps2_1': jyseps2_1,
-                  'jyseps1_2': jyseps1_2})
+                  'jyseps1_2': jyseps1_2, 'ny_inner': ny_inner, 'y_boundary_guards': myg})
 
     return ds
 
