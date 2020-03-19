@@ -30,7 +30,7 @@ Requirements
 - :py:mod:`xbout` requires Python 3
 
 - The following modules are also needed:
-  - ``xarray >= v0.12.2``
+  - ``xarray >= v0.13.0``
   - ``dask[array] >= 1.0.0``
   - ``natsort >= 5.5.0``
   - ``matplotlib >= 2.2``
