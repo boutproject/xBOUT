@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_allclose
+import numpy.testing as npt
 
 from xarray.core.utils import dict_equiv
 
@@ -43,69 +43,69 @@ class TestBoutDataArrayMethods:
         n.attrs['direction_y'] = 'Standard'
         n_al = n.bout.toFieldAligned()
         for t in range(ds.sizes['t']):
-            assert_allclose(n_al[t, 0, 0, 0].values, 1000.*t + 0., rtol=1.e-15, atol=5.e-16)                # noqa: E501
-            assert_allclose(n_al[t, 0, 0, 1].values, 1000.*t + 1., rtol=1.e-15, atol=0.)                    # noqa: E501
-            assert_allclose(n_al[t, 0, 0, 2].values, 1000.*t + 2., rtol=1.e-15, atol=0.)                    # noqa: E501
-            assert_allclose(n_al[t, 0, 0, 3].values, 1000.*t + 3., rtol=1.e-15, atol=0.)                    # noqa: E501
-            assert_allclose(n_al[t, 0, 0, 4].values, 1000.*t + 4., rtol=1.e-15, atol=0.)                    # noqa: E501
-            assert_allclose(n_al[t, 0, 0, 5].values, 1000.*t + 5., rtol=1.e-15, atol=0.)                    # noqa: E501
-            assert_allclose(n_al[t, 0, 0, 6].values, 1000.*t + 6., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 0, 0].values, 1000.*t + 0., rtol=1.e-15, atol=5.e-16)                # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 0, 1].values, 1000.*t + 1., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 0, 2].values, 1000.*t + 2., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 0, 3].values, 1000.*t + 3., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 0, 4].values, 1000.*t + 4., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 0, 5].values, 1000.*t + 5., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 0, 6].values, 1000.*t + 6., rtol=1.e-15, atol=0.)                    # noqa: E501
 
-            assert_allclose(n_al[t, 0, 1, 0].values, 1000.*t + 10.*1. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 1, 1].values, 1000.*t + 10.*1. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 1, 2].values, 1000.*t + 10.*1. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 1, 3].values, 1000.*t + 10.*1. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 1, 4].values, 1000.*t + 10.*1. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 1, 5].values, 1000.*t + 10.*1. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 1, 6].values, 1000.*t + 10.*1. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 1, 0].values, 1000.*t + 10.*1. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 1, 1].values, 1000.*t + 10.*1. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 1, 2].values, 1000.*t + 10.*1. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 1, 3].values, 1000.*t + 10.*1. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 1, 4].values, 1000.*t + 10.*1. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 1, 5].values, 1000.*t + 10.*1. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 1, 6].values, 1000.*t + 10.*1. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
 
-            assert_allclose(n_al[t, 0, 2, 0].values, 1000.*t + 10.*2. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 2, 1].values, 1000.*t + 10.*2. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 2, 2].values, 1000.*t + 10.*2. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 2, 3].values, 1000.*t + 10.*2. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 2, 4].values, 1000.*t + 10.*2. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 2, 5].values, 1000.*t + 10.*2. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 2, 6].values, 1000.*t + 10.*2. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 2, 0].values, 1000.*t + 10.*2. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 2, 1].values, 1000.*t + 10.*2. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 2, 2].values, 1000.*t + 10.*2. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 2, 3].values, 1000.*t + 10.*2. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 2, 4].values, 1000.*t + 10.*2. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 2, 5].values, 1000.*t + 10.*2. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 2, 6].values, 1000.*t + 10.*2. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
 
-            assert_allclose(n_al[t, 0, 3, 0].values, 1000.*t + 10.*3. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 3, 1].values, 1000.*t + 10.*3. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 3, 2].values, 1000.*t + 10.*3. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 3, 3].values, 1000.*t + 10.*3. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 3, 4].values, 1000.*t + 10.*3. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 3, 5].values, 1000.*t + 10.*3. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_al[t, 0, 3, 6].values, 1000.*t + 10.*3. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 3, 0].values, 1000.*t + 10.*3. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 3, 1].values, 1000.*t + 10.*3. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 3, 2].values, 1000.*t + 10.*3. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 3, 3].values, 1000.*t + 10.*3. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 3, 4].values, 1000.*t + 10.*3. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 3, 5].values, 1000.*t + 10.*3. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_al[t, 0, 3, 6].values, 1000.*t + 10.*3. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
 
-            assert_allclose(n_al[t, 1, 0, 0].values, 1000.*t + 100.*1 + 10.*0. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 0, 1].values, 1000.*t + 100.*1 + 10.*0. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 0, 2].values, 1000.*t + 100.*1 + 10.*0. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 0, 3].values, 1000.*t + 100.*1 + 10.*0. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 0, 4].values, 1000.*t + 100.*1 + 10.*0. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 0, 5].values, 1000.*t + 100.*1 + 10.*0. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 0, 6].values, 1000.*t + 100.*1 + 10.*0. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 0, 0].values, 1000.*t + 100.*1 + 10.*0. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 0, 1].values, 1000.*t + 100.*1 + 10.*0. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 0, 2].values, 1000.*t + 100.*1 + 10.*0. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 0, 3].values, 1000.*t + 100.*1 + 10.*0. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 0, 4].values, 1000.*t + 100.*1 + 10.*0. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 0, 5].values, 1000.*t + 100.*1 + 10.*0. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 0, 6].values, 1000.*t + 100.*1 + 10.*0. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
 
-            assert_allclose(n_al[t, 1, 1, 0].values, 1000.*t + 100.*1 + 10.*1. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 1, 1].values, 1000.*t + 100.*1 + 10.*1. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 1, 2].values, 1000.*t + 100.*1 + 10.*1. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 1, 3].values, 1000.*t + 100.*1 + 10.*1. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 1, 4].values, 1000.*t + 100.*1 + 10.*1. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 1, 5].values, 1000.*t + 100.*1 + 10.*1. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 1, 6].values, 1000.*t + 100.*1 + 10.*1. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 1, 0].values, 1000.*t + 100.*1 + 10.*1. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 1, 1].values, 1000.*t + 100.*1 + 10.*1. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 1, 2].values, 1000.*t + 100.*1 + 10.*1. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 1, 3].values, 1000.*t + 100.*1 + 10.*1. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 1, 4].values, 1000.*t + 100.*1 + 10.*1. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 1, 5].values, 1000.*t + 100.*1 + 10.*1. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 1, 6].values, 1000.*t + 100.*1 + 10.*1. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
 
-            assert_allclose(n_al[t, 1, 2, 0].values, 1000.*t + 100.*1 + 10.*2. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 2, 1].values, 1000.*t + 100.*1 + 10.*2. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 2, 2].values, 1000.*t + 100.*1 + 10.*2. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 2, 3].values, 1000.*t + 100.*1 + 10.*2. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 2, 4].values, 1000.*t + 100.*1 + 10.*2. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 2, 5].values, 1000.*t + 100.*1 + 10.*2. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 2, 6].values, 1000.*t + 100.*1 + 10.*2. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 2, 0].values, 1000.*t + 100.*1 + 10.*2. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 2, 1].values, 1000.*t + 100.*1 + 10.*2. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 2, 2].values, 1000.*t + 100.*1 + 10.*2. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 2, 3].values, 1000.*t + 100.*1 + 10.*2. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 2, 4].values, 1000.*t + 100.*1 + 10.*2. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 2, 5].values, 1000.*t + 100.*1 + 10.*2. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 2, 6].values, 1000.*t + 100.*1 + 10.*2. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
 
-            assert_allclose(n_al[t, 1, 3, 0].values, 1000.*t + 100.*1 + 10.*3. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 3, 1].values, 1000.*t + 100.*1 + 10.*3. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 3, 2].values, 1000.*t + 100.*1 + 10.*3. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 3, 3].values, 1000.*t + 100.*1 + 10.*3. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 3, 4].values, 1000.*t + 100.*1 + 10.*3. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 3, 5].values, 1000.*t + 100.*1 + 10.*3. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_al[t, 1, 3, 6].values, 1000.*t + 100.*1 + 10.*3. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 3, 0].values, 1000.*t + 100.*1 + 10.*3. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 3, 1].values, 1000.*t + 100.*1 + 10.*3. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 3, 2].values, 1000.*t + 100.*1 + 10.*3. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 3, 3].values, 1000.*t + 100.*1 + 10.*3. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 3, 4].values, 1000.*t + 100.*1 + 10.*3. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 3, 5].values, 1000.*t + 100.*1 + 10.*3. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_al[t, 1, 3, 6].values, 1000.*t + 100.*1 + 10.*3. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
 
     def test_fromFieldAligned(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
@@ -130,66 +130,66 @@ class TestBoutDataArrayMethods:
         n.attrs['direction_y'] = 'Aligned'
         n_nal = n.bout.fromFieldAligned()
         for t in range(ds.sizes['t']):
-            assert_allclose(n_nal[t, 0, 0, 0].values, 1000.*t + 0., rtol=1.e-15, atol=5.e-16)                # noqa: E501
-            assert_allclose(n_nal[t, 0, 0, 1].values, 1000.*t + 1., rtol=1.e-15, atol=0.)                    # noqa: E501
-            assert_allclose(n_nal[t, 0, 0, 2].values, 1000.*t + 2., rtol=1.e-15, atol=0.)                    # noqa: E501
-            assert_allclose(n_nal[t, 0, 0, 3].values, 1000.*t + 3., rtol=1.e-15, atol=0.)                    # noqa: E501
-            assert_allclose(n_nal[t, 0, 0, 4].values, 1000.*t + 4., rtol=1.e-15, atol=0.)                    # noqa: E501
-            assert_allclose(n_nal[t, 0, 0, 5].values, 1000.*t + 5., rtol=1.e-15, atol=0.)                    # noqa: E501
-            assert_allclose(n_nal[t, 0, 0, 6].values, 1000.*t + 6., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 0, 0].values, 1000.*t + 0., rtol=1.e-15, atol=5.e-16)                # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 0, 1].values, 1000.*t + 1., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 0, 2].values, 1000.*t + 2., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 0, 3].values, 1000.*t + 3., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 0, 4].values, 1000.*t + 4., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 0, 5].values, 1000.*t + 5., rtol=1.e-15, atol=0.)                    # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 0, 6].values, 1000.*t + 6., rtol=1.e-15, atol=0.)                    # noqa: E501
 
-            assert_allclose(n_nal[t, 0, 1, 0].values, 1000.*t + 10.*1. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 1, 1].values, 1000.*t + 10.*1. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 1, 2].values, 1000.*t + 10.*1. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 1, 3].values, 1000.*t + 10.*1. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 1, 4].values, 1000.*t + 10.*1. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 1, 5].values, 1000.*t + 10.*1. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 1, 6].values, 1000.*t + 10.*1. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 1, 0].values, 1000.*t + 10.*1. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 1, 1].values, 1000.*t + 10.*1. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 1, 2].values, 1000.*t + 10.*1. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 1, 3].values, 1000.*t + 10.*1. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 1, 4].values, 1000.*t + 10.*1. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 1, 5].values, 1000.*t + 10.*1. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 1, 6].values, 1000.*t + 10.*1. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
 
-            assert_allclose(n_nal[t, 0, 2, 0].values, 1000.*t + 10.*2. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 2, 1].values, 1000.*t + 10.*2. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 2, 2].values, 1000.*t + 10.*2. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 2, 3].values, 1000.*t + 10.*2. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 2, 4].values, 1000.*t + 10.*2. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 2, 5].values, 1000.*t + 10.*2. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 2, 6].values, 1000.*t + 10.*2. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 2, 0].values, 1000.*t + 10.*2. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 2, 1].values, 1000.*t + 10.*2. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 2, 2].values, 1000.*t + 10.*2. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 2, 3].values, 1000.*t + 10.*2. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 2, 4].values, 1000.*t + 10.*2. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 2, 5].values, 1000.*t + 10.*2. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 2, 6].values, 1000.*t + 10.*2. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
 
-            assert_allclose(n_nal[t, 0, 3, 0].values, 1000.*t + 10.*3. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 3, 1].values, 1000.*t + 10.*3. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 3, 2].values, 1000.*t + 10.*3. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 3, 3].values, 1000.*t + 10.*3. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 3, 4].values, 1000.*t + 10.*3. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 3, 5].values, 1000.*t + 10.*3. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
-            assert_allclose(n_nal[t, 0, 3, 6].values, 1000.*t + 10.*3. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 3, 0].values, 1000.*t + 10.*3. + 4., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 3, 1].values, 1000.*t + 10.*3. + 5., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 3, 2].values, 1000.*t + 10.*3. + 6., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 3, 3].values, 1000.*t + 10.*3. + 0., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 3, 4].values, 1000.*t + 10.*3. + 1., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 3, 5].values, 1000.*t + 10.*3. + 2., rtol=1.e-15, atol=0.)           # noqa: E501
+            npt.assert_allclose(n_nal[t, 0, 3, 6].values, 1000.*t + 10.*3. + 3., rtol=1.e-15, atol=0.)           # noqa: E501
 
-            assert_allclose(n_nal[t, 1, 0, 0].values, 1000.*t + 100.*1 + 10.*0. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 0, 1].values, 1000.*t + 100.*1 + 10.*0. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 0, 2].values, 1000.*t + 100.*1 + 10.*0. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 0, 3].values, 1000.*t + 100.*1 + 10.*0. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 0, 4].values, 1000.*t + 100.*1 + 10.*0. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 0, 5].values, 1000.*t + 100.*1 + 10.*0. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 0, 6].values, 1000.*t + 100.*1 + 10.*0. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 0, 0].values, 1000.*t + 100.*1 + 10.*0. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 0, 1].values, 1000.*t + 100.*1 + 10.*0. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 0, 2].values, 1000.*t + 100.*1 + 10.*0. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 0, 3].values, 1000.*t + 100.*1 + 10.*0. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 0, 4].values, 1000.*t + 100.*1 + 10.*0. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 0, 5].values, 1000.*t + 100.*1 + 10.*0. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 0, 6].values, 1000.*t + 100.*1 + 10.*0. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
 
-            assert_allclose(n_nal[t, 1, 1, 0].values, 1000.*t + 100.*1 + 10.*1. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 1, 1].values, 1000.*t + 100.*1 + 10.*1. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 1, 2].values, 1000.*t + 100.*1 + 10.*1. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 1, 3].values, 1000.*t + 100.*1 + 10.*1. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 1, 4].values, 1000.*t + 100.*1 + 10.*1. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 1, 5].values, 1000.*t + 100.*1 + 10.*1. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 1, 6].values, 1000.*t + 100.*1 + 10.*1. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 1, 0].values, 1000.*t + 100.*1 + 10.*1. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 1, 1].values, 1000.*t + 100.*1 + 10.*1. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 1, 2].values, 1000.*t + 100.*1 + 10.*1. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 1, 3].values, 1000.*t + 100.*1 + 10.*1. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 1, 4].values, 1000.*t + 100.*1 + 10.*1. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 1, 5].values, 1000.*t + 100.*1 + 10.*1. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 1, 6].values, 1000.*t + 100.*1 + 10.*1. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
 
-            assert_allclose(n_nal[t, 1, 2, 0].values, 1000.*t + 100.*1 + 10.*2. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 2, 1].values, 1000.*t + 100.*1 + 10.*2. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 2, 2].values, 1000.*t + 100.*1 + 10.*2. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 2, 3].values, 1000.*t + 100.*1 + 10.*2. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 2, 4].values, 1000.*t + 100.*1 + 10.*2. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 2, 5].values, 1000.*t + 100.*1 + 10.*2. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 2, 6].values, 1000.*t + 100.*1 + 10.*2. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 2, 0].values, 1000.*t + 100.*1 + 10.*2. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 2, 1].values, 1000.*t + 100.*1 + 10.*2. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 2, 2].values, 1000.*t + 100.*1 + 10.*2. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 2, 3].values, 1000.*t + 100.*1 + 10.*2. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 2, 4].values, 1000.*t + 100.*1 + 10.*2. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 2, 5].values, 1000.*t + 100.*1 + 10.*2. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 2, 6].values, 1000.*t + 100.*1 + 10.*2. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
 
-            assert_allclose(n_nal[t, 1, 3, 0].values, 1000.*t + 100.*1 + 10.*3. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 3, 1].values, 1000.*t + 100.*1 + 10.*3. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 3, 2].values, 1000.*t + 100.*1 + 10.*3. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 3, 3].values, 1000.*t + 100.*1 + 10.*3. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 3, 4].values, 1000.*t + 100.*1 + 10.*3. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 3, 5].values, 1000.*t + 100.*1 + 10.*3. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
-            assert_allclose(n_nal[t, 1, 3, 6].values, 1000.*t + 100.*1 + 10.*3. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 3, 0].values, 1000.*t + 100.*1 + 10.*3. + 0., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 3, 1].values, 1000.*t + 100.*1 + 10.*3. + 1., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 3, 2].values, 1000.*t + 100.*1 + 10.*3. + 2., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 3, 3].values, 1000.*t + 100.*1 + 10.*3. + 3., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 3, 4].values, 1000.*t + 100.*1 + 10.*3. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 3, 5].values, 1000.*t + 100.*1 + 10.*3. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
+            npt.assert_allclose(n_nal[t, 1, 3, 6].values, 1000.*t + 100.*1 + 10.*3. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
