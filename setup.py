@@ -33,7 +33,7 @@ setup(
     license="Apache",
     python_requires='>=3.6',
     install_requires=[
-        'xarray>=v0.12.2',
+        'xarray>=v0.13.0',
         'dask[array]>=1.0.0',
         'natsort>=5.5.0',
         'matplotlib>=3.1.1',
