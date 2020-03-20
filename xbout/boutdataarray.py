@@ -178,7 +178,7 @@ class BoutDataArrayAccessor:
             # get guard cells from x-neighbour regions
             if region.connection_inner is not None:
                 da_inner = self.data.bout.fromRegion(region.connection_inner,
-                                                     with_guards={xcoord: 0, ycoord:0})
+                                                     with_guards=0)
 
                 if (myg_da > 0 and keep_yboundaries
                         and region.connection_lower is not None
@@ -238,7 +238,7 @@ class BoutDataArrayAccessor:
                 del da.attrs['region']
             if region.connection_outer is not None:
                 da_outer = self.data.bout.fromRegion(region.connection_outer,
-                                                     with_guards={xcoord: 0, ycoord:0})
+                                                     with_guards=0)
 
                 if (myg_da > 0 and keep_yboundaries
                         and region.connection_lower is not None
