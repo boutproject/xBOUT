@@ -320,6 +320,8 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
 
     T = DataArray(data, dims=['t', 'x', 'y', 'z'])
     n = DataArray(data, dims=['t', 'x', 'y', 'z'])
+    for v in [n, T]:
+        v.attrs['direction_y'] = 'Standard'
     ds = Dataset({'n': n, 'T': T})
 
     # BOUT_VERSION needed so that we know that number of points in z is MZ, not MZ-1 (as
