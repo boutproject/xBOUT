@@ -308,7 +308,7 @@ def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
     ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims, combine='nested',
                            data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
                            preprocess=_preprocess, engine=filetype,
-                           chunks=chunks, **kwargs)
+                           chunks=chunks, join='exact', **kwargs)
 
     # Remove any duplicate time values from concatenation
     _, unique_indices = unique(ds['t_array'], return_index=True)
@@ -621,5 +621,5 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
                     y=slice(nin + 2 * yboundaries, None, None))
                 grid = xr.concat((grid_lower, grid_upper), dim='y',
                                  data_vars='minimal',
-                                 compat='identical')
+                                 compat='identical', join='exact')
     return grid
