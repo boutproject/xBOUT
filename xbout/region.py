@@ -13,8 +13,8 @@ class Region:
     Also stores the names of any neighbouring regions.
     """
     def __init__(self, *, name, ds=None, xinner_ind=None, xouter_ind=None,
-                 ylower_ind=None, yupper_ind=None, connect_inner=None, connect_outer=None,
-                 connect_lower=None, connect_upper=None):
+                 ylower_ind=None, yupper_ind=None, connect_inner=None,
+                 connect_outer=None, connect_lower=None, connect_upper=None):
         """
         Parameters
         ----------
@@ -59,8 +59,8 @@ class Region:
             xcoord = ds.metadata['bout_xdim']
             ycoord = ds.metadata['bout_ydim']
 
-            # dx is constant in any particular region in the y-direction, so convert to a 1d
-            # array
+            # dx is constant in any particular region in the y-direction, so convert to a
+            # 1d array
             dx = ds['dx'].isel(**{ycoord: self.ylower_ind})
             dx_cumsum = dx.cumsum()
             self.xinner = dx_cumsum[xinner_ind] - dx[xinner_ind]/2.
@@ -226,13 +226,13 @@ def _get_topology(ds):
         return 'single-null'
 
     if jys11 == jys21 and jys12 == jys22:
-        if jys11 < nyinner -1 and jys22 > nyinner:
+        if jys11 < nyinner - 1 and jys22 > nyinner:
             return 'xpoint'
         else:
             raise ValueError('Currently unsupported topology')
 
     if ixs1 == ixs2:
-        if jys21 < nyinner -1 and jys12 > nyinner:
+        if jys21 < nyinner - 1 and jys12 > nyinner:
             return 'connected-double-null'
         else:
             raise ValueError('Currently unsupported topology')

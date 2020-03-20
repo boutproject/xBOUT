@@ -90,8 +90,10 @@ def plot_separatrices(da, ax):
         inner = da_region.region.connection_inner
         if inner is not None:
             da_inner = da_regions[inner]
-            R = 0.5*(da_inner['R'].isel(**{xcoord: -1}) + da_region['R'].isel(**{xcoord: 0}))
-            Z = 0.5*(da_inner['Z'].isel(**{xcoord: -1}) + da_region['Z'].isel(**{xcoord: 0}))
+            R = 0.5*(da_inner['R'].isel(**{xcoord: -1})
+                     + da_region['R'].isel(**{xcoord: 0}))
+            Z = 0.5*(da_inner['Z'].isel(**{xcoord: -1})
+                     + da_region['Z'].isel(**{xcoord: 0}))
             ax.plot(R, Z, 'k--')
 
 

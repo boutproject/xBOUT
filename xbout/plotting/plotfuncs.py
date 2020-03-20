@@ -221,8 +221,8 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                     and not da.metadata['bout_ydim'] in R.dims):
                 # Small regions around X-point do not have segments in x- or y-directions,
                 # so skip
-                ## Currently this region does not exist, but there is a small white gap at
-                ## the X-point, so we might add it back in future
+                # Currently this region does not exist, but there is a small white gap at
+                # the X-point, so we might add it back in future
                 continue
             if gridlines.get('x') is not None:
                 # transpose in case Dataset or DataArray has been transposed away from the usual

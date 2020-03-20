@@ -144,8 +144,8 @@ class BoutDataArrayAccessor:
         region : str
             Region to get data for
         with_guards : int or dict of int, optional
-            Number of guard cells to include, by default use MXG and MYG from BOUT++. Pass
-            a dict to set different numbers for different coordinates.
+            Number of guard cells to include, by default use MXG and MYG from BOUT++.
+            Pass a dict to set different numbers for different coordinates.
         """
 
         region = self.data.regions[region]
@@ -207,7 +207,8 @@ class BoutDataArrayAccessor:
                     da_inner_lower = da_inner_lower.isel(
                             **{xcoord: slice(-mxg, None), ycoord: slice(-myg_da, None)})
                     save_region = da_inner.region
-                    da_inner = xr.concat((da_inner_lower, da_inner), ycoord, join='exact')
+                    da_inner = xr.concat((da_inner_lower, da_inner), ycoord,
+                                         join='exact')
                     # xr.concat takes attributes from the first variable, but we need
                     # da_inner's region
                     da_inner.attrs['region'] = save_region
@@ -221,11 +222,13 @@ class BoutDataArrayAccessor:
                                        da_inner.region.connection_upper, with_guards=0)
                     da_inner_upper = da_inner_upper.isel(
                             **{xcoord: slice(-mxg, None), ycoord: slice(myg_da)})
-                    da_inner = xr.concat((da_inner, da_inner_upper), ycoord, join='exact')
+                    da_inner = xr.concat((da_inner, da_inner_upper), ycoord,
+                                         join='exact')
                     # xr.concat takes attributes from the first variable, so region is OK
 
                 if xcoord in da.coords:
-                    # Use local coordinates for neighbouring region, not communicated ones
+                    # Use local coordinates for neighbouring region, not communicated
+                    # ones
                     xslice, yslice = region.getInnerGuardsSlices(mxg=mxg)
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
@@ -267,7 +270,8 @@ class BoutDataArrayAccessor:
                     da_outer_lower = da_outer_lower.isel(
                             **{xcoord: slice(-mxg, None), ycoord: slice(-myg_da, None)})
                     save_region = da_outer.region
-                    da_outer = xr.concat((da_outer_lower, da_outer), ycoord, join='exact')
+                    da_outer = xr.concat((da_outer_lower, da_outer), ycoord,
+                                         join='exact')
                     # xr.concat takes attributes from the first variable, but we need
                     # da_outer's region
                     da_outer.attrs['region'] = save_region
@@ -281,11 +285,13 @@ class BoutDataArrayAccessor:
                                        da_outer.region.connection_upper, with_guards=0)
                     da_outer_upper = da_outer_upper.isel(
                             **{xcoord: slice(-mxg, None), ycoord: slice(myg_da)})
-                    da_outer = xr.concat((da_outer, da_outer_upper), ycoord, join='exact')
+                    da_outer = xr.concat((da_outer, da_outer_upper), ycoord,
+                                         join='exact')
                     # xr.concat takes attributes from the first variable, so region is OK
 
                 if xcoord in da.coords:
-                    # Use local coordinates for neighbouring region, not communicated ones
+                    # Use local coordinates for neighbouring region, not communicated
+                    # ones
                     xslice, yslice = region.getOuterGuardsSlices(mxg=mxg)
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
@@ -298,23 +304,25 @@ class BoutDataArrayAccessor:
         if myg > 0:
             # get guard cells from y-neighbour regions
             if region.connection_lower is not None:
-                da_lower = self.data.bout.fromRegion(region.connection_lower,
-                                                     with_guards={xcoord: mxg, ycoord:0})
+                da_lower = self.data.bout.fromRegion(
+                        region.connection_lower, with_guards={xcoord: mxg, ycoord: 0})
 
                 # select just the points we need to fill the guard cells of da
                 da_lower = da_lower.isel(**{ycoord: slice(-myg, None)})
 
                 if ycoord in da.coords:
-                    # Use local coordinates for neighbouring region, not communicated ones
+                    # Use local coordinates for neighbouring region, not communicated
+                    # ones
                     xslice, yslice = region.getLowerGuardsSlices(mxg=mxg, myg=myg)
 
                     if yslice.start < 0:
-                        # For core-only or limiter topologies, the lower-y slice may be out of
-                        # the global array bounds
+                        # For core-only or limiter topologies, the lower-y slice may be
+                        # out of the global array bounds
                         raise ValueError('Trying to fill a slice which is not present '
-                                + 'in the global array, so do not have coordinate '
-                                + 'values for it. Try setting keep_yboundaries=True '
-                                + 'when calling open_boutdataset.')
+                                         + 'in the global array, so do not have '
+                                         + 'coordinate values for it. Try setting '
+                                         + 'keep_yboundaries=True when calling '
+                                         + 'open_boutdataset.')
 
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
@@ -326,22 +334,24 @@ class BoutDataArrayAccessor:
                 # have a region yet
                 del da.attrs['region']
             if region.connection_upper is not None:
-                da_upper = self.data.bout.fromRegion(region.connection_upper,
-                                                     with_guards={xcoord: mxg, ycoord: 0})
+                da_upper = self.data.bout.fromRegion(
+                        region.connection_upper, with_guards={xcoord: mxg, ycoord: 0})
                 # select just the points we need to fill the guard cells of da
                 da_upper = da_upper.isel(**{ycoord: slice(myg)})
 
                 if ycoord in da.coords:
-                    # Use local coordinates for neighbouring region, not communicated ones
+                    # Use local coordinates for neighbouring region, not communicated
+                    # ones
                     xslice, yslice = region.getUpperGuardsSlices(mxg=mxg, myg=myg)
 
                     if yslice.stop > self.data.sizes[ycoord]:
-                        # For core-only or limiter topologies, the upper-y slice may be out of
-                        # the global array bounds
+                        # For core-only or limiter topologies, the upper-y slice may be
+                        # out of the global array bounds
                         raise ValueError('Trying to fill a slice which is not present '
-                                + 'in the global array, so do not have coordinate '
-                                + 'values for it. Try setting keep_yboundaries=True '
-                                + 'when calling open_boutdataset.')
+                                         + 'in the global array, so do not have '
+                                         + 'coordinate values for it. Try setting '
+                                         + 'keep_yboundaries=True when calling '
+                                         + 'open_boutdataset.')
 
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})

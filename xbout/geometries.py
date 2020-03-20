@@ -157,8 +157,8 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     # in disconnected regions, but there are no branch-cuts allowed in the x-direction in
     # BOUT++ (at least for the momement), so the y-coordinate has to be 1d and
     # single-valued. Therefore similarly dy has to be 1d and single-valued.]
-    # Need drop=True so that the result does not have an x-coordinate value which prevents
-    # it being added as a coordinate.
+    # Need drop=True so that the result does not have an x-coordinate value which
+    # prevents it being added as a coordinate.
     dy = ds['dy'].isel(x=0, drop=True)
 
     # calculate theta at the centre of each cell

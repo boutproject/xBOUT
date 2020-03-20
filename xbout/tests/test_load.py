@@ -472,7 +472,8 @@ def create_bout_grid_ds(xsize=2, ysize=4, guards={}, topology='core', ny_inner=0
 
     ds = Dataset({'psixy': data, 'Rxy': data, 'Zxy': data, 'hthe': data,
                   'y_boundary_guards': myg, 'jyseps2_1': jyseps2_1,
-                  'jyseps1_2': jyseps1_2, 'ny_inner': ny_inner, 'y_boundary_guards': myg})
+                  'jyseps1_2': jyseps1_2, 'ny_inner': ny_inner,
+                  'y_boundary_guards': myg})
 
     return ds
 
