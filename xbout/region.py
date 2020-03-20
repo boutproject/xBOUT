@@ -54,6 +54,38 @@ class Region:
         self.connection_upper = connect_upper
 
         if ds is not None:
+            # self.nx, self.ny should not include boundary points.
+            # self.xinner, self.xouter, self.ylower, self.yupper
+            if ds.metadata['keep_xboundaries']:
+                xbndry = ds.metadata['MXG']
+                if self.connection_inner is None:
+                    self.nx -= xbndry
+
+                    # used to calculate x-coordinate of inner side (self.xinner)
+                    xinner_ind += xbndry
+
+                if self.connection_outer is None:
+                    self.nx -= xbndry
+
+                    # used to calculate x-coordinate of outer side (self.xouter)
+                    xouter_ind -= xbndry
+
+            if ds.metadata['keep_yboundaries']:
+                ybndry = ds.metadata['MYG']
+                if self.connection_lower is None:
+                    self.ny -= ybndry
+                    print('check ny 2', self.ny, self.connection_lower, connect_lower)
+
+                    # used to calculate y-coordinate of lower side (self.ylower)
+                    ylower_ind += ybndry
+
+                if self.connection_upper is None:
+                    self.ny -= ybndry
+                    print('check ny 3', self.ny, self.connection_upper, connect_upper)
+
+                    # used to calculate y-coordinate of upper side (self.yupper)
+                    yupper_ind -= ybndry
+
             # calculate start and end coordinates
             #####################################
             xcoord = ds.metadata['bout_xdim']
