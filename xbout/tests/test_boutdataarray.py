@@ -1,6 +1,8 @@
 import numpy as np
 import numpy.testing as npt
+from pathlib import Path
 
+import xarray as xr
 from xarray.core.utils import dict_equiv
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
@@ -193,3 +195,71 @@ class TestBoutDataArrayMethods:
             npt.assert_allclose(n_nal[t, 1, 3, 4].values, 1000.*t + 100.*1 + 10.*3. + 4., rtol=1.e-15, atol=0.)  # noqa: E501
             npt.assert_allclose(n_nal[t, 1, 3, 5].values, 1000.*t + 100.*1 + 10.*3. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
             npt.assert_allclose(n_nal[t, 1, 3, 6].values, 1000.*t + 100.*1 + 10.*3. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
+
+    def test_highParallelResRegion_core(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 16, 7), nxpe=1,
+                                      nype=1, nt=1, grid='grid', guards={'y':2},
+                                      topology='core')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n = ds['n']
+
+        thetalength = 2.*np.pi
+
+        dtheta = thetalength/16.
+        theta = xr.DataArray(np.linspace(0. - 1.5*dtheta, thetalength + 1.5*dtheta, 20),
+                             dims='theta')
+
+        dtheta_fine = thetalength/128.
+        theta_fine = xr.DataArray(
+                np.linspace(0. + dtheta_fine/2., thetalength - dtheta_fine/2., 128),
+                dims='theta')
+
+        def f(t):
+            t = np.sin(t)
+            return (t**3 - t**2 + t - 1.)
+
+        n.data = f(theta).broadcast_like(n)
+
+        n_highres = n.bout.highParallelResRegion('core')
+
+        expected = f(theta_fine).broadcast_like(n_highres)
+
+        npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
+
+    def test_highParallelResRegion_sol(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 16, 7), nxpe=1,
+                                      nype=1, nt=1, grid='grid', guards={'y':2},
+                                      topology='sol')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n = ds['n']
+
+        thetalength = 2.*np.pi
+
+        dtheta = thetalength/16.
+        theta = xr.DataArray(np.linspace(0. - 1.5*dtheta, thetalength + 1.5*dtheta, 20),
+                             dims='theta')
+
+        dtheta_fine = thetalength/128.
+        theta_fine = xr.DataArray(
+                np.linspace(0. - 1.5*dtheta_fine, thetalength + 1.5*dtheta_fine, 132),
+                dims='theta')
+
+        def f(t):
+            t = np.sin(t)
+            return (t**3 - t**2 + t - 1.)
+
+        n.data = f(theta).broadcast_like(n)
+
+        n_highres = n.bout.highParallelResRegion('SOL')
+
+        expected = f(theta_fine).broadcast_like(n_highres)
+
+        npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
