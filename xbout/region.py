@@ -284,14 +284,36 @@ def _get_topology(ds):
     return 'disconnected-double-null'
 
 
-def _create_connection_x(regions, inner, outer):
-    regions[inner].connection_outer = outer
-    regions[outer].connection_inner = inner
-
-
-def _create_connection_y(regions, lower, upper):
-    regions[lower].connection_upper = upper
-    regions[upper].connection_lower = lower
+def _check_connections(regions):
+    for region in regions.values():
+        if region.connection_inner is not None:
+            if regions[region.connection_inner].connection_outer != region.name:
+                raise ValueError(
+                        'Inner connection of ' + region.name + ' is '
+                        + region.connection_inner + ', but outer connection of '
+                        + region.connection_inner + ' is '
+                        + regions[region.connection_inner].connection_outer)
+        if region.connection_outer is not None:
+            if regions[region.connection_outer].connection_inner != region.name:
+                raise ValueError(
+                        'Inner connection of ' + region.name + ' is '
+                        + region.connection_outer + ', but inner connection of '
+                        + region.connection_outer + ' is '
+                        + regions[region.connection_outer].connection_inner)
+        if region.connection_lower is not None:
+            if regions[region.connection_lower].connection_upper != region.name:
+                raise ValueError(
+                        'Inner connection of ' + region.name + ' is '
+                        + region.connection_lower + ', but upper connection of '
+                        + region.connection_lower + ' is '
+                        + regions[region.connection_lower].connection_upper)
+        if region.connection_upper is not None:
+            if regions[region.connection_upper].connection_lower != region.name:
+                raise ValueError(
+                        'Inner connection of ' + region.name + ' is '
+                        + region.connection_upper + ', but lower connection of '
+                        + region.connection_upper + ' is '
+                        + regions[region.connection_upper].connection_lower)
 
 
 def _create_regions_toroidal(ds):
@@ -352,210 +374,210 @@ def _create_regions_toroidal(ds):
     if topology == 'disconnected-double-null':
         regions['lower_inner_PFR'] = Region(
                 name='lower_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=0, yupper_ind=jys11 + 1)
+                ylower_ind=0, yupper_ind=jys11 + 1, connect_outer='lower_inner_intersep',
+                connect_upper='lower_outer_PFR')
         regions['lower_inner_intersep'] = Region(
                 name='lower_inner_intersep', ds=ds, xinner_ind=ixs1, xouter_ind=ixs2,
-                ylower_ind=0, yupper_ind=jys11 + 1)
+                ylower_ind=0, yupper_ind=jys11 + 1, connect_inner='lower_inner_PFR',
+                connect_outer='lower_inner_SOL', connect_upper='inner_intersep')
         regions['lower_inner_SOL'] = Region(
                 name='lower_inner_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=0, yupper_ind=jys11 + 1)
+                ylower_ind=0, yupper_ind=jys11 + 1, connect_inner='lower_inner_intersep',
+                connect_upper='inner_SOL')
         regions['inner_core'] = Region(
                 name='inner_core', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys11 + 1, yupper_ind=jys21 + 1)
+                ylower_ind=jys11 + 1, yupper_ind=jys21 + 1,
+                connect_outer='inner_intersep', connect_lower='outer_core',
+                connect_upper='outer_core')
         regions['inner_intersep'] = Region(
                 name='inner_intersep', ds=ds, xinner_ind=ixs1, xouter_ind=ixs2,
-                ylower_ind=jys11 + 1, yupper_ind=jys21 + 1)
+                ylower_ind=jys11 + 1, yupper_ind=jys21 + 1, connect_inner='inner_core',
+                connect_outer='inner_SOL', connect_lower='lower_inner_intersep',
+                connect_upper='outer_intersep')
         regions['inner_SOL'] = Region(
                 name='inner_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=jys11 + 1, yupper_ind=jys21 + 1)
+                ylower_ind=jys11 + 1, yupper_ind=jys21 + 1,
+                connect_inner='inner_intersep', connect_lower='lower_inner_SOL',
+                connect_upper='upper_inner_SOL')
         regions['upper_inner_PFR'] = Region(
                 name='upper_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys21 + 1, yupper_ind=nyinner)
+                ylower_ind=jys21 + 1, yupper_ind=nyinner,
+                connect_outer='upper_inner_intersep', connect_lower='upper_outer_PFR')
         regions['upper_inner_intersep'] = Region(
                 name='upper_inner_intersep', ds=ds, xinner_ind=ixs1, xouter_ind=ixs2,
-                ylower_ind=jys21 + 1, yupper_ind=nyinner)
+                ylower_ind=jys21 + 1, yupper_ind=nyinner, connect_inner='upper_inner_PFR',
+                connect_outer='upper_inner_SOL', connect_lower='upper_outer_intersep')
         regions['upper_inner_SOL'] = Region(
                 name='upper_inner_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=jys21 + 1, yupper_ind=nyinner)
+                ylower_ind=jys21 + 1, yupper_ind=nyinner,
+                connect_inner='upper_inner_intersep', connect_lower='inner_SOL')
         regions['upper_outer_PFR'] = Region(
                 name='upper_outer_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=nyinner, yupper_ind=jys12 + 1)
+                ylower_ind=nyinner, yupper_ind=jys12 + 1,
+                connect_outer='upper_outer_intersep', connect_upper='upper_inner_PFR')
         regions['upper_outer_intersep'] = Region(
                 name='upper_outer_intersep', ds=ds, xinner_ind=ixs1, xouter_ind=ixs2,
-                ylower_ind=nyinner, yupper_ind=jys12 + 1)
+                ylower_ind=nyinner, yupper_ind=jys12 + 1, connect_inner='upper_outer_PFR',
+                connect_outer='upper_outer_SOL', connect_upper='upper_inner_intersep')
         regions['upper_outer_SOL'] = Region(
                 name='upper_outer_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=nyinner, yupper_ind=jys12 + 1)
+                ylower_ind=nyinner, yupper_ind=jys12 + 1,
+                connect_inner='upper_outer_intersep', connect_upper='outer_SOL')
         regions['outer_core'] = Region(
                 name='outer_core', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys12 + 1, yupper_ind=jys22 + 1)
+                ylower_ind=jys12 + 1, yupper_ind=jys22 + 1,
+                connect_outer='outer_intersep', connect_lower='inner_core',
+                connect_upper='inner_core')
         regions['outer_intersep'] = Region(
                 name='outer_intersep', ds=ds, xinner_ind=ixs1, xouter_ind=ixs2,
-                ylower_ind=jys12 + 1, yupper_ind=jys22 + 1)
+                ylower_ind=jys12 + 1, yupper_ind=jys22 + 1, connect_inner='outer_core',
+                connect_outer='outer_SOL', connect_lower='inner_intersep',
+                connect_upper='lower_outer_intersep')
         regions['outer_SOL'] = Region(
                 name='outer_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=jys12 + 1, yupper_ind=jys22 + 1)
+                ylower_ind=jys12 + 1, yupper_ind=jys22 + 1,
+                connect_inner='outer_intersep', connect_lower='upper_outer_SOL',
+                connect_upper='lower_outer_SOL')
         regions['lower_outer_PFR'] = Region(
                 name='lower_outer_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys22 + 1, yupper_ind=ny)
+                ylower_ind=jys22 + 1, yupper_ind=ny, connect_outer='lower_outer_intersep',
+                connect_lower='lower_inner_PFR')
         regions['lower_outer_intersep'] = Region(
                 name='lower_outer_intersep', ds=ds, xinner_ind=ixs1, xouter_ind=ixs2,
-                ylower_ind=jys22 + 1, yupper_ind=ny)
+                ylower_ind=jys22 + 1, yupper_ind=ny, connect_inner='lower_outer_PFR',
+                connect_outer='lower_outer_SOL', connect_lower='outer_intersep')
         regions['lower_outer_SOL'] = Region(
                 name='lower_outer_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=jys22 + 1, yupper_ind=ny)
-        _create_connection_x(regions, 'lower_inner_PFR', 'lower_inner_intersep')
-        _create_connection_x(regions, 'lower_inner_intersep', 'lower_inner_SOL')
-        _create_connection_x(regions, 'inner_core', 'inner_intersep')
-        _create_connection_x(regions, 'inner_intersep', 'inner_SOL')
-        _create_connection_x(regions, 'upper_inner_PFR', 'upper_inner_intersep')
-        _create_connection_x(regions, 'upper_inner_intersep', 'upper_inner_SOL')
-        _create_connection_x(regions, 'upper_outer_PFR', 'upper_outer_intersep')
-        _create_connection_x(regions, 'upper_outer_intersep', 'upper_outer_SOL')
-        _create_connection_x(regions, 'outer_core', 'outer_intersep')
-        _create_connection_x(regions, 'outer_intersep', 'outer_SOL')
-        _create_connection_x(regions, 'lower_outer_PFR', 'lower_outer_intersep')
-        _create_connection_x(regions, 'lower_outer_intersep', 'lower_outer_SOL')
-        _create_connection_y(regions, 'lower_inner_PFR', 'lower_outer_PFR')
-        _create_connection_y(regions, 'lower_inner_intersep', 'inner_intersep')
-        _create_connection_y(regions, 'lower_inner_SOL', 'inner_SOL')
-        _create_connection_y(regions, 'inner_core', 'outer_core')
-        _create_connection_y(regions, 'outer_core', 'inner_core')
-        _create_connection_y(regions, 'inner_intersep', 'outer_intersep')
-        _create_connection_y(regions, 'inner_SOL', 'upper_inner_SOL')
-        _create_connection_y(regions, 'upper_outer_intersep', 'upper_inner_intersep')
-        _create_connection_y(regions, 'upper_outer_PFR', 'upper_inner_PFR')
-        _create_connection_y(regions, 'upper_outer_SOL', 'outer_SOL')
-        _create_connection_y(regions, 'outer_intersep', 'lower_outer_intersep')
-        _create_connection_y(regions, 'outer_SOL', 'lower_outer_SOL')
+                ylower_ind=jys22 + 1, yupper_ind=ny, connect_inner='lower_outer_intersep',
+                connect_lower='outer_SOL')
+        _check_connections(regions)
     elif topology == 'connected-double-null':
         regions['lower_inner_PFR'] = Region(
                 name='lower_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=0, yupper_ind=jys11 + 1)
+                ylower_ind=0, yupper_ind=jys11 + 1, connect_outer='lower_inner_SOL',
+                connect_upper='lower_outer_PFR')
         regions['lower_inner_SOL'] = Region(
                 name='lower_inner_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=0, yupper_ind=jys11 + 1)
+                ylower_ind=0, yupper_ind=jys11 + 1, connect_inner='lower_inner_PFR',
+                connect_upper='inner_SOL')
         regions['inner_core'] = Region(
                 name='inner_core', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys11 + 1, yupper_ind=jys21 + 1)
+                ylower_ind=jys11 + 1, yupper_ind=jys21 + 1, connect_outer='inner_SOL',
+                connect_lower='outer_core', connect_upper='outer_core')
         regions['inner_SOL'] = Region(
                 name='inner_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=jys11 + 1, yupper_ind=jys21 + 1)
+                ylower_ind=jys11 + 1, yupper_ind=jys21 + 1, connect_inner='inner_core',
+                connect_lower='lower_inner_SOL', connect_upper='upper_inner_SOL')
         regions['upper_inner_PFR'] = Region(
                 name='upper_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys21 + 1, yupper_ind=nyinner)
+                ylower_ind=jys21 + 1, yupper_ind=nyinner, connect_outer='upper_inner_SOL',
+                connect_lower='upper_outer_PFR')
         regions['upper_inner_SOL'] = Region(
                 name='upper_inner_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=jys21 + 1, yupper_ind=nyinner)
+                ylower_ind=jys21 + 1, yupper_ind=nyinner, connect_inner='upper_inner_PFR',
+                connect_lower='inner_SOL')
         regions['upper_outer_PFR'] = Region(
                 name='upper_outer_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=nyinner, yupper_ind=jys12 + 1)
+                ylower_ind=nyinner, yupper_ind=jys12 + 1, connect_outer='upper_outer_SOL',
+                connect_upper='upper_inner_PFR')
         regions['upper_outer_SOL'] = Region(
                 name='upper_outer_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=nyinner, yupper_ind=jys12 + 1)
+                ylower_ind=nyinner, yupper_ind=jys12 + 1, connect_inner='upper_outer_PFR',
+                connect_upper='outer_SOL')
         regions['outer_core'] = Region(
                 name='outer_core', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys12 + 1, yupper_ind=jys22 + 1)
+                ylower_ind=jys12 + 1, yupper_ind=jys22 + 1, connect_outer='outer_SOL',
+                connect_lower='inner_core', connect_upper='inner_core')
         regions['outer_SOL'] = Region(
                 name='outer_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=jys12 + 1, yupper_ind=jys22 + 1)
+                ylower_ind=jys12 + 1, yupper_ind=jys22 + 1, connect_inner='outer_core',
+                connect_lower='upper_outer_SOL', connect_upper='lower_outer_SOL')
         regions['lower_outer_PFR'] = Region(
                 name='lower_outer_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys22 + 1, yupper_ind=ny)
+                ylower_ind=jys22 + 1, yupper_ind=ny, connect_outer='lower_outer_SOL',
+                connect_lower='lower_inner_PFR')
         regions['lower_outer_SOL'] = Region(
                 name='lower_outer_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=jys22 + 1, yupper_ind=ny)
-        _create_connection_x(regions, 'lower_inner_PFR', 'lower_inner_SOL')
-        _create_connection_x(regions, 'inner_core', 'inner_SOL')
-        _create_connection_x(regions, 'upper_inner_PFR', 'upper_inner_SOL')
-        _create_connection_x(regions, 'upper_outer_PFR', 'upper_outer_SOL')
-        _create_connection_x(regions, 'outer_core', 'outer_SOL')
-        _create_connection_x(regions, 'lower_outer_PFR', 'lower_outer_SOL')
-        _create_connection_y(regions, 'lower_inner_PFR', 'lower_outer_PFR')
-        _create_connection_y(regions, 'lower_inner_SOL', 'inner_SOL')
-        _create_connection_y(regions, 'inner_core', 'outer_core')
-        _create_connection_y(regions, 'outer_core', 'inner_core')
-        _create_connection_y(regions, 'inner_SOL', 'upper_inner_SOL')
-        _create_connection_y(regions, 'upper_outer_PFR', 'upper_inner_PFR')
-        _create_connection_y(regions, 'upper_outer_SOL', 'outer_SOL')
-        _create_connection_y(regions, 'outer_SOL', 'lower_outer_SOL')
+                ylower_ind=jys22 + 1, yupper_ind=ny, connect_inner='lower_outer_PFR',
+                connect_lower='outer_SOL')
+        _check_connections(regions)
     elif topology == 'single-null':
         regions['inner_PFR'] = Region(
                 name='inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1, ylower_ind=0,
-                yupper_ind=jys11 + 1)
+                yupper_ind=jys11 + 1, connect_outer='inner_SOL', connect_upper='outer_PFR')
         regions['inner_SOL'] = Region(
                 name='inner_SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx, ylower_ind=0,
-                yupper_ind=jys11 + 1)
+                yupper_ind=jys11 + 1, connect_inner='inner_PFR', connect_upper='SOL')
         regions['core'] = Region(
                 name='core', ds=ds, xinner_ind=0, xouter_ind=ixs1, ylower_ind=jys11 + 1,
-                yupper_ind=jys22 + 1)
+                yupper_ind=jys22 + 1, connect_outer='SOL', connect_lower='core',
+                connect_upper='core')
         regions['SOL'] = Region(
                 name='SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx, ylower_ind=jys11 + 1,
-                yupper_ind=jys22 + 1)
+                yupper_ind=jys22 + 1, connect_inner='core', connect_lower='inner_SOL',
+                connect_upper='outer_SOL')
         regions['outer_PFR'] = Region(
-                name='lower_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys22 + 1, yupper_ind=ny)
+                name='outer_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
+                ylower_ind=jys22 + 1, yupper_ind=ny, connect_outer='outer_SOL',
+                connect_lower='inner_PFR')
         regions['outer_SOL'] = Region(
-                name='lower_SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx,
-                ylower_ind=jys22 + 1, yupper_ind=ny)
-        _create_connection_x(regions, 'inner_PFR', 'inner_SOL')
-        _create_connection_x(regions, 'core', 'SOL')
-        _create_connection_x(regions, 'outer_PFR', 'outer_SOL')
-        _create_connection_y(regions, 'inner_PFR', 'outer_PFR')
-        _create_connection_y(regions, 'inner_SOL', 'SOL')
-        _create_connection_y(regions, 'core', 'core')
-        _create_connection_y(regions, 'SOL', 'outer_SOL')
+                name='outer_SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx,
+                ylower_ind=jys22 + 1, yupper_ind=ny, connect_inner='outer_PFR',
+                connect_lower='SOL')
+        _check_connections(regions)
     elif topology == 'limiter':
         regions['core'] = Region(
                 name='core', ds=ds, xinner_ind=0, xouter_ind=ixs1, ylower_ind=ybndry,
-                yupper_ind=ny - ybndry)
+                yupper_ind=ny - ybndry, connect_outer='SOL', connect_lower='core',
+                connect_upper='core')
         regions['SOL'] = Region(
                 name='SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx, ylower_ind=0,
-                yupper_ind=ny)
-        _create_connection_x(regions, 'core', 'SOL')
-        _create_connection_y(regions, 'core', 'core')
+                yupper_ind=ny, connect_inner='core')
+        _check_connections(regions)
     elif topology == 'core':
         regions['core'] = Region(
                 name='core', ds=ds, xinner_ind=0, xouter_ind=nx, ylower_ind=ybndry,
-                yupper_ind=ny - ybndry)
-        _create_connection_y(regions, 'core', 'core')
+                yupper_ind=ny - ybndry, connect_lower='core', connect_upper='core')
+        _check_connections(regions)
     elif topology == 'sol':
         regions['SOL'] = Region(
                 name='SOL', ds=ds, xinner_ind=0, xouter_ind=nx, ylower_ind=0,
                 yupper_ind=ny)
+        _check_connections(regions)
     elif topology == 'xpoint':
         regions['lower_inner_PFR'] = Region(
                 name='lower_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=0, yupper_ind=jys11 + 1)
+                ylower_ind=0, yupper_ind=jys11 + 1, connect_outer='lower_inner_SOL',
+                connect_upper='lower_outer_PFR')
         regions['lower_inner_SOL'] = Region(
                 name='lower_inner_SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx,
-                ylower_ind=0, yupper_ind=jys11 + 1)
+                ylower_ind=0, yupper_ind=jys11 + 1, connect_inner='lower_inner_PFR',
+                connect_upper='upper_inner_SOL')
         regions['upper_inner_PFR'] = Region(
                 name='upper_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys11 + 1, yupper_ind=nyinner)
+                ylower_ind=jys11 + 1, yupper_ind=nyinner, connect_outer='upper_inner_SOL',
+                connect_lower='upper_outer_PFR')
         regions['upper_inner_SOL'] = Region(
                 name='upper_inner_SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx,
-                ylower_ind=jys11 + 1, yupper_ind=nyinner)
+                ylower_ind=jys11 + 1, yupper_ind=nyinner, connect_inner='upper_inner_PFR',
+                connect_lower='lower_inner_SOL')
         regions['upper_outer_PFR'] = Region(
                 name='upper_outer_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=nyinner, yupper_ind=jys22 + 1)
+                ylower_ind=nyinner, yupper_ind=jys22 + 1, connect_outer='upper_outer_SOL',
+                connect_upper='upper_inner_PFR')
         regions['upper_outer_SOL'] = Region(
                 name='upper_outer_SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx,
-                ylower_ind=nyinner, yupper_ind=jys22 + 1)
+                ylower_ind=nyinner, yupper_ind=jys22 + 1, connect_inner='upper_outer_PFR',
+                connect_upper='lower_outer_SOL')
         regions['lower_outer_PFR'] = Region(
                 name='lower_outer_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys22 + 1, yupper_ind=ny)
+                ylower_ind=jys22 + 1, yupper_ind=ny, connect_outer='lower_outer_SOL',
+                connect_lower='lower_inner_PFR')
         regions['lower_outer_SOL'] = Region(
                 name='lower_outer_SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx,
-                ylower_ind=jys22 + 1, yupper_ind=ny)
-        _create_connection_x(regions, 'lower_inner_PFR', 'lower_inner_SOL')
-        _create_connection_x(regions, 'upper_inner_PFR', 'upper_inner_SOL')
-        _create_connection_x(regions, 'upper_outer_PFR', 'upper_outer_SOL')
-        _create_connection_x(regions, 'lower_outer_PFR', 'lower_outer_SOL')
-        _create_connection_y(regions, 'lower_inner_PFR', 'lower_outer_PFR')
-        _create_connection_y(regions, 'lower_inner_SOL', 'upper_inner_SOL')
-        _create_connection_y(regions, 'upper_outer_PFR', 'upper_inner_PFR')
-        _create_connection_y(regions, 'upper_outer_SOL', 'lower_outer_SOL')
+                ylower_ind=jys22 + 1, yupper_ind=ny, connect_inner='lower_outer_PFR',
+                connect_lower='upper_outer_SOL')
+        _check_connections(regions)
     else:
         raise NotImplementedError("Topology '" + topology + "' is not implemented")
 
