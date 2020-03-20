@@ -20,7 +20,8 @@ def create_example_grid_file(tmpdir_factory):
 
     # Create grid dataset
     arr = np.arange(6).reshape(2, 3)
-    grid = DataArray(data=arr, dims=['x', 'y'])
+    grid = DataArray(data=arr, name='arr', dims=['x', 'y']).to_dataset()
+    grid['dy'] = DataArray(np.ones((2, 3)), dims=['x', 'y'])
 
     # Create temporary directory
     save_dir = tmpdir_factory.mktemp("griddata")
