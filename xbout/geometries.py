@@ -264,10 +264,9 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
                              "geometry='s-alpha'")
         ds['r'] = ds['hthe'].isel({ycoord: 0}).squeeze(drop=True)
         ds['r'].attrs['units'] = 'm'
-        # remove x-index coordinate, don't need when we have 'r' as a radial coordinate
-        ds = ds.drop('x')
         ds = ds.set_coords('r')
         ds = ds.rename(x='r')
+        ds.metadata['bout_xdim'] = 'r'
 
         if hthe_from_grid:
             # remove hthe because it does not have correct metadata
