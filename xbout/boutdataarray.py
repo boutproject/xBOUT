@@ -1,6 +1,7 @@
 from copy import deepcopy
 from pprint import pformat as prettyformat
 from functools import partial
+import packaging.version
 
 import numpy as np
 
@@ -236,9 +237,12 @@ class BoutDataArrayAccessor:
                             **{xcoord: new_xcoord, ycoord: new_ycoord})
 
                 da = xr.concat((da_inner, da), xcoord, join='exact')
-                # xr.concat takes attributes from the first variable, but da should not
-                # have a region yet
-                del da.attrs['region']
+                # xr.concat takes attributes from the first variable (for xarray>=0.15.0,
+                # keeps attrs that are the same in all objects for xarray<0.15.0), but da
+                # should not have a region yet
+                if (packaging.version.parse(xr.__version__)
+                        >= packaging.version.parse("0.15.0")):
+                    del da.attrs['region']
             if region.connection_outer is not None:
                 da_outer = self.data.bout.fromRegion(region.connection_outer,
                                                      with_guards=0)
@@ -330,9 +334,12 @@ class BoutDataArrayAccessor:
                             **{xcoord: new_xcoord, ycoord: new_ycoord})
 
                 da = xr.concat((da_lower, da), ycoord, join='exact')
-                # xr.concat takes attributes from the first variable, but da should not
-                # have a region yet
-                del da.attrs['region']
+                # xr.concat takes attributes from the first variable (for xarray>=0.15.0,
+                # keeps attrs that are the same in all objects for xarray<0.15.0), but da
+                # should not have a region yet
+                if (packaging.version.parse(xr.__version__)
+                        >= packaging.version.parse("0.15.0")):
+                    del da.attrs['region']
             if region.connection_upper is not None:
                 da_upper = self.data.bout.fromRegion(
                         region.connection_upper, with_guards={xcoord: mxg, ycoord: 0})
