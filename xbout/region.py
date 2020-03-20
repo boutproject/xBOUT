@@ -59,18 +59,30 @@ class Region:
             xcoord = ds.metadata['bout_xdim']
             ycoord = ds.metadata['bout_ydim']
 
+            # Note the global coordinates used here are defined so that they are zero at
+            # the boundaries of the grid (where the grid includes all boundary cells), not
+            # necessarily the physical boundaries because constant offsets do not matter,
+            # as long as these bounds are consistent with the global coordinates defined
+            # in apply_geometry (we will only use these coordinates for interpolation) and
+            # it is simplest to calculate them with cumsum().
+
             # dx is constant in any particular region in the y-direction, so convert to a
             # 1d array
+            # Note that this is not the same coordinate as the 'x' coordinate that is
+            # created by default from the x-index, as these values are set only for
+            # particular regions, so do not need to be consistent between different
+            # regions (e.g. core and PFR), so we are not forced to use just the index
+            # value here.
             dx = ds['dx'].isel(**{ycoord: self.ylower_ind})
             dx_cumsum = dx.cumsum()
-            self.xinner = dx_cumsum[xinner_ind] - dx[xinner_ind]/2.
-            self.xouter = dx_cumsum[xouter_ind - 1] + dx[xouter_ind - 1]/2.
+            self.xinner = dx_cumsum[xinner_ind] - dx[xinner_ind]
+            self.xouter = dx_cumsum[xouter_ind - 1] + dx[xouter_ind - 1]
 
             # dy is constant in the x-direction, so convert to a 1d array
             dy = ds['dy'].isel(**{xcoord: self.xinner_ind})
             dy_cumsum = dy.cumsum()
-            self.ylower = dy_cumsum[ylower_ind] - dy[ylower_ind]/2.
-            self.yupper = dy_cumsum[yupper_ind - 1] + dy[yupper_ind - 1]/2.
+            self.ylower = dy_cumsum[ylower_ind] - dy[ylower_ind]
+            self.yupper = dy_cumsum[yupper_ind- 1]
 
     def __repr__(self):
         result = "<xbout.region.Region>\n"
