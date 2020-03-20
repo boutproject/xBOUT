@@ -48,12 +48,18 @@ class BoutDataArrayAccessor:
     def to_dataset(self):
         """
         Convert a DataArray to a Dataset, copying the attributes from the DataArray to
-        the Dataset.
+        the Dataset, and dropping attributes that only make sense for a DataArray
         """
         da = self.data
         ds = da.to_dataset()
 
-        ds.attrs = da.attrs
+        ds.attrs = deepcopy(da.attrs)
+
+        def dropIfExists(ds, name):
+            if name in ds.attrs:
+                del ds.attrs[name]
+        dropIfExists(ds, 'direction_y')
+        dropIfExists(ds, 'direction_z')
 
         return ds
 
