@@ -8,6 +8,7 @@ from pathlib import Path
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout import BoutDatasetAccessor, open_boutdataset
 from xbout.geometries import apply_geometry
+from xbout.utils import _set_attrs_on_all_vars
 
 
 EXAMPLE_OPTIONS_FILE_PATH = './xbout/tests/data/options/BOUT.inp'
@@ -80,6 +81,21 @@ class TestBoutDatasetMethods:
         # check getting the cached version
         ds['n_aligned'] = ds['T']
         xrt.assert_allclose(ds.bout.getFieldAligned('n'), ds['T'])
+
+    def test_resetParallelInterpFactor(self):
+        ds = Dataset()
+        ds['a'] = DataArray()
+        ds = _set_attrs_on_all_vars(ds, 'metadata', {})
+
+        with pytest.raises(KeyError):
+            ds.metadata['fine_interpolation_factor']
+        with pytest.raises(KeyError):
+            ds['a'].metadata['fine_interpolation_factor']
+
+        ds.bout.resetParallelInterpFactor(42)
+
+        assert ds.metadata['fine_interpolation_factor'] == 42
+        assert ds['a'].metadata['fine_interpolation_factor'] == 42
 
 
 class TestLoadInputFile:
