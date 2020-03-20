@@ -370,6 +370,18 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
         ds['jyseps1_2'] = ny//2 - 1
         ds['jyseps2_2'] = ny
         ds['ny_inner'] = ny//2
+    elif topology == 'xpoint':
+        if nype < 4:
+            raise ValueError('Not enough processors for xpoint topology: '
+                             + 'nype=' + str(nype))
+        ds['ixseps1'] = nx//2
+        ds['ixseps2'] = nx//2
+        ds['jyseps1_1'] = MYSUB - 1
+        ny_inner = 2*MYSUB
+        ds['ny_inner'] = ny_inner
+        ds['jyseps2_1'] = MYSUB - 1
+        ds['jyseps1_2'] = ny - MYSUB - 1
+        ds['jyseps2_2'] = ny - MYSUB - 1
     elif topology == 'single-null':
         if nype < 3:
             raise ValueError('Not enough processors for single-null topology: '
@@ -459,7 +471,7 @@ def create_bout_grid_ds(xsize=2, ysize=4, guards={}, topology='core', ny_inner=0
     jyseps2_1 = ysize//2
     jyseps1_2 = jyseps2_1
 
-    if 'double-null' in topology:
+    if 'double-null' in topology or 'xpoint' in topology:
         # Has upper target as well
         ysize += 2*myg
 

@@ -135,6 +135,155 @@ class TestRegion:
 
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
+    def test_region_xpoint(self, tmpdir_factory, bout_xyt_example_files, guards,
+                           keep_xboundaries, keep_yboundaries):
+        # Note using more than MXG x-direction points and MYG y-direction points per
+        # output file ensures tests for whether boundary cells are present do not fail
+        # when using minimal numbers of processors
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 7), nxpe=3,
+                                      nype=4, nt=1, guards=guards, grid='grid',
+                                      topology='xpoint')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_xboundaries=keep_xboundaries,
+                              keep_yboundaries=keep_yboundaries)
+
+        mxg = guards['x']
+        myg = guards['y']
+
+        if keep_xboundaries:
+            ixs = ds.metadata['ixseps1']
+        else:
+            ixs = ds.metadata['ixseps1'] - guards['x']
+
+        if keep_yboundaries:
+            ybndry = guards['y']
+        else:
+            ybndry = 0
+        jys1 = ds.metadata['jyseps1_1'] + ybndry
+        ny_inner = ds.metadata['ny_inner'] + 2*ybndry
+        jys2 = ds.metadata['jyseps2_2'] + 3*ybndry
+        ny = ds.metadata['ny'] + 4*ybndry
+
+        n = ds['n']
+
+        n_lower_inner_PFR = n.bout.fromRegion('lower_inner_PFR')
+
+        # Remove attributes that are expected to be different
+        del n_lower_inner_PFR.attrs['region']
+        xrt.assert_identical(n.isel(x=slice(ixs + mxg), theta=slice(jys1 + 1)),
+                             n_lower_inner_PFR.isel(
+                                 theta=slice(-myg if myg != 0 else None)))
+        if myg > 0:
+            # check y-guards, which were 'communicated' by fromRegion
+            # Coordinates are not equal, so only compare array values
+            npt.assert_equal(n.isel(x=slice(ixs + mxg),
+                                    theta=slice(jys2 + 1, jys2 + 1 + myg)).values,
+                             n_lower_inner_PFR.isel(theta=slice(-myg, None)).values)
+
+        n_lower_inner_SOL = n.bout.fromRegion('lower_inner_SOL')
+
+        # Remove attributes that are expected to be different
+        del n_lower_inner_SOL.attrs['region']
+        xrt.assert_identical(n.isel(x=slice(ixs - mxg, None), theta=slice(jys1 + 1)),
+                             n_lower_inner_SOL.isel(
+                                 theta=slice(-myg if myg != 0 else None)))
+        if myg > 0:
+            # check y-guards, which were 'communicated' by fromRegion
+            # Coordinates are not equal, so only compare array values
+            npt.assert_equal(n.isel(x=slice(ixs - mxg, None),
+                                    theta=slice(jys1 + 1, jys1 + 1 + myg)).values,
+                             n_lower_inner_SOL.isel(theta=slice(-myg, None)).values)
+
+        n_upper_inner_PFR = n.bout.fromRegion('upper_inner_PFR')
+
+        # Remove attributes that are expected to be different
+        del n_upper_inner_PFR.attrs['region']
+        xrt.assert_identical(n.isel(x=slice(ixs + mxg),
+                                    theta=slice(jys1 + 1, ny_inner)),
+                             n_upper_inner_PFR.isel(theta=slice(myg, None)))
+        if myg > 0:
+            # check y-guards, which were 'communicated' by fromRegion
+            # Coordinates are not equal, so only compare array values
+            npt.assert_equal(n.isel(x=slice(ixs + mxg),
+                                    theta=slice(jys2 + 1 - myg, jys2 + 1)).values,
+                             n_upper_inner_PFR.isel(theta=slice(myg)).values)
+
+        n_upper_inner_SOL = n.bout.fromRegion('upper_inner_SOL')
+
+        # Remove attributes that are expected to be different
+        del n_upper_inner_SOL.attrs['region']
+        xrt.assert_identical(n.isel(x=slice(ixs - mxg, None),
+                                    theta=slice(jys1 + 1, ny_inner)),
+                             n_upper_inner_SOL.isel(theta=slice(myg, None)))
+        if myg > 0:
+            # check y-guards, which were 'communicated' by fromRegion
+            # Coordinates are not equal, so only compare array values
+            npt.assert_equal(n.isel(x=slice(ixs - mxg, None),
+                                    theta=slice(jys1 + 1 - myg, jys1 + 1)).values,
+                             n_upper_inner_SOL.isel(theta=slice(myg)).values)
+
+        n_upper_outer_PFR = n.bout.fromRegion('upper_outer_PFR')
+
+        # Remove attributes that are expected to be different
+        del n_upper_outer_PFR.attrs['region']
+        xrt.assert_identical(n.isel(x=slice(ixs + mxg),
+                                    theta=slice(ny_inner, jys2 + 1)),
+                             n_upper_outer_PFR.isel(
+                                 theta=slice(-myg if myg != 0 else None)))
+        if myg > 0:
+            # check y-guards, which were 'communicated' by fromRegion
+            # Coordinates are not equal, so only compare array values
+            npt.assert_equal(n.isel(x=slice(ixs + mxg),
+                                    theta=slice(jys1 + 1, jys1 + 1 + myg)).values,
+                             n_upper_outer_PFR.isel(theta=slice(-myg, None)).values)
+
+        n_upper_outer_SOL = n.bout.fromRegion('upper_outer_SOL')
+
+        # Remove attributes that are expected to be different
+        del n_upper_outer_SOL.attrs['region']
+        xrt.assert_identical(n.isel(x=slice(ixs - mxg, None),
+                                    theta=slice(ny_inner, jys2 + 1)),
+                             n_upper_outer_SOL.isel(
+                                 theta=slice(-myg if myg != 0 else None)))
+        if myg > 0:
+            # check y-guards, which were 'communicated' by fromRegion
+            # Coordinates are not equal, so only compare array values
+            npt.assert_equal(n.isel(x=slice(ixs - mxg, None),
+                                    theta=slice(jys2 + 1, jys2 + 1 + myg)).values,
+                             n_upper_outer_SOL.isel(theta=slice(-myg, None)).values)
+
+        n_lower_outer_PFR = n.bout.fromRegion('lower_outer_PFR')
+
+        # Remove attributes that are expected to be different
+        del n_lower_outer_PFR.attrs['region']
+        xrt.assert_identical(n.isel(x=slice(ixs + mxg),
+                                    theta=slice(jys2 + 1, None)),
+                             n_lower_outer_PFR.isel(theta=slice(myg, None)))
+        if myg > 0:
+            # check y-guards, which were 'communicated' by fromRegion
+            # Coordinates are not equal, so only compare array values
+            npt.assert_equal(n.isel(x=slice(ixs + mxg),
+                                    theta=slice(jys1 + 1 - myg, jys1 + 1)).values,
+                             n_lower_outer_PFR.isel(theta=slice(myg)).values)
+
+        n_lower_outer_SOL = n.bout.fromRegion('lower_outer_SOL')
+
+        # Remove attributes that are expected to be different
+        del n_lower_outer_SOL.attrs['region']
+        xrt.assert_identical(n.isel(x=slice(ixs - mxg, None),
+                                    theta=slice(jys2 + 1, None)),
+                             n_lower_outer_SOL.isel(theta=slice(myg, None)))
+        if myg > 0:
+            # check y-guards, which were 'communicated' by fromRegion
+            # Coordinates are not equal, so only compare array values
+            npt.assert_equal(n.isel(x=slice(ixs - mxg, None),
+                                    theta=slice(jys2 + 1 - myg, jys2 + 1)).values,
+                             n_lower_outer_SOL.isel(theta=slice(myg)).values)
+
+    @pytest.mark.parametrize(params_guards, params_guards_values)
+    @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_region_singlenull(self, tmpdir_factory, bout_xyt_example_files, guards,
                                keep_xboundaries, keep_yboundaries):
         # Note using more than MXG x-direction points and MYG y-direction points per
