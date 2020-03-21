@@ -9,14 +9,14 @@ from xbout.tests.test_load import bout_xyt_example_files
 from xbout import open_boutdataset
 
 
-class TestRegion:
+params_guards = "guards"
+params_guards_values = [{'x': 0, 'y': 0}, {'x': 2, 'y': 0}, {'x': 0, 'y': 2},
+                        {'x': 2, 'y': 2}]
+params_boundaries = "keep_xboundaries, keep_yboundaries"
+params_boundaries_values = [(False, False), (True, False), (False, True),
+                            (True, True)]
 
-    params_guards = "guards"
-    params_guards_values = [{'x': 0, 'y': 0}, {'x': 2, 'y': 0}, {'x': 0, 'y': 2},
-                            {'x': 2, 'y': 2}]
-    params_boundaries = "keep_xboundaries, keep_yboundaries"
-    params_boundaries_values = [(False, False), (True, False), (False, True),
-                                (True, True)]
+class TestRegion:
 
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
@@ -1283,3 +1283,5 @@ class TestRegion:
             npt.assert_equal(n.isel(x=slice(ixs2 - xguards, None),
                                     theta=slice(jys22 + 1 - yguards, jys22 + 1)).values,
                              n_lower_outer_SOL.isel(theta=slice(yguards)).values)
+
+
