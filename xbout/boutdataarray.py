@@ -482,7 +482,7 @@ class BoutDataArrayAccessor:
         return da
 
 
-    def highParallelRes(self, **kwargs):
+    def highParallelRes(self, return_dataset=False, **kwargs):
         """
         Interpolate in the parallel direction to get a higher resolution version of the
         variable.
@@ -500,10 +500,14 @@ class BoutDataArrayAccessor:
             The interpolation method to use. Options from xarray.DataArray.interp(),
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
             'cubic'.
+        return_dataset : bool, optional
+            If this is set to True, return a Dataset containing this variable as a member
+            (by default returns a DataArray)
 
         Returns
         -------
-        A new Dataset containing a high-resolution version of the variable.
+        A new DataArray containing a high-resolution version of the variable. (If
+        return_dataset=True, instead returns a Dataset containing the DataArray.)
         """
 
         # xr.combine_by_coords does not keep attrs at the moment. See
@@ -527,7 +531,11 @@ class BoutDataArrayAccessor:
         if 'region' in result[self.data.name].attrs:
             del result[self.data.name].attrs['region']
 
-        return result
+        if return_dataset:
+            return result
+        else:
+            # Extract the DataArray to return
+            return result[self.data.name]
 
 
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,

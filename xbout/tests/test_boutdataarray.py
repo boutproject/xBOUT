@@ -394,11 +394,11 @@ class TestBoutDataArrayMethods:
 
         f_fine = f_y(theta_fine)*(x + 1.)
 
-        n_highres_ds = n.bout.highParallelRes().isel(theta=slice(2, -2))
+        n_highres = n.bout.highParallelRes().isel(theta=slice(2, -2))
 
-        expected = f_fine.broadcast_like(n_highres_ds['n'])
+        expected = f_fine.broadcast_like(n_highres)
 
-        npt.assert_allclose(n_highres_ds['n'].values, expected.values,
+        npt.assert_allclose(n_highres.values, expected.values,
                             rtol=0., atol=1.1e-2)
 
     def test_highParallelRes_toroidal_points(self, tmpdir_factory, bout_xyt_example_files):
@@ -410,11 +410,11 @@ class TestBoutDataArrayMethods:
                               gridfilepath=Path(path).parent.joinpath('grid.nc'),
                               geometry='toroidal', keep_yboundaries=True)
 
-        n_highres_ds = ds['n'].bout.highParallelRes()
+        n_highres = ds['n'].bout.highParallelRes()
 
-        n_highres_ds_truncated = ds['n'].bout.highParallelRes(toroidal_points=2)
+        n_highres_truncated = ds['n'].bout.highParallelRes(toroidal_points=2)
 
-        xrt.assert_identical(n_highres_ds_truncated, n_highres_ds.isel(zeta=[0, 2]))
+        xrt.assert_identical(n_highres_truncated, n_highres.isel(zeta=[0, 2]))
 
     def test_highParallelRes_toroidal_points_list(self, tmpdir_factory,
                                                   bout_xyt_example_files):
@@ -426,11 +426,10 @@ class TestBoutDataArrayMethods:
                               gridfilepath=Path(path).parent.joinpath('grid.nc'),
                               geometry='toroidal', keep_yboundaries=True)
 
-        n_highres_ds = ds['n'].bout.highParallelRes()
+        n_highres = ds['n'].bout.highParallelRes()
 
         points_list = [1, 2]
 
-        n_highres_ds_truncated = ds['n'].bout.highParallelRes(
-                toroidal_points=points_list)
+        n_highres_truncated = ds['n'].bout.highParallelRes(toroidal_points=points_list)
 
-        xrt.assert_identical(n_highres_ds_truncated, n_highres_ds.isel(zeta=points_list))
+        xrt.assert_identical(n_highres_truncated, n_highres.isel(zeta=points_list))

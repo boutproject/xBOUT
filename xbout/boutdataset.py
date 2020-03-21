@@ -123,16 +123,19 @@ class BoutDatasetAccessor:
         Dataset is a valid BoutDataset, although containing only the specified variables.
         """
         if isinstance(variables, str):
-            ds = self.data[variables].bout.highParallelRes(**kwargs)
+            ds = self.data[variables].bout.highParallelRes(return_dataset=True, **kwargs)
         else:
             # Need to start with a Dataset with attrs as merge() drops the attrs of the
             # passed-in argument.
-            ds = self.data[variables[0]].bout.highParallelRes(**kwargs)
+            ds = self.data[variables[0]].bout.highParallelRes(return_dataset=True,
+                                                              **kwargs)
             for var in variables[1:]:
-                ds = ds.merge(self.data[var].bout.highParallelRes(**kwargs))
+                ds = ds.merge(self.data[var].bout.highParallelRes(return_dataset=True,
+                                                                  **kwargs))
 
         # Add extra variables needed to make this a valid Dataset
-        ds['dx'] = self.data['dx'].bout.highParallelRes(**kwargs)['dx']
+        ds['dx'] = self.data['dx'].bout.highParallelRes(return_dataset=True,
+                                                        **kwargs)['dx']
 
         # dy needs to be compatible with the new poloidal coordinate
         # dy was created as a coordinate in BoutDataArray.highParallelResRegion, here just
