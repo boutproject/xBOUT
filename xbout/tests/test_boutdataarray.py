@@ -263,3 +263,55 @@ class TestBoutDataArrayMethods:
         expected = f(theta_fine).broadcast_like(n_highres)
 
         npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
+
+    def test_highParallelResRegion_singlenull(self, tmpdir_factory,
+                                              bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 16, 7), nxpe=1,
+                                      nype=3, nt=1, grid='grid', guards={'y':2},
+                                      topology='single-null')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n = ds['n']
+
+        thetalength = 2.*np.pi
+
+        dtheta = thetalength/48.
+        theta = xr.DataArray(np.linspace(0. - 1.5*dtheta, thetalength + 1.5*dtheta, 52),
+                             dims='theta')
+
+        dtheta_fine = thetalength/3./128.
+        theta_fine = xr.DataArray(
+                np.linspace(0. + 0.5*dtheta_fine, thetalength - 0.5*dtheta_fine, 3*128),
+                dims='theta')
+
+        def f(t):
+            t = np.sin(3.*t)
+            return (t**3 - t**2 + t - 1.)
+
+        n.data = f(theta).broadcast_like(n)
+
+        f_fine = f(theta_fine)[:128]
+
+        for region in ['inner_PFR', 'inner_SOL']:
+            n_highres = n.bout.highParallelResRegion(region).isel(theta=slice(2, None))
+
+            expected = f_fine.broadcast_like(n_highres)
+
+            npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
+
+        for region in ['core', 'SOL']:
+            n_highres = n.bout.highParallelResRegion(region)
+
+            expected = f_fine.broadcast_like(n_highres)
+
+            npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
+
+        for region in ['outer_PFR', 'outer_SOL']:
+            n_highres = n.bout.highParallelResRegion(region).isel(theta=slice( -2))
+
+            expected = f_fine.broadcast_like(n_highres)
+
+            npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
