@@ -112,7 +112,7 @@ class TestBoutDatasetMethods:
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 7), nxpe=3,
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
                                       nype=6, nt=1, guards=guards, grid='grid',
                                       topology='disconnected-double-null')
 
