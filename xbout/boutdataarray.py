@@ -519,6 +519,12 @@ class BoutDataArrayAccessor:
         result = xr.combine_by_coords(parts)
         result.attrs = parts[0].attrs
 
+        # result has all regions, so should not have a region attribute
+        if 'region' in result.attrs:
+            del result.attrs['region']
+        if 'region' in result[self.data.name].attrs:
+            del result[self.data.name].attrs['region']
+
         return result
 
 
