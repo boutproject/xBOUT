@@ -69,6 +69,7 @@ class BoutDataArrayAccessor:
 
         nz = self.data.metadata['nz']
         zlength = nz*self.data.metadata['dz']
+        nmodes = nz // 2 + 1
 
         # Get axis position of dimension to transform
         axis = self.data.dims.index(self.data.metadata['bout_zdim'])
@@ -78,33 +79,22 @@ class BoutDataArrayAccessor:
         fft_dims[axis] = 'kz'
 
         # Fourier transform to get the DataArray in k-space
-        data_fft = np.fft.fft(self.data.values, axis=axis)
+        data_fft = np.fft.rfft(self.data.values, axis=axis)
 
         # Complex phase for rotation by angle zShift
-        zperiod = int(round(2.*np.pi / zlength))
-        kz = xr.DataArray(np.arange(0, nz*zperiod, zperiod), dims='kz')
-        phases = 1.j * zShift * kz
+        kz = 2.*np.pi*xr.DataArray(np.arange(0, nmodes), dims='kz')/zlength
+        phase = 1.j*kz*zShift
 
         # Ensure dimensions are in correct order for numpy broadcasting
         extra_dims = deepcopy(fft_dims)
-        for dim in phases.dims:
+        for dim in phase.dims:
             extra_dims.remove(dim)
-        phases = phases.expand_dims(extra_dims)
-        phases = phases.transpose(*fft_dims)
+        phase = phase.expand_dims(extra_dims)
+        phase = phase.transpose(*fft_dims)
 
-        data_shifted_fft = data_fft * np.exp(phases.values)
+        data_shifted_fft = data_fft * np.exp(phase.values)
 
-        if(nz % 2 == 0):
-            nfft = nz // 2
-            data_shifted_fft[:, :, :, nfft] = data_shifted_fft[:, :, :, nfft].real
-            data_shifted_fft[:, :, :, nfft+1:] = np.conj(
-                    data_shifted_fft[:, :, :, nfft-1:0:-1])
-        else:
-            nfft = (nz - 1)//2
-            data_shifted_fft[:, :, :, nfft+1:] = np.conj(
-                    data_shifted_fft[:, :, :, nfft:0:-1])
-
-        data_shifted = np.fft.ifft(data_shifted_fft).real
+        data_shifted = np.fft.irfft(data_shifted_fft, n=nz)
 
         # Return a DataArray with the same attributes as self, but values from
         # data_shifted
