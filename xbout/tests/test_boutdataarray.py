@@ -199,6 +199,7 @@ class TestBoutDataArrayMethods:
             npt.assert_allclose(n_nal[t, 1, 3, 5].values, 1000.*t + 100.*1 + 10.*3. + 5., rtol=1.e-15, atol=0.)  # noqa: E501
             npt.assert_allclose(n_nal[t, 1, 3, 6].values, 1000.*t + 100.*1 + 10.*3. + 6., rtol=1.e-15, atol=0.)  # noqa: E501
 
+    @pytest.mark.long
     def test_highParallelResRegion_core(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
                                       nype=1, nt=1, grid='grid', guards={'y':2},
@@ -233,7 +234,10 @@ class TestBoutDataArrayMethods:
 
         npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
 
-    @pytest.mark.parametrize('res_factor', [2, 3, 7, 18])
+    @pytest.mark.parametrize('res_factor', [pytest.param(2, marks=pytest.mark.long),
+                                            3,
+                                            pytest.param(7, marks=pytest.mark.long),
+                                            pytest.param(18, marks=pytest.mark.long)])
     def test_highParallelResRegion_core_change_n(self, tmpdir_factory,
                                                  bout_xyt_example_files, res_factor):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
@@ -270,6 +274,7 @@ class TestBoutDataArrayMethods:
 
         npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
 
+    @pytest.mark.long
     def test_highParallelResRegion_sol(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
                                       nype=1, nt=1, grid='grid', guards={'y':2},

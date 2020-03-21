@@ -10,14 +10,19 @@ from xbout import open_boutdataset
 
 
 params_guards = "guards"
-params_guards_values = [{'x': 0, 'y': 0}, {'x': 2, 'y': 0}, {'x': 0, 'y': 2},
+params_guards_values = [pytest.param({'x': 0, 'y': 0}, marks=pytest.mark.long),
+                        pytest.param({'x': 2, 'y': 0}, marks=pytest.mark.long),
+                        pytest.param({'x': 0, 'y': 2}, marks=pytest.mark.long),
                         {'x': 2, 'y': 2}]
 params_boundaries = "keep_xboundaries, keep_yboundaries"
-params_boundaries_values = [(False, False), (True, False), (False, True),
+params_boundaries_values = [pytest.param(False, False, marks=pytest.mark.long),
+                            pytest.param(True, False, marks=pytest.mark.long),
+                            pytest.param(False, True, marks=pytest.mark.long),
                             (True, True)]
 
 class TestRegion:
 
+    @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_region_core(self, tmpdir_factory, bout_xyt_example_files, guards,
@@ -53,6 +58,7 @@ class TestRegion:
                 n.isel(theta=slice(ybndry, -ybndry if ybndry != 0 else None)),
                 n_core.isel(theta=slice(ybndry, -ybndry if ybndry != 0 else None)))
 
+    @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_region_sol(self, tmpdir_factory, bout_xyt_example_files, guards,
@@ -133,6 +139,7 @@ class TestRegion:
                        theta=slice(ybndry, -ybndry if ybndry != 0 else None)),
                 n_core.isel(theta=slice(ybndry, -ybndry if ybndry != 0 else None)))
 
+    @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_region_xpoint(self, tmpdir_factory, bout_xyt_example_files, guards,
@@ -282,6 +289,7 @@ class TestRegion:
                                     theta=slice(jys2 + 1 - myg, jys2 + 1)).values,
                              n_lower_outer_SOL.isel(theta=slice(myg)).values)
 
+    @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_region_singlenull(self, tmpdir_factory, bout_xyt_example_files, guards,
@@ -403,6 +411,7 @@ class TestRegion:
                                     theta=slice(jys2 + 1 - myg, jys2 + 1)).values,
                              n_outer_SOL.isel(theta=slice(myg)).values)
 
+    @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_region_connecteddoublenull(self, tmpdir_factory, bout_xyt_example_files,
