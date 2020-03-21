@@ -387,8 +387,8 @@ class BoutDataArrayAccessor:
             If int, number of toroidal points to output, applies a stride to toroidal
             direction to save memory usage. It is not always possible to get a particular
             number of output points with a constant stride, so the number of outputs will
-            be only less than or equal to toroidal_points. If sequence of int, the indexes
-            of toroidal points for the output.
+            be only less than or equal to toroidal_points. If sequence of int, the
+            indexes of toroidal points for the output.
         method : str, optional
             The interpolation method to use. Options from xarray.DataArray.interp(),
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
@@ -439,12 +439,12 @@ class BoutDataArrayAccessor:
 
         da = _update_metadata_increased_resolution(da, n)
 
-        # Add dy to da as a coordinate. This will only be temporary, once we have combined
-        # the regions together, we will demote dy to a regular variable
+        # Add dy to da as a coordinate. This will only be temporary, once we have
+        # combined the regions together, we will demote dy to a regular variable
         dy_array = xr.DataArray(np.full([da.sizes[xcoord], da.sizes[ycoord]], dy),
                                 dims=[xcoord, ycoord])
-        # need a view of da with only x- and y-dimensions, unfortunately no neat way to do
-        # this with isel
+        # need a view of da with only x- and y-dimensions, unfortunately no neat way to
+        # do this with isel
         da_2d = da
         if tcoord in da.sizes:
             da_2d = da_2d.isel(**{tcoord: 0}, drop=True)
@@ -471,7 +471,6 @@ class BoutDataArrayAccessor:
                 da = da.isel(**{zcoord: toroidal_points})
 
         return da
-
 
     def highParallelRes(self, return_dataset=False, **kwargs):
         """
@@ -501,20 +500,20 @@ class BoutDataArrayAccessor:
         return_dataset=True, instead returns a Dataset containing the DataArray.)
         """
 
-        # xr.combine_by_coords does not keep attrs at the moment. See
-        # https://github.com/pydata/xarray/issues/3865
-        # For now just copy the attrs from the first region. Can remove this workaround
-        # when the xarray issue is fixed. Should be able to use just:
-        #return xr.combine_by_coords(
-        #        [self.highParallelResRegion(region, **kwargs).bout.to_dataset()
-        #            for region in self.data.regions]
-        #        )
-
         parts = [self.highParallelResRegion(region, **kwargs).bout.to_dataset()
-                    for region in self.data.regions]
+                 for region in self.data.regions]
 
         result = xr.combine_by_coords(parts)
         result.attrs = parts[0].attrs
+        # xr.combine_by_coords does not keep attrs at the moment. See
+        # https://github.com/pydata/xarray/issues/3865
+        # For now just copy the attrs from the first region. Can remove this workaround
+        # when the xarray issue is fixed. Should be able to use instead of the above
+        # just:
+        # result = xr.combine_by_coords(
+        #         [self.highParallelResRegion(region, **kwargs).bout.to_dataset()
+        #             for region in self.data.regions]
+        #         )
 
         # result has all regions, so should not have a region attribute
         if 'region' in result.attrs:

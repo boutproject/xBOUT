@@ -138,16 +138,16 @@ class BoutDatasetAccessor:
                                                         **kwargs)['dx']
 
         # dy needs to be compatible with the new poloidal coordinate
-        # dy was created as a coordinate in BoutDataArray.highParallelResRegion, here just
-        # need to demote back to a regular variable.
+        # dy was created as a coordinate in BoutDataArray.highParallelResRegion, here
+        # just need to demote back to a regular variable.
         ds = ds.reset_coords('dy')
 
         # Apply geometry
         try:
             ds = apply_geometry(ds, ds.geometry)
         except AttributeError as e:
-            # if no geometry was originally applied, then ds has no geometry attribute and
-            # we can continue without applying geometry here
+            # if no geometry was originally applied, then ds has no geometry attribute
+            # and we can continue without applying geometry here
             if str(e) != "'Dataset' object has no attribute 'geometry'":
                 raise
 

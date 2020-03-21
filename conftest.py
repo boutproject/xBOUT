@@ -1,9 +1,11 @@
 import pytest
 
+
 # Add command line option '--long' for pytest, to be used to enable long tests
 def pytest_addoption(parser):
     parser.addoption("--long", action="store_true", default=False,
                      help="enable tests marked as 'long'")
+
 
 def pytest_collection_modifyitems(config, items):
     if not config.getoption("--long"):

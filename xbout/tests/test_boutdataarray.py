@@ -132,7 +132,7 @@ class TestBoutDataArrayMethods:
     @pytest.mark.long
     def test_highParallelResRegion_core(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=1, nt=1, grid='grid', guards={'y':2},
+                                      nype=1, nt=1, grid='grid', guards={'y': 2},
                                       topology='core')
 
         ds = open_boutdataset(datapath=path,
@@ -171,7 +171,7 @@ class TestBoutDataArrayMethods:
     def test_highParallelResRegion_core_change_n(self, tmpdir_factory,
                                                  bout_xyt_example_files, res_factor):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=1, nt=1, grid='grid', guards={'y':2},
+                                      nype=1, nt=1, grid='grid', guards={'y': 2},
                                       topology='core')
 
         ds = open_boutdataset(datapath=path,
@@ -207,7 +207,7 @@ class TestBoutDataArrayMethods:
     @pytest.mark.long
     def test_highParallelResRegion_sol(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=1, nt=1, grid='grid', guards={'y':2},
+                                      nype=1, nt=1, grid='grid', guards={'y': 2},
                                       topology='sol')
 
         ds = open_boutdataset(datapath=path,
@@ -242,7 +242,7 @@ class TestBoutDataArrayMethods:
     def test_highParallelResRegion_singlenull(self, tmpdir_factory,
                                               bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=3, nt=1, grid='grid', guards={'y':2},
+                                      nype=3, nt=1, grid='grid', guards={'y': 2},
                                       topology='single-null')
 
         ds = open_boutdataset(datapath=path,
@@ -285,7 +285,7 @@ class TestBoutDataArrayMethods:
             npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
 
         for region in ['outer_PFR', 'outer_SOL']:
-            n_highres = n.bout.highParallelResRegion(region).isel(theta=slice( -2))
+            n_highres = n.bout.highParallelResRegion(region).isel(theta=slice(-2))
 
             expected = f_fine.broadcast_like(n_highres)
 
@@ -293,7 +293,7 @@ class TestBoutDataArrayMethods:
 
     def test_highParallelRes(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=3, nt=1, grid='grid', guards={'y':2},
+                                      nype=3, nt=1, grid='grid', guards={'y': 2},
                                       topology='single-null')
 
         ds = open_boutdataset(datapath=path,
@@ -331,9 +331,10 @@ class TestBoutDataArrayMethods:
         npt.assert_allclose(n_highres.values, expected.values,
                             rtol=0., atol=1.1e-2)
 
-    def test_highParallelRes_toroidal_points(self, tmpdir_factory, bout_xyt_example_files):
+    def test_highParallelRes_toroidal_points(self, tmpdir_factory,
+                                             bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=3, nt=1, grid='grid', guards={'y':2},
+                                      nype=3, nt=1, grid='grid', guards={'y': 2},
                                       topology='single-null')
 
         ds = open_boutdataset(datapath=path,
@@ -349,7 +350,7 @@ class TestBoutDataArrayMethods:
     def test_highParallelRes_toroidal_points_list(self, tmpdir_factory,
                                                   bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=3, nt=1, grid='grid', guards={'y':2},
+                                      nype=3, nt=1, grid='grid', guards={'y': 2},
                                       topology='single-null')
 
         ds = open_boutdataset(datapath=path,

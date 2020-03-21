@@ -8,7 +8,7 @@ from pathlib import Path
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout.tests.test_region import (params_guards, params_guards_values,
-        params_boundaries, params_boundaries_values)
+                                     params_boundaries, params_boundaries_values)
 from xbout import BoutDatasetAccessor, open_boutdataset
 from xbout.geometries import apply_geometry
 from xbout.utils import _set_attrs_on_all_vars
@@ -103,7 +103,7 @@ class TestBoutDatasetMethods:
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_getHighParallelResVars(self, tmpdir_factory, bout_xyt_example_files,
-                                   guards, keep_xboundaries, keep_yboundaries):
+                                    guards, keep_xboundaries, keep_yboundaries):
         # This test checks that the regions created in the new high-resolution Dataset by
         # getHighParallelResVars are correct.
         # This test does not test the accuracy of the parallel interpolation (there are
@@ -178,13 +178,15 @@ class TestBoutDatasetMethods:
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
                                         theta=slice(jys11 + 1, jys11 + 1 + myg)).values,
-                                 v_lower_inner_intersep.isel(theta=slice(-myg, None)).values)
+                                 v_lower_inner_intersep.isel(
+                                     theta=slice(-myg, None)).values)
 
             v_lower_inner_SOL = v.bout.fromRegion('lower_inner_SOL')
 
             # Remove attributes that are expected to be different
             del v_lower_inner_SOL.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs2 - mxg, None), theta=slice(jys11 + 1)),
+            xrt.assert_identical(v.isel(x=slice(ixs2 - mxg, None),
+                                        theta=slice(jys11 + 1)),
                                  v_lower_inner_SOL.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
@@ -317,7 +319,8 @@ class TestBoutDatasetMethods:
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
                                         theta=slice(jys21 + 1, jys21 + 1 + myg)).values,
-                                 v_upper_outer_intersep.isel(theta=slice(-myg, None)).values)
+                                 v_upper_outer_intersep.isel(
+                                     theta=slice(-myg, None)).values)
 
             v_upper_outer_SOL = v.bout.fromRegion('upper_outer_SOL')
 

@@ -92,11 +92,11 @@ class Region:
             ycoord = ds.metadata['bout_ydim']
 
             # Note the global coordinates used here are defined so that they are zero at
-            # the boundaries of the grid (where the grid includes all boundary cells), not
-            # necessarily the physical boundaries because constant offsets do not matter,
-            # as long as these bounds are consistent with the global coordinates defined
-            # in apply_geometry (we will only use these coordinates for interpolation) and
-            # it is simplest to calculate them with cumsum().
+            # the boundaries of the grid (where the grid includes all boundary cells),
+            # not necessarily the physical boundaries because constant offsets do not
+            # matter, as long as these bounds are consistent with the global coordinates
+            # defined in apply_geometry (we will only use these coordinates for
+            # interpolation) and it is simplest to calculate them with cumsum().
 
             # dx is constant in any particular region in the y-direction, so convert to a
             # 1d array
@@ -114,7 +114,7 @@ class Region:
             dy = ds['dy'].isel(**{xcoord: self.xinner_ind})
             dy_cumsum = dy.cumsum()
             self.ylower = dy_cumsum[ylower_ind] - dy[ylower_ind]
-            self.yupper = dy_cumsum[yupper_ind- 1]
+            self.yupper = dy_cumsum[yupper_ind - 1]
 
     def __repr__(self):
         result = "<xbout.region.Region>\n"
@@ -405,8 +405,9 @@ def _create_regions_toroidal(ds):
                 connect_outer='upper_inner_intersep', connect_lower='upper_outer_PFR')
         regions['upper_inner_intersep'] = Region(
                 name='upper_inner_intersep', ds=ds, xinner_ind=ixs1, xouter_ind=ixs2,
-                ylower_ind=jys21 + 1, yupper_ind=nyinner, connect_inner='upper_inner_PFR',
-                connect_outer='upper_inner_SOL', connect_lower='upper_outer_intersep')
+                ylower_ind=jys21 + 1, yupper_ind=nyinner,
+                connect_inner='upper_inner_PFR', connect_outer='upper_inner_SOL',
+                connect_lower='upper_outer_intersep')
         regions['upper_inner_SOL'] = Region(
                 name='upper_inner_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
                 ylower_ind=jys21 + 1, yupper_ind=nyinner,
@@ -417,8 +418,9 @@ def _create_regions_toroidal(ds):
                 connect_outer='upper_outer_intersep', connect_upper='upper_inner_PFR')
         regions['upper_outer_intersep'] = Region(
                 name='upper_outer_intersep', ds=ds, xinner_ind=ixs1, xouter_ind=ixs2,
-                ylower_ind=nyinner, yupper_ind=jys12 + 1, connect_inner='upper_outer_PFR',
-                connect_outer='upper_outer_SOL', connect_upper='upper_inner_intersep')
+                ylower_ind=nyinner, yupper_ind=jys12 + 1,
+                connect_inner='upper_outer_PFR', connect_outer='upper_outer_SOL',
+                connect_upper='upper_inner_intersep')
         regions['upper_outer_SOL'] = Region(
                 name='upper_outer_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
                 ylower_ind=nyinner, yupper_ind=jys12 + 1,
@@ -440,16 +442,16 @@ def _create_regions_toroidal(ds):
                 connect_upper='lower_outer_SOL')
         regions['lower_outer_PFR'] = Region(
                 name='lower_outer_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys22 + 1, yupper_ind=ny, connect_outer='lower_outer_intersep',
-                connect_lower='lower_inner_PFR')
+                ylower_ind=jys22 + 1, yupper_ind=ny,
+                connect_outer='lower_outer_intersep', connect_lower='lower_inner_PFR')
         regions['lower_outer_intersep'] = Region(
                 name='lower_outer_intersep', ds=ds, xinner_ind=ixs1, xouter_ind=ixs2,
                 ylower_ind=jys22 + 1, yupper_ind=ny, connect_inner='lower_outer_PFR',
                 connect_outer='lower_outer_SOL', connect_lower='outer_intersep')
         regions['lower_outer_SOL'] = Region(
                 name='lower_outer_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=jys22 + 1, yupper_ind=ny, connect_inner='lower_outer_intersep',
-                connect_lower='outer_SOL')
+                ylower_ind=jys22 + 1, yupper_ind=ny,
+                connect_inner='lower_outer_intersep', connect_lower='outer_SOL')
         _check_connections(regions)
     elif topology == 'connected-double-null':
         regions['lower_inner_PFR'] = Region(
@@ -470,20 +472,20 @@ def _create_regions_toroidal(ds):
                 connect_lower='lower_inner_SOL', connect_upper='upper_inner_SOL')
         regions['upper_inner_PFR'] = Region(
                 name='upper_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys21 + 1, yupper_ind=nyinner, connect_outer='upper_inner_SOL',
-                connect_lower='upper_outer_PFR')
+                ylower_ind=jys21 + 1, yupper_ind=nyinner,
+                connect_outer='upper_inner_SOL', connect_lower='upper_outer_PFR')
         regions['upper_inner_SOL'] = Region(
                 name='upper_inner_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=jys21 + 1, yupper_ind=nyinner, connect_inner='upper_inner_PFR',
-                connect_lower='inner_SOL')
+                ylower_ind=jys21 + 1, yupper_ind=nyinner,
+                connect_inner='upper_inner_PFR', connect_lower='inner_SOL')
         regions['upper_outer_PFR'] = Region(
                 name='upper_outer_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=nyinner, yupper_ind=jys12 + 1, connect_outer='upper_outer_SOL',
-                connect_upper='upper_inner_PFR')
+                ylower_ind=nyinner, yupper_ind=jys12 + 1,
+                connect_outer='upper_outer_SOL', connect_upper='upper_inner_PFR')
         regions['upper_outer_SOL'] = Region(
                 name='upper_outer_SOL', ds=ds, xinner_ind=ixs2, xouter_ind=nx,
-                ylower_ind=nyinner, yupper_ind=jys12 + 1, connect_inner='upper_outer_PFR',
-                connect_upper='outer_SOL')
+                ylower_ind=nyinner, yupper_ind=jys12 + 1,
+                connect_inner='upper_outer_PFR', connect_upper='outer_SOL')
         regions['outer_core'] = Region(
                 name='outer_core', ds=ds, xinner_ind=0, xouter_ind=ixs1,
                 ylower_ind=jys12 + 1, yupper_ind=jys22 + 1, connect_outer='outer_SOL',
@@ -504,7 +506,8 @@ def _create_regions_toroidal(ds):
     elif topology == 'single-null':
         regions['inner_PFR'] = Region(
                 name='inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1, ylower_ind=0,
-                yupper_ind=jys11 + 1, connect_outer='inner_SOL', connect_upper='outer_PFR')
+                yupper_ind=jys11 + 1, connect_outer='inner_SOL',
+                connect_upper='outer_PFR')
         regions['inner_SOL'] = Region(
                 name='inner_SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx, ylower_ind=0,
                 yupper_ind=jys11 + 1, connect_inner='inner_PFR', connect_upper='SOL')
@@ -555,20 +558,20 @@ def _create_regions_toroidal(ds):
                 connect_upper='upper_inner_SOL')
         regions['upper_inner_PFR'] = Region(
                 name='upper_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=jys11 + 1, yupper_ind=nyinner, connect_outer='upper_inner_SOL',
-                connect_lower='upper_outer_PFR')
+                ylower_ind=jys11 + 1, yupper_ind=nyinner,
+                connect_outer='upper_inner_SOL', connect_lower='upper_outer_PFR')
         regions['upper_inner_SOL'] = Region(
                 name='upper_inner_SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx,
-                ylower_ind=jys11 + 1, yupper_ind=nyinner, connect_inner='upper_inner_PFR',
-                connect_lower='lower_inner_SOL')
+                ylower_ind=jys11 + 1, yupper_ind=nyinner,
+                connect_inner='upper_inner_PFR', connect_lower='lower_inner_SOL')
         regions['upper_outer_PFR'] = Region(
                 name='upper_outer_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
-                ylower_ind=nyinner, yupper_ind=jys22 + 1, connect_outer='upper_outer_SOL',
-                connect_upper='upper_inner_PFR')
+                ylower_ind=nyinner, yupper_ind=jys22 + 1,
+                connect_outer='upper_outer_SOL', connect_upper='upper_inner_PFR')
         regions['upper_outer_SOL'] = Region(
                 name='upper_outer_SOL', ds=ds, xinner_ind=ixs1, xouter_ind=nx,
-                ylower_ind=nyinner, yupper_ind=jys22 + 1, connect_inner='upper_outer_PFR',
-                connect_upper='lower_outer_SOL')
+                ylower_ind=nyinner, yupper_ind=jys22 + 1,
+                connect_inner='upper_outer_PFR', connect_upper='lower_outer_SOL')
         regions['lower_outer_PFR'] = Region(
                 name='lower_outer_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
                 ylower_ind=jys22 + 1, yupper_ind=ny, connect_outer='lower_outer_SOL',

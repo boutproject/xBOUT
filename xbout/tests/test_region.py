@@ -20,6 +20,7 @@ params_boundaries_values = [pytest.param(False, False, marks=pytest.mark.long),
                             pytest.param(False, True, marks=pytest.mark.long),
                             (True, True)]
 
+
 class TestRegion:
 
     @pytest.mark.long
@@ -1292,5 +1293,3 @@ class TestRegion:
             npt.assert_equal(n.isel(x=slice(ixs2 - xguards, None),
                                     theta=slice(jys22 + 1 - yguards, jys22 + 1)).values,
                              n_lower_outer_SOL.isel(theta=slice(yguards)).values)
-
-

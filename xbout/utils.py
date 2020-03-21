@@ -43,6 +43,7 @@ def _separate_metadata(ds):
 
     return ds.drop(scalar_vars), metadata
 
+
 def _update_metadata_increased_resolution(da, n):
     """
     Update the metadata variables to account for a y-direction resolution increased by a

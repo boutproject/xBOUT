@@ -23,7 +23,7 @@ class TestGeometryRegistration:
         assert "Schwarzschild" in REGISTERED_GEOMETRIES.keys()
 
         original = Dataset()
-        original['dy'] = DataArray(np.ones((3,4)), dims=('x', 'y'))
+        original['dy'] = DataArray(np.ones((3, 4)), dims=('x', 'y'))
         original.attrs['metadata'] = {}
         updated = apply_geometry(ds=original, geometry_name="Schwarzschild")
         assert_equal(updated['event_horizon'], DataArray(4.0))

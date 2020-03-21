@@ -72,8 +72,8 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     # ######################
     # Note the global coordinates used here are defined so that they are zero at
     # the boundaries of the grid (where the grid includes all boundary cells), not
-    # necessarily the physical boundaries, because constant offsets do not matter, as long
-    # as these bounds are consistent with the global coordinates defined in
+    # necessarily the physical boundaries, because constant offsets do not matter, as
+    # long as these bounds are consistent with the global coordinates defined in
     # Region.__init__() (we will only use these coordinates for interpolation) and it is
     # simplest to calculate them with cumsum().
     xcoord = updated_ds.metadata.get('bout_xdim', 'x')
@@ -83,8 +83,8 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         # Make index 'x' a coordinate, useful for handling global indexing
         # Note we have to use the index value, not the value calculated from 'dx' because
         # 'dx' may not be consistent between different regions (e.g. core and PFR).
-        # For some geometries xcoord may have already been created by add_geometry_coords,
-        # in which case we do not need this.
+        # For some geometries xcoord may have already been created by
+        # add_geometry_coords, in which case we do not need this.
         nx = updated_ds.dims[xcoord]
         updated_ds = updated_ds.assign_coords(**{xcoord: np.arange(nx)})
     ny = updated_ds.dims[ycoord]
@@ -115,7 +115,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
                  + str(2.*np.pi*updated_ds.metadata['ZMAX'] - z0)
                  + '): using value from dz')
         z = xr.DataArray(np.linspace(start=z0, stop=z1, num=nz, endpoint=False),
-                           dims=zcoord)
+                         dims=zcoord)
         updated_ds = updated_ds.assign_coords(**{zcoord: z})
 
     return updated_ds
@@ -171,8 +171,8 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates)
 
-    # If the coordinates already exist, we are re-applying the geometry and do not need to
-    # add them again.
+    # If the coordinates already exist, we are re-applying the geometry and do not need
+    # to add them again.
     # Ignore coordinates['z'] because ds might be Field2D-type without a z-dimension, and
     # if the other coordinates all match for a Field3D-type ds, we must actually be
     # re-applying the geometry.
@@ -181,21 +181,22 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
                    for c in coordinates.values()]):
 
         # Check whether coordinates names conflict with variables in ds
-        bad_names = [name for name in coordinates.values() if name in ds and name not in
-                ds.coords]
+        bad_names = [name for name in coordinates.values()
+                     if name in ds and name not in ds.coords]
         if bad_names:
             raise ValueError("Coordinate names {} clash with variables in the dataset. "
-                             "Register a different geometry to provide alternative names. "
-                             "It may be useful to use the 'coordinates' argument to "
-                             "add_toroidal_geometry_coords() for this.".format(bad_names))
+                             "Register a different geometry to provide alternative "
+                             "names. It may be useful to use the 'coordinates' argument "
+                             "to add_toroidal_geometry_coords() for this."
+                             .format(bad_names))
 
         # Get extra geometry information from grid file if it's not in the dump files
         needed_variables = ['psixy', 'Rxy', 'Zxy']
         for v in needed_variables:
             if v not in ds:
                 if grid is None:
-                    raise ValueError("Grid file is required to provide %s. Pass the grid "
-                                     "file name as the 'gridfilepath' argument to "
+                    raise ValueError("Grid file is required to provide %s. Pass the "
+                                     "grid file name as the 'gridfilepath' argument to "
                                      "open_boutdataset().")
                 ds[v] = grid[v]
 
