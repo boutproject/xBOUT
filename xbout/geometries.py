@@ -171,7 +171,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     if 'z' in ds.dims:
         ds = ds.rename(z=coordinates['z'])
         nz = ds.dims[coordinates['z']]
-        phi = xr.DataArray(np.linspace(start=ds.metadata['ZMIN'],
+        phi = xr.DataArray(np.linspace(start=2 * np.pi * ds.metadata['ZMIN'],
                                        stop=2 * np.pi * ds.metadata['ZMAX'], num=nz),
                            dims=coordinates['z'])
         ds = ds.assign_coords(**{coordinates['z']: phi})
