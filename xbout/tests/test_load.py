@@ -452,7 +452,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
 
     ds['dx'] = 0.5*one
     ds['dy'] = 2.*one
-    ds['dz'] = 0.7
+    ds['dz'] = 2.*np.pi/nz
 
     ds['iteration'] = t_length
     ds['t_array'] = DataArray(np.arange(t_length, dtype=float)*10., dims='t')
