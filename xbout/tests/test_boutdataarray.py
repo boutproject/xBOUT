@@ -5,6 +5,7 @@ import numpy.testing as npt
 from pathlib import Path
 
 import xarray as xr
+import xarray.testing as xrt
 from xarray.core.utils import dict_equiv
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
@@ -394,3 +395,37 @@ class TestBoutDataArrayMethods:
 
         npt.assert_allclose(n_highres_ds['n'].values, expected.values,
                             rtol=0., atol=1.1e-2)
+
+    def test_highParallelRes_toroidal_points(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
+                                      nype=3, nt=1, grid='grid', guards={'y':2},
+                                      topology='single-null')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n_highres_ds = ds['n'].bout.highParallelRes()
+
+        n_highres_ds_truncated = ds['n'].bout.highParallelRes(toroidal_points=2)
+
+        xrt.assert_identical(n_highres_ds_truncated, n_highres_ds.isel(zeta=[0, 2]))
+
+    def test_highParallelRes_toroidal_points_list(self, tmpdir_factory,
+                                                  bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
+                                      nype=3, nt=1, grid='grid', guards={'y':2},
+                                      topology='single-null')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n_highres_ds = ds['n'].bout.highParallelRes()
+
+        points_list = [1, 2]
+
+        n_highres_ds_truncated = ds['n'].bout.highParallelRes(
+                toroidal_points=points_list)
+
+        xrt.assert_identical(n_highres_ds_truncated, n_highres_ds.isel(zeta=points_list))
