@@ -394,8 +394,10 @@ class BoutDataArrayAccessor:
             BoutDataset.setupParallelInterp(), or 10 if that has not been called.
         toroidal_points : int or sequence of int, optional
             If int, number of toroidal points to output, applies a stride to toroidal
-            direction to save memory usage. If sequence of int, the indexes of toroidal
-            points for the output.
+            direction to save memory usage. It is not always possible to get a particular
+            number of output points with a constant stride, so the number of outputs will
+            be only less than or equal to toroidal_points. If sequence of int, the indexes
+            of toroidal points for the output.
         method : str, optional
             The interpolation method to use. Options from xarray.DataArray.interp(),
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
@@ -472,7 +474,7 @@ class BoutDataArrayAccessor:
         if toroidal_points is not None and zcoord in da.sizes:
             if isinstance(toroidal_points, int):
                 nz = len(da[zcoord])
-                zstride = nz//toroidal_points
+                zstride = (nz + toroidal_points - 1)//toroidal_points
                 da = da.isel(**{zcoord: slice(None, None, zstride)})
             else:
                 da = da.isel(**{zcoord: toroidal_points})
