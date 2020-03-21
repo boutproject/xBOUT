@@ -129,7 +129,7 @@ class BoutDatasetAccessor:
             # passed-in argument.
             ds = self.data[variables[0]].bout.highParallelRes(**kwargs)
             for var in variables[1:]:
-                ds.merge(self.data[var].bout.highParallelRes(**kwargs))
+                ds = ds.merge(self.data[var].bout.highParallelRes(**kwargs))
 
         # Add extra variables needed to make this a valid Dataset
         ds['dx'] = self.data['dx'].bout.highParallelRes(**kwargs)['dx']
