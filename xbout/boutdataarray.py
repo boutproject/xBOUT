@@ -68,6 +68,7 @@ class BoutDataArrayAccessor:
         # https://github.com/xgcm/xrft/pull/81 to add this).
 
         nz = self.data.metadata['nz']
+        zlength = nz*self.data.metadata['dz']
 
         # Get axis position of dimension to transform
         axis = self.data.dims.index(self.data.metadata['bout_zdim'])
@@ -80,7 +81,7 @@ class BoutDataArrayAccessor:
         data_fft = np.fft.fft(self.data.values, axis=axis)
 
         # Complex phase for rotation by angle zShift
-        zperiod = 1./(self.data.metadata['ZMAX'] - self.data.metadata['ZMIN'])
+        zperiod = int(round(2.*np.pi / zlength))
         kz = xr.DataArray(np.arange(0, nz*zperiod, zperiod), dims='kz')
         phases = 1.j * zShift * kz
 
