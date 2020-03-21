@@ -1,3 +1,5 @@
+import pytest
+
 import numpy as np
 import numpy.testing as npt
 from pathlib import Path
@@ -225,6 +227,43 @@ class TestBoutDataArrayMethods:
         n.data = f(theta).broadcast_like(n)
 
         n_highres = n.bout.highParallelResRegion('core')
+
+        expected = f(theta_fine).broadcast_like(n_highres)
+
+        npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
+
+    @pytest.mark.parametrize('res_factor', [2, 3, 7, 18])
+    def test_highParallelResRegion_core_change_n(self, tmpdir_factory,
+                                                 bout_xyt_example_files, res_factor):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 16, 7), nxpe=1,
+                                      nype=1, nt=1, grid='grid', guards={'y':2},
+                                      topology='core')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n = ds['n']
+
+        thetalength = 2.*np.pi
+
+        dtheta = thetalength/16.
+        theta = xr.DataArray(np.linspace(0. - 1.5*dtheta, thetalength + 1.5*dtheta, 20),
+                             dims='theta')
+
+        dtheta_fine = thetalength/res_factor/16.
+        theta_fine = xr.DataArray(
+                np.linspace(0. + dtheta_fine/2., thetalength - dtheta_fine/2.,
+                            res_factor*16),
+                dims='theta')
+
+        def f(t):
+            t = np.sin(t)
+            return (t**3 - t**2 + t - 1.)
+
+        n.data = f(theta).broadcast_like(n)
+
+        n_highres = n.bout.highParallelResRegion('core', n=res_factor)
 
         expected = f(theta_fine).broadcast_like(n_highres)
 
