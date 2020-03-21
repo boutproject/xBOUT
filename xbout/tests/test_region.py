@@ -23,7 +23,7 @@ class TestRegion:
     def test_region_core(self, tmpdir_factory, bout_xyt_example_files, guards,
                          keep_xboundaries, keep_yboundaries):
         # Note need to use more than (3*MXG,3*MYG) points per output file
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 7), nxpe=3,
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
                                       nype=4, nt=1, guards=guards, grid='grid',
                                       topology='core')
 
@@ -58,7 +58,7 @@ class TestRegion:
     def test_region_sol(self, tmpdir_factory, bout_xyt_example_files, guards,
                         keep_xboundaries, keep_yboundaries):
         # Note need to use more than (3*MXG,3*MYG) points per output file
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 7), nxpe=3,
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
                                       nype=4, nt=1, guards=guards, grid='grid',
                                       topology='sol')
 
@@ -82,7 +82,7 @@ class TestRegion:
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 7), nxpe=3,
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
                                       nype=4, nt=1, guards=guards, grid='grid',
                                       topology='limiter')
 
@@ -140,7 +140,7 @@ class TestRegion:
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 7), nxpe=3,
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
                                       nype=4, nt=1, guards=guards, grid='grid',
                                       topology='xpoint')
 
@@ -289,7 +289,7 @@ class TestRegion:
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 7), nxpe=3,
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
                                       nype=4, nt=1, guards=guards, grid='grid',
                                       topology='single-null')
 
@@ -410,7 +410,7 @@ class TestRegion:
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 7), nxpe=3,
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
                                       nype=6, nt=1, guards=guards, grid='grid',
                                       topology='connected-double-null')
 
@@ -631,7 +631,7 @@ class TestRegion:
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 7), nxpe=3,
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
                                       nype=6, nt=1, guards=guards, grid='grid',
                                       topology='disconnected-double-null')
 
@@ -954,7 +954,7 @@ class TestRegion:
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 7), nxpe=3,
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
                                       nype=6, nt=1, guards=guards, grid='grid',
                                       topology='disconnected-double-null')
 
