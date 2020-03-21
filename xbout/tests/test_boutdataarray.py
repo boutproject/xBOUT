@@ -25,7 +25,10 @@ class TestBoutDataArrayMethods:
         assert dict_equiv(ds.attrs, new_ds.attrs)
         assert dict_equiv(ds.metadata, new_ds.metadata)
 
-    @pytest.mark.parametrize('nz', [6, 7, 8, 9])
+    @pytest.mark.parametrize('nz', [pytest.param(6, marks=pytest.mark.long),
+                                    7,
+                                    pytest.param(8, marks=pytest.mark.long),
+                                    pytest.param(9, marks=pytest.mark.long)])
     def test_toFieldAligned(self, tmpdir_factory, bout_xyt_example_files, nz):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, nz), nxpe=1,
                                       nype=1, nt=1)
@@ -74,7 +77,10 @@ class TestBoutDataArrayMethods:
             for z in range(nz):
                 npt.assert_allclose(n_al[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z + 7)%nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
-    @pytest.mark.parametrize('nz', [6, 7, 8, 9])
+    @pytest.mark.parametrize('nz', [pytest.param(6, marks=pytest.mark.long),
+                                    7,
+                                    pytest.param(8, marks=pytest.mark.long),
+                                    pytest.param(9, marks=pytest.mark.long)])
     def test_fromFieldAligned(self, tmpdir_factory, bout_xyt_example_files, nz):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, nz), nxpe=1,
                                       nype=1, nt=1)
