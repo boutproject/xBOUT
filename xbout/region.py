@@ -285,31 +285,31 @@ def _check_connections(regions):
         if region.connection_inner is not None:
             if regions[region.connection_inner].connection_outer != region.name:
                 raise ValueError(
-                        'Inner connection of ' + region.name + ' is '
-                        + region.connection_inner + ', but outer connection of '
-                        + region.connection_inner + ' is '
-                        + regions[region.connection_inner].connection_outer)
+                        f'Inner connection of {region.name} is '
+                        f'{region.connection_inner}, but outer connection of '
+                        f'{region.connection_inner} is '
+                        f'{regions[region.connection_inner].connection_outer}')
         if region.connection_outer is not None:
             if regions[region.connection_outer].connection_inner != region.name:
                 raise ValueError(
-                        'Inner connection of ' + region.name + ' is '
-                        + region.connection_outer + ', but inner connection of '
-                        + region.connection_outer + ' is '
-                        + regions[region.connection_outer].connection_inner)
+                        f'Inner connection of {region.name} is '
+                        f'{region.connection_outer}, but inner connection of '
+                        f'{region.connection_outer} is '
+                        f'{regions[region.connection_outer].connection_inner}')
         if region.connection_lower is not None:
             if regions[region.connection_lower].connection_upper != region.name:
                 raise ValueError(
-                        'Inner connection of ' + region.name + ' is '
-                        + region.connection_lower + ', but upper connection of '
-                        + region.connection_lower + ' is '
-                        + regions[region.connection_lower].connection_upper)
+                        f'Inner connection of {region.name} is '
+                        f'{region.connection_lower}, but upper connection of '
+                        f'{region.connection_lower} is '
+                        f'{regions[region.connection_lower].connection_upper}')
         if region.connection_upper is not None:
             if regions[region.connection_upper].connection_lower != region.name:
                 raise ValueError(
-                        'Inner connection of ' + region.name + ' is '
-                        + region.connection_upper + ', but lower connection of '
-                        + region.connection_upper + ' is '
-                        + regions[region.connection_upper].connection_lower)
+                        f'Inner connection of {region.name} is '
+                        f'{region.connection_upper}, but lower connection of '
+                        f'{region.connection_upper} is '
+                        f'{regions[region.connection_upper].connection_lower}')
 
 
 topologies = {}
@@ -628,7 +628,7 @@ def _create_regions_toroidal(ds):
                                        jys21=jys21, ny_inner=ny_inner, jys12=jys12,
                                        jys22=jys22, ny=ny, ybndry=ybndry)
     except KeyError:
-        raise NotImplementedError("Topology '" + topology + "' is not implemented")
+        raise NotImplementedError(f"Topology '{topology}' is not implemented")
 
     _check_connections(regions)
 

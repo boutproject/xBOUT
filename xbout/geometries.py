@@ -110,10 +110,9 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         z1 = z0 + nz*updated_ds.metadata['dz']
         if not np.isclose(z1, 2.*np.pi*updated_ds.metadata['ZMAX'],
                           rtol=1.e-15, atol=0.):
-            warn('Size of toroidal domain as calculated from nz*dz (' + str(z1 - z0)
-                 + ' is not the same as 2pi*(ZMAX - ZMIN) ('
-                 + str(2.*np.pi*updated_ds.metadata['ZMAX'] - z0)
-                 + '): using value from dz')
+            warn(f"Size of toroidal domain as calculated from nz*dz ({str(z1 - z0)}"
+                 f" is not the same as 2pi*(ZMAX - ZMIN) ("
+                 f"{2.*np.pi*updated_ds.metadata['ZMAX'] - z0}): using value from dz")
         z = xr.DataArray(np.linspace(start=z0, stop=z1, num=nz, endpoint=False),
                          dims=zcoord)
         updated_ds = updated_ds.assign_coords(**{zcoord: z})
