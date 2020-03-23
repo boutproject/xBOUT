@@ -135,21 +135,21 @@ class BoutDataArrayAccessor:
         result["direction_y"] = "Standard"
         return result
 
-    def fromRegion(self, region, with_guards=None):
+    def fromRegion(self, name, with_guards=None):
         """
         Get a logically-rectangular section of data from a certain region.
         Includes guard cells from neighbouring regions.
 
         Parameters
         ----------
-        region : str
+        name : str
             Region to get data for
         with_guards : int or dict of int, optional
             Number of guard cells to include, by default use MXG and MYG from BOUT++.
             Pass a dict to set different numbers for different coordinates.
         """
 
-        region = self.data.regions[region]
+        region = self.data.regions[name]
         xcoord = self.data.metadata['bout_xdim']
         ycoord = self.data.metadata['bout_ydim']
         keep_yboundaries = self.data.metadata['keep_yboundaries']
