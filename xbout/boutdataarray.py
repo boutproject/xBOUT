@@ -223,7 +223,7 @@ class BoutDataArrayAccessor:
                 if xcoord in da.coords:
                     # Use local coordinates for neighbouring region, not communicated
                     # ones
-                    xslice, yslice = region.getInnerGuardsSlices(mxg=mxg)
+                    xslice, yslice = region.get_inner_guards_slices(mxg=mxg)
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
                     da_inner = da_inner.assign_coords(
@@ -288,7 +288,7 @@ class BoutDataArrayAccessor:
                 if xcoord in da.coords:
                     # Use local coordinates for neighbouring region, not communicated
                     # ones
-                    xslice, yslice = region.getOuterGuardsSlices(mxg=mxg)
+                    xslice, yslice = region.get_outer_guards_slices(mxg=mxg)
                     new_xcoord = self.data[xcoord].isel(**{xcoord: xslice})
                     new_ycoord = self.data[ycoord].isel(**{ycoord: yslice})
                     da_outer = da_outer.assign_coords(
@@ -309,7 +309,7 @@ class BoutDataArrayAccessor:
                 if ycoord in da.coords:
                     # Use local coordinates for neighbouring region, not communicated
                     # ones
-                    xslice, yslice = region.getLowerGuardsSlices(mxg=mxg, myg=myg)
+                    xslice, yslice = region.get_lower_guards_slices(mxg=mxg, myg=myg)
 
                     if yslice.start < 0:
                         # For core-only or limiter topologies, the lower-y slice may be
@@ -341,7 +341,7 @@ class BoutDataArrayAccessor:
                 if ycoord in da.coords:
                     # Use local coordinates for neighbouring region, not communicated
                     # ones
-                    xslice, yslice = region.getUpperGuardsSlices(mxg=mxg, myg=myg)
+                    xslice, yslice = region.get_upper_guards_slices(mxg=mxg, myg=myg)
 
                     if yslice.stop > self.data.sizes[ycoord]:
                         # For core-only or limiter topologies, the upper-y slice may be
