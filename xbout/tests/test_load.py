@@ -374,8 +374,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
         ds['ny_inner'] = ny//2
     elif topology == 'xpoint':
         if nype < 4:
-            raise ValueError('Not enough processors for xpoint topology: '
-                             + 'nype=' + str(nype))
+            raise ValueError(f'Not enough processors for xpoint topology: nype={nype}')
         ds['ixseps1'] = nx//2
         ds['ixseps2'] = nx//2
         ds['jyseps1_1'] = MYSUB - 1
@@ -386,8 +385,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
         ds['jyseps2_2'] = ny - MYSUB - 1
     elif topology == 'single-null':
         if nype < 3:
-            raise ValueError('Not enough processors for single-null topology: '
-                             + 'nype=' + str(nype))
+            raise ValueError(f'Not enough processors for xpoint topology: nype={nype}')
         ds['ixseps1'] = nx//2
         ds['ixseps2'] = nx
         ds['jyseps1_1'] = MYSUB - 1
@@ -398,7 +396,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     elif topology == 'connected-double-null':
         if nype < 6:
             raise ValueError('Not enough processors for connected-double-null topology: '
-                             + 'nype=' + str(nype))
+                             f'nype={nype}')
         ds['ixseps1'] = nx//2
         ds['ixseps2'] = nx//2
         ds['jyseps1_1'] = MYSUB - 1
@@ -410,12 +408,12 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     elif topology == 'disconnected-double-null':
         if nype < 6:
             raise ValueError('Not enough processors for disconnected-double-null '
-                             + 'topology: nype=' + str(nype))
+                             f'topology: nype={nype}')
         ds['ixseps1'] = nx//2
         ds['ixseps2'] = nx//2 + 4
         if ds['ixseps2'] >= nx:
             raise ValueError('Not enough points in the x-direction. ixseps2='
-                             + str(ds['ixseps2']) + ' > nx=' + str(nx))
+                             f'{ds["ixseps2"]} > nx={nx}')
         ds['jyseps1_1'] = MYSUB - 1
         ny_inner = 3*MYSUB
         ds['ny_inner'] = ny_inner
@@ -423,7 +421,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
         ds['jyseps1_2'] = ny_inner + MYSUB - 1
         ds['jyseps2_2'] = ny - MYSUB - 1
     else:
-        raise ValueError('Unrecognised topology=' + str(topology))
+        raise ValueError(f'Unrecognised topology={topology}')
 
     one = DataArray(np.ones((x_length, y_length)), dims=['x', 'y'])
     zero = DataArray(np.zeros((x_length, y_length)), dims=['x', 'y'])
