@@ -96,10 +96,14 @@ class BoutDatasetAccessor:
 
         return ds
 
-    def getHighParallelResVars(self, variables, **kwargs):
+    def interpolate_parallel(self, variables, **kwargs):
         """
-        Interpolate in the parallel direction to get a higher resolution version of one
-        or more variables.
+        Interpolate in the parallel direction to get a higher resolution version of a
+        subset of variables.
+
+        Note that the high-resolution variables are all loaded into memory, so most
+        likely it is necessary to select only a small number. The toroidal_points
+        argument can also be used to reduce the memory demand.
 
         Parameters
         ----------

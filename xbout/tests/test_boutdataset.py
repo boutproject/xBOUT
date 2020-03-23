@@ -102,10 +102,10 @@ class TestBoutDatasetMethods:
 
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
-    def test_getHighParallelResVars(self, tmpdir_factory, bout_xyt_example_files,
+    def test_interpolate_parallel(self, tmpdir_factory, bout_xyt_example_files,
                                     guards, keep_xboundaries, keep_yboundaries):
         # This test checks that the regions created in the new high-resolution Dataset by
-        # getHighParallelResVars are correct.
+        # interpolate_parallel are correct.
         # This test does not test the accuracy of the parallel interpolation (there are
         # other tests for that).
 
@@ -122,7 +122,7 @@ class TestBoutDatasetMethods:
                               keep_yboundaries=keep_yboundaries)
 
         # Get high parallel resolution version of ds, and check that
-        ds = ds.bout.getHighParallelResVars(('n', 'T'))
+        ds = ds.bout.interpolate_parallel(('n', 'T'))
 
         mxg = guards['x']
         myg = guards['y']
