@@ -2,6 +2,7 @@ from copy import deepcopy
 from pprint import pformat as prettyformat
 from functools import partial
 
+import dask.array
 import numpy as np
 
 import xarray as xr
@@ -76,6 +77,12 @@ class BoutDataArrayAccessor:
         # implement inverse Fourier transforms (although there is an open PR
         # https://github.com/xgcm/xrft/pull/81 to add this).
 
+        # Use dask.array.fft if self.data.data is a dask array
+        if isinstance(self.data.data, dask.array.Array):
+            fft = dask.array.fft
+        else:
+            fft = np.fft
+
         nz = self.data.metadata['nz']
         zlength = nz*self.data.metadata['dz']
         nmodes = nz // 2 + 1
@@ -88,7 +95,7 @@ class BoutDataArrayAccessor:
         fft_dims[axis] = 'kz'
 
         # Fourier transform to get the DataArray in k-space
-        data_fft = np.fft.rfft(self.data.values, axis=axis)
+        data_fft = fft.rfft(self.data.data, axis=axis)
 
         # Complex phase for rotation by angle zShift
         kz = 2.*np.pi*xr.DataArray(np.arange(0, nmodes), dims='kz')/zlength
@@ -101,9 +108,9 @@ class BoutDataArrayAccessor:
         phase = phase.expand_dims(extra_dims)
         phase = phase.transpose(*fft_dims, transpose_coords=True)
 
-        data_shifted_fft = data_fft * np.exp(phase.values)
+        data_shifted_fft = data_fft * np.exp(phase.data)
 
-        data_shifted = np.fft.irfft(data_shifted_fft, n=nz)
+        data_shifted = fft.irfft(data_shifted_fft, n=nz)
 
         # Return a DataArray with the same attributes as self, but values from
         # data_shifted
