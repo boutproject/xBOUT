@@ -79,7 +79,7 @@ class BoutDatasetAccessor:
                 self.data[aligned_name] = self.data[name].bout.toFieldAligned()
             return self.data[aligned_name]
 
-    def resetParallelInterpFactor(self, n):
+    def set_parallel_interpolation_factor(self, n):
         """
         Set the default factor to increase resolution when doing parallel interpolation.
 

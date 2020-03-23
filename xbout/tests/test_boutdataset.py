@@ -85,7 +85,7 @@ class TestBoutDatasetMethods:
         ds['n_aligned'] = ds['T']
         xrt.assert_allclose(ds.bout.getFieldAligned('n'), ds['T'])
 
-    def test_resetParallelInterpFactor(self):
+    def test_set_parallel_interpolation_factor(self):
         ds = Dataset()
         ds['a'] = DataArray()
         ds = _set_attrs_on_all_vars(ds, 'metadata', {})
@@ -95,7 +95,7 @@ class TestBoutDatasetMethods:
         with pytest.raises(KeyError):
             ds['a'].metadata['fine_interpolation_factor']
 
-        ds.bout.resetParallelInterpFactor(42)
+        ds.bout.set_parallel_interpolation_factor(42)
 
         assert ds.metadata['fine_interpolation_factor'] == 42
         assert ds['a'].metadata['fine_interpolation_factor'] == 42
