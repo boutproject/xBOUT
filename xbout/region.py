@@ -75,7 +75,7 @@ class Region:
     def __repr__(self):
         result = "<xbout.region.Region>\n"
         for attr, val in vars(self).items():
-            result += "\t" + attr + "\t" + str(val) + "\n"
+            result += f"\t{attr}\t{val}\n"
         return result
 
     def get_slices(self, mxg=0, myg=0):
