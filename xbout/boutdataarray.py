@@ -159,15 +159,9 @@ class BoutDataArrayAccessor:
             myg = self.data.metadata['MYG']
         else:
             try:
-                try:
-                    mxg = with_guards[xcoord]
-                except KeyError:
-                    mxg = self.data.metadata['MXG']
-                try:
-                    myg = with_guards[ycoord]
-                except KeyError:
-                    myg = self.data.metadata['MYG']
-            except TypeError:
+                mxg = with_guards.get(xcoord, self.data.metadata['MXG'])
+                myg = with_guards.get(ycoord, self.data.metadata['MYG'])
+            except AttributeError:
                 mxg = with_guards
                 myg = with_guards
 
