@@ -61,7 +61,7 @@ def plot_separatrix(da, sep_pos, ax, radial_coord='x'):
 
 def _decompose_regions(da):
 
-    return {region: da.bout.fromRegion(region, with_guards=1) for region in da.regions}
+    return {region: da.bout.from_region(region, with_guards=1) for region in da.regions}
 
 
 def _is_core_only(da):

@@ -135,7 +135,7 @@ class BoutDataArrayAccessor:
         result["direction_y"] = "Standard"
         return result
 
-    def fromRegion(self, name, with_guards=None):
+    def from_region(self, name, with_guards=None):
         """
         Get a logically-rectangular section of data from a certain region.
         Includes guard cells from neighbouring regions.
@@ -172,7 +172,7 @@ class BoutDataArrayAccessor:
             myg_da = self.data.metadata['MYG']
             # get guard cells from x-neighbour regions
             if region.connection_inner is not None:
-                da_inner = self.data.bout.fromRegion(region.connection_inner,
+                da_inner = self.data.bout.from_region(region.connection_inner,
                                                      with_guards=0)
 
                 if (myg_da > 0 and keep_yboundaries
@@ -197,7 +197,7 @@ class BoutDataArrayAccessor:
                     # da_inner may have fewer points in the y-direction, because it has a
                     # connection, not an actual boundary. Need to get the extra points
                     # from its connection
-                    da_inner_lower = self.data.bout.fromRegion(
+                    da_inner_lower = self.data.bout.from_region(
                                        da_inner.region.connection_lower, with_guards=0)
                     da_inner_lower = da_inner_lower.isel(
                             **{xcoord: slice(-mxg, None), ycoord: slice(-myg_da, None)})
@@ -213,7 +213,7 @@ class BoutDataArrayAccessor:
                     # da_inner may have fewer points in the y-direction, because it has a
                     # connection, not an actual boundary. Need to get the extra points
                     # from its connection
-                    da_inner_upper = self.data.bout.fromRegion(
+                    da_inner_upper = self.data.bout.from_region(
                                        da_inner.region.connection_upper, with_guards=0)
                     da_inner_upper = da_inner_upper.isel(
                             **{xcoord: slice(-mxg, None), ycoord: slice(myg_da)})
@@ -238,7 +238,7 @@ class BoutDataArrayAccessor:
                         >= packaging.version.parse("0.15.0")):
                     del da.attrs['region']
             if region.connection_outer is not None:
-                da_outer = self.data.bout.fromRegion(region.connection_outer,
+                da_outer = self.data.bout.from_region(region.connection_outer,
                                                      with_guards=0)
 
                 if (myg_da > 0 and keep_yboundaries
@@ -263,7 +263,7 @@ class BoutDataArrayAccessor:
                     # da_outer may have fewer points in the y-direction, because it has a
                     # connection, not an actual boundary. Need to get the extra points
                     # from its connection
-                    da_outer_lower = self.data.bout.fromRegion(
+                    da_outer_lower = self.data.bout.from_region(
                                        da_outer.region.connection_lower, with_guards=0)
                     da_outer_lower = da_outer_lower.isel(
                             **{xcoord: slice(-mxg, None), ycoord: slice(-myg_da, None)})
@@ -279,7 +279,7 @@ class BoutDataArrayAccessor:
                     # da_outer may have fewer points in the y-direction, because it has a
                     # connection, not an actual boundary. Need to get the extra points
                     # from its connection
-                    da_outer_upper = self.data.bout.fromRegion(
+                    da_outer_upper = self.data.bout.from_region(
                                        da_outer.region.connection_upper, with_guards=0)
                     da_outer_upper = da_outer_upper.isel(
                             **{xcoord: slice(-mxg, None), ycoord: slice(myg_da)})
@@ -302,7 +302,7 @@ class BoutDataArrayAccessor:
         if myg > 0:
             # get guard cells from y-neighbour regions
             if region.connection_lower is not None:
-                da_lower = self.data.bout.fromRegion(
+                da_lower = self.data.bout.from_region(
                         region.connection_lower, with_guards={xcoord: mxg, ycoord: 0})
 
                 # select just the points we need to fill the guard cells of da
@@ -335,7 +335,7 @@ class BoutDataArrayAccessor:
                         >= packaging.version.parse("0.15.0")):
                     del da.attrs['region']
             if region.connection_upper is not None:
-                da_upper = self.data.bout.fromRegion(
+                da_upper = self.data.bout.from_region(
                         region.connection_upper, with_guards={xcoord: mxg, ycoord: 0})
                 # select just the points we need to fill the guard cells of da
                 da_upper = da_upper.isel(**{ycoord: slice(myg)})
