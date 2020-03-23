@@ -151,7 +151,7 @@ class TestBoutDatasetMethods:
         for var in ['n', 'T']:
             v = ds[var]
 
-            v_lower_inner_PFR = v.bout.fromRegion('lower_inner_PFR')
+            v_lower_inner_PFR = v.bout.from_region('lower_inner_PFR')
 
             # Remove attributes that are expected to be different
             del v_lower_inner_PFR.attrs['region']
@@ -159,13 +159,13 @@ class TestBoutDatasetMethods:
                                  v_lower_inner_PFR.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
                                         theta=slice(jys22 + 1, jys22 + 1 + myg)).values,
                                  v_lower_inner_PFR.isel(theta=slice(-myg, None)).values)
 
-            v_lower_inner_intersep = v.bout.fromRegion('lower_inner_intersep')
+            v_lower_inner_intersep = v.bout.from_region('lower_inner_intersep')
 
             # Remove attributes that are expected to be different
             del v_lower_inner_intersep.attrs['region']
@@ -174,14 +174,14 @@ class TestBoutDatasetMethods:
                                  v_lower_inner_intersep.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
                                         theta=slice(jys11 + 1, jys11 + 1 + myg)).values,
                                  v_lower_inner_intersep.isel(
                                      theta=slice(-myg, None)).values)
 
-            v_lower_inner_SOL = v.bout.fromRegion('lower_inner_SOL')
+            v_lower_inner_SOL = v.bout.from_region('lower_inner_SOL')
 
             # Remove attributes that are expected to be different
             del v_lower_inner_SOL.attrs['region']
@@ -190,13 +190,13 @@ class TestBoutDatasetMethods:
                                  v_lower_inner_SOL.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
                                         theta=slice(jys11 + 1, jys11 + 1 + myg)).values,
                                  v_lower_inner_SOL.isel(theta=slice(-myg, None)).values)
 
-            v_inner_core = v.bout.fromRegion('inner_core')
+            v_inner_core = v.bout.from_region('inner_core')
 
             # Remove attributes that are expected to be different
             del v_inner_core.attrs['region']
@@ -205,7 +205,7 @@ class TestBoutDatasetMethods:
                                  v_inner_core.isel(
                                      theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
                                         theta=slice(jys22 + 1 - myg, jys22 + 1)).values,
@@ -214,7 +214,7 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys12 + 1, jys12 + 1 + myg)).values,
                                  v_inner_core.isel(theta=slice(-myg, None)).values)
 
-            v_inner_intersep = v.bout.fromRegion('inner_intersep')
+            v_inner_intersep = v.bout.from_region('inner_intersep')
 
             # Remove attributes that are expected to be different
             del v_inner_intersep.attrs['region']
@@ -223,7 +223,7 @@ class TestBoutDatasetMethods:
                                  v_inner_intersep.isel(
                                      theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
                                         theta=slice(jys11 + 1 - myg, jys11 + 1)).values,
@@ -232,7 +232,7 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys12 + 1, jys12 + 1 + myg)).values,
                                  v_inner_intersep.isel(theta=slice(-myg, None)).values)
 
-            v_inner_sol = v.bout.fromRegion('inner_SOL')
+            v_inner_sol = v.bout.from_region('inner_SOL')
 
             # Remove attributes that are expected to be different
             del v_inner_sol.attrs['region']
@@ -240,7 +240,7 @@ class TestBoutDatasetMethods:
                     v.isel(x=slice(ixs2 - mxg, None), theta=slice(jys11 + 1, jys21 + 1)),
                     v_inner_sol.isel(theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
                                         theta=slice(jys11 + 1 - myg, jys11 + 1)).values,
@@ -249,7 +249,7 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys21 + 1, jys21 + 1 + myg)).values,
                                  v_inner_sol.isel(theta=slice(-myg, None)).values)
 
-            v_upper_inner_PFR = v.bout.fromRegion('upper_inner_PFR')
+            v_upper_inner_PFR = v.bout.from_region('upper_inner_PFR')
 
             # Remove attributes that are expected to be different
             del v_upper_inner_PFR.attrs['region']
@@ -257,13 +257,13 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys21 + 1, ny_inner)),
                                  v_upper_inner_PFR.isel(theta=slice(myg, None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
                                         theta=slice(jys12 + 1 - myg, jys12 + 1)).values,
                                  v_upper_inner_PFR.isel(theta=slice(myg)).values)
 
-            v_upper_inner_intersep = v.bout.fromRegion('upper_inner_intersep')
+            v_upper_inner_intersep = v.bout.from_region('upper_inner_intersep')
 
             # Remove attributes that are expected to be different
             del v_upper_inner_intersep.attrs['region']
@@ -271,13 +271,13 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys21 + 1, ny_inner)),
                                  v_upper_inner_intersep.isel(theta=slice(myg, None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
                                         theta=slice(jys12 + 1 - myg, jys12 + 1)).values,
                                  v_upper_inner_intersep.isel(theta=slice(myg)).values)
 
-            v_upper_inner_SOL = v.bout.fromRegion('upper_inner_SOL')
+            v_upper_inner_SOL = v.bout.from_region('upper_inner_SOL')
 
             # Remove attributes that are expected to be different
             del v_upper_inner_SOL.attrs['region']
@@ -285,13 +285,13 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys21 + 1, ny_inner)),
                                  v_upper_inner_SOL.isel(theta=slice(myg, None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
                                         theta=slice(jys21 + 1 - myg, jys21 + 1)).values,
                                  v_upper_inner_SOL.isel(theta=slice(myg)).values)
 
-            v_upper_outer_PFR = v.bout.fromRegion('upper_outer_PFR')
+            v_upper_outer_PFR = v.bout.from_region('upper_outer_PFR')
 
             # Remove attributes that are expected to be different
             del v_upper_outer_PFR.attrs['region']
@@ -300,13 +300,13 @@ class TestBoutDatasetMethods:
                                  v_upper_outer_PFR.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
                                         theta=slice(jys21 + 1, jys21 + 1 + myg)).values,
                                  v_upper_outer_PFR.isel(theta=slice(-myg, None)).values)
 
-            v_upper_outer_intersep = v.bout.fromRegion('upper_outer_intersep')
+            v_upper_outer_intersep = v.bout.from_region('upper_outer_intersep')
 
             # Remove attributes that are expected to be different
             del v_upper_outer_intersep.attrs['region']
@@ -315,14 +315,14 @@ class TestBoutDatasetMethods:
                                  v_upper_outer_intersep.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
                                         theta=slice(jys21 + 1, jys21 + 1 + myg)).values,
                                  v_upper_outer_intersep.isel(
                                      theta=slice(-myg, None)).values)
 
-            v_upper_outer_SOL = v.bout.fromRegion('upper_outer_SOL')
+            v_upper_outer_SOL = v.bout.from_region('upper_outer_SOL')
 
             # Remove attributes that are expected to be different
             del v_upper_outer_SOL.attrs['region']
@@ -331,13 +331,13 @@ class TestBoutDatasetMethods:
                                  v_upper_outer_SOL.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
                                         theta=slice(jys12 + 1, jys12 + 1 + myg)).values,
                                  v_upper_outer_SOL.isel(theta=slice(-myg, None)).values)
 
-            v_outer_core = v.bout.fromRegion('outer_core')
+            v_outer_core = v.bout.from_region('outer_core')
 
             # Remove attributes that are expected to be different
             del v_outer_core.attrs['region']
@@ -346,7 +346,7 @@ class TestBoutDatasetMethods:
                                  v_outer_core.isel(
                                      theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
                                         theta=slice(jys21 + 1 - myg, jys21 + 1)).values,
@@ -355,7 +355,7 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys11 + 1, jys11 + 1 + myg)).values,
                                  v_outer_core.isel(theta=slice(-myg, None)).values)
 
-            v_outer_intersep = v.bout.fromRegion('outer_intersep')
+            v_outer_intersep = v.bout.from_region('outer_intersep')
 
             # Remove attributes that are expected to be different
             del v_outer_intersep.attrs['region']
@@ -364,7 +364,7 @@ class TestBoutDatasetMethods:
                                  v_outer_intersep.isel(
                                      theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
                                         theta=slice(jys21 + 1 - myg, jys21 + 1)).values,
@@ -373,7 +373,7 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys22 + 1, jys22 + 1 + myg)).values,
                                  v_outer_intersep.isel(theta=slice(-myg, None)).values)
 
-            v_outer_sol = v.bout.fromRegion('outer_SOL')
+            v_outer_sol = v.bout.from_region('outer_SOL')
 
             # Remove attributes that are expected to be different
             del v_outer_sol.attrs['region']
@@ -381,7 +381,7 @@ class TestBoutDatasetMethods:
                     v.isel(x=slice(ixs2 - mxg, None), theta=slice(jys12 + 1, jys22 + 1)),
                     v_outer_sol.isel(theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
                                         theta=slice(jys12 + 1 - myg, jys12 + 1)).values,
@@ -390,7 +390,7 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys22 + 1, jys22 + 1 + myg)).values,
                                  v_outer_sol.isel(theta=slice(-myg, None)).values)
 
-            v_lower_outer_PFR = v.bout.fromRegion('lower_outer_PFR')
+            v_lower_outer_PFR = v.bout.from_region('lower_outer_PFR')
 
             # Remove attributes that are expected to be different
             del v_lower_outer_PFR.attrs['region']
@@ -398,13 +398,13 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys22 + 1, None)),
                                  v_lower_outer_PFR.isel(theta=slice(myg, None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
                                         theta=slice(jys11 + 1 - myg, jys11 + 1)).values,
                                  v_lower_outer_PFR.isel(theta=slice(myg)).values)
 
-            v_lower_outer_intersep = v.bout.fromRegion('lower_outer_intersep')
+            v_lower_outer_intersep = v.bout.from_region('lower_outer_intersep')
 
             # Remove attributes that are expected to be different
             del v_lower_outer_intersep.attrs['region']
@@ -412,13 +412,13 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys22 + 1, None)),
                                  v_lower_outer_intersep.isel(theta=slice(myg, None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
                                         theta=slice(jys22 + 1 - myg, jys22 + 1)).values,
                                  v_lower_outer_intersep.isel(theta=slice(myg)).values)
 
-            v_lower_outer_SOL = v.bout.fromRegion('lower_outer_SOL')
+            v_lower_outer_SOL = v.bout.from_region('lower_outer_SOL')
 
             # Remove attributes that are expected to be different
             del v_lower_outer_SOL.attrs['region']
@@ -426,7 +426,7 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys22 + 1, None)),
                                  v_lower_outer_SOL.isel(theta=slice(myg, None)))
             if myg > 0:
-                # check y-guards, which were 'communicated' by fromRegion
+                # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
                 npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
                                         theta=slice(jys22 + 1 - myg, jys22 + 1)).values,

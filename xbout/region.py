@@ -102,6 +102,7 @@ class Region:
             # particular regions, so do not need to be consistent between different
             # regions (e.g. core and PFR), so we are not forced to use just the index
             # value here.
+            dx = ds['dx']
             dx_cumsum = dx.cumsum()
             self.xinner = dx_cumsum[xinner_ind] - dx[xinner_ind]
             self.xouter = dx_cumsum[xouter_ind - 1] + dx[xouter_ind - 1]

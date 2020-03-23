@@ -227,7 +227,7 @@ class BoutDataArrayAccessor:
             except KeyError:
                 n = 8
 
-        da = da.bout.fromRegion(region.name, with_guards={xcoord: 0, ycoord: 2})
+        da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
         da = da.chunk({ycoord: None})
 
         ny_fine = n*region.ny
