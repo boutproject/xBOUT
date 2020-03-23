@@ -130,7 +130,8 @@ class TestBoutDataArrayMethods:
                 npt.assert_allclose(n_nal[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z - 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
     @pytest.mark.long
-    def test_highParallelResRegion_core(self, tmpdir_factory, bout_xyt_example_files):
+    def test_interpolate_parallel_region_core(self, tmpdir_factory,
+                                              bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
                                       nype=1, nt=1, grid='grid', guards={'y': 2},
                                       topology='core')
@@ -158,7 +159,7 @@ class TestBoutDataArrayMethods:
 
         n.data = f(theta).broadcast_like(n)
 
-        n_highres = n.bout.highParallelResRegion('core')
+        n_highres = n.bout.interpolate_parallel('core')
 
         expected = f(theta_fine).broadcast_like(n_highres)
 
@@ -168,8 +169,9 @@ class TestBoutDataArrayMethods:
                                             3,
                                             pytest.param(7, marks=pytest.mark.long),
                                             pytest.param(18, marks=pytest.mark.long)])
-    def test_highParallelResRegion_core_change_n(self, tmpdir_factory,
-                                                 bout_xyt_example_files, res_factor):
+    def test_interpolate_parallel_region_core_change_n(self, tmpdir_factory,
+                                                       bout_xyt_example_files,
+                                                       res_factor):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
                                       nype=1, nt=1, grid='grid', guards={'y': 2},
                                       topology='core')
@@ -198,14 +200,15 @@ class TestBoutDataArrayMethods:
 
         n.data = f(theta).broadcast_like(n)
 
-        n_highres = n.bout.highParallelResRegion('core', n=res_factor)
+        n_highres = n.bout.interpolate_parallel('core', n=res_factor)
 
         expected = f(theta_fine).broadcast_like(n_highres)
 
         npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
 
     @pytest.mark.long
-    def test_highParallelResRegion_sol(self, tmpdir_factory, bout_xyt_example_files):
+    def test_interpolate_parallel_region_sol(self, tmpdir_factory,
+                                             bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
                                       nype=1, nt=1, grid='grid', guards={'y': 2},
                                       topology='sol')
@@ -233,14 +236,14 @@ class TestBoutDataArrayMethods:
 
         n.data = f(theta).broadcast_like(n)
 
-        n_highres = n.bout.highParallelResRegion('SOL')
+        n_highres = n.bout.interpolate_parallel('SOL')
 
         expected = f(theta_fine).broadcast_like(n_highres)
 
         npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
 
-    def test_highParallelResRegion_singlenull(self, tmpdir_factory,
-                                              bout_xyt_example_files):
+    def test_interpolate_parallel_region_singlenull(self, tmpdir_factory,
+                                                    bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
                                       nype=3, nt=1, grid='grid', guards={'y': 2},
                                       topology='single-null')
@@ -271,27 +274,27 @@ class TestBoutDataArrayMethods:
         f_fine = f(theta_fine)[:128]
 
         for region in ['inner_PFR', 'inner_SOL']:
-            n_highres = n.bout.highParallelResRegion(region).isel(theta=slice(2, None))
+            n_highres = n.bout.interpolate_parallel(region).isel(theta=slice(2, None))
 
             expected = f_fine.broadcast_like(n_highres)
 
             npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
 
         for region in ['core', 'SOL']:
-            n_highres = n.bout.highParallelResRegion(region)
+            n_highres = n.bout.interpolate_parallel(region)
 
             expected = f_fine.broadcast_like(n_highres)
 
             npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
 
         for region in ['outer_PFR', 'outer_SOL']:
-            n_highres = n.bout.highParallelResRegion(region).isel(theta=slice(-2))
+            n_highres = n.bout.interpolate_parallel(region).isel(theta=slice(-2))
 
             expected = f_fine.broadcast_like(n_highres)
 
             npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
 
-    def test_highParallelRes(self, tmpdir_factory, bout_xyt_example_files):
+    def test_interpolate_parallel(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
                                       nype=3, nt=1, grid='grid', guards={'y': 2},
                                       topology='single-null')
@@ -324,30 +327,14 @@ class TestBoutDataArrayMethods:
 
         f_fine = f_y(theta_fine)*(x + 1.)
 
-        n_highres = n.bout.highParallelRes().isel(theta=slice(2, -2))
+        n_highres = n.bout.interpolate_parallel().isel(theta=slice(2, -2))
 
         expected = f_fine.broadcast_like(n_highres)
 
         npt.assert_allclose(n_highres.values, expected.values,
                             rtol=0., atol=1.1e-2)
 
-    def test_highParallelRes_toroidal_points(self, tmpdir_factory,
-                                             bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=3, nt=1, grid='grid', guards={'y': 2},
-                                      topology='single-null')
-
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_yboundaries=True)
-
-        n_highres = ds['n'].bout.highParallelRes()
-
-        n_highres_truncated = ds['n'].bout.highParallelRes(toroidal_points=2)
-
-        xrt.assert_identical(n_highres_truncated, n_highres.isel(zeta=[0, 2]))
-
-    def test_highParallelRes_toroidal_points_list(self, tmpdir_factory,
+    def test_interpolate_parallel_toroidal_points(self, tmpdir_factory,
                                                   bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
                                       nype=3, nt=1, grid='grid', guards={'y': 2},
@@ -357,10 +344,27 @@ class TestBoutDataArrayMethods:
                               gridfilepath=Path(path).parent.joinpath('grid.nc'),
                               geometry='toroidal', keep_yboundaries=True)
 
-        n_highres = ds['n'].bout.highParallelRes()
+        n_highres = ds['n'].bout.interpolate_parallel()
+
+        n_highres_truncated = ds['n'].bout.interpolate_parallel(toroidal_points=2)
+
+        xrt.assert_identical(n_highres_truncated, n_highres.isel(zeta=[0, 2]))
+
+    def test_interpolate_parallel_toroidal_points_list(self, tmpdir_factory,
+                                                       bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
+                                      nype=3, nt=1, grid='grid', guards={'y': 2},
+                                      topology='single-null')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n_highres = ds['n'].bout.interpolate_parallel()
 
         points_list = [1, 2]
 
-        n_highres_truncated = ds['n'].bout.highParallelRes(toroidal_points=points_list)
+        n_highres_truncated = ds['n'].bout.interpolate_parallel(
+                                               toroidal_points=points_list)
 
         xrt.assert_identical(n_highres_truncated, n_highres.isel(zeta=points_list))

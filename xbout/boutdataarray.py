@@ -183,31 +183,71 @@ class BoutDataArrayAccessor:
 
         return da
 
-    def highParallelResRegion(self, region, n=None, toroidal_points=None,
-                              method='cubic'):
+    def interpolate_parallel(self, region=None, *, n=None, toroidal_points=None,
+                             method='cubic', return_dataset=False):
         """
         Interpolate in the parallel direction to get a higher resolution version of the
-        variable in a certain region
+        variable.
 
         Parameters
         ----------
-        region : str
-            The region to calculate the output in
+        region : str, optional
+            By default, return a result with all regions interpolated separately and then
+            combined. If an explicit region argument is passed, then return the variable
+            from only that region.
         n : int, optional
             The factor to increase the resolution by. Defaults to the value set by
             BoutDataset.setupParallelInterp(), or 10 if that has not been called.
         toroidal_points : int or sequence of int, optional
             If int, number of toroidal points to output, applies a stride to toroidal
-            direction to save memory usage. It is not always possible to get a particular
-            number of output points with a constant stride, so the number of outputs will
-            be only less than or equal to toroidal_points. If sequence of int, the
-            indexes of toroidal points for the output.
+            direction to save memory usage. If sequence of int, the indexes of toroidal
+            points for the output.
         method : str, optional
             The interpolation method to use. Options from xarray.DataArray.interp(),
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
             'cubic'.
+        return_dataset : bool, optional
+            If this is set to True, return a Dataset containing this variable as a member
+            (by default returns a DataArray). Only used when region=None.
+
+        Returns
+        -------
+        A new DataArray containing a high-resolution version of the variable. (If
+        return_dataset=True, instead returns a Dataset containing the DataArray.)
         """
 
+        if region is None:
+            # Call the single-region version of this method for each region, and combine
+            # the results together
+            parts = [
+                self.interpolate_parallel(region, n=n, toroidal_points=toroidal_points,
+                                          method=method).bout.to_dataset()
+                for region in self.data.regions]
+
+            result = xr.combine_by_coords(parts)
+            result.attrs = parts[0].attrs
+            # xr.combine_by_coords does not keep attrs at the moment. See
+            # https://github.com/pydata/xarray/issues/3865 For now just copy the attrs
+            # from the first region. Can remove this workaround when the xarray issue is
+            # fixed. Should be able to use instead of the above just:
+            # result = xr.combine_by_coords(
+            #    [self.interpolate_parallel(region, n=n, toroidal_points=toroidal_points,
+            #                                method=method).bout.to_dataset()]
+            # )
+
+            # result has all regions, so should not have a region attribute
+            if 'region' in result.attrs:
+                del result.attrs['region']
+            if 'region' in result[self.data.name].attrs:
+                del result[self.data.name].attrs['region']
+
+            if return_dataset:
+                return result
+            else:
+                # Extract the DataArray to return
+                return result[self.data.name]
+
+        # Select a particular 'region' and interpolate to higher parallel resolution
         da = self.data
         region = da.regions[region]
         tcoord = da.metadata['bout_tdim']
@@ -284,62 +324,6 @@ class BoutDataArrayAccessor:
                 da = da.isel(**{zcoord: toroidal_points})
 
         return da
-
-    def highParallelRes(self, return_dataset=False, **kwargs):
-        """
-        Interpolate in the parallel direction to get a higher resolution version of the
-        variable.
-
-        Parameters
-        ----------
-        n : int, optional
-            The factor to increase the resolution by. Defaults to the value set by
-            BoutDataset.setupParallelInterp(), or 10 if that has not been called.
-        toroidal_points : int or sequence of int, optional
-            If int, number of toroidal points to output, applies a stride to toroidal
-            direction to save memory usage. If sequence of int, the indexes of toroidal
-            points for the output.
-        method : str, optional
-            The interpolation method to use. Options from xarray.DataArray.interp(),
-            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
-            'cubic'.
-        return_dataset : bool, optional
-            If this is set to True, return a Dataset containing this variable as a member
-            (by default returns a DataArray)
-
-        Returns
-        -------
-        A new DataArray containing a high-resolution version of the variable. (If
-        return_dataset=True, instead returns a Dataset containing the DataArray.)
-        """
-
-        parts = [self.highParallelResRegion(region, **kwargs).bout.to_dataset()
-                 for region in self.data.regions]
-
-        result = xr.combine_by_coords(parts)
-        result.attrs = parts[0].attrs
-        # xr.combine_by_coords does not keep attrs at the moment. See
-        # https://github.com/pydata/xarray/issues/3865
-        # For now just copy the attrs from the first region. Can remove this workaround
-        # when the xarray issue is fixed. Should be able to use instead of the above
-        # just:
-        # result = xr.combine_by_coords(
-        #         [self.highParallelResRegion(region, **kwargs).bout.to_dataset()
-        #             for region in self.data.regions]
-        #         )
-
-        # result has all regions, so should not have a region attribute
-        if 'region' in result.attrs:
-            del result.attrs['region']
-        if 'region' in result[self.data.name].attrs:
-            del result[self.data.name].attrs['region']
-
-        if return_dataset:
-            return result
-        else:
-            # Extract the DataArray to return
-            return result[self.data.name]
-
 
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):
