@@ -56,18 +56,18 @@ class Region:
         if ds is not None:
             # calculate start and end coordinates
             #####################################
-            xcoord = ds.metadata['bout_xdim']
-            ycoord = ds.metadata['bout_ydim']
+            self.xcoord = ds.metadata['bout_xdim']
+            self.ycoord = ds.metadata['bout_ydim']
 
             # dx is constant in any particular region in the y-direction, so convert to a
             # 1d array
-            dx = ds['dx'].isel(**{ycoord: self.ylower_ind})
+            dx = ds['dx'].isel(**{self.ycoord: self.ylower_ind})
             dx_cumsum = dx.cumsum()
             self.xinner = dx_cumsum[xinner_ind] - dx[xinner_ind]/2.
             self.xouter = dx_cumsum[xouter_ind - 1] + dx[xouter_ind - 1]/2.
 
             # dy is constant in the x-direction, so convert to a 1d array
-            dy = ds['dy'].isel(**{xcoord: self.xinner_ind})
+            dy = ds['dy'].isel(**{self.xcoord: self.xinner_ind})
             dy_cumsum = dy.cumsum()
             self.ylower = dy_cumsum[ylower_ind] - dy[ylower_ind]/2.
             self.yupper = dy_cumsum[yupper_ind - 1] + dy[yupper_ind - 1]/2.
@@ -103,7 +103,7 @@ class Region:
         if self.connection_upper is not None:
             yu += myg
 
-        return slice(xi, xo), slice(yl, yu)
+        return {self.xcoord: slice(xi, xo), self.ycoord: slice(yl, yu)}
 
     def get_inner_guards_slices(self, *, mxg, myg=0):
         """
@@ -123,7 +123,8 @@ class Region:
         yupper = self.yupper_ind
         if self.connection_upper is not None:
             yupper += myg
-        return slice(self.xinner_ind - mxg, self.xinner_ind), slice(ylower, yupper)
+        return {self.xcoord: slice(self.xinner_ind - mxg, self.xinner_ind),
+                self.ycoord: slice(ylower, yupper)}
 
     def get_outer_guards_slices(self, *, mxg, myg=0):
         """
@@ -143,7 +144,8 @@ class Region:
         yupper = self.yupper_ind
         if self.connection_upper is not None:
             yupper += myg
-        return slice(self.xouter_ind, self.xouter_ind + mxg), slice(ylower, yupper)
+        return {self.xcoord: slice(self.xouter_ind, self.xouter_ind + mxg),
+                self.ycoord: slice(ylower, yupper)}
 
     def get_lower_guards_slices(self, *, myg, mxg=0):
         """
@@ -163,7 +165,8 @@ class Region:
         xouter = self.xouter_ind
         if self.connection_outer is not None:
             xouter += mxg
-        return slice(xinner, xouter), slice(self.ylower_ind - myg, self.ylower_ind)
+        return {self.xcoord: slice(xinner, xouter),
+                self.ycoord: slice(self.ylower_ind - myg, self.ylower_ind)}
 
     def get_upper_guards_slices(self, *, myg, mxg=0):
         """
@@ -183,7 +186,8 @@ class Region:
         xouter = self.xouter_ind
         if self.connection_outer is not None:
             xouter += mxg
-        return slice(xinner, xouter), slice(self.yupper_ind, self.yupper_ind + myg)
+        return {self.xcoord: slice(xinner, xouter),
+                self.ycoord: slice(self.yupper_ind, self.yupper_ind + myg)}
 
 
 def _in_range(val, lower, upper):
