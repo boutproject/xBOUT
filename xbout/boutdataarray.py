@@ -165,7 +165,7 @@ class BoutDataArrayAccessor:
                 mxg = with_guards
                 myg = with_guards
 
-        xslice, yslice = region.getSlices()
+        xslice, yslice = region.get_slices()
         da = self.data.isel(**{xcoord: xslice, ycoord: yslice})
 
         if mxg > 0:

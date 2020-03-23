@@ -78,7 +78,7 @@ class Region:
             result += "\t" + attr + "\t" + str(val) + "\n"
         return result
 
-    def getSlices(self, mxg=0, myg=0):
+    def get_slices(self, mxg=0, myg=0):
         """
         Return x- and y-dimension slices that select this region from the global
         DataArray.
