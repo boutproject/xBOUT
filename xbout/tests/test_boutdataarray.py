@@ -1,5 +1,6 @@
 import pytest
 
+import dask.array
 import numpy as np
 from numpy.testing import assert_allclose
 
@@ -43,6 +44,62 @@ class TestBoutDataArrayMethods:
                     zShift[x, y] = (x*ds.sizes['theta'] + y) * 2.*np.pi/ds.sizes['zeta']
                     for z in range(nz):
                         n[t, x, y, z] = 1000.*t + 100.*x + 10.*y + z
+
+        n.attrs['direction_y'] = 'Standard'
+        n_al = n.bout.toFieldAligned()
+        for t in range(ds.sizes['t']):
+            for z in range(nz):
+                assert_allclose(n_al[t, 0, 0, z].values, 1000.*t + z % nz, rtol=1.e-15, atol=5.e-16)                      # noqa: E501
+
+            for z in range(nz):
+                assert_allclose(n_al[t, 0, 1, z].values, 1000.*t + 10.*1. + (z + 1) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+
+            for z in range(nz):
+                assert_allclose(n_al[t, 0, 2, z].values, 1000.*t + 10.*2. + (z + 2) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+
+            for z in range(nz):
+                assert_allclose(n_al[t, 0, 3, z].values, 1000.*t + 10.*3. + (z + 3) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+
+            for z in range(nz):
+                assert_allclose(n_al[t, 1, 0, z].values, 1000.*t + 100.*1 + 10.*0. + (z + 4) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+
+            for z in range(nz):
+                assert_allclose(n_al[t, 1, 1, z].values, 1000.*t + 100.*1 + 10.*1. + (z + 5) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+
+            for z in range(nz):
+                assert_allclose(n_al[t, 1, 2, z].values, 1000.*t + 100.*1 + 10.*2. + (z + 6) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+
+            for z in range(nz):
+                assert_allclose(n_al[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z + 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+
+    def test_toFieldAligned_dask(self, tmpdir_factory, bout_xyt_example_files):
+
+        nz = 6
+
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, nz), nxpe=1,
+                                      nype=1, nt=1)
+        ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
+
+        ds['psixy'] = ds['x']
+        ds['Rxy'] = ds['x']
+        ds['Zxy'] = ds['y']
+
+        ds = apply_geometry(ds, 'toroidal')
+
+        # set up test variable
+        n = ds['n'].load()
+        zShift = ds['zShift'].load()
+        for t in range(ds.sizes['t']):
+            for x in range(ds.sizes['x']):
+                for y in range(ds.sizes['theta']):
+                    zShift[x, y] = (x*ds.sizes['theta'] + y) * 2.*np.pi/ds.sizes['zeta']
+                    for z in range(nz):
+                        n[t, x, y, z] = 1000.*t + 100.*x + 10.*y + z
+
+        # The above loop required the call to .load(), but that turned the data into a
+        # numpy array. Now convert back to dask
+        n = n.chunk({'t': 1})
+        assert isinstance(n.data, dask.array.Array)
 
         n.attrs['direction_y'] = 'Standard'
         n_al = n.bout.toFieldAligned()
