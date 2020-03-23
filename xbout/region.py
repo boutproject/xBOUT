@@ -71,14 +71,12 @@ class Region:
                 ybndry = ds.metadata['MYG']
                 if self.connection_lower is None:
                     self.ny -= ybndry
-                    print('check ny 2', self.ny, self.connection_lower, connect_lower)
 
                     # used to calculate y-coordinate of lower side (self.ylower)
                     ylower_ind += ybndry
 
                 if self.connection_upper is None:
                     self.ny -= ybndry
-                    print('check ny 3', self.ny, self.connection_upper, connect_upper)
 
                     # used to calculate y-coordinate of upper side (self.yupper)
                     yupper_ind -= ybndry
