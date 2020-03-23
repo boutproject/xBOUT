@@ -174,9 +174,9 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         phi0 = 2*np.pi*ds.metadata['ZMIN']
         phi1 = phi0 + nz*ds.metadata['dz']
         if not np.isclose(phi1, 2.*np.pi*ds.metadata['ZMAX'], rtol=1.e-15, atol=0.):
-            warn('Size of toroidal domain as calculated from nz*dz (' + str(phi1 - phi0)
-                 + ' is not the same as 2pi*(ZMAX - ZMIN) ('
-                 + str(2.*np.pi*ds.metadata['ZMAX'] - phi0) + '): using value from dz')
+            warn(f"Size of toroidal domain as calculated from nz*dz ({phi1 - phi0}) is "
+                 f"not the same as 2pi*(ZMAX - ZMIN) "
+                 f"({2.*np.pi*ds.metadata['ZMAX'] - phi0}): using value from dz")
         phi = xr.DataArray(np.linspace(start=phi0, stop=phi1, num=nz, endpoint=False),
                            dims=coordinates['z'])
         ds = ds.assign_coords(**{coordinates['z']: phi})
