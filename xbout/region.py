@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from .utils import _set_attrs_on_all_vars
 
 
@@ -319,7 +317,7 @@ topologies = {}
 
 def topology_disconnected_double_null(*, ds, ixs1, ixs2, nx, jys11, jys21, ny_inner,
                                       jys12, jys22, ny, ybndry):
-    regions = OrderedDict()
+    regions = {}
     regions['lower_inner_PFR'] = Region(
             name='lower_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
             ylower_ind=0, yupper_ind=jys11 + 1, connect_outer='lower_inner_intersep',
@@ -408,7 +406,7 @@ topologies['disconnected-double-null'] = topology_disconnected_double_null
 
 def topology_connected_double_null(*, ds, ixs1, ixs2, nx, jys11, jys21, ny_inner, jys12,
                                    jys22, ny, ybndry):
-    regions = OrderedDict()
+    regions = {}
     regions['lower_inner_PFR'] = Region(
             name='lower_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
             ylower_ind=0, yupper_ind=jys11 + 1, connect_outer='lower_inner_SOL',
@@ -465,7 +463,7 @@ topologies['connected-double-null'] = topology_connected_double_null
 
 def topology_single_null(*, ds, ixs1, ixs2, nx, jys11, jys21, ny_inner, jys12, jys22,
                          ny, ybndry):
-    regions = OrderedDict()
+    regions = {}
     regions['inner_PFR'] = Region(
             name='inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1, ylower_ind=0,
             yupper_ind=jys11 + 1, connect_outer='inner_SOL',
@@ -497,7 +495,7 @@ topologies['single-null'] = topology_single_null
 
 def topology_limiter(*, ds, ixs1, ixs2, nx, jys11, jys21, ny_inner, jys12, jys22, ny,
                      ybndry):
-    regions = OrderedDict()
+    regions = {}
     regions['core'] = Region(
             name='core', ds=ds, xinner_ind=0, xouter_ind=ixs1, ylower_ind=ybndry,
             yupper_ind=ny - ybndry, connect_outer='SOL', connect_lower='core',
@@ -513,7 +511,7 @@ topologies['limiter'] = topology_limiter
 
 def topology_core(*, ds, ixs1, ixs2, nx, jys11, jys21, ny_inner, jys12, jys22, ny,
                   ybndry):
-    regions = OrderedDict()
+    regions = {}
     regions['core'] = Region(
             name='core', ds=ds, xinner_ind=0, xouter_ind=nx, ylower_ind=ybndry,
             yupper_ind=ny - ybndry, connect_lower='core', connect_upper='core')
@@ -525,7 +523,7 @@ topologies['core'] = topology_core
 
 def topology_sol(*, ds, ixs1, ixs2, nx, jys11, jys21, ny_inner, jys12, jys22, ny,
                  ybndry):
-    regions = OrderedDict()
+    regions = {}
     regions['SOL'] = Region(
             name='SOL', ds=ds, xinner_ind=0, xouter_ind=nx, ylower_ind=0,
             yupper_ind=ny)
@@ -537,7 +535,7 @@ topologies['sol'] = topology_sol
 
 def topology_xpoint(*, ds, ixs1, ixs2, nx, jys11, jys21, ny_inner, jys12, jys22, ny,
                     ybndry):
-    regions = OrderedDict()
+    regions = {}
     regions['lower_inner_PFR'] = Region(
             name='lower_inner_PFR', ds=ds, xinner_ind=0, xouter_ind=ixs1,
             ylower_ind=0, yupper_ind=jys11 + 1, connect_outer='lower_inner_SOL',
