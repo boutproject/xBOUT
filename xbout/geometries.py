@@ -76,9 +76,16 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     # long as these bounds are consistent with the global coordinates defined in
     # Region.__init__() (we will only use these coordinates for interpolation) and it is
     # simplest to calculate them with cumsum().
+    tcoord = updated_ds.metadata.get('bout_tdim', 't')
     xcoord = updated_ds.metadata.get('bout_xdim', 'x')
     ycoord = updated_ds.metadata.get('bout_ydim', 'y')
     zcoord = updated_ds.metadata.get('bout_zdim', 'z')
+
+    if (tcoord not in ds.coords) and (tcoord in ds.dims):
+        # Create the time coordinate from t_array
+        updated_ds = updated_ds.rename({'t_array': tcoord})
+        updated_ds = updated_ds.set_coords(tcoord)
+
     if xcoord not in ds.coords:
         # Make index 'x' a coordinate, useful for handling global indexing
         # Note we have to use the index value, not the value calculated from 'dx' because
