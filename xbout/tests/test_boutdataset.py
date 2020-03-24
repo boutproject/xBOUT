@@ -432,6 +432,26 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys22 + 1 - myg, jys22 + 1)).values,
                                  v_lower_outer_SOL.isel(theta=slice(myg)).values)
 
+    def test_interpolate_parallel_all_variables_arg(self, tmpdir_factory,
+                                                    bout_xyt_example_files):
+        # Check that passing 'variables=...' to interpolate_parallel() does actually
+        # interpolate all the variables
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1,
+                                      nype=1, nt=1, grid='grid', topology='sol')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal')
+
+        # Get high parallel resolution version of ds, and check that
+        ds = ds.bout.interpolate_parallel(...)
+
+        interpolated_variables = [v for v in ds]
+
+        assert set(interpolated_variables) == set(('n', 'T', 'g11', 'g22', 'g33', 'g12',
+                'g13', 'g23', 'g_11', 'g_22', 'g_33', 'g_12', 'g_13', 'g_23', 'G1', 'G2',
+                'G3', 'J', 'Bxy', 'dx', 'dy'))
+
 
 class TestLoadInputFile:
     @pytest.mark.skip

@@ -107,8 +107,9 @@ class BoutDatasetAccessor:
 
         Parameters
         ----------
-        variables : str or sequence of str
-            The names of the variables to interpolate
+        variables : str or sequence of str or ...
+            The names of the variables to interpolate. If 'variables=...' is passed
+            explicitly, then interpolate all variables in the Dataset.
         n : int, optional
             The factor to increase the resolution by. Defaults to the value set by
             BoutDataset.setupParallelInterp(), or 10 if that has not been called.
@@ -126,6 +127,15 @@ class BoutDatasetAccessor:
         A new Dataset containing a high-resolution versions of the variables. The new
         Dataset is a valid BoutDataset, although containing only the specified variables.
         """
+
+        if variables is ...:
+            variables = [v for v in self.data]
+            if 'dy' in variables:
+                # dy is treated specially, as it is converted to a coordinate, and then
+                # converted back again below, so must not call
+                # interpolate_parallel('dy').
+                variables.remove('dy')
+
         if isinstance(variables, str):
             ds = self.data[variables].bout.interpolate_parallel(return_dataset=True,
                                                                 **kwargs)
