@@ -278,11 +278,11 @@ class BoutDataArrayAccessor:
         dy = (region.yupper - region.ylower)/ny_fine
 
         myg = da.metadata['MYG']
-        if da.metadata['keep_yboundaries'] and region.connection_lower is None:
+        if da.metadata['keep_yboundaries'] and region.connection_lower_y is None:
             ybndry_lower = myg
         else:
             ybndry_lower = 0
-        if da.metadata['keep_yboundaries'] and region.connection_upper is None:
+        if da.metadata['keep_yboundaries'] and region.connection_upper_y is None:
             ybndry_upper = myg
         else:
             ybndry_upper = 0
