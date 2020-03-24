@@ -14,8 +14,9 @@ class Region:
     Also stores the names of any neighbouring regions.
     """
     def __init__(self, *, name, ds=None, xinner_ind=None, xouter_ind=None,
-                 ylower_ind=None, yupper_ind=None, connect_inner=None,
-                 connect_outer=None, connect_lower=None, connect_upper=None):
+                 ylower_ind=None, yupper_ind=None, connection_inner_x=None,
+                 connection_outer_x=None, connection_lower_y=None,
+                 connection_upper_y=None):
         """
         Parameters
         ----------
@@ -31,13 +32,13 @@ class Region:
             Global y-index of the lower points of this region
         yupper_ind : int, optional
             Global y-index of the points just beyond the upper edge of this region
-        connect_inner : str, optional
+        connection_inner_x : str, optional
             The region inside this one in the x-direction
-        connect_outer : str, optional
+        connection_outer_x : str, optional
             The region outside this one in the x-direction
-        connect_lower : str, optional
+        connection_lower_y : str, optional
             The region below this one in the y-direction
-        connect_upper : str, optional
+        connection_upper_y : str, optional
             The region above this one in the y-direction
         """
         self.name = name
@@ -49,10 +50,10 @@ class Region:
         self.yupper_ind = yupper_ind
         if yupper_ind is not None and ylower_ind is not None:
             self.ny = yupper_ind - ylower_ind
-        self.connection_inner = connect_inner
-        self.connection_outer = connect_outer
-        self.connection_lower = connect_lower
-        self.connection_upper = connect_upper
+        self.connection_inner_x = connection_inner_x
+        self.connection_outer_x = connection_outer_x
+        self.connection_lower_y = connection_lower_y
+        self.connection_upper_y = connection_upper_y
 
         if ds is not None:
             # calculate start and end coordinates
@@ -89,19 +90,19 @@ class Region:
         xslice, yslice : slice, slice
         """
         xi = self.xinner_ind
-        if self.connection_inner is not None:
+        if self.connection_inner_x is not None:
             xi -= mxg
 
         xo = self.xouter_ind
-        if self.connection_outer is not None:
+        if self.connection_outer_x is not None:
             xi += mxg
 
         yl = self.ylower_ind
-        if self.connection_lower is not None:
+        if self.connection_lower_y is not None:
             yl -= myg
 
         yu = self.yupper_ind
-        if self.connection_upper is not None:
+        if self.connection_upper_y is not None:
             yu += myg
 
         return {self.xcoord: slice(xi, xo), self.ycoord: slice(yl, yu)}
@@ -119,10 +120,10 @@ class Region:
             Number of y-guard cells to include at the corners
         """
         ylower = self.ylower_ind
-        if self.connection_lower is not None:
+        if self.connection_lower_y is not None:
             ylower -= myg
         yupper = self.yupper_ind
-        if self.connection_upper is not None:
+        if self.connection_upper_y is not None:
             yupper += myg
         return {self.xcoord: slice(self.xinner_ind - mxg, self.xinner_ind),
                 self.ycoord: slice(ylower, yupper)}
@@ -140,10 +141,10 @@ class Region:
             Number of y-guard cells to include at the corners
         """
         ylower = self.ylower_ind
-        if self.connection_lower is not None:
+        if self.connection_lower_y is not None:
             ylower -= myg
         yupper = self.yupper_ind
-        if self.connection_upper is not None:
+        if self.connection_upper_y is not None:
             yupper += myg
         return {self.xcoord: slice(self.xouter_ind, self.xouter_ind + mxg),
                 self.ycoord: slice(ylower, yupper)}
@@ -161,10 +162,10 @@ class Region:
             Number of x-guard cells to include at the corners
         """
         xinner = self.xinner_ind
-        if self.connection_inner is not None:
+        if self.connection_inner_x is not None:
             xinner -= mxg
         xouter = self.xouter_ind
-        if self.connection_outer is not None:
+        if self.connection_outer_x is not None:
             xouter += mxg
         return {self.xcoord: slice(xinner, xouter),
                 self.ycoord: slice(self.ylower_ind - myg, self.ylower_ind)}
@@ -182,10 +183,10 @@ class Region:
             Number of x-guard cells to include at the corners
         """
         xinner = self.xinner_ind
-        if self.connection_inner is not None:
+        if self.connection_inner_x is not None:
             xinner -= mxg
         xouter = self.xouter_ind
-        if self.connection_outer is not None:
+        if self.connection_outer_x is not None:
             xouter += mxg
         return {self.xcoord: slice(xinner, xouter),
                 self.ycoord: slice(self.yupper_ind, self.yupper_ind + myg)}
@@ -246,13 +247,13 @@ def _get_topology(ds):
 
 
 def _create_connection_x(regions, inner, outer):
-    regions[inner].connection_outer = outer
-    regions[outer].connection_inner = inner
+    regions[inner].connection_outer_x = outer
+    regions[outer].connection_inner_x = inner
 
 
 def _create_connection_y(regions, lower, upper):
-    regions[lower].connection_upper = upper
-    regions[upper].connection_lower = lower
+    regions[lower].connection_upper_y = upper
+    regions[upper].connection_lower_y = lower
 
 
 def _create_regions_toroidal(ds):
@@ -539,15 +540,15 @@ def _concat_inner_guards(da, da_global, mxg):
     xcoord = da_global.metadata['bout_xdim']
     ycoord = da_global.metadata['bout_ydim']
 
-    da_inner = da_global.bout.from_region(da.region.connection_inner, with_guards=0)
+    da_inner = da_global.bout.from_region(da.region.connection_inner_x, with_guards=0)
 
-    if (myg_da > 0 and keep_yboundaries and da.region.connection_lower is not None
-            and da_inner.region.connection_lower is None):
+    if (myg_da > 0 and keep_yboundaries and da.region.connection_lower_y is not None
+            and da_inner.region.connection_lower_y is None):
         # da_inner may have more points in the y-direction, because it has an actual
         # boundary, not a connection. Need to remove any extra points
         da_inner = da_inner.isel(**{ycoord: slice(myg_da, None)})
-    if (myg_da > 0 and keep_yboundaries and da.region.connection_upper is not None
-            and da_inner.region.connection_upper is None):
+    if (myg_da > 0 and keep_yboundaries and da.region.connection_upper_y is not None
+            and da_inner.region.connection_upper_y is None):
         # da_inner may have more points in the y-direction, because it has an actual
         # boundary, not a connection. Need to remove any extra points
         da_inner = da_inner.isel(**{ycoord: slice(None, -myg_da)})
@@ -555,11 +556,11 @@ def _concat_inner_guards(da, da_global, mxg):
     # select just the points we need to fill the guard cells of da
     da_inner = da_inner.isel(**{xcoord: slice(-mxg, None)})
 
-    if (myg_da > 0 and keep_yboundaries and da.region.connection_lower is None
-            and da_inner.region.connection_lower is not None):
+    if (myg_da > 0 and keep_yboundaries and da.region.connection_lower_y is None
+            and da_inner.region.connection_lower_y is not None):
         # da_inner may have fewer points in the y-direction, because it has a connection,
         # not an actual boundary. Need to get the extra points from its connection
-        da_inner_lower = da_global.bout.from_region(da_inner.region.connection_lower,
+        da_inner_lower = da_global.bout.from_region(da_inner.region.connection_lower_y,
                                                     with_guards=0)
         da_inner_lower = da_inner_lower.isel(**{xcoord: slice(-mxg, None),
                                                 ycoord: slice(-myg_da, None)})
@@ -568,11 +569,11 @@ def _concat_inner_guards(da, da_global, mxg):
         # xr.concat takes attributes from the first variable, but we need da_inner's
         # region
         da_inner.attrs['region'] = save_region
-    if (myg_da > 0 and keep_yboundaries and da.region.connection_upper is None
-            and da_inner.region.connection_upper is not None):
+    if (myg_da > 0 and keep_yboundaries and da.region.connection_upper_y is None
+            and da_inner.region.connection_upper_y is not None):
         # da_inner may have fewer points in the y-direction, because it has a connection,
         # not an actual boundary. Need to get the extra points from its connection
-        da_inner_upper = da_global.bout.from_region(da_inner.region.connection_upper,
+        da_inner_upper = da_global.bout.from_region(da_inner.region.connection_upper_y,
                                                     with_guards=0)
         da_inner_upper = da_inner_upper.isel(**{xcoord: slice(-mxg, None),
                                                 ycoord: slice(myg_da)})
@@ -611,15 +612,15 @@ def _concat_outer_guards(da, da_global, mxg):
     xcoord = da_global.metadata['bout_xdim']
     ycoord = da_global.metadata['bout_ydim']
 
-    da_outer = da_global.bout.from_region(da.region.connection_outer, with_guards=0)
+    da_outer = da_global.bout.from_region(da.region.connection_outer_x, with_guards=0)
 
-    if (myg_da > 0 and keep_yboundaries and da.region.connection_lower is not None
-            and da_outer.region.connection_lower is None):
+    if (myg_da > 0 and keep_yboundaries and da.region.connection_lower_y is not None
+            and da_outer.region.connection_lower_y is None):
         # da_outer may have more points in the y-direction, because it has an actual
         # boundary, not a connection. Need to remove any extra points
         da_outer = da_outer.isel(**{ycoord: slice(myg_da, None)})
-    if (myg_da > 0 and keep_yboundaries and da.region.connection_upper is not None
-            and da_outer.region.connection_upper is None):
+    if (myg_da > 0 and keep_yboundaries and da.region.connection_upper_y is not None
+            and da_outer.region.connection_upper_y is None):
         # da_outer may have more points in the y-direction, because it has an actual
         # boundary, not a connection. Need to remove any extra points
         da_outer = da_outer.isel(**{ycoord: slice(None, -myg_da)})
@@ -627,11 +628,11 @@ def _concat_outer_guards(da, da_global, mxg):
     # select just the points we need to fill the guard cells of da
     da_outer = da_outer.isel(**{xcoord: slice(mxg)})
 
-    if (myg_da > 0 and keep_yboundaries and da.region.connection_lower is None
-            and da_outer.region.connection_lower is not None):
+    if (myg_da > 0 and keep_yboundaries and da.region.connection_lower_y is None
+            and da_outer.region.connection_lower_y is not None):
         # da_outer may have fewer points in the y-direction, because it has a connection,
         # not an actual boundary. Need to get the extra points from its connection
-        da_outer_lower = da_global.bout.from_region(da_outer.region.connection_lower,
+        da_outer_lower = da_global.bout.from_region(da_outer.region.connection_lower_y,
                                                     with_guards=0)
         da_outer_lower = da_outer_lower.isel(**{xcoord: slice(-mxg, None),
                                                 ycoord: slice(-myg_da, None)})
@@ -640,11 +641,11 @@ def _concat_outer_guards(da, da_global, mxg):
         # xr.concat takes attributes from the first variable, but we need da_outer's
         # region
         da_outer.attrs['region'] = save_region
-    if (myg_da > 0 and keep_yboundaries and da.region.connection_upper is None
-            and da_outer.region.connection_upper is not None):
+    if (myg_da > 0 and keep_yboundaries and da.region.connection_upper_y is None
+            and da_outer.region.connection_upper_y is not None):
         # da_outer may have fewer points in the y-direction, because it has a connection,
         # not an actual boundary. Need to get the extra points from its connection
-        da_outer_upper = da_global.bout.from_region(da_outer.region.connection_upper,
+        da_outer_upper = da_global.bout.from_region(da_outer.region.connection_upper_y,
                                                     with_guards=0)
         da_outer_upper = da_outer_upper.isel(**{xcoord: slice(-mxg, None),
                                                 ycoord: slice(myg_da)})
@@ -680,7 +681,7 @@ def _concat_lower_guards(da, da_global, mxg, myg):
     xcoord = da_global.metadata['bout_xdim']
     ycoord = da_global.metadata['bout_ydim']
 
-    da_lower = da_global.bout.from_region(da.region.connection_lower,
+    da_lower = da_global.bout.from_region(da.region.connection_lower_y,
                                           with_guards={xcoord: mxg, ycoord: 0})
 
     # select just the points we need to fill the guard cells of da
@@ -725,7 +726,7 @@ def _concat_upper_guards(da, da_global, mxg, myg):
     xcoord = da_global.metadata['bout_xdim']
     ycoord = da_global.metadata['bout_ydim']
 
-    da_upper = da_global.bout.from_region(da.region.connection_upper,
+    da_upper = da_global.bout.from_region(da.region.connection_upper_y,
                                           with_guards={xcoord: mxg, ycoord: 0})
     # select just the points we need to fill the guard cells of da
     da_upper = da_upper.isel(**{ycoord: slice(myg)})
