@@ -531,6 +531,9 @@ def _concat_inner_guards(da, da_global, mxg):
     cells from the global array
     """
 
+    if mxg <= 0:
+        return da
+
     myg_da = da_global.metadata['MYG']
     keep_yboundaries = da_global.metadata['keep_yboundaries']
     xcoord = da_global.metadata['bout_xdim']
@@ -600,6 +603,9 @@ def _concat_outer_guards(da, da_global, mxg):
     cells from the global array
     """
 
+    if mxg <= 0:
+        return da
+
     myg_da = da_global.metadata['MYG']
     keep_yboundaries = da_global.metadata['keep_yboundaries']
     xcoord = da_global.metadata['bout_xdim']
@@ -668,6 +674,9 @@ def _concat_lower_guards(da, da_global, mxg, myg):
     cells from the global array
     """
 
+    if myg <= 0:
+        return da
+
     xcoord = da_global.metadata['bout_xdim']
     ycoord = da_global.metadata['bout_ydim']
 
@@ -709,6 +718,9 @@ def _concat_upper_guards(da, da_global, mxg, myg):
     Concatenate upper y-guard cells to da, which is in a single region, getting the guard
     cells from the global array
     """
+
+    if myg <= 0:
+        return da
 
     xcoord = da_global.metadata['bout_xdim']
     ycoord = da_global.metadata['bout_ydim']
