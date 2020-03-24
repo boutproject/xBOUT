@@ -61,7 +61,9 @@ def _update_metadata_increased_resolution(da, n):
     da.attrs['metadata'] = deepcopy(da.metadata)
 
     def update_jyseps(name):
-        da.metadata[name] = n*(da.metadata[name] + 1) - 1
+        # If any jyseps<=0, need to leave as is
+        if da.metadata[name] > 0:
+            da.metadata[name] = n*(da.metadata[name] + 1) - 1
     update_jyseps('jyseps1_1')
     update_jyseps('jyseps2_1')
     update_jyseps('jyseps1_2')
