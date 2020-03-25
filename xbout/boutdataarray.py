@@ -172,21 +172,18 @@ class BoutDataArrayAccessor:
         da = self.data.isel(region.get_slices())
         da.attrs['region'] = region
 
-        if mxg > 0:
-            if region.connection_inner is not None:
-                # get inner x-guard cells for da from the global array
-                da = _concat_inner_guards(da, self.data, mxg)
-            if region.connection_outer is not None:
-                # get outer x-guard cells for da from the global array
-                da = _concat_outer_guards(da, self.data, mxg)
-
-        if myg > 0:
-            if region.connection_lower is not None:
-                # get lower y-guard cells from the global array
-                da = _concat_lower_guards(da, self.data, mxg, myg)
-            if region.connection_upper is not None:
-                # get upper y-guard cells from the global array
-                da = _concat_upper_guards(da, self.data, mxg, myg)
+        if region.connection_inner_x is not None:
+            # get inner x-guard cells for da from the global array
+            da = _concat_inner_guards(da, self.data, mxg)
+        if region.connection_outer_x is not None:
+            # get outer x-guard cells for da from the global array
+            da = _concat_outer_guards(da, self.data, mxg)
+        if region.connection_lower_y is not None:
+            # get lower y-guard cells from the global array
+            da = _concat_lower_guards(da, self.data, mxg, myg)
+        if region.connection_upper_y is not None:
+            # get upper y-guard cells from the global array
+            da = _concat_upper_guards(da, self.data, mxg, myg)
 
         return da
 
