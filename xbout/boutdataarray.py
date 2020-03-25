@@ -124,8 +124,8 @@ class BoutDataArrayAccessor:
         to the base coordinates by an angle zShift
         """
         if self.data.direction_y != "Standard":
-            raise ValueError("Cannot shift a " + self.direction_y + " type field to "
-                             + "field-aligned coordinates")
+            raise ValueError(f"Cannot shift a {self.data.direction_y} type field to "
+                             "field-aligned coordinates")
         if hasattr(self.data, "cell_location") and not (
             self.data.cell_location == "CELL_CENTRE"
             or self.data.cell_location == "CELL_ZLOW"
@@ -144,8 +144,8 @@ class BoutDataArrayAccessor:
         respect to the base coordinates by an angle zShift
         """
         if self.data.direction_y != "Aligned":
-            raise ValueError("Cannot shift a " + self.direction_y + " type field to "
-                             + "field-aligned coordinates")
+            raise ValueError(f"Cannot shift a {self.data.direction_y} type field from "
+                             "field-aligned coordinates")
         if hasattr(self.data, "cell_location") and not (
             self.data.cell_location == "CELL_CENTRE"
             or self.data.cell_location == "CELL_ZLOW"
