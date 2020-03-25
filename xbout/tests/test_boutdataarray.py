@@ -26,6 +26,32 @@ class TestBoutDataArrayMethods:
         assert dict_equiv(ds.attrs, new_ds.attrs)
         assert dict_equiv(ds.metadata, new_ds.metadata)
 
+    @pytest.mark.parametrize("mxg", [0, pytest.param(2, marks=pytest.mark.long)])
+    @pytest.mark.parametrize("myg", [pytest.param(0, marks=pytest.mark.long), 2])
+    def test_remove_yboundaries(self, tmpdir_factory, bout_xyt_example_files, mxg, myg):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1,
+                nype=6, nt=1, grid='grid', guards={'x': mxg, 'y': myg},
+                topology='connected-double-null', syn_data_type='linear')
+
+        ds = open_boutdataset(datapath=path,
+                gridfilepath=Path(path).parent.joinpath('grid.nc'), geometry='toroidal',
+                keep_yboundaries=True)
+
+        path_no_yboundaries = bout_xyt_example_files(
+                tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1, nype=6, nt=1, grid='grid',
+                guards={'x': mxg, 'y': 0}, topology='connected-double-null',
+                syn_data_type='linear')
+
+        ds_no_yboundaries = open_boutdataset(
+                datapath=path_no_yboundaries,
+                gridfilepath=Path(path).parent.joinpath('grid.nc'), geometry='toroidal',
+                keep_yboundaries=False)
+
+        n = ds['n'].bout.remove_yboundaries()
+
+        assert n.metadata['keep_yboundaries'] == 0
+        npt.assert_equal(n.values, ds_no_yboundaries['n'].values)
+
     @pytest.mark.parametrize('nz', [pytest.param(6, marks=pytest.mark.long),
                                     7,
                                     pytest.param(8, marks=pytest.mark.long),

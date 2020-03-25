@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy, deepcopy
 from pprint import pformat as prettyformat
 from functools import partial
 
@@ -381,6 +381,61 @@ class BoutDataArrayAccessor:
                 da = da.isel(**{zcoord: toroidal_points})
 
         return da
+
+    def remove_yboundaries(self, return_dataset=False):
+        """
+        Remove y-boundary points, if present, from the DataArray
+
+        Parameters
+        ----------
+        return_dataset : bool, default False
+            Return the result as a Dataset containing the new DataArray.
+        """
+
+        myg = self.data.metadata['MYG']
+
+        if self.metadata['keep_yboundaries'] == 0 or myg == 0:
+            # Ensure we do not modify any other references to metadata
+            self.data.attrs['metadata'] = deepcopy(self.data.metadata)
+            self.data.metadata['keep_yboundaries'] = 0
+            # no y-boundary points to remove
+            if return_dataset:
+                return self.data.to_dataset()
+            else:
+                return self.data
+
+        ycoord = self.data.metadata['bout_ydim']
+        parts = []
+        for region in self.data.regions:
+            part = self.data.bout.from_region(region, with_guards=0)
+            if part.region.connection_lower_y is None:
+                part = part.isel({ycoord: slice(myg, None)})
+            if part.region.connection_upper_y is None:
+                part = part.isel({ycoord: slice(-myg)})
+            parts.append(part.bout.to_dataset())
+
+        result = xr.combine_by_coords(parts)
+        # Ensure we do not modify any other references to metadata
+        result.attrs = copy(parts[0].attrs)
+        result.attrs['metadata'] = deepcopy(self.data.metadata)
+        result[self.data.name].attrs['metadata'] = deepcopy(self.data.metadata)
+
+        # result is as if we had not kept y-boundaries when loading
+        result.metadata['keep_yboundaries'] = 0
+        result[self.data.name].metadata['keep_yboundaries'] = 0
+
+        del result.attrs['region']
+        del result[self.data.name].attrs['region']
+
+        # regions are not correct now that number of y-points has changed
+        del result.attrs['regions']
+        del result[self.data.name].attrs['regions']
+
+        if return_dataset:
+            return result
+        else:
+            # Extract the DataArray to return
+            return result[self.data.name]
 
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):
