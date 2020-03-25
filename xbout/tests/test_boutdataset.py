@@ -83,6 +83,7 @@ class TestBoutDatasetMethods:
 
         # check getting the cached version
         ds['n_aligned'] = ds['T']
+        ds['n_aligned'].attrs['direction_y'] = 'Aligned'
         xrt.assert_allclose(ds.bout.getFieldAligned('n'), ds['T'])
 
     def test_set_parallel_interpolation_factor(self):
