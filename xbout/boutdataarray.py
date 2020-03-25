@@ -135,7 +135,7 @@ class BoutDataArrayAccessor:
                 f"location is {self.data.cell_location}."
             )
         result = self._shiftZ(self.data['zShift'])
-        result["direction_y"] = "Aligned"
+        result.attrs["direction_y"] = "Aligned"
         return result
 
     def fromFieldAligned(self):
@@ -155,7 +155,7 @@ class BoutDataArrayAccessor:
                 f"location is {self.data.cell_location}."
             )
         result = self._shiftZ(-self.data['zShift'])
-        result["direction_y"] = "Standard"
+        result.attrs["direction_y"] = "Standard"
         return result
 
     @property
