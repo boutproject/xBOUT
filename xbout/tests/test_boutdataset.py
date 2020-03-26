@@ -86,6 +86,48 @@ class TestBoutDatasetMethods:
         ds['n_aligned'].attrs['direction_y'] = 'Aligned'
         xrt.assert_allclose(ds.bout.get_field_aligned('n'), ds['T'])
 
+    @pytest.mark.parametrize("mxg", [0, pytest.param(2, marks=pytest.mark.long)])
+    @pytest.mark.parametrize("myg", [pytest.param(0, marks=pytest.mark.long), 2])
+    def test_remove_yboundaries(self, tmpdir_factory, bout_xyt_example_files, mxg, myg):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1,
+                nype=6, nt=1, grid='grid', guards={'x': mxg, 'y': myg},
+                topology='connected-double-null', syn_data_type='linear')
+
+        ds = open_boutdataset(datapath=path,
+                gridfilepath=Path(path).parent.joinpath('grid.nc'), geometry='toroidal',
+                keep_yboundaries=True)
+
+        path_no_yboundaries = bout_xyt_example_files(
+                tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1, nype=6, nt=1, grid='grid',
+                guards={'x': mxg, 'y': 0}, topology='connected-double-null',
+                syn_data_type='linear')
+
+        ds_no_yboundaries = open_boutdataset(
+                datapath=path_no_yboundaries,
+                gridfilepath=Path(path).parent.joinpath('grid.nc'), geometry='toroidal',
+                keep_yboundaries=False)
+
+        ds = ds.bout.remove_yboundaries()
+
+        assert ds.metadata['keep_yboundaries'] == 0
+        for v in ds:
+            print('keep y',v)
+            assert ds[v].metadata['keep_yboundaries'] == 0
+
+        # expect theta coordinate to be different, so ignore
+        ds = ds.drop('theta')
+        ds_no_yboundaries = ds_no_yboundaries.drop('theta')
+
+        # expect MYG can be different, so ignore
+        del ds.metadata['MYG']
+        del ds_no_yboundaries.metadata['MYG']
+        for v in ds:
+            del ds[v].metadata['MYG']
+            # metadata on variables is a reference to ds_no_yboundaries.metadata, so
+            # don't need to delete MYG again
+
+        xrt.assert_equal(ds, ds_no_yboundaries)
+
     def test_set_parallel_interpolation_factor(self):
         ds = Dataset()
         ds['a'] = DataArray()

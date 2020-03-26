@@ -400,7 +400,7 @@ class BoutDataArrayAccessor:
             self.data.metadata['keep_yboundaries'] = 0
             # no y-boundary points to remove
             if return_dataset:
-                return self.data.to_dataset()
+                return self.to_dataset()
             else:
                 return self.data
 
