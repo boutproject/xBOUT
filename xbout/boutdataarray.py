@@ -206,20 +206,29 @@ class BoutDataArrayAccessor:
                 myg = with_guards
 
         da = self.data.isel(region.get_slices())
-        da.attrs['region'] = region
 
-        if region.connection_inner_x is not None:
-            # get inner x-guard cells for da from the global array
-            da = _concat_inner_guards(da, self.data, mxg)
-        if region.connection_outer_x is not None:
-            # get outer x-guard cells for da from the global array
-            da = _concat_outer_guards(da, self.data, mxg)
-        if region.connection_lower_y is not None:
-            # get lower y-guard cells from the global array
-            da = _concat_lower_guards(da, self.data, mxg, myg)
-        if region.connection_upper_y is not None:
-            # get upper y-guard cells from the global array
-            da = _concat_upper_guards(da, self.data, mxg, myg)
+        # Make sure attrs are unique before we change them
+        da.attrs = copy(da.attrs)
+        # The returned da has only one region
+        single_region = deepcopy(region)
+        da.attrs['regions'] = {name: single_region}
+
+        # get inner x-guard cells for da from the global array
+        da = _concat_inner_guards(da, self.data, mxg)
+        # get outer x-guard cells for da from the global array
+        da = _concat_outer_guards(da, self.data, mxg)
+        # get lower y-guard cells from the global array
+        da = _concat_lower_guards(da, self.data, mxg, myg)
+        # get upper y-guard cells from the global array
+        da = _concat_upper_guards(da, self.data, mxg, myg)
+
+        # If the result (which only has a single region) is passed to from_region a
+        # second time, don't want to slice anything.
+        single_region = list(da.regions.values())[0]
+        single_region.xinner_ind = None
+        single_region.xouter_ind = None
+        single_region.ylower_ind = None
+        single_region.yupper_ind = None
 
         return da
 
@@ -408,9 +417,10 @@ class BoutDataArrayAccessor:
         parts = []
         for region in self.data.regions:
             part = self.data.bout.from_region(region, with_guards=0)
-            if part.region.connection_lower_y is None:
+            part_region = list(part.regions.values())[0]
+            if part_region.connection_lower_y is None:
                 part = part.isel({ycoord: slice(myg, None)})
-            if part.region.connection_upper_y is None:
+            if part_region.connection_upper_y is None:
                 part = part.isel({ycoord: slice(
                     -myg if not remove_extra_upper else -myg-1)})
             parts.append(part.bout.to_dataset())
@@ -432,9 +442,6 @@ class BoutDataArrayAccessor:
             result.metadata['jyseps1_2'] -= 1
             result.metadata['jyseps2_2'] -= 1
             result.metadata['ny'] -= 2
-
-        del result.attrs['region']
-        del result[self.data.name].attrs['region']
 
         # regions are not correct now that number of y-points has changed
         del result.attrs['regions']

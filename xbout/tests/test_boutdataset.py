@@ -197,287 +197,315 @@ class TestBoutDatasetMethods:
 
         for var in ['n', 'T']:
             v = ds[var]
+            v_noregions = v.copy(deep=True)
+
+            # Remove attributes that are expected to be different
+            del v_noregions.attrs['regions']
 
             v_lower_inner_PFR = v.bout.from_region('lower_inner_PFR')
 
             # Remove attributes that are expected to be different
-            del v_lower_inner_PFR.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 + mxg), theta=slice(jys11 + 1)),
+            del v_lower_inner_PFR.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 + mxg),
+                                                  theta=slice(jys11 + 1)),
                                  v_lower_inner_PFR.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
+                npt.assert_equal(v_noregions.isel(x=slice(ixs1 + mxg),
                                         theta=slice(jys22 + 1, jys22 + 1 + myg)).values,
                                  v_lower_inner_PFR.isel(theta=slice(-myg, None)).values)
 
             v_lower_inner_intersep = v.bout.from_region('lower_inner_intersep')
 
             # Remove attributes that are expected to be different
-            del v_lower_inner_intersep.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys11 + 1)),
+            del v_lower_inner_intersep.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                                  theta=slice(jys11 + 1)),
                                  v_lower_inner_intersep.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys11 + 1, jys11 + 1 + myg)).values,
-                                 v_lower_inner_intersep.isel(
-                                     theta=slice(-myg, None)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                         theta=slice(jys11 + 1, jys11 + 1 + myg)).values,
+                        v_lower_inner_intersep.isel(theta=slice(-myg, None)).values)
 
             v_lower_inner_SOL = v.bout.from_region('lower_inner_SOL')
 
             # Remove attributes that are expected to be different
-            del v_lower_inner_SOL.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(jys11 + 1)),
+            del v_lower_inner_SOL.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                                  theta=slice(jys11 + 1)),
                                  v_lower_inner_SOL.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(jys11 + 1, jys11 + 1 + myg)).values,
-                                 v_lower_inner_SOL.isel(theta=slice(-myg, None)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                         theta=slice(jys11 + 1, jys11 + 1 + myg)).values,
+                        v_lower_inner_SOL.isel(theta=slice(-myg, None)).values)
 
             v_inner_core = v.bout.from_region('inner_core')
 
             # Remove attributes that are expected to be different
-            del v_inner_core.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(jys11 + 1, jys21 + 1)),
+            del v_inner_core.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 + mxg),
+                                                  theta=slice(jys11 + 1, jys21 + 1)),
                                  v_inner_core.isel(
                                      theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(jys22 + 1 - myg, jys22 + 1)).values,
-                                 v_inner_core.isel(theta=slice(myg)).values)
-                npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(jys12 + 1, jys12 + 1 + myg)).values,
-                                 v_inner_core.isel(theta=slice(-myg, None)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 + mxg),
+                                         theta=slice(jys22 + 1 - myg, jys22 + 1)).values,
+                        v_inner_core.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 + mxg),
+                                         theta=slice(jys12 + 1, jys12 + 1 + myg)).values,
+                        v_inner_core.isel(theta=slice(-myg, None)).values)
 
             v_inner_intersep = v.bout.from_region('inner_intersep')
 
             # Remove attributes that are expected to be different
-            del v_inner_intersep.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys11 + 1, jys21 + 1)),
+            del v_inner_intersep.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                                  theta=slice(jys11 + 1, jys21 + 1)),
                                  v_inner_intersep.isel(
                                      theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys11 + 1 - myg, jys11 + 1)).values,
-                                 v_inner_intersep.isel(theta=slice(myg)).values)
-                npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys12 + 1, jys12 + 1 + myg)).values,
-                                 v_inner_intersep.isel(theta=slice(-myg, None)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                         theta=slice(jys11 + 1 - myg, jys11 + 1)).values,
+                        v_inner_intersep.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                         theta=slice(jys12 + 1, jys12 + 1 + myg)).values,
+                        v_inner_intersep.isel(theta=slice(-myg, None)).values)
 
             v_inner_sol = v.bout.from_region('inner_SOL')
 
             # Remove attributes that are expected to be different
-            del v_inner_sol.attrs['region']
+            del v_inner_sol.attrs['regions']
             xrt.assert_identical(
-                    v.isel(x=slice(ixs2 - mxg, None), theta=slice(jys11 + 1, jys21 + 1)),
+                    v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                     theta=slice(jys11 + 1, jys21 + 1)),
                     v_inner_sol.isel(theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(jys11 + 1 - myg, jys11 + 1)).values,
-                                 v_inner_sol.isel(theta=slice(myg)).values)
-                npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(jys21 + 1, jys21 + 1 + myg)).values,
-                                 v_inner_sol.isel(theta=slice(-myg, None)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                         theta=slice(jys11 + 1 - myg, jys11 + 1)).values,
+                        v_inner_sol.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                         theta=slice(jys21 + 1, jys21 + 1 + myg)).values,
+                        v_inner_sol.isel(theta=slice(-myg, None)).values)
 
             v_upper_inner_PFR = v.bout.from_region('upper_inner_PFR')
 
             # Remove attributes that are expected to be different
-            del v_upper_inner_PFR.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(jys21 + 1, ny_inner)),
+            del v_upper_inner_PFR.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 + mxg),
+                                                  theta=slice(jys21 + 1, ny_inner)),
                                  v_upper_inner_PFR.isel(theta=slice(myg, None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(jys12 + 1 - myg, jys12 + 1)).values,
-                                 v_upper_inner_PFR.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 + mxg),
+                                         theta=slice(jys12 + 1 - myg, jys12 + 1)).values,
+                        v_upper_inner_PFR.isel(theta=slice(myg)).values)
 
             v_upper_inner_intersep = v.bout.from_region('upper_inner_intersep')
 
             # Remove attributes that are expected to be different
-            del v_upper_inner_intersep.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys21 + 1, ny_inner)),
+            del v_upper_inner_intersep.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                                  theta=slice(jys21 + 1, ny_inner)),
                                  v_upper_inner_intersep.isel(theta=slice(myg, None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys12 + 1 - myg, jys12 + 1)).values,
-                                 v_upper_inner_intersep.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                         theta=slice(jys12 + 1 - myg, jys12 + 1)).values,
+                        v_upper_inner_intersep.isel(theta=slice(myg)).values)
 
             v_upper_inner_SOL = v.bout.from_region('upper_inner_SOL')
 
             # Remove attributes that are expected to be different
-            del v_upper_inner_SOL.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(jys21 + 1, ny_inner)),
+            del v_upper_inner_SOL.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                                  theta=slice(jys21 + 1, ny_inner)),
                                  v_upper_inner_SOL.isel(theta=slice(myg, None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(jys21 + 1 - myg, jys21 + 1)).values,
-                                 v_upper_inner_SOL.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                         theta=slice(jys21 + 1 - myg, jys21 + 1)).values,
+                        v_upper_inner_SOL.isel(theta=slice(myg)).values)
 
             v_upper_outer_PFR = v.bout.from_region('upper_outer_PFR')
 
             # Remove attributes that are expected to be different
-            del v_upper_outer_PFR.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(ny_inner, jys12 + 1)),
+            del v_upper_outer_PFR.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 + mxg),
+                                                  theta=slice(ny_inner, jys12 + 1)),
                                  v_upper_outer_PFR.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(jys21 + 1, jys21 + 1 + myg)).values,
-                                 v_upper_outer_PFR.isel(theta=slice(-myg, None)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 + mxg),
+                                         theta=slice(jys21 + 1, jys21 + 1 + myg)).values,
+                        v_upper_outer_PFR.isel(theta=slice(-myg, None)).values)
 
             v_upper_outer_intersep = v.bout.from_region('upper_outer_intersep')
 
             # Remove attributes that are expected to be different
-            del v_upper_outer_intersep.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(ny_inner, jys12 + 1)),
+            del v_upper_outer_intersep.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                                  theta=slice(ny_inner, jys12 + 1)),
                                  v_upper_outer_intersep.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys21 + 1, jys21 + 1 + myg)).values,
-                                 v_upper_outer_intersep.isel(
-                                     theta=slice(-myg, None)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                         theta=slice(jys21 + 1, jys21 + 1 + myg)).values,
+                        v_upper_outer_intersep.isel(theta=slice(-myg, None)).values)
 
             v_upper_outer_SOL = v.bout.from_region('upper_outer_SOL')
 
             # Remove attributes that are expected to be different
-            del v_upper_outer_SOL.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(ny_inner, jys12 + 1)),
+            del v_upper_outer_SOL.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                                  theta=slice(ny_inner, jys12 + 1)),
                                  v_upper_outer_SOL.isel(
                                      theta=slice(-myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(jys12 + 1, jys12 + 1 + myg)).values,
-                                 v_upper_outer_SOL.isel(theta=slice(-myg, None)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                         theta=slice(jys12 + 1, jys12 + 1 + myg)).values,
+                        v_upper_outer_SOL.isel(theta=slice(-myg, None)).values)
 
             v_outer_core = v.bout.from_region('outer_core')
 
             # Remove attributes that are expected to be different
-            del v_outer_core.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(jys12 + 1, jys22 + 1)),
+            del v_outer_core.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 + mxg),
+                                                  theta=slice(jys12 + 1, jys22 + 1)),
                                  v_outer_core.isel(
                                      theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(jys21 + 1 - myg, jys21 + 1)).values,
-                                 v_outer_core.isel(theta=slice(myg)).values)
-                npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(jys11 + 1, jys11 + 1 + myg)).values,
-                                 v_outer_core.isel(theta=slice(-myg, None)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 + mxg),
+                                         theta=slice(jys21 + 1 - myg, jys21 + 1)).values,
+                        v_outer_core.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 + mxg),
+                                         theta=slice(jys11 + 1, jys11 + 1 + myg)).values,
+                        v_outer_core.isel(theta=slice(-myg, None)).values)
 
             v_outer_intersep = v.bout.from_region('outer_intersep')
 
             # Remove attributes that are expected to be different
-            del v_outer_intersep.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys12 + 1, jys22 + 1)),
+            del v_outer_intersep.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                                  theta=slice(jys12 + 1, jys22 + 1)),
                                  v_outer_intersep.isel(
                                      theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys21 + 1 - myg, jys21 + 1)).values,
-                                 v_outer_intersep.isel(theta=slice(myg)).values)
-                npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys22 + 1, jys22 + 1 + myg)).values,
-                                 v_outer_intersep.isel(theta=slice(-myg, None)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                         theta=slice(jys21 + 1 - myg, jys21 + 1)).values,
+                        v_outer_intersep.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                         theta=slice(jys22 + 1, jys22 + 1 + myg)).values,
+                        v_outer_intersep.isel(theta=slice(-myg, None)).values)
 
             v_outer_sol = v.bout.from_region('outer_SOL')
 
             # Remove attributes that are expected to be different
-            del v_outer_sol.attrs['region']
+            del v_outer_sol.attrs['regions']
             xrt.assert_identical(
-                    v.isel(x=slice(ixs2 - mxg, None), theta=slice(jys12 + 1, jys22 + 1)),
+                    v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                     theta=slice(jys12 + 1, jys22 + 1)),
                     v_outer_sol.isel(theta=slice(myg, -myg if myg != 0 else None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(jys12 + 1 - myg, jys12 + 1)).values,
-                                 v_outer_sol.isel(theta=slice(myg)).values)
-                npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(jys22 + 1, jys22 + 1 + myg)).values,
-                                 v_outer_sol.isel(theta=slice(-myg, None)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                         theta=slice(jys12 + 1 - myg, jys12 + 1)).values,
+                        v_outer_sol.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                         theta=slice(jys22 + 1, jys22 + 1 + myg)).values,
+                        v_outer_sol.isel(theta=slice(-myg, None)).values)
 
             v_lower_outer_PFR = v.bout.from_region('lower_outer_PFR')
 
             # Remove attributes that are expected to be different
-            del v_lower_outer_PFR.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(jys22 + 1, None)),
+            del v_lower_outer_PFR.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 + mxg),
+                                                  theta=slice(jys22 + 1, None)),
                                  v_lower_outer_PFR.isel(theta=slice(myg, None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 + mxg),
-                                        theta=slice(jys11 + 1 - myg, jys11 + 1)).values,
-                                 v_lower_outer_PFR.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 + mxg),
+                                         theta=slice(jys11 + 1 - myg, jys11 + 1)).values,
+                        v_lower_outer_PFR.isel(theta=slice(myg)).values)
 
             v_lower_outer_intersep = v.bout.from_region('lower_outer_intersep')
 
             # Remove attributes that are expected to be different
-            del v_lower_outer_intersep.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys22 + 1, None)),
+            del v_lower_outer_intersep.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                                  theta=slice(jys22 + 1, None)),
                                  v_lower_outer_intersep.isel(theta=slice(myg, None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
-                                        theta=slice(jys22 + 1 - myg, jys22 + 1)).values,
-                                 v_lower_outer_intersep.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs1 - mxg, ixs2 + mxg),
+                                         theta=slice(jys22 + 1 - myg, jys22 + 1)).values,
+                        v_lower_outer_intersep.isel(theta=slice(myg)).values)
 
             v_lower_outer_SOL = v.bout.from_region('lower_outer_SOL')
 
             # Remove attributes that are expected to be different
-            del v_lower_outer_SOL.attrs['region']
-            xrt.assert_identical(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(jys22 + 1, None)),
+            del v_lower_outer_SOL.attrs['regions']
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                                  theta=slice(jys22 + 1, None)),
                                  v_lower_outer_SOL.isel(theta=slice(myg, None)))
             if myg > 0:
                 # check y-guards, which were 'communicated' by from_region
                 # Coordinates are not equal, so only compare array values
-                npt.assert_equal(v.isel(x=slice(ixs2 - mxg, None),
-                                        theta=slice(jys22 + 1 - myg, jys22 + 1)).values,
-                                 v_lower_outer_SOL.isel(theta=slice(myg)).values)
+                npt.assert_equal(
+                        v_noregions.isel(x=slice(ixs2 - mxg, None),
+                                         theta=slice(jys22 + 1 - myg, jys22 + 1)).values,
+                        v_lower_outer_SOL.isel(theta=slice(myg)).values)
 
     def test_interpolate_parallel_all_variables_arg(self, tmpdir_factory,
                                                     bout_xyt_example_files):
