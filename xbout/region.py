@@ -118,6 +118,9 @@ class Region:
             result += f"\t{attr}\t{val}\n"
         return result
 
+    def __eq__(self, other):
+        return vars(self) == vars(other)
+
     def get_slices(self, mxg=0, myg=0):
         """
         Return x- and y-dimension slices that select this region from the global
