@@ -299,10 +299,10 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
 
         t_array = DataArray((nx - 2*mxg)*ny*nz*np.arange(t_length, dtype=float),
                             dims='t')
-        x_array = DataArray(ny*nz*(xproc*lengths[1] + mxg
+        x_array = DataArray(ny*nz*(xproc*lengths[1]
                             + np.arange(lengths[1], dtype=float)),
                             dims='x')
-        y_array = DataArray(nz*(yproc*lengths[2] + myg
+        y_array = DataArray(nz*(yproc*lengths[2]
                             + np.arange(lengths[2], dtype=float)),
                             dims='y')
         z_array = DataArray(np.arange(z_length, dtype=float), dims='z')
