@@ -55,7 +55,7 @@ class BoutDatasetAccessor:
     #    return 'boutdata.BoutDataset(', {}, ',', {}, ')'.format(self.datapath,
     #  self.prefix)
 
-    def getFieldAligned(self, name, caching=True):
+    def get_field_aligned(self, name, caching=True):
         """
         Get a field-aligned version of a variable, calculating (and caching in the
         Dataset) if necessary
@@ -76,7 +76,7 @@ class BoutDatasetAccessor:
             return result
         except KeyError:
             if caching:
-                self.data[aligned_name] = self.data[name].bout.toFieldAligned()
+                self.data[aligned_name] = self.data[name].bout.to_field_aligned()
             return self.data[aligned_name]
 
     @property

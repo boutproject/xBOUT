@@ -30,7 +30,7 @@ class TestBoutDataArrayMethods:
                                     7,
                                     pytest.param(8, marks=pytest.mark.long),
                                     pytest.param(9, marks=pytest.mark.long)])
-    def test_toFieldAligned(self, tmpdir_factory, bout_xyt_example_files, nz):
+    def test_to_field_aligned(self, tmpdir_factory, bout_xyt_example_files, nz):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, nz), nxpe=1,
                                       nype=1, nt=1)
         ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
@@ -52,7 +52,7 @@ class TestBoutDataArrayMethods:
                         n[t, x, y, z] = 1000.*t + 100.*x + 10.*y + z
 
         n.attrs['direction_y'] = 'Standard'
-        n_al = n.bout.toFieldAligned()
+        n_al = n.bout.to_field_aligned()
         for t in range(ds.sizes['t']):
             for z in range(nz):
                 npt.assert_allclose(n_al[t, 0, 0, z].values, 1000.*t + z % nz, rtol=1.e-15, atol=5.e-16)                      # noqa: E501
@@ -78,7 +78,7 @@ class TestBoutDataArrayMethods:
             for z in range(nz):
                 npt.assert_allclose(n_al[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z + 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
-    def test_toFieldAligned_dask(self, tmpdir_factory, bout_xyt_example_files):
+    def test_to_field_aligned_dask(self, tmpdir_factory, bout_xyt_example_files):
 
         nz = 6
 
@@ -108,7 +108,7 @@ class TestBoutDataArrayMethods:
         assert isinstance(n.data, dask.array.Array)
 
         n.attrs['direction_y'] = 'Standard'
-        n_al = n.bout.toFieldAligned()
+        n_al = n.bout.to_field_aligned()
         for t in range(ds.sizes['t']):
             for z in range(nz):
                 npt.assert_allclose(n_al[t, 0, 0, z].values, 1000.*t + z % nz, rtol=1.e-15, atol=5.e-16)                      # noqa: E501
@@ -138,7 +138,7 @@ class TestBoutDataArrayMethods:
                                     7,
                                     pytest.param(8, marks=pytest.mark.long),
                                     pytest.param(9, marks=pytest.mark.long)])
-    def test_fromFieldAligned(self, tmpdir_factory, bout_xyt_example_files, nz):
+    def test_from_field_aligned(self, tmpdir_factory, bout_xyt_example_files, nz):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, nz), nxpe=1,
                                       nype=1, nt=1)
         ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
@@ -160,7 +160,7 @@ class TestBoutDataArrayMethods:
                         n[t, x, y, z] = 1000.*t + 100.*x + 10.*y + z
 
         n.attrs['direction_y'] = 'Aligned'
-        n_nal = n.bout.fromFieldAligned()
+        n_nal = n.bout.from_field_aligned()
         for t in range(ds.sizes['t']):
             for z in range(nz):
                 npt.assert_allclose(n_nal[t, 0, 0, z].values, 1000.*t + z % nz, rtol=1.e-15, atol=5.e-16)                      # noqa: E501

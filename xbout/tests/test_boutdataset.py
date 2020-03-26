@@ -60,7 +60,7 @@ class TestBoutDatasetMethods:
 
         print(ds.bout.extra_data)
 
-    def test_getFieldAligned(self, tmpdir_factory, bout_xyt_example_files):
+    def test_get_field_aligned(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
         ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
 
@@ -72,19 +72,19 @@ class TestBoutDatasetMethods:
 
         n = ds['n']
         n.attrs['direction_y'] = 'Standard'
-        n_aligned_from_array = n.bout.toFieldAligned()
+        n_aligned_from_array = n.bout.to_field_aligned()
 
         # check n_aligned does not exist yet
         assert 'n_aligned' not in ds
 
-        n_aligned_from_ds = ds.bout.getFieldAligned('n')
+        n_aligned_from_ds = ds.bout.get_field_aligned('n')
         xrt.assert_allclose(n_aligned_from_ds, n_aligned_from_array)
         xrt.assert_allclose(ds['n_aligned'], n_aligned_from_array)
 
         # check getting the cached version
         ds['n_aligned'] = ds['T']
         ds['n_aligned'].attrs['direction_y'] = 'Aligned'
-        xrt.assert_allclose(ds.bout.getFieldAligned('n'), ds['T'])
+        xrt.assert_allclose(ds.bout.get_field_aligned('n'), ds['T'])
 
     def test_set_parallel_interpolation_factor(self):
         ds = Dataset()
