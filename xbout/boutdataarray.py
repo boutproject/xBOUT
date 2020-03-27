@@ -386,6 +386,9 @@ class BoutDataArrayAccessor:
         return da
 
     def add_cartesian_coordinates(self):
+        return _add_cartesian_coordinates(self.data)
+
+    def add_cartesian_coordinates(self):
         """
         Add Cartesian (X,Y,Z) coordinates.
 
