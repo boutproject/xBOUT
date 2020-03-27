@@ -1080,3 +1080,6 @@ class BoutDataArrayAccessor:
         tokamak topology.
         """
         return plotfuncs.plot_regions(self.data, ax=ax, **kwargs)
+
+    def plot3d(self, ax=None, **kwargs):
+        return plotfuncs.plot3d(self.data, **kwargs)

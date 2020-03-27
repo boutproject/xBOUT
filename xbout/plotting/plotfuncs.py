@@ -10,6 +10,8 @@ from .utils import (
     _create_norm,
     _decompose_regions,
     _is_core_only,
+    _k3d_plot_isel,
+    _make_structured_triangulation,
     plot_separatrices,
     plot_targets,
 )
@@ -69,7 +71,7 @@ def plot_regions(da, ax=None, **kwargs):
                 infer_intervals=False,
                 add_colorbar=False,
                 ax=ax,
-                **kwargs
+                **kwargs,
             )
             for region in colored_regions
         ]
@@ -93,7 +95,7 @@ def plot2d_wrapper(
     vmax=None,
     aspect=None,
     extend=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Make a 2D plot using an xarray method, taking into account branch cuts (X-points).
@@ -269,7 +271,7 @@ def plot2d_wrapper(
                 add_colorbar=False,
                 add_labels=add_label,
                 cmap=cmap,
-                **kwargs
+                **kwargs,
             )
             for region, add_label in zip(da_regions.values(), add_labels)
         ]
@@ -346,3 +348,111 @@ def plot2d_wrapper(
         plot_targets(da_regions, ax, x=x, y=y, hatching=add_limiter_hatching)
 
     return artists
+
+
+def plot3d(da, style="surface", engine="k3d", **kwargs):
+    """
+    Make a 3d plot
+
+    Parameters
+    ----------
+    style : {'surface', 'poloidal planes'}
+        Type of plot to make:
+        - 'surface' plots the outer surface of the DataArray
+        - 'poloidal planes' plots each poloidal plane in the DataArray
+    engine : {'k3d', 'mayavi'}
+        3d plotting library to use
+    """
+
+    if len(da.dims) != 3:
+        raise ValueError(f"plot3d needs to be passed 3d data. Got {da.dims}.")
+
+    da = da.bout.add_cartesian_coordinates()
+    vmin = kwargs.pop("vmin", float(da.min().values))
+    vmax = kwargs.pop("vmax", float(da.max().values))
+    xcoord = da.metadata["bout_xdim"]
+    ycoord = da.metadata["bout_ydim"]
+    zcoord = da.metadata["bout_zdim"]
+
+    if engine == "k3d":
+        import k3d
+
+        plot = k3d.plot()
+
+        for region_name, da_region in _decompose_regions(da).items():
+
+            npsi, ntheta, nzeta = da_region.shape
+
+            if style == "surface":
+                region = da_region.regions[region_name]
+
+                if region.connection_inner_x is None:
+                    # Plot the inner-x surface
+                    plot += _k3d_plot_isel(da_region, {xcoord: 0}, vmin, vmax, kwargs)
+
+                if region.connection_outer_x is None:
+                    # Plot the outer-x surface
+                    plot += _k3d_plot_isel(da_region, {xcoord: -1}, vmin, vmax, kwargs)
+
+                if region.connection_lower_y is None:
+                    # Plot the lower-y surface
+                    plot += _k3d_plot_isel(da_region, {ycoord: 0}, vmin, vmax, kwargs)
+
+                if region.connection_upper_y is None:
+                    # Plot the upper-y surface
+                    plot += _k3d_plot_isel(da_region, {ycoord: -1}, vmin, vmax, kwargs)
+
+                # First z-surface
+                plot += _k3d_plot_isel(da_region, {zcoord: 0}, vmin, vmax, kwargs)
+
+                # Last z-surface
+                plot += _k3d_plot_isel(da_region, {zcoord: -1}, vmin, vmax, kwargs)
+            elif style == "poloidal planes":
+                for zeta in range(nzeta):
+                    plot += _k3d_plot_isel(
+                        da_region, {zcoord: zeta}, vmin, vmax, kwargs
+                    )
+            else:
+                raise ValueError(f"style='{style}' not implemented for engine='k3d'")
+
+        return plot
+
+    elif engine == "mayavi":
+        from mayavi import mlab
+
+        if style == "surface":
+            for region_name, da_region in _decompose_regions(da).items():
+                region = da_region.regions[region_name]
+
+                # Always include z-surfaces
+                surface_selections = [
+                    {da.metadata["bout_zdim"]: 0},
+                    {da.metadata["bout_zdim"]: -1},
+                ]
+                if region.connection_inner_x is None:
+                    # Plot the inner-x surface
+                    surface_selections.append({da.metadata["bout_xdim"]: 0})
+                if region.connection_outer_x is None:
+                    # Plot the outer-x surface
+                    surface_selections.append({da.metadata["bout_xdim"]: -1})
+                if region.connection_lower_y is None:
+                    # Plot the lower-y surface
+                    surface_selections.append({da.metadata["bout_ydim"]: 0})
+                if region.connection_upper_y is None:
+                    # Plot the upper-y surface
+                    surface_selections.append({da.metadata["bout_ydim"]: -1})
+
+                for surface_sel in surface_selections:
+                    da_sel = da_region.isel(surface_sel)
+                    X = da_sel["X_cartesian"].values
+                    Y = da_sel["Y_cartesian"].values
+                    Z = da_sel["Z_cartesian"].values
+                    data = da_sel.values
+
+                    mlab.mesh(X, Y, Z, scalars=data, vmin=vmin, vmax=vmax, **kwargs)
+        else:
+            raise ValueError(f"style='{style}' not implemented for engine='mayavi'")
+
+        plt.show()
+    else:
+        raise ValueError(f"Unrecognised plot3d() 'engine' argument: {engine}")
