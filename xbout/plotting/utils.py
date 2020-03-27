@@ -204,3 +204,65 @@ def _get_perp_vec(u1, u2, magnitude=0.04):
     v = np.linalg.norm((vx, vy))
     wx, wy = -vy / v * magnitude, vx / v * magnitude
     return wx, wy
+
+
+def _make_structured_triangulation(m, n):
+    # Construct a 'triangulation' of an (m x n) grid
+    # Returns an array of triples of (flattened) indices of the corners of the triangles
+    indices = np.zeros((m - 1, 2 * (n - 1), 3), dtype=np.uint32)
+    # indices[0] = [0, 1, n]
+    # indices[1] = [1, n+1, n]
+
+    indices[:, 0 : 2 * (n - 1) : 2, 0] = (
+        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
+        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
+    )
+    indices[:, 0 : 2 * (n - 1) : 2, 1] = (
+        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
+        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
+        + 1
+    )
+    indices[:, 0 : 2 * (n - 1) : 2, 2] = (
+        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
+        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
+        + n
+    )
+
+    indices[:, 1 : 2 * (n - 1) : 2, 0] = (
+        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
+        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
+        + 1
+    )
+    indices[:, 1 : 2 * (n - 1) : 2, 1] = (
+        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
+        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
+        + n
+        + 1
+    )
+    indices[:, 1 : 2 * (n - 1) : 2, 2] = (
+        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
+        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
+        + n
+    )
+
+    return indices.reshape((2 * (m - 1) * (n - 1), 3))
+
+
+def _k3d_plot_isel(da_region, isel, vmin, vmax, kwargs):
+    import k3d
+
+    da_sel = da_region.isel(isel)
+    X = da_sel["X_cartesian"].values.flatten().astype(np.float32)
+    Y = da_sel["Y_cartesian"].values.flatten().astype(np.float32)
+    Z = da_sel["Z_cartesian"].values.flatten().astype(np.float32)
+    data = da_sel.values.flatten().astype(np.float32)
+
+    indices = _make_structured_triangulation(*da_sel.shape)
+
+    return k3d.mesh(
+        np.vstack([X, Y, Z]).T,
+        indices,
+        attribute=data,
+        color_range=[vmin, vmax],
+        **kwargs
+    )
