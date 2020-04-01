@@ -248,7 +248,7 @@ def _make_structured_triangulation(m, n):
     return indices.reshape((2 * (m - 1) * (n - 1), 3))
 
 
-def _k3d_plot_isel(da_region, isel, vmin, vmax, kwargs):
+def _k3d_plot_isel(da_region, isel, vmin, vmax, **kwargs):
     import k3d
 
     da_sel = da_region.isel(isel)
