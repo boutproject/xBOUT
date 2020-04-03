@@ -186,6 +186,98 @@ class TestBoutDataArrayMethods:
             for z in range(nz):
                 npt.assert_allclose(n_nal[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z - 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
+    @pytest.mark.parametrize('stag_location', ['CELL_XLOW', 'CELL_YLOW', 'CELL_ZLOW'])
+    def test_to_field_aligned_staggered(self, tmpdir_factory, bout_xyt_example_files,
+                                        stag_location):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 8), nxpe=1,
+                                      nype=1, nt=1)
+        ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
+
+        ds['psixy'] = ds['x']
+        ds['Rxy'] = ds['x']
+        ds['Zxy'] = ds['y']
+
+        ds = apply_geometry(ds, 'toroidal')
+
+        # set up test variable
+        n = ds['n'].load()
+        zShift = ds['zShift'].load()
+        for t in range(ds.sizes['t']):
+            for x in range(ds.sizes['x']):
+                for y in range(ds.sizes['theta']):
+                    zShift[x, y] = (x*ds.sizes['theta'] + y) * 2.*np.pi/ds.sizes['zeta']
+                    for z in range(ds.sizes['zeta']):
+                        n[t, x, y, z] = 1000.*t + 100.*x + 10.*y + z
+
+        n_al = n.bout.to_field_aligned().copy(deep=True)
+
+        # make 'n' staggered
+        ds['n'].attrs['cell_location'] = stag_location
+
+        if stag_location != 'CELL_ZLOW':
+            with pytest.raises(ValueError):
+                # Check exception raised when needed zShift_CELL_*LOW is not present
+                ds['n'].bout.to_field_aligned()
+            ds['zShift_' + stag_location] = zShift
+            ds['zShift_' + stag_location].attrs['cell_location'] = stag_location
+            ds = ds.set_coords('zShift_' + stag_location)
+            ds = ds.drop('zShift')
+
+            with pytest.raises(ValueError):
+                # Check shifting non-staggered field fails without zShift
+                ds['T'].bout.to_field_aligned()
+
+        n_stag_al = ds['n'].bout.to_field_aligned()
+
+        npt.assert_equal(n_stag_al.values, n_al.values)
+
+    @pytest.mark.parametrize('stag_location', ['CELL_XLOW', 'CELL_YLOW', 'CELL_ZLOW'])
+    def test_from_field_aligned_staggered(self, tmpdir_factory, bout_xyt_example_files,
+                                          stag_location):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 8), nxpe=1,
+                                      nype=1, nt=1)
+        ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
+
+        ds['psixy'] = ds['x']
+        ds['Rxy'] = ds['x']
+        ds['Zxy'] = ds['y']
+
+        ds = apply_geometry(ds, 'toroidal')
+
+        # set up test variable
+        n = ds['n'].load()
+        zShift = ds['zShift'].load()
+        for t in range(ds.sizes['t']):
+            for x in range(ds.sizes['x']):
+                for y in range(ds.sizes['theta']):
+                    zShift[x, y] = (x*ds.sizes['theta'] + y) * 2.*np.pi/ds.sizes['zeta']
+                    for z in range(ds.sizes['zeta']):
+                        n[t, x, y, z] = 1000.*t + 100.*x + 10.*y + z
+        n.attrs['direction_y'] = 'Aligned'
+        ds['T'].attrs['direction_y'] = 'Aligned'
+
+        n_nal = n.bout.from_field_aligned().copy(deep=True)
+
+        # make 'n' staggered
+        ds['n'].attrs['cell_location'] = stag_location
+
+        if stag_location != 'CELL_ZLOW':
+            with pytest.raises(ValueError):
+                # Check exception raised when needed zShift_CELL_*LOW is not present
+                ds['n'].bout.from_field_aligned()
+            ds['zShift_' + stag_location] = zShift
+            ds['zShift_' + stag_location].attrs['cell_location'] = stag_location
+            ds = ds.set_coords('zShift_' + stag_location)
+            ds = ds.drop('zShift')
+
+            with pytest.raises(ValueError):
+                # Check shifting non-staggered field fails without zShift
+                ds['T'].bout.from_field_aligned()
+
+        n_stag_al = ds['n'].bout.from_field_aligned()
+
+        npt.assert_equal(n_stag_al.values, n_nal.values)
+
     @pytest.mark.long
     def test_interpolate_parallel_region_core(self, tmpdir_factory,
                                               bout_xyt_example_files):

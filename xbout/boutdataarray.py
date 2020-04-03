@@ -123,18 +123,22 @@ class BoutDataArrayAccessor:
         Transform DataArray to field-aligned coordinates, which are shifted with respect
         to the base coordinates by an angle zShift
         """
+        if (self.data.cell_location == 'CELL_CENTRE'
+                or self.data.cell_location == 'CELL_ZLOW'):
+            zShift_coord = 'zShift'
+        else:
+            zShift_coord = 'zShift_' + self.data.cell_location
+
         if self.data.direction_y != "Standard":
             raise ValueError(f"Cannot shift a {self.data.direction_y} type field to "
                              "field-aligned coordinates")
-        if hasattr(self.data, "cell_location") and not (
-            self.data.cell_location == "CELL_CENTRE"
-            or self.data.cell_location == "CELL_ZLOW"
-        ):
-            raise ValueError(
-                f"to_field_aligned does not support staggered grids yet, but "
-                f"location is {self.data.cell_location}."
-            )
-        result = self._shift_z(self.data['zShift'])
+
+        if zShift_coord not in self.data.coords:
+            raise ValueError(f"{zShift_coord} missing, cannot shift "
+                             f"{self.data.cell_location} field {self.data.name} to "
+                             f"field-aligned coordinates")
+
+        result = self._shift_z(self.data[zShift_coord])
         result.attrs["direction_y"] = "Aligned"
         return result
 
@@ -143,18 +147,22 @@ class BoutDataArrayAccessor:
         Transform DataArray from field-aligned coordinates, which are shifted with
         respect to the base coordinates by an angle zShift
         """
+        if (self.data.cell_location == 'CELL_CENTRE'
+                or self.data.cell_location == 'CELL_ZLOW'):
+            zShift_coord = 'zShift'
+        else:
+            zShift_coord = 'zShift_' + self.data.cell_location
+
         if self.data.direction_y != "Aligned":
             raise ValueError(f"Cannot shift a {self.data.direction_y} type field from "
                              "field-aligned coordinates")
-        if hasattr(self.data, "cell_location") and not (
-            self.data.cell_location == "CELL_CENTRE"
-            or self.data.cell_location == "CELL_ZLOW"
-        ):
-            raise ValueError(
-                f"from_field_aligned does not support staggered grids yet, but "
-                f"location is {self.data.cell_location}."
-            )
-        result = self._shift_z(-self.data['zShift'])
+
+        if zShift_coord not in self.data.coords:
+            raise ValueError(f"{zShift_coord} missing, cannot shift "
+                             f"{self.data.cell_location} field {self.data.name} from "
+                             f"field-aligned coordinates")
+
+        result = self._shift_z(-self.data[zShift_coord])
         result.attrs["direction_y"] = "Standard"
         return result
 
