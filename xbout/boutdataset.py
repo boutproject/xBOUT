@@ -98,7 +98,7 @@ class BoutDatasetAccessor:
         """
         ds = self.data
         ds.metadata['fine_interpolation_factor'] = n
-        for da in ds.values():
+        for da in ds.data_vars:
             da.metadata['fine_interpolation_factor'] = n
 
     def interpolate_parallel(self, variables, **kwargs):

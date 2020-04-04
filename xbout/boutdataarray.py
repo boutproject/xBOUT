@@ -59,6 +59,7 @@ class BoutDataArrayAccessor:
         def dropIfExists(ds, name):
             if name in ds.attrs:
                 del ds.attrs[name]
+
         dropIfExists(ds, 'direction_y')
         dropIfExists(ds, 'direction_z')
 
