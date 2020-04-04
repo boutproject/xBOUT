@@ -187,6 +187,25 @@ class BoutDataArrayAccessor:
 
         return da
 
+    @property
+    def fine_interpolation_factor(self):
+        """
+        The default factor to increase resolution when doing parallel interpolation
+        """
+        return self.data.metadata['fine_interpolation_factor']
+
+    @fine_interpolation_factor.setter
+    def fine_interpolation_factor(self, n):
+        """
+        Set the default factor to increase resolution when doing parallel interpolation.
+
+        Parameters
+        -----------
+        n : int
+            Factor to increase parallel resolution by
+        """
+        self.data.metadata['fine_interpolation_factor'] = n
+
     def interpolate_parallel(self, region=None, *, n=None, toroidal_points=None,
                              method='cubic', return_dataset=False):
         """
@@ -266,10 +285,7 @@ class BoutDataArrayAccessor:
             aligned_input = True
 
         if n is None:
-            try:
-                n = self.data.metadata['fine_interpolation_factor']
-            except KeyError:
-                n = 8
+            n = self.fine_interpolation_factor
 
         da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
         da = da.chunk({ycoord: None})

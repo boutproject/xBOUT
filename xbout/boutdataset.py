@@ -79,7 +79,15 @@ class BoutDatasetAccessor:
                 self.data[aligned_name] = self.data[name].bout.toFieldAligned()
             return self.data[aligned_name]
 
-    def set_parallel_interpolation_factor(self, n):
+    @property
+    def fine_interpolation_factor(self):
+        """
+        The default factor to increase resolution when doing parallel interpolation
+        """
+        return self.data.metadata['fine_interpolation_factor']
+
+    @fine_interpolation_factor.setter
+    def fine_interpolation_factor(self, n):
         """
         Set the default factor to increase resolution when doing parallel interpolation.
 
@@ -88,13 +96,10 @@ class BoutDatasetAccessor:
         n : int
             Factor to increase parallel resolution by
         """
-
         ds = self.data
         ds.metadata['fine_interpolation_factor'] = n
         for da in ds.values():
             da.metadata['fine_interpolation_factor'] = n
-
-        return ds
 
     def interpolate_parallel(self, variables, **kwargs):
         """

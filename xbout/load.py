@@ -168,6 +168,10 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     if run_name:
         ds.name = run_name
 
+    # Set some default settings that are only used in post-processing by xBOUT, not by
+    # BOUT++
+    ds.bout.fine_interpolation_factor = 8
+
     if info is 'terse':
         print("Read in dataset from {}".format(str(Path(datapath))))
     elif info:
