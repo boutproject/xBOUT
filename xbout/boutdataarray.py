@@ -403,7 +403,10 @@ class BoutDataArrayAccessor:
 
         myg = self.data.metadata['MYG']
 
-        if self.metadata['keep_yboundaries'] == 0 or myg == 0:
+        if (
+            (self.metadata['keep_yboundaries'] == 0 or myg == 0)
+            and not remove_extra_upper
+        ):
             # Ensure we do not modify any other references to metadata
             self.data.attrs['metadata'] = deepcopy(self.data.metadata)
             self.data.metadata['keep_yboundaries'] = 0
@@ -412,6 +415,8 @@ class BoutDataArrayAccessor:
                 return self.to_dataset()
             else:
                 return self.data
+        if self.metadata['keep_yboundaries'] == 0:
+            myg = 0
 
         ycoord = self.data.metadata['bout_ydim']
         parts = []
