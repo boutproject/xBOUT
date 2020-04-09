@@ -95,7 +95,7 @@ class TestBoutDatasetMethods:
         with pytest.raises(KeyError):
             ds['a'].metadata['fine_interpolation_factor']
 
-        ds.bout.set_parallel_interpolation_factor(42)
+        ds.bout.fine_interpolation_factor = 42
 
         assert ds.metadata['fine_interpolation_factor'] == 42
         assert ds['a'].metadata['fine_interpolation_factor'] == 42

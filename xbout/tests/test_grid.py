@@ -60,6 +60,7 @@ class TestOpenGrid:
         @register_geometry(name="Schwarzschild")
         def add_schwarzschild_coords(ds, coordinates=None):
             ds['event_horizon'] = 4.0
+            ds['event_horizon'].attrs = ds.attrs.copy()
             return ds
 
         example_grid = create_example_grid_file
