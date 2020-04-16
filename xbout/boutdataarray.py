@@ -4,6 +4,7 @@ from functools import partial
 
 import dask.array
 import numpy as np
+from scipy.interpolate import griddata as scipy_griddata
 
 import xarray as xr
 from xarray import register_dataarray_accessor
@@ -528,6 +529,94 @@ class BoutDataArrayAccessor:
                                       sep_pos=sep_pos, animate=animate, fps=fps,
                                       save_as=save_as, ax=ax, **kwargs)
             return line_block
+
+    def interpolate_from_unstructured(self, *, fill_value=np.nan, **kwargs):
+        """Interpolate DataArray onto new grids of some existing coordinates
+
+        Parameters
+        ----------
+        **kwargs : (str, array)
+            Each keyword is the name of a coordinate in the DataArray, the argument is a
+            1d array giving the values of that coordinate on the output grid
+        fill_value : float
+            fill_value passed through to scipy.interpolation.griddata
+
+        Returns
+        -------
+        DataArray
+            Data interpolated onto a new, structured grid
+        """
+
+        da = self.data
+
+        new_coords = {
+            name: xr.DataArray(values, dims=name)
+            for name, values in kwargs.items()
+        }
+
+        coord_arrays = tuple(
+            np.meshgrid(*[values for values in kwargs.values()],
+            indexing="ij")
+        )
+
+        # Figure out number of dimensions in the coordinates to be interpolated
+        dims = set()
+        for coord in kwargs:
+            dims = dims.union(da[coord].dims)
+        dims = tuple(dims)
+        ndim = len(dims)
+
+        # dimensions that are not being interpolated
+        remaining_dims = tuple(d for d in da.dims if d not in dims)
+
+        # Select interpolation method
+        if ndim <= 2:
+            # "cubic" only available for 1d or 2d interpolation
+            method = "cubic"
+        else:
+            method = "linear"
+
+        # extend input coordinates to cover all dims, so we can flatten them
+        input_coords = []
+        for coord in kwargs:
+            data = da[coord]
+            missing_dims = tuple(set(dims) - set(data.dims))
+            expand = {dim: da.sizes[dim] for dim in missing_dims}
+            expand_positions = tuple(dims.index(d) for d in missing_dims)
+            da[coord] = data.expand_dims(expand, axis=expand_positions)
+
+        # scipy.interpolate.griddata requires the axis being interpolated to be the first
+        # one, so stack together 'dims', and then transpose so the resulting stacked
+        # dimension is the first
+        dims_name_list = [d for d in da.dims if d in dims]
+        stacked_dim_name = "stacked_" + "_".join(dims_name_list)
+        stacked = da.stack({stacked_dim_name: dims_name_list})
+        stacked = stacked.transpose(*((stacked_dim_name,) + remaining_dims),
+                                    transpose_coords=True)
+
+        result = scipy_griddata(
+            tuple(stacked[coord] for coord in kwargs),
+            stacked,
+            coord_arrays,
+            method=method,
+            fill_value=fill_value,
+        )
+
+        new_coords.update({
+            name: array
+            for name, array in stacked.coords.items()
+            if stacked_dim_name not in array.dims
+        })
+
+        result = xr.DataArray(
+            result,
+            dims=[d for d in kwargs] + list(remaining_dims),
+            coords=new_coords,
+            name=da.name,
+            attrs=da.attrs,
+        )
+
+        return result
 
     # BOUT-specific plotting functionality: methods that plot on a poloidal (R-Z) plane
     def contour(self, ax=None, **kwargs):
