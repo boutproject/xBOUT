@@ -1,3 +1,4 @@
+from copy import copy, deepcopy
 import xarray as xr
 from .utils import _set_attrs_on_all_vars
 
@@ -925,3 +926,47 @@ def _concat_upper_guards(da, da_global, mxg, myg):
     da.attrs['regions'] = save_regions
 
     return da
+
+
+def _from_region(ds_or_da, name, with_guards):
+    region = ds_or_da.regions[name]
+    xcoord = ds_or_da.metadata['bout_xdim']
+    ycoord = ds_or_da.metadata['bout_ydim']
+
+    if with_guards is None:
+        mxg = ds_or_da.metadata['MXG']
+        myg = ds_or_da.metadata['MYG']
+    else:
+        try:
+            mxg = with_guards.get(xcoord, ds_or_da.metadata['MXG'])
+            myg = with_guards.get(ycoord, ds_or_da.metadata['MYG'])
+        except AttributeError:
+            mxg = with_guards
+            myg = with_guards
+
+    result = ds_or_da.isel(region.get_slices())
+
+    # Make sure attrs are unique before we change them
+    result.attrs = copy(result.attrs)
+    # The returned result has only one region
+    single_region = deepcopy(region)
+    result.attrs['regions'] = {name: single_region}
+
+    # get inner x-guard cells for result from the global array
+    result = _concat_inner_guards(result, ds_or_da, mxg)
+    # get outer x-guard cells for result from the global array
+    result = _concat_outer_guards(result, ds_or_da, mxg)
+    # get lower y-guard cells from the global array
+    result = _concat_lower_guards(result, ds_or_da, mxg, myg)
+    # get upper y-guard cells from the global array
+    result = _concat_upper_guards(result, ds_or_da, mxg, myg)
+
+    # If the result (which only has a single region) is passed to from_region a
+    # second time, don't want to slice anything.
+    single_region = list(result.regions.values())[0]
+    single_region.xinner_ind = None
+    single_region.xouter_ind = None
+    single_region.ylower_ind = None
+    single_region.yupper_ind = None
+
+    return result

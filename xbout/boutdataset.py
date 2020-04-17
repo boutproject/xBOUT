@@ -20,6 +20,7 @@ from dask.diagnostics import ProgressBar
 from .geometries import apply_geometry
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
+from .region import _from_region
 
 
 @xr.register_dataset_accessor('bout')
@@ -79,6 +80,21 @@ class BoutDatasetAccessor:
             if caching:
                 self.data[aligned_name] = self.data[name].bout.to_field_aligned()
             return self.data[aligned_name]
+
+    def from_region(self, name, with_guards=None):
+        """
+        Get a logically-rectangular section of data from a certain region.
+        Includes guard cells from neighbouring regions.
+
+        Parameters
+        ----------
+        name : str
+            Region to get data for
+        with_guards : int or dict of int, optional
+            Number of guard cells to include, by default use MXG and MYG from BOUT++.
+            Pass a dict to set different numbers for different coordinates.
+        """
+        return _from_region(self.data, name, with_guards)
 
     @property
     def regions(self):
