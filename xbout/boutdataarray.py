@@ -3,6 +3,7 @@ from pprint import pformat as prettyformat
 from functools import partial
 
 import dask.array
+import matplotlib.path
 import numpy as np
 from scipy.interpolate import griddata as scipy_griddata
 
@@ -624,6 +625,31 @@ class BoutDataArrayAccessor:
             fill_value=fill_value,
         )
 
+        # griddata only sets points outside the 'convex hull' to fill_value
+        # Nicer to set all points outside the grid boundaries to fill_value
+        ###################################################################
+        boundaries = self.get_bounding_surfaces(coords=[c for c in kwargs])
+        points = np.stack(coord_arrays, axis=-1)
+
+        # boundaries[0] is the outer boundary
+        path = matplotlib.path.Path(boundaries[0], closed=True, readonly=True)
+        is_contained = path.contains_points(points.reshape([-1, 2]))
+        is_contained = is_contained.reshape(
+            coord_arrays[0].shape + (1,)*len(remaining_dims)
+        )
+        result = np.where(is_contained, result, fill_value)
+
+        # boundaries[1] is the inner boundary if it exists
+        if len(boundaries) > 1:
+            path = matplotlib.path.Path(boundaries[1], closed=True, readonly=True)
+            is_contained = path.contains_points(points)
+            result = np.where(is_contained, fill_value, result)
+
+        if len(boundaries) > 2:
+            raise ValueError(f"Found {len(boundaries)} boundaries, expected at most 2")
+
+        # Create DataArray to return, with as much metadata as possible retained
+        ########################################################################
         new_coords.update({
             name: array
             for name, array in stacked.coords.items()
