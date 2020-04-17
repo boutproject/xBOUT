@@ -13,7 +13,7 @@ from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 from .plotting.utils import _create_norm
 from .region import _from_region
-from .utils import _update_metadata_increased_resolution
+from .utils import _update_metadata_increased_resolution, _get_bounding_surfaces
 
 
 @register_dataarray_accessor('bout')
@@ -413,6 +413,28 @@ class BoutDataArrayAccessor:
         else:
             # Extract the DataArray to return
             return result[self.data.name]
+
+    def get_bounding_surfaces(self, coords=("R", "Z")):
+        """
+        Get bounding surfaces.
+        Surfaces are returned as arrays of points describing a polygon, assuming the
+        third spatial dimension is a symmetry direction.
+
+        Parameters
+        ----------
+        coords : (str, str), default ("R", "Z")
+            Pair of names of coordinates whose values are used to give the positions of
+            the points in the result
+
+        Returns
+        -------
+        result : list of DataArrays
+            Each DataArray in the list contains points on a boundary, with size
+            (<number of points in the bounding polygon>, 2). Points wind clockwise around
+            the outside domain, and anti-clockwise around the inside (if there is an
+            inner boundary).
+        """
+        return _get_bounding_surfaces(self.data, coords)
 
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):

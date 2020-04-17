@@ -21,6 +21,7 @@ from .geometries import apply_geometry
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
 from .region import _from_region
+from .utils import _get_bounding_surfaces
 
 
 @xr.register_dataset_accessor('bout')
@@ -263,6 +264,28 @@ class BoutDatasetAccessor:
         result = apply_geometry(result, self.data.geometry)
 
         return result
+
+    def get_bounding_surfaces(self, coords=("R", "Z")):
+        """
+        Get bounding surfaces.
+        Surfaces are returned as arrays of points describing a polygon, assuming the
+        third spatial dimension is a symmetry direction.
+
+        Parameters
+        ----------
+        coords : (str, str), default ("R", "Z")
+            Pair of names of coordinates whose values are used to give the positions of
+            the points in the result
+
+        Returns
+        -------
+        result : list of DataArrays
+            Each DataArray in the list contains points on a boundary, with size
+            (<number of points in the bounding polygon>, 2). Points wind clockwise around
+            the outside domain, and anti-clockwise around the inside (if there is an
+            inner boundary).
+        """
+        return _get_bounding_surfaces(self.data, coords)
 
     def save(self, savepath='./boutdata.nc', filetype='NETCDF4',
              variables=None, save_dtype=None, separate_vars=False, pre_load=False):
