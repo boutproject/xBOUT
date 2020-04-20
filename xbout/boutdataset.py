@@ -329,8 +329,7 @@ class BoutDatasetAccessor:
 
         return
 
-    def to_restart(self, savepath='.', nxpe=None, nype=None,
-                   original_splitting=False):
+    def to_restart(self, savepath='.', nxpe=None, nype=None):
         """
         Write out final timestep as a set of netCDF BOUT.restart files.
 
@@ -339,18 +338,21 @@ class BoutDatasetAccessor:
 
         Parameters
         ----------
-        savepath : str
-        nxpe : int
-        nype : int
+        savepath : str, default '.'
+            Directory to save the created restart files under
+        nxpe : int, optional
+            Number of processors in the x-direction. If not given, keep the number used
+            for the original simulation
+        nype : int, optional
+            Number of processors in the y-direction. If not given, keep the number used
+            for the original simulation
         """
 
         # Set processor decomposition if not given
-        if original_splitting:
-            if any([nxpe, nype]):
-                raise ValueError('Inconsistent choices for domain '
-                                 'decomposition.')
-            else:
-                nxpe, nype = self.metadata['NXPE'], self.metadata['NYPE']
+        if nxpe is None
+            nxpe = self.metadata['NXPE']
+        if nype is None:
+            nype = self.metadata['NYPE']
 
         # Is this even possible without saving the guard cells?
         # Can they be recreated?
