@@ -329,7 +329,7 @@ class BoutDatasetAccessor:
 
         return
 
-    def to_restart(self, savepath='.', nxpe=None, nype=None):
+    def to_restart(self, variables=None, *, savepath='.', nxpe=None, nype=None):
         """
         Write out final timestep as a set of netCDF BOUT.restart files.
 
@@ -338,6 +338,10 @@ class BoutDatasetAccessor:
 
         Parameters
         ----------
+        variables : str or sequence of str, optional
+            The evolving variables needed in the restart files. If not given explicitly,
+            all time-evolving variables in the Dataset will be used, which may result in
+            larger restart files than necessary.
         savepath : str, default '.'
             Directory to save the created restart files under
         nxpe : int, optional
@@ -356,8 +360,9 @@ class BoutDatasetAccessor:
 
         # Is this even possible without saving the guard cells?
         # Can they be recreated?
-        restart_datasets, paths = _split_into_restarts(self.data, savepath,
-                                                       nxpe, nype)
+        restart_datasets, paths = _split_into_restarts(
+            self.data, variables, savepath, nxpe, nype,
+        )
         with ProgressBar():
             xr.save_mfdataset(restart_datasets, paths, compute=True)
         return
