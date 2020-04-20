@@ -388,9 +388,6 @@ class BoutDatasetAccessor:
         with ProgressBar():
             xr.save_mfdataset(restart_datasets, paths, compute=True)
 
-        # return the Dataset to allow method-chaining
-        return self.data
-
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
                      nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
                      vmin=None, vmax=None, logscale=None, titles=None, aspect='equal',
