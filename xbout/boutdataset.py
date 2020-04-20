@@ -153,13 +153,42 @@ class BoutDatasetAccessor:
 
         # Need to start with a Dataset with attrs as merge() drops the attrs of the
         # passed-in argument.
-        ds = self.data[variables[0]].bout.interpolate_parallel(return_dataset=True,
-                                                               **kwargs)
-        for var in variables[1:]:
-            ds = ds.merge(
-                    self.data[var].bout.interpolate_parallel(return_dataset=True,
-                                                             **kwargs)
-                 )
+        # Make sure the first variable has all dimensions so we don't lose any
+        # coordinates
+        def find_with_dims(first_var, dims):
+            if first_var is None:
+                dims = set(dims)
+                for v in variables:
+                    if set(self.data[v].dims) == dims:
+                        first_var = v
+                        break
+            return first_var
+        tcoord = self.data.metadata.get("bout_tdim", "t")
+        zcoord = self.data.metadata.get("bout_zdim", "z")
+        first_var = find_with_dims(None, self.data.dims)
+        first_var = find_with_dims(first_var, set(self.data.dims) - set(tcoord))
+        first_var = find_with_dims(first_var, set(self.data.dims) - set(zcoord))
+        first_var = find_with_dims(first_var, set(self.data.dims) - set([tcoord, zcoord]))
+        if first_var is None:
+            raise ValueError(
+                f"Could not find variable to interpolate with both "
+                f"{ds.metadata.get('bout_xdim', 'x')} and "
+                f"{ds.metadata.get('bout_ydim', 'y')} dimensions"
+            )
+        variables.remove(first_var)
+        ds = self.data[first_var].bout.interpolate_parallel(return_dataset=True,
+                                                            **kwargs)
+        xcoord = ds.metadata.get("bout_xdim", "x")
+        ycoord = ds.metadata.get("bout_ydim", "y")
+        for var in variables:
+            da = self.data[var]
+            if xcoord in da.dims and ycoord in da.dims:
+                ds = ds.merge(
+                        da.bout.interpolate_parallel(return_dataset=True, **kwargs)
+                     )
+            elif ycoord not in da.dims:
+                ds = ds.merge(da)
+            # Can't interpolate a variable that depends on y but not x, so just skip
 
         # dy needs to be compatible with the new poloidal coordinate
         # dy was created as a coordinate in BoutDataArray.interpolate_parallel, here just
