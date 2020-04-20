@@ -19,6 +19,7 @@ from dask.diagnostics import ProgressBar
 from .geometries import apply_geometry
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
+from .utils import _split_into_restarts
 
 
 @xr.register_dataset_accessor('bout')
@@ -329,9 +330,19 @@ class BoutDatasetAccessor:
 
         return
 
-    def to_restart(self, variables=None, *, savepath='.', nxpe=None, nype=None):
+    def to_restart(
+        self,
+        variables=None,
+        *,
+        savepath='.',
+        nxpe=None,
+        nype=None,
+        tind=-1,
+        prefix="BOUT.restart",
+        overwrite=False,
+    ):
         """
-        Write out final timestep as a set of netCDF BOUT.restart files.
+        Write out a timestep as a set of netCDF BOUT.restart files.
 
         If processor decomposition is not specified then data will be saved
         using the decomposition it had when loaded.
@@ -350,10 +361,20 @@ class BoutDatasetAccessor:
         nype : int, optional
             Number of processors in the y-direction. If not given, keep the number used
             for the original simulation
+        tind : int, default -1
+            Time-index of the slice to write to the restart files
+        prefix : str, default "BOUT.restart"
+            Prefix to use for names of restart files
+        overwrite : bool, default False
+            By default, raises if restart file already exists. Set to True to overwrite
+            existing files
         """
 
+        if isinstance(variables, str):
+            variables = [variables]
+
         # Set processor decomposition if not given
-        if nxpe is None
+        if nxpe is None:
             nxpe = self.metadata['NXPE']
         if nype is None:
             nype = self.metadata['NYPE']
@@ -361,11 +382,14 @@ class BoutDatasetAccessor:
         # Is this even possible without saving the guard cells?
         # Can they be recreated?
         restart_datasets, paths = _split_into_restarts(
-            self.data, variables, savepath, nxpe, nype,
+            self.data, variables, savepath, nxpe, nype, tind, prefix, overwrite,
         )
+
         with ProgressBar():
             xr.save_mfdataset(restart_datasets, paths, compute=True)
-        return
+
+        # return the Dataset to allow method-chaining
+        return self.data
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
                      nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
