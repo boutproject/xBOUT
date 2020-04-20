@@ -135,28 +135,29 @@ class BoutDatasetAccessor:
 
         if variables is ...:
             variables = [v for v in self.data]
+
+        if isinstance(variables, str):
+            variables = [variables]
+
         if 'dy' in variables:
             # dy is treated specially, as it is converted to a coordinate, and then
             # converted back again below, so must not call
             # interpolate_parallel('dy').
             variables.remove('dy')
 
-        if isinstance(variables, str):
-            ds = self.data[variables].bout.interpolate_parallel(return_dataset=True,
-                                                                **kwargs)
-        else:
-            # Need to start with a Dataset with attrs as merge() drops the attrs of the
-            # passed-in argument.
-            ds = self.data[variables[0]].bout.interpolate_parallel(return_dataset=True,
-                                                                   **kwargs)
-            for var in variables[1:]:
-                ds = ds.merge(
-                        self.data[var].bout.interpolate_parallel(return_dataset=True,
-                                                                 **kwargs)
-                     )
-
         # Add extra variables needed to make this a valid Dataset
-        ds['dx'] = self.data['dx'].bout.interpolate_parallel(**kwargs)
+        if 'dx' not in variables:
+            variables.append('dx')
+
+        # Need to start with a Dataset with attrs as merge() drops the attrs of the
+        # passed-in argument.
+        ds = self.data[variables[0]].bout.interpolate_parallel(return_dataset=True,
+                                                               **kwargs)
+        for var in variables[1:]:
+            ds = ds.merge(
+                    self.data[var].bout.interpolate_parallel(return_dataset=True,
+                                                             **kwargs)
+                 )
 
         # dy needs to be compatible with the new poloidal coordinate
         # dy was created as a coordinate in BoutDataArray.interpolate_parallel, here just
