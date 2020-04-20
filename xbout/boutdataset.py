@@ -135,11 +135,11 @@ class BoutDatasetAccessor:
 
         if variables is ...:
             variables = [v for v in self.data]
-            if 'dy' in variables:
-                # dy is treated specially, as it is converted to a coordinate, and then
-                # converted back again below, so must not call
-                # interpolate_parallel('dy').
-                variables.remove('dy')
+        if 'dy' in variables:
+            # dy is treated specially, as it is converted to a coordinate, and then
+            # converted back again below, so must not call
+            # interpolate_parallel('dy').
+            variables.remove('dy')
 
         if isinstance(variables, str):
             ds = self.data[variables].bout.interpolate_parallel(return_dataset=True,
