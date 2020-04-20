@@ -138,6 +138,8 @@ class BoutDatasetAccessor:
 
         if isinstance(variables, str):
             variables = [variables]
+        if isinstance(variables, tuple):
+            variables = list(variables)
 
         if 'dy' in variables:
             # dy is treated specially, as it is converted to a coordinate, and then
