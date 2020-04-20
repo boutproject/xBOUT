@@ -452,9 +452,10 @@ class TestBoutDatasetMethods:
 
         interpolated_variables = [v for v in ds]
 
-        assert set(interpolated_variables) == set(('n', 'T', 'g11', 'g22', 'g33', 'g12',
-                'g13', 'g23', 'g_11', 'g_22', 'g_33', 'g_12', 'g_13', 'g_23', 'G1', 'G2',
-                'G3', 'J', 'Bxy', 'dx', 'dy'))
+        assert set(interpolated_variables) == set((
+            'n', 'T', 'g11', 'g22', 'g33', 'g12', 'g13', 'g23', 'g_11', 'g_22', 'g_33',
+            'g_12', 'g_13', 'g_23', 'G1', 'G2', 'G3', 'J', 'Bxy', 'dx', 'dy'
+        ))
 
 
 class TestLoadInputFile:

@@ -1124,7 +1124,7 @@ class TestRegion:
                              n_upper_inner_PFR.isel(theta=slice(yguards)).values)
 
         n_upper_inner_intersep = n.bout.from_region('upper_inner_intersep',
-                                                   with_guards=with_guards)
+                                                    with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_upper_inner_intersep.attrs['region']
@@ -1170,7 +1170,7 @@ class TestRegion:
                              n_upper_outer_PFR.isel(theta=slice(-yguards, None)).values)
 
         n_upper_outer_intersep = n.bout.from_region('upper_outer_intersep',
-                                                   with_guards=with_guards)
+                                                    with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_upper_outer_intersep.attrs['region']
@@ -1273,7 +1273,7 @@ class TestRegion:
                              n_lower_outer_PFR.isel(theta=slice(yguards)).values)
 
         n_lower_outer_intersep = n.bout.from_region('lower_outer_intersep',
-                                                   with_guards=with_guards)
+                                                    with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_lower_outer_intersep.attrs['region']

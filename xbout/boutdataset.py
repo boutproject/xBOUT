@@ -168,7 +168,8 @@ class BoutDatasetAccessor:
         first_var = find_with_dims(None, self.data.dims)
         first_var = find_with_dims(first_var, set(self.data.dims) - set(tcoord))
         first_var = find_with_dims(first_var, set(self.data.dims) - set(zcoord))
-        first_var = find_with_dims(first_var, set(self.data.dims) - set([tcoord, zcoord]))
+        first_var = find_with_dims(first_var, set(self.data.dims)
+                                   - set([tcoord, zcoord]))
         if first_var is None:
             raise ValueError(
                 f"Could not find variable to interpolate with both "
