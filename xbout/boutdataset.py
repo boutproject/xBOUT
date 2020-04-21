@@ -80,6 +80,16 @@ class BoutDatasetAccessor:
             return self.data[aligned_name]
 
     @property
+    def regions(self):
+        if "regions" not in self.data.attrs:
+            raise ValueError(
+                "Called a method requiring regions, but these have not been created. "
+                "Please set the 'geometry' option when calling open_boutdataset() to "
+                "create regions."
+            )
+        return self.data.attrs["regions"]
+
+    @property
     def fine_interpolation_factor(self):
         """
         The default factor to increase resolution when doing parallel interpolation

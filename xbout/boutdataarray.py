@@ -141,6 +141,16 @@ class BoutDataArrayAccessor:
         result["direction_y"] = "Standard"
         return result
 
+    @property
+    def regions(self):
+        if "regions" not in self.data.attrs:
+            raise ValueError(
+                "Called a method requiring regions, but these have not been created. "
+                "Please set the 'geometry' option when calling open_boutdataset() to "
+                "create regions."
+            )
+        return self.data.attrs["regions"]
+
     def from_region(self, name, with_guards=None):
         """
         Get a logically-rectangular section of data from a certain region.
