@@ -188,7 +188,7 @@ class BoutDatasetAccessor:
                         da.bout.interpolate_parallel(return_dataset=True, **kwargs)
                      )
             elif ycoord not in da.dims:
-                ds = ds.merge(da)
+                ds[var] = da
             # Can't interpolate a variable that depends on y but not x, so just skip
 
         # dy needs to be compatible with the new poloidal coordinate
