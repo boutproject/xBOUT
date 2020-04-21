@@ -276,7 +276,10 @@ class BoutDatasetAccessor:
                 pass
 
         # Do not need to save regions as these can be reconstructed from the metadata
-        del to_save.attrs['regions']
+        try:
+            del to_save.attrs['regions']
+        except KeyError:
+            pass
         for var in chain(to_save.data_vars, to_save.coords):
             try:
                 del to_save[var].attrs['regions']
