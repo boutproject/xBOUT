@@ -42,7 +42,7 @@ setup(
         'Pillow>=6.1.0'
     ],
     extras_require=extras_require,
-    tests_require=['pytest >= 3.3.0'],
+    tests_require=['pytest >= 3.3.0', 'boutdata'],
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[
