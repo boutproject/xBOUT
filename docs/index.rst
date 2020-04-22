@@ -51,5 +51,5 @@ Indices and tables
 
 
 .. _BOUT++: https://boutproject.github.io/
-.. _xarray: http://xarray.pydata.org/en/stable/index.html
+.. _xarray: https://xarray.pydata.org/en/stable/index.html
 .. _this fork: https://github.com/TomNicholas/xarray/tree/feature/nd_combine
