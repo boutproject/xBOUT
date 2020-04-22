@@ -28,7 +28,7 @@ or
 git clone https://github.com/boutproject/xBOUT.git
 ```
 
-Once cloned navigate to the xBOUT directory and run the following command:
+Once cloned navigate to the `xBOUT` directory and run the following command:
 
 ```bash
 pip3 install --user ./
@@ -39,7 +39,8 @@ python3 setup.py install
 ```
 
 You can run the tests by navigating to the `/xBOUT/` directory and
-entering `pytest`.
+entering `pytest`. You can also test your installation of `xBOUT` by
+running `pytest --pyargs xbout`.
 
 xBOUT requires other python packages, which will be installed when you 
 run one of the above install commands if they are not already installed on 

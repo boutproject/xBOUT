@@ -42,6 +42,45 @@ Requirements
 
   pip3 install --user -r requirements.txt
 
+
+Installation
+------------
+
+- :py:mod:`xbout` is not currently on pip or conda. Therefore to install xbout on
+  your system you must first clone the repository using:
+
+.. code-block:: bash
+
+  git clone git@github.com:boutproject/xBOUT.git
+
+or
+
+.. code-block:: bash
+
+  git clone https://github.com/boutproject/xBOUT.git
+
+
+Once cloned navigate to the `xBOUT` directory and run the following command:
+
+.. code-block:: bash
+
+  pip3 install --user ./
+
+or
+
+.. code-block:: bash
+
+  python3 setup.py install
+
+
+You can run the tests by navigating to the `/xBOUT/` directory and
+entering `pytest`. You can also test your installation of `xBOUT` by
+running `pytest --pyargs xbout`.
+
+xBOUT will install the required python packages when you run one of
+the above install commands if they are not already installed on your
+system.
+
 Indices and tables
 ==================
 
