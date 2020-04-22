@@ -168,7 +168,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     if run_name:
         ds.name = run_name
 
-    if info is 'terse':
+    if info == 'terse':
         print("Read in dataset from {}".format(str(Path(datapath))))
     elif info:
         print("Read in:\n{}".format(ds.bout))
@@ -553,9 +553,9 @@ def _get_limit(side, dim, keep_boundaries, boundaries, guards):
         if boundaries.get(dim, False):
             limit = None
         else:
-            limit = guards[dim] if side is 'lower' else -guards[dim]
+            limit = guards[dim] if side == 'lower' else -guards[dim]
     elif guards.get(dim, False):
-        limit = guards[dim] if side is 'lower' else -guards[dim]
+        limit = guards[dim] if side == 'lower' else -guards[dim]
     else:
         limit = None
 
