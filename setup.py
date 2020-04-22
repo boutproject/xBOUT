@@ -7,7 +7,7 @@ version_dict = {}
 with open("xbout/_version.py") as f:
     exec(f.read(), version_dict)
 
-name = 'xBOUT'
+name = 'xbout'
 version = version_dict['__version__']
 release = version
 
