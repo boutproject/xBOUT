@@ -81,6 +81,16 @@ class BoutDatasetAccessor:
             return self.data[aligned_name]
 
     @property
+    def regions(self):
+        if "regions" not in self.data.attrs:
+            raise ValueError(
+                "Called a method requiring regions, but these have not been created. "
+                "Please set the 'geometry' option when calling open_boutdataset() to "
+                "create regions."
+            )
+        return self.data.attrs["regions"]
+
+    @property
     def fine_interpolation_factor(self):
         """
         The default factor to increase resolution when doing parallel interpolation
@@ -189,7 +199,7 @@ class BoutDatasetAccessor:
                         da.bout.interpolate_parallel(return_dataset=True, **kwargs)
                      )
             elif ycoord not in da.dims:
-                ds = ds.merge(da)
+                ds[var] = da
             # Can't interpolate a variable that depends on y but not x, so just skip
 
         # dy needs to be compatible with the new poloidal coordinate
@@ -277,7 +287,10 @@ class BoutDatasetAccessor:
                 pass
 
         # Do not need to save regions as these can be reconstructed from the metadata
-        del to_save.attrs['regions']
+        try:
+            del to_save.attrs['regions']
+        except KeyError:
+            pass
         for var in chain(to_save.data_vars, to_save.coords):
             try:
                 del to_save[var].attrs['regions']

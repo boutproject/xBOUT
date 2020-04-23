@@ -121,10 +121,10 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
          targets = False
 
     if separatrix:
-        plot_separatrices(da_regions, ax)
+        plot_separatrices(da_regions, ax, x=x, y=y)
 
     if targets:
-        plot_targets(da_regions, ax, hatching=add_limiter_hatching)
+        plot_targets(da_regions, ax, x=x, y=y, hatching=add_limiter_hatching)
 
     if animate:
         timeline = amp.Timeline(np.arange(da.sizes[animate_over]), fps=fps)
