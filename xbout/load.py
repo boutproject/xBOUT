@@ -425,11 +425,13 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     nprocs = nxpe * nype
     n_runs = int(len(filepaths) / nprocs)
     if len(filepaths) % nprocs != 0:
-        raise ValueError("Each run directory does not contain an equal number"
-                         "of output files. If the parallelization scheme of "
-                         "your simulation changed partway-through, then please"
-                         "load each directory separately and concatenate them"
-                         "along the time dimension with xarray.concat().")
+        raise ValueError(
+            "Each run directory does not contain an equal number "
+            "of output files. If the parallelization scheme of "
+            "your simulation changed partway-through, then please "
+            "load each directory separately and concatenate them "
+            "along the time dimension with xarray.concat()."
+        )
 
     # Create list of lists of filepaths, so that xarray knows how they should
     # be concatenated by xarray.open_mfdataset()
