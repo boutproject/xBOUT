@@ -125,15 +125,17 @@ class BoutDatasetAccessor:
         if options:
             # TODO Convert Ben's options class to a (flattened) nested
             # dictionary then store it in ds.attrs?
-            raise NotImplementedError("Haven't decided how to write options "
-                                      "file back out yet")
-        else:
-            # Delete placeholders for options on each variable and coordinate
-            for var in chain(to_save.data_vars, to_save.coords):
-                try:
-                    del to_save[var].attrs['options']
-                except KeyError:
-                    pass
+            warnings.warn(
+                "Haven't decided how to write options file back out yet - deleting "
+                "options for now. To re-load this Dataset, pass the same inputfilepath "
+                "to open_boutdataset when re-loading."
+            )
+        # Delete placeholders for options on each variable and coordinate
+        for var in chain(to_save.data_vars, to_save.coords):
+            try:
+                del to_save[var].attrs['options']
+            except KeyError:
+                pass
 
         # Store the metadata as individual attributes instead because
         # netCDF can't handle storing arbitrary objects in attrs
