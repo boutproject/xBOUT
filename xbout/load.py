@@ -3,8 +3,8 @@ from warnings import warn
 from pathlib import Path
 from functools import partial
 from itertools import chain
-import configparser
 
+from boutdata.data import BoutOptionsFile
 import xarray as xr
 from numpy import unique
 
@@ -250,10 +250,7 @@ def reload_boutdataset(
 def _add_options(ds, inputfilepath):
     if inputfilepath:
         # Use Ben's options class to store all input file options
-        with open(inputfilepath, 'r') as f:
-            config_string = "[dummysection]\n" + f.read()
-        options = configparser.ConfigParser()
-        options.read_string(config_string)
+        options = BoutOptionsFile(inputfilepath)
     else:
         options = None
     ds = _set_attrs_on_all_vars(ds, 'options', options)
