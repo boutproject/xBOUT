@@ -121,6 +121,10 @@ class BoutDatasetAccessor:
         if save_dtype is not None:
             to_save = to_save.astype(save_dtype)
 
+        # make shallow copy of Dataset, so we do not modify the attributes of the data
+        # when we change things to save
+        to_save = to_save.copy()
+
         options = to_save.attrs.pop('options')
         if options:
             # TODO Convert Ben's options class to a (flattened) nested
