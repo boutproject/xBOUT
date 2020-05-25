@@ -1,4 +1,4 @@
-from .load import open_boutdataset, collect
+from .load import open_boutdataset, reload_boutdataset, collect
 
 from . import geometries
 from .geometries import register_geometry, REGISTERED_GEOMETRIES
