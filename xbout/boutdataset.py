@@ -119,7 +119,11 @@ class BoutDatasetAccessor:
             raise ValueError('Must provide a path to which to save the data.')
 
         if save_dtype is not None:
-            to_save = to_save.astype(save_dtype)
+            # Workaround to keep attributes while calling astype. See
+            # https://github.com/pydata/xarray/issues/2049
+            # https://github.com/pydata/xarray/pull/2070
+            for da in chain(to_save.values(), to_save.coords.values()):
+                da.data = da.data.astype(save_dtype)
 
         # make shallow copy of Dataset, so we do not modify the attributes of the data
         # when we change things to save
