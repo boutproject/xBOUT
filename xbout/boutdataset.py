@@ -143,14 +143,14 @@ class BoutDatasetAccessor:
 
         # Store the metadata as individual attributes instead because
         # netCDF can't handle storing arbitrary objects in attrs
-        def dict_to_attrs(obj, key):
-            for key, value in obj.attrs.pop(key).items():
-                obj.attrs[key] = value
+        def dict_to_attrs(obj, section):
+            for key, value in obj.attrs.pop(section).items():
+                obj.attrs[section + ":" + key] = value
         dict_to_attrs(to_save, 'metadata')
         # Must do this for all variables and coordinates in dataset too
         for varname, da in chain(to_save.data_vars.items(), to_save.coords.items()):
             try:
-                dict_to_attrs(da, key='metadata')
+                dict_to_attrs(da, 'metadata')
             except KeyError:
                 pass
 
