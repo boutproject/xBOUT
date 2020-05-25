@@ -6,7 +6,7 @@ import numpy as np
 from pathlib import Path
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
-from xbout import BoutDatasetAccessor, open_boutdataset
+from xbout import BoutDatasetAccessor, open_boutdataset, reload_boutdataset
 from xbout.geometries import apply_geometry
 
 
@@ -120,8 +120,25 @@ class TestSave:
         # Load it again using bare xarray
         recovered = open_dataset(savepath)
 
-        # Compare
+        # Compare equal (not identical because attributes are changed when saving)
         xrt.assert_equal(original, recovered)
+
+    def test_reload_all(self, tmpdir_factory, bout_xyt_example_files):
+        # Create data
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=5, nt=1)
+
+        # Load it as a boutdataset
+        original = open_boutdataset(datapath=path, inputfilepath=None)
+
+        # Save it to a netCDF file
+        savepath = str(Path(path).parent) + 'temp_boutdata.nc'
+        original.bout.save(savepath=savepath)
+
+        # Load it again
+        recovered = reload_boutdataset(savepath)
+
+        # Compare
+        xrt.assert_identical(original, recovered)
 
     @pytest.mark.skip("saving and loading as float32 does not work")
     @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
@@ -157,8 +174,25 @@ class TestSave:
             savepath = str(Path(path).parent) + '/temp_boutdata_' + var + '.nc'
             recovered = open_dataset(savepath)
 
-            # Compare
+            # Compare equal (not identical because attributes are changed when saving)
             xrt.assert_equal(recovered[var], original[var])
+
+    def test_reload_separate_variables(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1)
+
+        # Load it as a boutdataset
+        original = open_boutdataset(datapath=path, inputfilepath=None)
+
+        # Save it to a netCDF file
+        savepath = str(Path(path).parent) + '/temp_boutdata.nc'
+        original.bout.save(savepath=savepath, separate_vars=True)
+
+        # Load it again
+        savepath = str(Path(path).parent) + '/temp_boutdata_*.nc'
+        recovered = reload_boutdataset(savepath, pre_squashed=True)
+
+        # Compare
+        xrt.assert_identical(recovered, original)
 
 
 class TestSaveRestart:
