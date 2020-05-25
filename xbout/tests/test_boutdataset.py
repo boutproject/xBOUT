@@ -123,12 +123,28 @@ class TestSave:
         # Compare equal (not identical because attributes are changed when saving)
         xrt.assert_equal(original, recovered)
 
-    def test_reload_all(self, tmpdir_factory, bout_xyt_example_files):
+    @pytest.mark.parametrize("geometry", [None, "toroidal"])
+    def test_reload_all(self, tmpdir_factory, bout_xyt_example_files, geometry):
+        if geometry is not None:
+            grid = "grid"
+        else:
+            grid = None
+
         # Create data
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=5, nt=1)
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=5, nt=1, grid=grid)
+
+        if grid is not None:
+            gridpath = str(Path(path).parent) + "/grid.nc"
+        else:
+            gridpath = None
 
         # Load it as a boutdataset
-        original = open_boutdataset(datapath=path, inputfilepath=None)
+        original = open_boutdataset(
+                       datapath=path,
+                       inputfilepath=None,
+                       geometry=geometry,
+                       gridfilepath=gridpath,
+                   )
 
         # Save it to a netCDF file
         savepath = str(Path(path).parent) + 'temp_boutdata.nc'
@@ -138,7 +154,16 @@ class TestSave:
         recovered = reload_boutdataset(savepath)
 
         # Compare
-        xrt.assert_identical(original, recovered)
+        for coord in original.coords.values():
+            # Get rid of the options if they exist, because options are not dealt with
+            # totally consistently: they exist if a coord was created from a variable
+            # loaded from the BOUT++ output, but not if the coord was calculated from
+            # some parameters or loaded from a grid file
+            try:
+                del coord.attrs["options"]
+            except KeyError:
+                pass
+        xrt.assert_identical(original.load(), recovered.load())
 
     @pytest.mark.skip("saving and loading as float32 does not work")
     @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
@@ -177,11 +202,29 @@ class TestSave:
             # Compare equal (not identical because attributes are changed when saving)
             xrt.assert_equal(recovered[var], original[var])
 
-    def test_reload_separate_variables(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1)
+    @pytest.mark.parametrize("geometry", [None, "toroidal"])
+    def test_reload_separate_variables(
+        self, tmpdir_factory, bout_xyt_example_files, geometry
+    ):
+        if geometry is not None:
+            grid = "grid"
+        else:
+            grid = None
+
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1, grid=grid)
+
+        if grid is not None:
+            gridpath = str(Path(path).parent) + "/grid.nc"
+        else:
+            gridpath = None
 
         # Load it as a boutdataset
-        original = open_boutdataset(datapath=path, inputfilepath=None)
+        original = open_boutdataset(
+                       datapath=path,
+                       inputfilepath=None,
+                       geometry=geometry,
+                       gridfilepath=gridpath,
+                   )
 
         # Save it to a netCDF file
         savepath = str(Path(path).parent) + '/temp_boutdata.nc'
@@ -192,6 +235,15 @@ class TestSave:
         recovered = reload_boutdataset(savepath, pre_squashed=True)
 
         # Compare
+        for coord in original.coords.values():
+            # Get rid of the options if they exist, because options are not dealt with
+            # totally consistently: they exist if a coord was created from a variable
+            # loaded from the BOUT++ output, but not if the coord was calculated from
+            # some parameters or loaded from a grid file
+            try:
+                del coord.attrs["options"]
+            except KeyError:
+                pass
         xrt.assert_identical(recovered, original)
 
 
