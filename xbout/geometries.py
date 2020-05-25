@@ -133,7 +133,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
             if grid is None:
                 raise ValueError("Grid file is required to provide %s. Pass the grid "
                                  "file name as the 'gridfilepath' argument to "
-                                 "open_boutdataset().")
+                                 "open_boutdataset().", v)
             ds[v] = grid[v]
 
     # Rename 't' if user requested it
