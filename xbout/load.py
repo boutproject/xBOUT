@@ -42,7 +42,7 @@ except ValueError:
 
 
 def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
-                     geometry=None, gridfilepath=None, chunks={},
+                     geometry=None, gridfilepath=None, chunks=None,
                      keep_xboundaries=True, keep_yboundaries=False,
                      run_name=None, info=True, pre_squashed=False, **kwargs):
     """
@@ -100,6 +100,9 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     -------
     ds : xarray.Dataset
     """
+
+    if chunks is None:
+        chunks = {}
 
     if pre_squashed:
         ds = xr.open_mfdataset(datapath, chunks=chunks, combine='nested',
@@ -363,9 +366,12 @@ def _is_dump_files(datapath):
         return True
 
 
-def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
+def _auto_open_mfboutdataset(datapath, chunks=None, info=True,
                              keep_xboundaries=False, keep_yboundaries=False,
                              **kwargs):
+    if chunks is None:
+        chunks = {}
+
     filepaths, filetype = _expand_filepaths(datapath)
 
     # Open just one file to read processor splitting
