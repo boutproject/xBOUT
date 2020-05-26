@@ -170,7 +170,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
 
 
 def reload_boutdataset(
-    datapath, inputfilepath=None, chunks={}, info=True, pre_squashed=False, **kwargs
+    datapath, inputfilepath=None, chunks=None, info=True, pre_squashed=False, **kwargs
 ):
     """
     Reload a BoutDataset saved by bout.save(), restoring it to the state the original
