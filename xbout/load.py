@@ -2,6 +2,7 @@ from copy import copy
 from warnings import warn
 from pathlib import Path
 from functools import partial
+from itertools import chain
 import configparser
 
 import xarray as xr
@@ -41,7 +42,7 @@ except ValueError:
 
 
 def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
-                     geometry=None, gridfilepath=None, chunks={},
+                     geometry=None, gridfilepath=None, chunks=None,
                      keep_xboundaries=True, keep_yboundaries=False,
                      run_name=None, info=True, pre_squashed=False, **kwargs):
     """
@@ -87,7 +88,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         Name to give to the whole dataset, e.g. 'JET_ELM_high_resolution'.
         Useful if you are going to open multiple simulations and compare the
         results.
-    info : bool, optional
+    info : bool or "terse", optional
     pre_squashed :  bool, optional
         Set true when loading from data which was saved as separate variables
         using ds.bout.save().
@@ -99,6 +100,9 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     -------
     ds : xarray.Dataset
     """
+
+    if chunks is None:
+        chunks = {}
 
     if pre_squashed:
         ds = xr.open_mfdataset(datapath, chunks=chunks, combine='nested',
@@ -132,15 +136,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
                     latest_top_left['t'] = -1
                 ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
 
-    if inputfilepath:
-        # Use Ben's options class to store all input file options
-        with open(inputfilepath, 'r') as f:
-            config_string = "[dummysection]\n" + f.read()
-        options = configparser.ConfigParser()
-        options.read_string(config_string)
-    else:
-        options = None
-    ds = _set_attrs_on_all_vars(ds, 'options', options)
+    ds = _add_options(ds, inputfilepath)
 
     if geometry is None:
         if geometry in ds.attrs:
@@ -173,6 +169,86 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     elif info:
         print("Read in:\n{}".format(ds.bout))
 
+    return ds
+
+
+def reload_boutdataset(
+    datapath, inputfilepath=None, chunks=None, info=True, pre_squashed=False, **kwargs
+):
+    """
+    Reload a BoutDataset saved by bout.save(), restoring it to the state the original
+    Dataset was in when bout.save() was called
+
+    Parameters
+    ----------
+    datapath : str
+        Path to netCDF file where the Dataset to be re-loaded was saved
+    inputfilepath : str, optional
+        'options' are not saved. 'inputfilepath' must be provided if 'options' should
+        be recreated for the reloaded Dataset
+    chunks : dict, optional
+        Passed to `xarray.open_mfdataset` or `xarray.open_dataset`
+    info : bool or "terse", optional
+    pre_squashed :  bool, optional
+        Set true when loading from data which was saved as separate variables
+        using ds.bout.save().
+    kwargs : optional
+        Keyword arguments are passed down to `xarray.open_mfdataset` or
+        `xarray.open_dataset`
+    """
+    if pre_squashed:
+        ds = xr.open_mfdataset(datapath, chunks=chunks, combine='nested',
+                               concat_dim=None, **kwargs)
+    else:
+        ds = xr.open_dataset(datapath, chunks=chunks, **kwargs)
+
+    def attrs_to_dict(obj, section):
+        result = {}
+        section = section + ":"
+        sectionlength = len(section)
+        for key in list(obj.attrs):
+            if key[:sectionlength] == section:
+                result[key[sectionlength:]] = obj.attrs.pop(key)
+        return result
+
+    def attrs_remove_section(obj, section):
+        section = section + ":"
+        sectionlength = len(section)
+        has_metadata = False
+        for key in list(obj.attrs):
+            if key[:sectionlength] == section:
+                has_metadata = True
+                del obj.attrs[key]
+        return has_metadata
+
+    # Restore metadata from attrs
+    metadata = attrs_to_dict(ds, "metadata")
+    ds.attrs["metadata"] = metadata
+    # Must do this for all variables and coordinates in dataset too
+    for da in chain(ds.data_vars.values(), ds.coords.values()):
+        if attrs_remove_section(da, "metadata"):
+            da.attrs["metadata"] = metadata
+
+    ds = _add_options(ds, inputfilepath)
+
+    if info == 'terse':
+        print("Read in dataset from {}".format(str(Path(datapath))))
+    elif info:
+        print("Read in:\n{}".format(ds.bout))
+
+    return ds
+
+
+def _add_options(ds, inputfilepath):
+    if inputfilepath:
+        # Use Ben's options class to store all input file options
+        with open(inputfilepath, 'r') as f:
+            config_string = "[dummysection]\n" + f.read()
+        options = configparser.ConfigParser()
+        options.read_string(config_string)
+    else:
+        options = None
+    ds = _set_attrs_on_all_vars(ds, 'options', options)
     return ds
 
 
@@ -290,9 +366,12 @@ def _is_dump_files(datapath):
         return True
 
 
-def _auto_open_mfboutdataset(datapath, chunks={}, info=True,
+def _auto_open_mfboutdataset(datapath, chunks=None, info=True,
                              keep_xboundaries=False, keep_yboundaries=False,
                              **kwargs):
+    if chunks is None:
+        chunks = {}
+
     filepaths, filetype = _expand_filepaths(datapath)
 
     # Open just one file to read processor splitting
