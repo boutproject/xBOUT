@@ -361,7 +361,7 @@ def _is_dump_files(datapath):
         ds = xr.open_dataset(filepaths[0], engine=filetype)
         dims = ds.dims
         ds.close()
-        return True if 't' in dims else False
+        return 't' in dims
     else:
         return True
 
