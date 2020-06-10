@@ -166,11 +166,13 @@ def _pad_x_boundaries(ds):
     xcoord = ds.metadata.get("bout_xdim", "x")
 
     if not ds.metadata["keep_xboundaries"] and mxg > 0:
-        boundary_pad = ds.isel({xcoord: slice(mxg)})
-        boundary_pad = boundary_pad.where(
-            not xr.ufuncs.isnan(boundary_pad), np.nan
+        boundary_pad = ds.isel({xcoord: slice(mxg)}).copy(deep=True).load()
+        for v in boundary_pad:
+            if xcoord in boundary_pad[v].dims:
+                boundary_pad[v].values[...] = np.nan
+        ds = xr.concat(
+            [boundary_pad, ds.load, boundary_pad], dim=xcoord, data_vars="minimal"
         )
-        ds = xr.concat([boundary_pad, ds, boundary_pad], dim=xcoord)
 
     return ds
 
@@ -180,15 +182,17 @@ def _pad_y_boundaries(ds):
 
     myg = ds.metadata["MYG"]
     ycoord = ds.metadata.get("bout_ydim", "y")
-    has_second_divertor = (ds.metadata["jyseps2_1"] == ds.metadata["jyseps1_2"])
+    has_second_divertor = (ds.metadata["jyseps2_1"] != ds.metadata["jyseps1_2"])
 
     if not ds.metadata["keep_yboundaries"] and myg > 0:
-        boundary_pad = ds.isel({ycoord: slice(myg)})
-        boundary_pad = boundary_pad.where(
-            not xr.ufuncs.isnan(boundary_pad), np.nan
-        )
+        boundary_pad = ds.isel({ycoord: slice(myg)}).copy(deep=True).load()
+        for v in boundary_pad:
+            if ycoord in boundary_pad[v].dims:
+                boundary_pad[v].values[...] = np.nan
         if not has_second_divertor:
-            ds = xr.concat([boundary_pad, ds, boundary_pad], dim=ycoord)
+            ds = xr.concat(
+                [boundary_pad, ds.load(), boundary_pad], dim=ycoord, data_vars="minimal"
+            )
         else:
             # Include second divertor
             ny_inner = ds.metadata["ny_inner"]
@@ -202,6 +206,7 @@ def _pad_y_boundaries(ds):
                     boundary_pad,
                 ],
                 dim=ycoord,
+                data_vars="minimal",
             )
 
     return ds
