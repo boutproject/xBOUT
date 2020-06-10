@@ -298,7 +298,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
     if hist_hi < 0:
         hist_hi = -1
 
-    has_second_divertor = (ds.metadata["jyseps2_1"] == ds.metadata["jyseps1_2"])
+    has_second_divertor = (ds.metadata["jyseps2_1"] != ds.metadata["jyseps1_2"])
 
     # select desired time-index for the restart files
     ds = ds.isel({tcoord: tind}).persist()
