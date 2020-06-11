@@ -443,10 +443,10 @@ def _read_splitting(filepath, info=True):
         if key in ds:
             val = ds[key].values
             if only_positive and (val < 0):
-                raise ValueError(f"{key} read from dump files is {val}, but negative" 
+                raise ValueError(f"{key} read from dump files is {val}, but negative"
                                  f" values are not valid")
             else:
-               return val
+                return val
         else:
             if info is True:
                 print("{key} not found, setting to {default}"
