@@ -231,6 +231,10 @@ def reload_boutdataset(
 
     ds = _add_options(ds, inputfilepath)
 
+    # If geometry was set, apply geometry again
+    if "geometry" in ds.attrs:
+        ds = geometries.apply_geometry(ds, ds.attrs["geometry"])
+
     if info == 'terse':
         print("Read in dataset from {}".format(str(Path(datapath))))
     elif info:

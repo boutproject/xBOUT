@@ -122,12 +122,17 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     coordinates = _set_default_toroidal_coordinates(coordinates)
 
     # Check whether coordinates names conflict with variables in ds
-    bad_names = [name for name in coordinates.values() if name in ds]
+    bad_names = [name for name in coordinates.values() if name in ds.data_vars]
     if bad_names:
         raise ValueError("Coordinate names {} clash with variables in the dataset. "
                          "Register a different geometry to provide alternative names. "
                          "It may be useful to use the 'coordinates' argument to "
                          "add_toroidal_geometry_coords() for this.".format(bad_names))
+
+    if set(coordinates.values()).issubset(set(ds.coords).union(ds.dims)):
+        # Loading a Dataset which already had the coordinates created for it
+        ds = _create_regions_toroidal(ds)
+        return ds
 
     # Get extra geometry information from grid file if it's not in the dump files
     needed_variables = ['psixy', 'Rxy', 'Zxy']
@@ -217,6 +222,12 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates)
 
+    if set(coordinates.values()).issubset(set(ds.coords).union(ds.dims)):
+        # Loading a Dataset which already had the coordinates created for it
+        ds = _create_regions_toroidal(ds)
+        return ds
+
+    # Get extra geometry information from grid file if it's not in the dump files
     # Add 'hthe' from grid file, needed below for radial coordinate
     if 'hthe' not in ds:
         hthe_from_grid = True
