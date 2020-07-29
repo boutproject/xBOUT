@@ -525,16 +525,6 @@ class TestSave:
         # Load it again
         recovered = reload_boutdataset(savepath)
 
-        # Compare
-        for coord in original.coords.values():
-            # Get rid of the options if they exist, because options are not dealt with
-            # totally consistently: they exist if a coord was created from a variable
-            # loaded from the BOUT++ output, but not if the coord was calculated from
-            # some parameters or loaded from a grid file
-            try:
-                del coord.attrs["options"]
-            except KeyError:
-                pass
         xrt.assert_identical(original.load(), recovered.load())
 
     @pytest.mark.skip("saving and loading as float32 does not work")
@@ -607,15 +597,6 @@ class TestSave:
         recovered = reload_boutdataset(savepath, pre_squashed=True)
 
         # Compare
-        for coord in original.coords.values():
-            # Get rid of the options if they exist, because options are not dealt with
-            # totally consistently: they exist if a coord was created from a variable
-            # loaded from the BOUT++ output, but not if the coord was calculated from
-            # some parameters or loaded from a grid file
-            try:
-                del coord.attrs["options"]
-            except KeyError:
-                pass
         xrt.assert_identical(recovered, original)
 
 

@@ -5,7 +5,7 @@ import xarray as xr
 import numpy as np
 
 from .region import Region, _create_regions_toroidal
-from .utils import _set_attrs_on_all_vars
+from .utils import _add_attrs_to_var, _set_attrs_on_all_vars
 
 REGISTERED_GEOMETRIES = {}
 
@@ -94,6 +94,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         # add_geometry_coords, in which case we do not need this.
         nx = updated_ds.dims[xcoord]
         updated_ds = updated_ds.assign_coords(**{xcoord: np.arange(nx)})
+        _add_attrs_to_var(updated_ds, xcoord)
     ny = updated_ds.dims[ycoord]
     # dy should always be constant in x, so it is safe to slice to x=0.
     # [The y-coordinate has to be a 1d coordinate that labels x-z slices of the grid
@@ -109,6 +110,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     # calculate ycoord at the centre of each cell
     y = dy.cumsum(keep_attrs=True) - dy/2.
     updated_ds = updated_ds.assign_coords(**{ycoord: y.values})
+    _add_attrs_to_var(updated_ds, ycoord)
 
     # If full data (not just grid file) then toroidal dim will be present
     if zcoord in updated_ds.dims:
@@ -123,6 +125,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         z = xr.DataArray(np.linspace(start=z0, stop=z1, num=nz, endpoint=False),
                          dims=zcoord)
         updated_ds = updated_ds.assign_coords(**{zcoord: z})
+        _add_attrs_to_var(updated_ds, zcoord)
 
     return updated_ds
 
@@ -199,6 +202,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
                                  "file name as the 'gridfilepath' argument to "
                                  "open_boutdataset().")
             ds[v] = grid[v]
+            _add_attrs_to_var(ds, v)
 
     # Rename 't' if user requested it
     ds = ds.rename(t=coordinates['t'])
@@ -210,6 +214,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     # Make index 'x' a coordinate, useful for handling global indexing
     nx = ds.dims['x']
     ds = ds.assign_coords(x=np.arange(nx))
+    _add_attrs_to_var(ds, 'x')
     ny = ds.dims[coordinates['y']]
     # dy should always be constant in x, so it is safe to slice to x=0.
     # [The y-coordinate has to be a 1d coordinate that labels x-z slices of the grid
@@ -295,6 +300,7 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
                              "file name as the 'gridfilepath' argument to "
                              "open_boutdataset().")
         ds['hthe'] = grid['hthe']
+        _add_attrs_to_var(ds, 'hthe')
     else:
         hthe_from_grid = False
         ycoord = coordinates["y"]
