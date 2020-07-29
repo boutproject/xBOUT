@@ -86,7 +86,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         updated_ds = updated_ds.rename({'t_array': tcoord})
         updated_ds = updated_ds.set_coords(tcoord)
 
-    if xcoord not in ds.coords:
+    if xcoord not in updated_ds.coords:
         # Make index 'x' a coordinate, useful for handling global indexing
         # Note we have to use the index value, not the value calculated from 'dx' because
         # 'dx' may not be consistent between different regions (e.g. core and PFR).
