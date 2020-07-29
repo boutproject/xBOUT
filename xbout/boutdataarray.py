@@ -11,6 +11,8 @@ from xarray import register_dataarray_accessor
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 from .plotting.utils import _create_norm
+from .region import (Region, _concat_inner_guards, _concat_outer_guards,
+                     _concat_lower_guards, _concat_upper_guards)
 
 
 @register_dataarray_accessor('bout')
@@ -97,7 +99,7 @@ class BoutDataArrayAccessor:
         for dim in phase.dims:
             extra_dims.remove(dim)
         phase = phase.expand_dims(extra_dims)
-        phase = phase.transpose(*fft_dims)
+        phase = phase.transpose(*fft_dims, transpose_coords=True)
 
         data_shifted_fft = data_fft * np.exp(phase.data)
 
@@ -130,6 +132,53 @@ class BoutDataArrayAccessor:
         result = self._shiftZ(-self.data['zShift'])
         result["direction_y"] = "Standard"
         return result
+
+    def from_region(self, name, with_guards=None):
+        """
+        Get a logically-rectangular section of data from a certain region.
+        Includes guard cells from neighbouring regions.
+
+        Parameters
+        ----------
+        name : str
+            Region to get data for
+        with_guards : int or dict of int, optional
+            Number of guard cells to include, by default use MXG and MYG from BOUT++.
+            Pass a dict to set different numbers for different coordinates.
+        """
+
+        region = self.data.regions[name]
+        xcoord = self.data.metadata['bout_xdim']
+        ycoord = self.data.metadata['bout_ydim']
+
+        if with_guards is None:
+            mxg = self.data.metadata['MXG']
+            myg = self.data.metadata['MYG']
+        else:
+            try:
+                mxg = with_guards.get(xcoord, self.data.metadata['MXG'])
+                myg = with_guards.get(ycoord, self.data.metadata['MYG'])
+            except AttributeError:
+                mxg = with_guards
+                myg = with_guards
+
+        da = self.data.isel(region.get_slices())
+        da.attrs['region'] = region
+
+        if region.connection_inner_x is not None:
+            # get inner x-guard cells for da from the global array
+            da = _concat_inner_guards(da, self.data, mxg)
+        if region.connection_outer_x is not None:
+            # get outer x-guard cells for da from the global array
+            da = _concat_outer_guards(da, self.data, mxg)
+        if region.connection_lower_y is not None:
+            # get lower y-guard cells from the global array
+            da = _concat_lower_guards(da, self.data, mxg, myg)
+        if region.connection_upper_y is not None:
+            # get upper y-guard cells from the global array
+            da = _concat_upper_guards(da, self.data, mxg, myg)
+
+        return da
 
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):

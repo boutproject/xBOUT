@@ -1,5 +1,3 @@
-import collections
-
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,10 +24,10 @@ def regions(da, ax=None, **kwargs):
     if ax is None:
         fig, ax = plt.subplots()
 
-    regions = _decompose_regions(da)
+    da_regions = _decompose_regions(da)
 
-    colored_regions = [xr.full_like(region, fill_value=num / len(regions))
-                       for num, region in enumerate(regions)]
+    colored_regions = [xr.full_like(da_region, fill_value=num / len(regions))
+                       for num, da_region in enumerate(da_regions.values())]
 
     return [region.plot.pcolormesh(x=x, y=y, vmin=0, vmax=1, cmap='tab20',
                                    infer_intervals=False, add_colorbar=False, ax=ax,
@@ -181,12 +179,13 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         if 'infer_intervals' not in kwargs:
             kwargs['infer_intervals'] = False
 
-    regions = _decompose_regions(da)
+    da_regions = _decompose_regions(da)
 
     # Plot all regions on same axis
-    add_labels = [True] + [False] * (len(regions) - 1)
+    add_labels = [True] + [False] * (len(da_regions) - 1)
     artists = [method(region, x=x, y=y, ax=ax, add_colorbar=False, add_labels=add_label,
-               cmap=cmap, **kwargs) for region, add_label in zip(regions, add_labels)]
+               cmap=cmap, **kwargs)
+               for region, add_label in zip(da_regions.values(), add_labels)]
 
     if method is xr.plot.contour:
         # using extend='neither' guarantees that the ends of the colorbar will be
@@ -213,35 +212,34 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                 if not isinstance(value, slice):
                     raise ValueError('Argument passed to gridlines must be bool, int or '
                                      'slice. Got a ' + type(value) + ', ' + str(value))
-        R_global = da['R']
-        R_global.attrs['metadata'] = da.metadata
 
-        Z_global = da['Z']
-        Z_global.attrs['metadata'] = da.metadata
-
-        R_regions = _decompose_regions(da['R'])
-        Z_regions = _decompose_regions(da['Z'])
+        R_regions = [da_region['R'] for da_region in da_regions.values()]
+        Z_regions = [da_region['Z'] for da_region in da_regions.values()]
 
         for R, Z in zip(R_regions, Z_regions):
             if (not da.metadata['bout_xdim'] in R.dims
                     and not da.metadata['bout_ydim'] in R.dims):
                 # Small regions around X-point do not have segments in x- or y-directions,
                 # so skip
+                # Currently this region does not exist, but there is a small white gap at
+                # the X-point, so we might add it back in future
                 continue
             if gridlines.get('x') is not None:
                 # transpose in case Dataset or DataArray has been transposed away from the usual
                 # form
                 dim_order = (da.metadata['bout_xdim'], da.metadata['bout_ydim'])
                 yarg = {da.metadata['bout_ydim']: gridlines['x']}
-                plt.plot(R.isel(**yarg).transpose(*dim_order),
-                         Z.isel(**yarg).transpose(*dim_order), color='k', lw=0.1)
+                plt.plot(R.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                         Z.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                         color='k', lw=0.1)
             if gridlines.get('y') is not None:
                 xarg = {da.metadata['bout_xdim']: gridlines['y']}
                 # Need to plot transposed arrays to make gridlines that go in the
                 # y-direction
                 dim_order = (da.metadata['bout_ydim'], da.metadata['bout_xdim'])
-                plt.plot(R.isel(**xarg).transpose(*dim_order),
-                         Z.isel(**yarg).transpose(*dim_order), color='k', lw=0.1)
+                plt.plot(R.isel(**xarg).transpose(*dim_order, transpose_coords=True),
+                         Z.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                         color='k', lw=0.1)
 
     ax.set_title(da.name)
 
@@ -250,9 +248,9 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         targets = False
 
     if separatrix:
-        plot_separatrices(da, ax)
+        plot_separatrices(da_regions, ax)
 
     if targets:
-        plot_targets(da, ax, hatching=add_limiter_hatching)
+        plot_targets(da_regions, ax, hatching=add_limiter_hatching)
 
     return artists

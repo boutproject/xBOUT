@@ -71,11 +71,7 @@ class TestBoutDatasetMethods:
         n_aligned_from_array = n.bout.toFieldAligned()
 
         # check n_aligned does not exist yet
-        try:
-            ds['n_aligned']
-            assert False
-        except KeyError:
-            pass
+        assert 'n_aligned' not in ds
 
         n_aligned_from_ds = ds.bout.getFieldAligned('n')
         xrt.assert_allclose(n_aligned_from_ds, n_aligned_from_array)
