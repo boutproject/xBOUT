@@ -311,6 +311,11 @@ class BoutDataArrayAccessor:
                              region.yupper + (ybndry_upper - 0.5)*dy,
                              ny_fine + ybndry_lower + ybndry_upper)
 
+        # This prevents da.interp() from being very slow, but don't know why.
+        # Slow-down was introduced in d062fa9e75c02fbfdd46e5d1104b9b12f034448f when
+        # _add_attrs_to_var(updated_ds, ycoord) was added in geometries.py
+        da = da.compute()
+
         da = da.interp({ycoord: y_fine.data}, assume_sorted=True, method=method,
                        kwargs={'fill_value': 'extrapolate'})
 
