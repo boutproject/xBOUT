@@ -669,6 +669,14 @@ class BoutDatasetAccessor:
         aspect = _expand_list_arg(aspect, 'aspect')
 
         blocks = []
+
+        def is_list(variable):
+            return (
+                isinstance(variable, list)
+                or isinstance(variable, tuple)
+                or isinstance(variable, set)
+            )
+
         for subplot_args in zip(variables, axes, poloidal_plot, vmin, vmax,
                                 logscale, titles, aspect):
 
@@ -680,16 +688,55 @@ class BoutDatasetAccessor:
 
             ax.set_aspect(this_aspect)
 
-            if isinstance(v, str):
-                v = self.data[v]
+            if is_list(v):
+                for i in range(len(v)):
+                    if isinstance(v[i], str):
+                        v[i] = self.data[v[i]]
+                # list of variables for one subplot only supported for line plots with 1
+                # dimension plus time
+                ndims = 2
+                dims = v[0].dims
+                if len(dims) != 2:
+                    raise ValueError(
+                        "Variables in sublist must be 2d - can only overlay line plots"
+                    )
+                for w in v:
+                    if not w.dims == dims:
+                        raise ValueError(
+                            f"All variables in sub-list must have same dimensions."
+                            f"{v[0].name} had {v[0].dims} but {w.name} had {w.dims}."
+                        )
+            else:
+                if isinstance(v, str):
+                    v = self.data[v]
 
-            data = v.bout.data
-            ndims = len(data.dims)
-            ax.set_title(data.name)
+                data = v.bout.data
+                ndims = len(data.dims)
+                ax.set_title(data.name)
 
             if ndims == 2:
-                blocks.append(animate_line(data=data, ax=ax, animate_over=animate_over,
-                                           animate=False, **kwargs))
+                if not is_list(v):
+                    blocks.append(animate_line(
+                        data=data,
+                        ax=ax,
+                        animate_over=animate_over,
+                        animate=False,
+                        **kwargs
+                    ))
+                else:
+                    for w in v:
+                        blocks.append(animate_line(
+                            data=w,
+                            ax=ax,
+                            animate_over=animate_over,
+                            animate=False,
+                            label=w.name,
+                            **kwargs
+                        ))
+                    legend = ax.legend()
+                    legend.set_draggable(True)
+                    # set 'v' to use for the timeline below
+                    v = v[0]
             elif ndims == 3:
                 if this_vmin is None:
                     this_vmin = data.min().values
