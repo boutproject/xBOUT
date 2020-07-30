@@ -229,6 +229,11 @@ class Region:
         return {self.xcoord: slice(xinner, xouter),
                 self.ycoord: slice(self.yupper_ind, self.yupper_ind + myg)}
 
+    def __eq__(self, other):
+        if not isinstance(other, Region):
+            return NotImplemented
+        return vars(self) == vars(other)
+
 
 def _in_range(val, lower, upper):
     if val < lower:

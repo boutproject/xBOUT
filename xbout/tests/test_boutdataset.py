@@ -9,7 +9,7 @@ from pathlib import Path
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout.tests.test_region import (params_guards, params_guards_values,
                                      params_boundaries, params_boundaries_values)
-from xbout import BoutDatasetAccessor, open_boutdataset
+from xbout import BoutDatasetAccessor, open_boutdataset, reload_boutdataset
 from xbout.geometries import apply_geometry
 from xbout.utils import _set_attrs_on_all_vars
 
@@ -477,17 +477,13 @@ class TestLoadInputFile:
 class TestLoadLogFile:
     pass
 
-@pytest.mark.skip(reason="Need to sort out issue with saving metadata")
 class TestSave:
-    @pytest.mark.parametrize("options", [False, True])
-    def test_save_all(self, tmpdir_factory, bout_xyt_example_files, options):
+    def test_save_all(self, tmpdir_factory, bout_xyt_example_files):
         # Create data
         path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=5, nt=1)
 
         # Load it as a boutdataset
         original = open_boutdataset(datapath=path, inputfilepath=None)
-        if not options:
-            original.attrs['options'] = {}
 
         # Save it to a netCDF file
         savepath = str(Path(path).parent) + 'temp_boutdata.nc'
@@ -496,9 +492,42 @@ class TestSave:
         # Load it again using bare xarray
         recovered = open_dataset(savepath)
 
-        # Compare
+        # Compare equal (not identical because attributes are changed when saving)
         xrt.assert_equal(original, recovered)
 
+    @pytest.mark.parametrize("geometry", [None, "toroidal"])
+    def test_reload_all(self, tmpdir_factory, bout_xyt_example_files, geometry):
+        if geometry is not None:
+            grid = "grid"
+        else:
+            grid = None
+
+        # Create data
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=5, nt=1, grid=grid)
+
+        if grid is not None:
+            gridpath = str(Path(path).parent) + "/grid.nc"
+        else:
+            gridpath = None
+
+        # Load it as a boutdataset
+        original = open_boutdataset(
+                       datapath=path,
+                       inputfilepath=None,
+                       geometry=geometry,
+                       gridfilepath=gridpath,
+                   )
+
+        # Save it to a netCDF file
+        savepath = str(Path(path).parent) + 'temp_boutdata.nc'
+        original.bout.save(savepath=savepath)
+
+        # Load it again
+        recovered = reload_boutdataset(savepath)
+
+        xrt.assert_identical(original.load(), recovered.load())
+
+    @pytest.mark.skip("saving and loading as float32 does not work")
     @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
     def test_save_dtype(self, tmpdir_factory, bout_xyt_example_files, save_dtype):
 
@@ -532,8 +561,43 @@ class TestSave:
             savepath = str(Path(path).parent) + '/temp_boutdata_' + var + '.nc'
             recovered = open_dataset(savepath)
 
-            # Compare
+            # Compare equal (not identical because attributes are changed when saving)
             xrt.assert_equal(recovered[var], original[var])
+
+    @pytest.mark.parametrize("geometry", [None, "toroidal"])
+    def test_reload_separate_variables(
+        self, tmpdir_factory, bout_xyt_example_files, geometry
+    ):
+        if geometry is not None:
+            grid = "grid"
+        else:
+            grid = None
+
+        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1, grid=grid)
+
+        if grid is not None:
+            gridpath = str(Path(path).parent) + "/grid.nc"
+        else:
+            gridpath = None
+
+        # Load it as a boutdataset
+        original = open_boutdataset(
+                       datapath=path,
+                       inputfilepath=None,
+                       geometry=geometry,
+                       gridfilepath=gridpath,
+                   )
+
+        # Save it to a netCDF file
+        savepath = str(Path(path).parent) + '/temp_boutdata.nc'
+        original.bout.save(savepath=savepath, separate_vars=True)
+
+        # Load it again
+        savepath = str(Path(path).parent) + '/temp_boutdata_*.nc'
+        recovered = reload_boutdataset(savepath, pre_squashed=True)
+
+        # Compare
+        xrt.assert_identical(recovered, original)
 
 
 class TestSaveRestart:

@@ -7,7 +7,7 @@ Documentation: https://xbout.readthedocs.io
 
 xBOUT provides an interface for collecting the output data from a
 [BOUT++](https://boutproject.github.io/) simulation into an
-[xarray](http://xarray.pydata.org/en/stable/index.html)
+[xarray](https://xarray.pydata.org/en/stable/index.html)
 dataset in an efficient and scalable way, as well as accessor methods
 for common BOUT++ analysis and plotting tasks.
 
@@ -28,7 +28,7 @@ or
 git clone https://github.com/boutproject/xBOUT.git
 ```
 
-Once cloned navigate to the xBOUT directory and run the following command:
+Once cloned navigate to the `xBOUT` directory and run the following command:
 
 ```bash
 pip3 install --user ./
@@ -39,7 +39,8 @@ python3 setup.py install
 ```
 
 You can run the tests by navigating to the `/xBOUT/` directory and
-entering `pytest`.
+entering `pytest`. You can also test your installation of `xBOUT` by
+running `pytest --pyargs xbout`.
 
 xBOUT requires other python packages, which will be installed when you 
 run one of the above install commands if they are not already installed on 
@@ -68,7 +69,7 @@ including data, input options and (soon) grid data.
 ### BoutDataset Accessor Methods
 
 xBOUT defines a set of
-[accessor](http://xarray.pydata.org/en/stable/internals.html#extending-xarray)
+[accessor](https://xarray.pydata.org/en/stable/internals.html#extending-xarray)
 methods on the loaded Datasets and DataArrays, which are called by
 `ds.bout.method()`.
 
@@ -132,7 +133,7 @@ though I would encourage you to submit an issue before writing a pull
 request.
 For a general guide on how to contribute to an open-source python
 project see
-[xarray's guide for contributors](http://xarray.pydata.org/en/stable/contributing.html).
+[xarray's guide for contributors](https://xarray.pydata.org/en/stable/contributing.html).
 
 The existing code was written using Test-Driven Development, and I would
 like to continue this, so please include `pytest` tests with any pull

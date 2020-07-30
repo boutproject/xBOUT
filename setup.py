@@ -7,7 +7,7 @@ version_dict = {}
 with open("xbout/_version.py") as f:
     exec(f.read(), version_dict)
 
-name = 'xBOUT'
+name = 'xbout'
 version = version_dict['__version__']
 release = version
 
@@ -33,7 +33,7 @@ setup(
     license="Apache",
     python_requires='>=3.6',
     install_requires=[
-        'xarray>=v0.13.0',
+        'xarray>=0.16.0',
         'dask[array]>=1.0.0',
         'natsort>=5.5.0',
         'matplotlib>=3.1.1',

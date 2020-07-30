@@ -258,22 +258,15 @@ class BoutDataArrayAccessor:
                                           method=method).bout.to_dataset()
                 for region in self.data.regions]
 
-            result = xr.combine_by_coords(parts)
-            result.attrs = parts[0].attrs
-            # xr.combine_by_coords does not keep attrs at the moment. See
-            # https://github.com/pydata/xarray/issues/3865 For now just copy the attrs
-            # from the first region. Can remove this workaround when the xarray issue is
-            # fixed. Should be able to use instead of the above just:
-            # result = xr.combine_by_coords(
-            #    [self.interpolate_parallel(region, n=n, toroidal_points=toroidal_points,
-            #                                method=method).bout.to_dataset()]
-            # )
+            # 'region' is not the same for all parts, and should not exist in the result,
+            # so delete before merging
+            for part in parts:
+                if 'region' in part.attrs:
+                    del part.attrs['region']
+                if 'region' in part[self.data.name].attrs:
+                    del part[self.data.name].attrs['region']
 
-            # result has all regions, so should not have a region attribute
-            if 'region' in result.attrs:
-                del result.attrs['region']
-            if 'region' in result[self.data.name].attrs:
-                del result[self.data.name].attrs['region']
+            result = xr.combine_by_coords(parts)
 
             if return_dataset:
                 return result
@@ -317,6 +310,11 @@ class BoutDataArrayAccessor:
         y_fine = np.linspace(region.ylower - (ybndry_lower - 0.5)*dy,
                              region.yupper + (ybndry_upper - 0.5)*dy,
                              ny_fine + ybndry_lower + ybndry_upper)
+
+        # This prevents da.interp() from being very slow, but don't know why.
+        # Slow-down was introduced in d062fa9e75c02fbfdd46e5d1104b9b12f034448f when
+        # _add_attrs_to_var(updated_ds, ycoord) was added in geometries.py
+        da = da.compute()
 
         da = da.interp({ycoord: y_fine.data}, assume_sorted=True, method=method,
                        kwargs={'fill_value': 'extrapolate'})

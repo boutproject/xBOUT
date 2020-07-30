@@ -257,45 +257,56 @@ class BoutDatasetAccessor:
             raise ValueError('Must provide a path to which to save the data.')
 
         if save_dtype is not None:
-            to_save = to_save.astype(save_dtype)
+            # Workaround to keep attributes while calling astype. See
+            # https://github.com/pydata/xarray/issues/2049
+            # https://github.com/pydata/xarray/pull/2070
+            for da in chain(to_save.values(), to_save.coords.values()):
+                da.data = da.data.astype(save_dtype)
+
+        # make shallow copy of Dataset, so we do not modify the attributes of the data
+        # when we change things to save
+        to_save = to_save.copy()
 
         options = to_save.attrs.pop('options')
         if options:
             # TODO Convert Ben's options class to a (flattened) nested
             # dictionary then store it in ds.attrs?
-            raise NotImplementedError("Haven't decided how to write options "
-                                      "file back out yet")
-        else:
-            # Delete placeholders for options on each variable and coordinate
-            for var in chain(to_save.data_vars, to_save.coords):
-                try:
-                    del to_save[var].attrs['options']
-                except KeyError:
-                    pass
+            warnings.warn(
+                "Haven't decided how to write options file back out yet - deleting "
+                "options for now. To re-load this Dataset, pass the same inputfilepath "
+                "to open_boutdataset when re-loading."
+            )
+        # Delete placeholders for options on each variable and coordinate
+        for var in chain(to_save.data_vars, to_save.coords):
+            try:
+                del to_save[var].attrs['options']
+            except KeyError:
+                pass
 
         # Store the metadata as individual attributes instead because
         # netCDF can't handle storing arbitrary objects in attrs
-        def dict_to_attrs(obj, key):
-            for key, value in obj.attrs.pop(key).items():
-                obj.attrs[key] = value
+        def dict_to_attrs(obj, section):
+            for key, value in obj.attrs.pop(section).items():
+                obj.attrs[section + ":" + key] = value
         dict_to_attrs(to_save, 'metadata')
         # Must do this for all variables and coordinates in dataset too
         for varname, da in chain(to_save.data_vars.items(), to_save.coords.items()):
             try:
-                dict_to_attrs(da, key='metadata')
+                dict_to_attrs(da, 'metadata')
             except KeyError:
                 pass
 
-        # Do not need to save regions as these can be reconstructed from the metadata
-        try:
-            del to_save.attrs['regions']
-        except KeyError:
-            pass
-        for var in chain(to_save.data_vars, to_save.coords):
+        if 'regions' in to_save.attrs:
+            # Do not need to save regions as these can be reconstructed from the metadata
             try:
-                del to_save[var].attrs['regions']
+                del to_save.attrs['regions']
             except KeyError:
                 pass
+            for var in chain(to_save.data_vars, to_save.coords):
+                try:
+                    del to_save[var].attrs['regions']
+                except KeyError:
+                    pass
 
         if separate_vars:
             # Save each major variable to a different netCDF file
