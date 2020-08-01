@@ -125,6 +125,14 @@ class BoutDataArrayAccessor:
         if self.data.direction_y != "Standard":
             raise ValueError("Cannot shift a " + self.direction_y + " type field to "
                              + "field-aligned coordinates")
+        if not (
+            self.data.cell_location == "CELL_CENTRE"
+            or self.data.cell_location == "CELL_ZLOW"
+        ):
+            raise ValueError(
+                f"toFieldAligned does not support staggered grids yet, but "
+                f"location is {self.data.cell_location}."
+            )
         result = self._shiftZ(self.data['zShift'])
         result["direction_y"] = "Aligned"
         return result
@@ -137,6 +145,14 @@ class BoutDataArrayAccessor:
         if self.data.direction_y != "Aligned":
             raise ValueError("Cannot shift a " + self.direction_y + " type field to "
                              + "field-aligned coordinates")
+        if not (
+            self.data.cell_location == "CELL_CENTRE"
+            or self.data.cell_location == "CELL_ZLOW"
+        ):
+            raise ValueError(
+                f"fromFieldAligned does not support staggered grids yet, but "
+                f"location is {self.data.cell_location}."
+            )
         result = self._shiftZ(-self.data['zShift'])
         result["direction_y"] = "Standard"
         return result
