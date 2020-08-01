@@ -240,6 +240,18 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         ds = ds.set_coords('zShift')
     except KeyError:
         pass
+    try:
+        ds = ds.set_coords('zShift_CELL_XLOW')
+    except KeyError:
+        pass
+    try:
+        ds = ds.set_coords('zShift_CELL_YLOW')
+    except KeyError:
+        pass
+    try:
+        ds = ds.set_coords('zShift_CELL_ZLOW')
+    except KeyError:
+        pass
 
     ds = _create_regions_toroidal(ds)
 
