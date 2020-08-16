@@ -125,7 +125,7 @@ class BoutDataArrayAccessor:
         if self.data.direction_y != "Standard":
             raise ValueError("Cannot shift a " + self.direction_y + " type field to "
                              + "field-aligned coordinates")
-        if not (
+        if hasattr(self.data, "cell_location") and not (
             self.data.cell_location == "CELL_CENTRE"
             or self.data.cell_location == "CELL_ZLOW"
         ):
@@ -145,7 +145,7 @@ class BoutDataArrayAccessor:
         if self.data.direction_y != "Aligned":
             raise ValueError("Cannot shift a " + self.direction_y + " type field to "
                              + "field-aligned coordinates")
-        if not (
+        if hasattr(self.data, "cell_location") and not (
             self.data.cell_location == "CELL_CENTRE"
             or self.data.cell_location == "CELL_ZLOW"
         ):
