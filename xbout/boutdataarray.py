@@ -62,6 +62,7 @@ class BoutDataArrayAccessor:
 
         dropIfExists(ds, 'direction_y')
         dropIfExists(ds, 'direction_z')
+        dropIfExists(ds, 'cell_location')
 
         return ds
 
