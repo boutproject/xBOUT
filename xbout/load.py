@@ -447,10 +447,10 @@ def _read_splitting(filepath, info=True):
     ds = xr.open_dataset(str(filepath))
 
     # Account for case of no parallelisation, when nxpe etc won't be in dataset
-    def get_scalar(ds, key, default=1, only_positive=False, info=True):
+    def get_nonnegative_scalar(ds, key, default=1, info=True):
         if key in ds:
             val = ds[key].values
-            if only_positive and (val < 0):
+            if val < 0:
                 raise ValueError(f"{key} read from dump files is {val}, but negative"
                                  f" values are not valid")
             else:
@@ -461,12 +461,12 @@ def _read_splitting(filepath, info=True):
                       .format(key=key, default=default))
             return default
 
-    nxpe = get_scalar(ds, 'NXPE', default=1, only_positive=True)
-    nype = get_scalar(ds, 'NYPE', default=1, only_positive=True)
-    mxg = get_scalar(ds, 'MXG', default=2, only_positive=True)
-    myg = get_scalar(ds, 'MYG', default=0, only_positive=True)
-    mxsub = get_scalar(ds, 'MXSUB', default=ds.dims['x'] - 2 * mxg, only_positive=True)
-    mysub = get_scalar(ds, 'MYSUB', default=ds.dims['y'] - 2 * myg, only_positive=True)
+    nxpe = get_nonnegative_scalar(ds, 'NXPE', default=1)
+    nype = get_nonnegative_scalar(ds, 'NYPE', default=1)
+    mxg = get_nonnegative_scalar(ds, 'MXG', default=2)
+    myg = get_nonnegative_scalar(ds, 'MYG', default=0)
+    mxsub = get_nonnegative_scalar(ds, 'MXSUB', default=ds.dims['x'] - 2 * mxg)
+    mysub = get_nonnegative_scalar(ds, 'MYSUB', default=ds.dims['y'] - 2 * myg)
 
     # Check whether this is a single file squashed from the multiple output files of a
     # parallel run (i.e. NXPE*NYPE > 1 even though there is only a single file to read).
