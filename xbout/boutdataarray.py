@@ -13,6 +13,7 @@ from .plotting import plotfuncs
 from .plotting.utils import _create_norm
 from .region import (Region, _concat_inner_guards, _concat_outer_guards,
                      _concat_lower_guards, _concat_upper_guards)
+from .utils import _update_metadata_increased_resolution
 
 
 @register_dataarray_accessor('bout')
@@ -48,12 +49,20 @@ class BoutDataArrayAccessor:
     def to_dataset(self):
         """
         Convert a DataArray to a Dataset, copying the attributes from the DataArray to
-        the Dataset.
+        the Dataset, and dropping attributes that only make sense for a DataArray
         """
         da = self.data
         ds = da.to_dataset()
 
-        ds.attrs = da.attrs
+        ds.attrs = deepcopy(da.attrs)
+
+        def dropIfExists(ds, name):
+            if name in ds.attrs:
+                del ds.attrs[name]
+
+        dropIfExists(ds, 'direction_y')
+        dropIfExists(ds, 'direction_z')
+        dropIfExists(ds, 'cell_location')
 
         return ds
 
@@ -117,6 +126,14 @@ class BoutDataArrayAccessor:
         if self.data.direction_y != "Standard":
             raise ValueError("Cannot shift a " + self.direction_y + " type field to "
                              + "field-aligned coordinates")
+        if hasattr(self.data, "cell_location") and not (
+            self.data.cell_location == "CELL_CENTRE"
+            or self.data.cell_location == "CELL_ZLOW"
+        ):
+            raise ValueError(
+                f"toFieldAligned does not support staggered grids yet, but "
+                f"location is {self.data.cell_location}."
+            )
         result = self._shiftZ(self.data['zShift'])
         result["direction_y"] = "Aligned"
         return result
@@ -129,9 +146,27 @@ class BoutDataArrayAccessor:
         if self.data.direction_y != "Aligned":
             raise ValueError("Cannot shift a " + self.direction_y + " type field to "
                              + "field-aligned coordinates")
+        if hasattr(self.data, "cell_location") and not (
+            self.data.cell_location == "CELL_CENTRE"
+            or self.data.cell_location == "CELL_ZLOW"
+        ):
+            raise ValueError(
+                f"fromFieldAligned does not support staggered grids yet, but "
+                f"location is {self.data.cell_location}."
+            )
         result = self._shiftZ(-self.data['zShift'])
         result["direction_y"] = "Standard"
         return result
+
+    @property
+    def regions(self):
+        if "regions" not in self.data.attrs:
+            raise ValueError(
+                "Called a method requiring regions, but these have not been created. "
+                "Please set the 'geometry' option when calling open_boutdataset() to "
+                "create regions."
+            )
+        return self.data.attrs["regions"]
 
     def from_region(self, name, with_guards=None):
         """
@@ -177,6 +212,165 @@ class BoutDataArrayAccessor:
         if region.connection_upper_y is not None:
             # get upper y-guard cells from the global array
             da = _concat_upper_guards(da, self.data, mxg, myg)
+
+        return da
+
+    @property
+    def fine_interpolation_factor(self):
+        """
+        The default factor to increase resolution when doing parallel interpolation
+        """
+        return self.data.metadata['fine_interpolation_factor']
+
+    @fine_interpolation_factor.setter
+    def fine_interpolation_factor(self, n):
+        """
+        Set the default factor to increase resolution when doing parallel interpolation.
+
+        Parameters
+        -----------
+        n : int
+            Factor to increase parallel resolution by
+        """
+        self.data.metadata['fine_interpolation_factor'] = n
+
+    def interpolate_parallel(self, region=None, *, n=None, toroidal_points=None,
+                             method='cubic', return_dataset=False):
+        """
+        Interpolate in the parallel direction to get a higher resolution version of the
+        variable.
+
+        Parameters
+        ----------
+        region : str, optional
+            By default, return a result with all regions interpolated separately and then
+            combined. If an explicit region argument is passed, then return the variable
+            from only that region.
+        n : int, optional
+            The factor to increase the resolution by. Defaults to the value set by
+            BoutDataset.setupParallelInterp(), or 10 if that has not been called.
+        toroidal_points : int or sequence of int, optional
+            If int, number of toroidal points to output, applies a stride to toroidal
+            direction to save memory usage. If sequence of int, the indexes of toroidal
+            points for the output.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataArray.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+        return_dataset : bool, optional
+            If this is set to True, return a Dataset containing this variable as a member
+            (by default returns a DataArray). Only used when region=None.
+
+        Returns
+        -------
+        A new DataArray containing a high-resolution version of the variable. (If
+        return_dataset=True, instead returns a Dataset containing the DataArray.)
+        """
+
+        if region is None:
+            # Call the single-region version of this method for each region, and combine
+            # the results together
+            parts = [
+                self.interpolate_parallel(region, n=n, toroidal_points=toroidal_points,
+                                          method=method).bout.to_dataset()
+                for region in self.data.regions]
+
+            # 'region' is not the same for all parts, and should not exist in the result,
+            # so delete before merging
+            for part in parts:
+                if 'region' in part.attrs:
+                    del part.attrs['region']
+                if 'region' in part[self.data.name].attrs:
+                    del part[self.data.name].attrs['region']
+
+            result = xr.combine_by_coords(parts)
+
+            if return_dataset:
+                return result
+            else:
+                # Extract the DataArray to return
+                return result[self.data.name]
+
+        # Select a particular 'region' and interpolate to higher parallel resolution
+        da = self.data
+        region = da.regions[region]
+        tcoord = da.metadata['bout_tdim']
+        xcoord = da.metadata['bout_xdim']
+        ycoord = da.metadata['bout_ydim']
+        zcoord = da.metadata['bout_zdim']
+
+        if zcoord in da.dims and da.direction_y != 'Aligned':
+            aligned_input = False
+            da = da.bout.toFieldAligned()
+        else:
+            aligned_input = True
+
+        if n is None:
+            n = self.fine_interpolation_factor
+
+        da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
+        da = da.chunk({ycoord: None})
+
+        ny_fine = n*region.ny
+        dy = (region.yupper - region.ylower)/ny_fine
+
+        myg = da.metadata['MYG']
+        if da.metadata['keep_yboundaries'] and region.connection_lower_y is None:
+            ybndry_lower = myg
+        else:
+            ybndry_lower = 0
+        if da.metadata['keep_yboundaries'] and region.connection_upper_y is None:
+            ybndry_upper = myg
+        else:
+            ybndry_upper = 0
+
+        y_fine = np.linspace(region.ylower - (ybndry_lower - 0.5)*dy,
+                             region.yupper + (ybndry_upper - 0.5)*dy,
+                             ny_fine + ybndry_lower + ybndry_upper)
+
+        # This prevents da.interp() from being very slow.
+        # Apparently large attrs (i.e. regions) on a coordinate which is passed as an
+        # argument to dask.array.map_blocks() slow things down, maybe because coordinates
+        # are numpy arrays, not dask arrays?
+        # Slow-down was introduced in d062fa9e75c02fbfdd46e5d1104b9b12f034448f when
+        # _add_attrs_to_var(updated_ds, ycoord) was added in geometries.py
+        da[ycoord].attrs = {}
+
+        da = da.interp({ycoord: y_fine.data}, assume_sorted=True, method=method,
+                       kwargs={'fill_value': 'extrapolate'})
+
+        da = _update_metadata_increased_resolution(da, n)
+
+        # Add dy to da as a coordinate. This will only be temporary, once we have
+        # combined the regions together, we will demote dy to a regular variable
+        dy_array = xr.DataArray(np.full([da.sizes[xcoord], da.sizes[ycoord]], dy),
+                                dims=[xcoord, ycoord])
+        # need a view of da with only x- and y-dimensions, unfortunately no neat way to
+        # do this with isel
+        da_2d = da
+        if tcoord in da.sizes:
+            da_2d = da_2d.isel(**{tcoord: 0}, drop=True)
+        if zcoord in da.sizes:
+            da_2d = da_2d.isel(**{zcoord: 0}, drop=True)
+        dy_array = da_2d.copy(data=dy_array)
+        da = da.assign_coords(dy=dy_array)
+
+        # Remove regions which have incorrect information for the high-resolution grid.
+        # New regions will be generated when creating a new Dataset in
+        # BoutDataset.getHighParallelResVars
+        del da.attrs['regions']
+
+        if not aligned_input:
+            # Want output in non-aligned coordinates
+            da = da.bout.fromFieldAligned()
+
+        if toroidal_points is not None and zcoord in da.sizes:
+            if isinstance(toroidal_points, int):
+                nz = len(da[zcoord])
+                zstride = (nz + toroidal_points - 1)//toroidal_points
+                da = da.isel(**{zcoord: slice(None, None, zstride)})
+            else:
+                da = da.isel(**{zcoord: toroidal_points})
 
         return da
 

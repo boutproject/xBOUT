@@ -9,15 +9,21 @@ from xbout.tests.test_load import bout_xyt_example_files
 from xbout import open_boutdataset
 
 
+params_guards = "guards"
+params_guards_values = [pytest.param({'x': 0, 'y': 0}, marks=pytest.mark.long),
+                        pytest.param({'x': 2, 'y': 0}, marks=pytest.mark.long),
+                        pytest.param({'x': 0, 'y': 2}, marks=pytest.mark.long),
+                        {'x': 2, 'y': 2}]
+params_boundaries = "keep_xboundaries, keep_yboundaries"
+params_boundaries_values = [pytest.param(False, False, marks=pytest.mark.long),
+                            pytest.param(True, False, marks=pytest.mark.long),
+                            pytest.param(False, True, marks=pytest.mark.long),
+                            (True, True)]
+
+
 class TestRegion:
 
-    params_guards = "guards"
-    params_guards_values = [{'x': 0, 'y': 0}, {'x': 2, 'y': 0}, {'x': 0, 'y': 2},
-                            {'x': 2, 'y': 2}]
-    params_boundaries = "keep_xboundaries, keep_yboundaries"
-    params_boundaries_values = [(False, False), (True, False), (False, True),
-                                (True, True)]
-
+    @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_region_core(self, tmpdir_factory, bout_xyt_example_files, guards,
@@ -53,6 +59,7 @@ class TestRegion:
                 n.isel(theta=slice(ybndry, -ybndry if ybndry != 0 else None)),
                 n_core.isel(theta=slice(ybndry, -ybndry if ybndry != 0 else None)))
 
+    @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_region_sol(self, tmpdir_factory, bout_xyt_example_files, guards,
@@ -133,6 +140,7 @@ class TestRegion:
                        theta=slice(ybndry, -ybndry if ybndry != 0 else None)),
                 n_core.isel(theta=slice(ybndry, -ybndry if ybndry != 0 else None)))
 
+    @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_region_xpoint(self, tmpdir_factory, bout_xyt_example_files, guards,
@@ -282,6 +290,7 @@ class TestRegion:
                                     theta=slice(jys2 + 1 - myg, jys2 + 1)).values,
                              n_lower_outer_SOL.isel(theta=slice(myg)).values)
 
+    @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_region_singlenull(self, tmpdir_factory, bout_xyt_example_files, guards,
@@ -403,6 +412,7 @@ class TestRegion:
                                     theta=slice(jys2 + 1 - myg, jys2 + 1)).values,
                              n_outer_SOL.isel(theta=slice(myg)).values)
 
+    @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
     def test_region_connecteddoublenull(self, tmpdir_factory, bout_xyt_example_files,
@@ -996,7 +1006,8 @@ class TestRegion:
 
         n = ds['n']
 
-        n_lower_inner_PFR = n.bout.from_region('lower_inner_PFR', with_guards=with_guards)
+        n_lower_inner_PFR = n.bout.from_region('lower_inner_PFR',
+                                               with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_lower_inner_PFR.attrs['region']
@@ -1011,7 +1022,7 @@ class TestRegion:
                              n_lower_inner_PFR.isel(theta=slice(-yguards, None)).values)
 
         n_lower_inner_intersep = n.bout.from_region('lower_inner_intersep',
-                                                   with_guards=with_guards)
+                                                    with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_lower_inner_intersep.attrs['region']
@@ -1027,7 +1038,8 @@ class TestRegion:
                            theta=slice(jys11 + 1, jys11 + 1 + yguards)).values,
                     n_lower_inner_intersep.isel(theta=slice(-yguards, None)).values)
 
-        n_lower_inner_SOL = n.bout.from_region('lower_inner_SOL', with_guards=with_guards)
+        n_lower_inner_SOL = n.bout.from_region('lower_inner_SOL',
+                                               with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_lower_inner_SOL.attrs['region']
@@ -1096,7 +1108,8 @@ class TestRegion:
                                     theta=slice(jys21 + 1, jys21 + 1 + yguards)).values,
                              n_inner_sol.isel(theta=slice(-yguards, None)).values)
 
-        n_upper_inner_PFR = n.bout.from_region('upper_inner_PFR', with_guards=with_guards)
+        n_upper_inner_PFR = n.bout.from_region('upper_inner_PFR',
+                                               with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_upper_inner_PFR.attrs['region']
@@ -1111,7 +1124,7 @@ class TestRegion:
                              n_upper_inner_PFR.isel(theta=slice(yguards)).values)
 
         n_upper_inner_intersep = n.bout.from_region('upper_inner_intersep',
-                                                   with_guards=with_guards)
+                                                    with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_upper_inner_intersep.attrs['region']
@@ -1125,7 +1138,8 @@ class TestRegion:
                                     theta=slice(jys12 + 1 - yguards, jys12 + 1)).values,
                              n_upper_inner_intersep.isel(theta=slice(yguards)).values)
 
-        n_upper_inner_SOL = n.bout.from_region('upper_inner_SOL', with_guards=with_guards)
+        n_upper_inner_SOL = n.bout.from_region('upper_inner_SOL',
+                                               with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_upper_inner_SOL.attrs['region']
@@ -1139,7 +1153,8 @@ class TestRegion:
                                     theta=slice(jys21 + 1 - yguards, jys21 + 1)).values,
                              n_upper_inner_SOL.isel(theta=slice(yguards)).values)
 
-        n_upper_outer_PFR = n.bout.from_region('upper_outer_PFR', with_guards=with_guards)
+        n_upper_outer_PFR = n.bout.from_region('upper_outer_PFR',
+                                               with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_upper_outer_PFR.attrs['region']
@@ -1155,7 +1170,7 @@ class TestRegion:
                              n_upper_outer_PFR.isel(theta=slice(-yguards, None)).values)
 
         n_upper_outer_intersep = n.bout.from_region('upper_outer_intersep',
-                                                   with_guards=with_guards)
+                                                    with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_upper_outer_intersep.attrs['region']
@@ -1171,7 +1186,8 @@ class TestRegion:
                              n_upper_outer_intersep.isel(
                                  theta=slice(-yguards, None)).values)
 
-        n_upper_outer_SOL = n.bout.from_region('upper_outer_SOL', with_guards=with_guards)
+        n_upper_outer_SOL = n.bout.from_region('upper_outer_SOL',
+                                               with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_upper_outer_SOL.attrs['region']
@@ -1241,7 +1257,8 @@ class TestRegion:
                                     theta=slice(jys22 + 1, jys22 + 1 + yguards)).values,
                              n_outer_sol.isel(theta=slice(-yguards, None)).values)
 
-        n_lower_outer_PFR = n.bout.from_region('lower_outer_PFR', with_guards=with_guards)
+        n_lower_outer_PFR = n.bout.from_region('lower_outer_PFR',
+                                               with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_lower_outer_PFR.attrs['region']
@@ -1256,7 +1273,7 @@ class TestRegion:
                              n_lower_outer_PFR.isel(theta=slice(yguards)).values)
 
         n_lower_outer_intersep = n.bout.from_region('lower_outer_intersep',
-                                                   with_guards=with_guards)
+                                                    with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_lower_outer_intersep.attrs['region']
@@ -1270,7 +1287,8 @@ class TestRegion:
                                     theta=slice(jys22 + 1 - yguards, jys22 + 1)).values,
                              n_lower_outer_intersep.isel(theta=slice(yguards)).values)
 
-        n_lower_outer_SOL = n.bout.from_region('lower_outer_SOL', with_guards=with_guards)
+        n_lower_outer_SOL = n.bout.from_region('lower_outer_SOL',
+                                               with_guards=with_guards)
 
         # Remove attributes that are expected to be different
         del n_lower_outer_SOL.attrs['region']
@@ -1280,6 +1298,7 @@ class TestRegion:
         if yguards > 0:
             # check y-guards, which were 'communicated' by from_region
             # Coordinates are not equal, so only compare array values
-            npt.assert_equal(n.isel(x=slice(ixs2 - xguards, None),
-                                    theta=slice(jys22 + 1 - yguards, jys22 + 1)).values,
-                             n_lower_outer_SOL.isel(theta=slice(yguards)).values)
+            npt.assert_equal(
+                    n.isel(x=slice(ixs2 - xguards, None),
+                           theta=slice(jys22 + 1 - yguards, jys22 + 1)).values,
+                    n_lower_outer_SOL.isel(theta=slice(yguards)).values)

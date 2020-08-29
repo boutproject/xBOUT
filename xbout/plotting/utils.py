@@ -73,7 +73,7 @@ def _is_core_only(da):
     return (ix1 >= nx and ix2 >= nx)
 
 
-def plot_separatrices(da, ax):
+def plot_separatrices(da, ax, *, x='R', y='Z'):
     """Plot separatrices"""
 
     if not isinstance(da, dict):
@@ -90,14 +90,14 @@ def plot_separatrices(da, ax):
         inner = da_region.region.connection_inner_x
         if inner is not None:
             da_inner = da_regions[inner]
-            R = 0.5*(da_inner['R'].isel(**{xcoord: -1})
-                     + da_region['R'].isel(**{xcoord: 0}))
-            Z = 0.5*(da_inner['Z'].isel(**{xcoord: -1})
-                     + da_region['Z'].isel(**{xcoord: 0}))
-            ax.plot(R, Z, 'k--')
+            x_sep = 0.5*(da_inner[x].isel(**{xcoord: -1})
+                         + da_region[x].isel(**{xcoord: 0}))
+            y_sep = 0.5*(da_inner[y].isel(**{xcoord: -1})
+                         + da_region[y].isel(**{xcoord: 0}))
+            ax.plot(x_sep, y_sep, 'k--')
 
 
-def plot_targets(da, ax, hatching=True):
+def plot_targets(da, ax, *, x='R', y='Z', hatching=True):
     """Plot divertor and limiter target plates"""
 
     if not isinstance(da, dict):
@@ -118,16 +118,16 @@ def plot_targets(da, ax, hatching=True):
     for da_region in da_regions.values():
         if da_region.region.connection_lower_y is None:
             # lower target exists
-            R = da_region.coords['R'].isel(**{ycoord: y_boundary_guards})
-            Z = da_region.coords['Z'].isel(**{ycoord: y_boundary_guards})
-            [line] = ax.plot(R, Z, 'k-', linewidth=2)
+            x_target = da_region.coords[x].isel(**{ycoord: y_boundary_guards})
+            y_target = da_region.coords[y].isel(**{ycoord: y_boundary_guards})
+            [line] = ax.plot(x_target, y_target, 'k-', linewidth=2)
             if hatching:
                 _add_hatching(line, ax)
         if da_region.region.connection_upper_y is None:
             # upper target exists
-            R = da_region.coords['R'].isel(**{ycoord: -y_boundary_guards - 1})
-            Z = da_region.coords['Z'].isel(**{ycoord: -y_boundary_guards - 1})
-            [line] = ax.plot(R, Z, 'k-', linewidth=2)
+            x_target = da_region.coords[x].isel(**{ycoord: -y_boundary_guards - 1})
+            y_target = da_region.coords[y].isel(**{ycoord: -y_boundary_guards - 1})
+            [line] = ax.plot(x_target, y_target, 'k-', linewidth=2)
             if hatching:
                 _add_hatching(line, ax, reversed=True)
 

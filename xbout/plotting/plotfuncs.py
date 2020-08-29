@@ -213,12 +213,20 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                     raise ValueError('Argument passed to gridlines must be bool, int or '
                                      'slice. Got a ' + type(value) + ', ' + str(value))
 
-        R_regions = [da_region['R'] for da_region in da_regions.values()]
-        Z_regions = [da_region['Z'] for da_region in da_regions.values()]
+        x_regions = [da_region[x] for da_region in da_regions.values()]
+        y_regions = [da_region[y] for da_region in da_regions.values()]
 
-        for R, Z in zip(R_regions, Z_regions):
-            if (not da.metadata['bout_xdim'] in R.dims
-                    and not da.metadata['bout_ydim'] in R.dims):
+        for x, y in zip(x_regions, y_regions):
+            if (
+                (
+                    not da.metadata['bout_xdim'] in x.dims
+                    and not da.metadata['bout_ydim'] in x.dims
+                )
+                or (
+                    not da.metadata['bout_xdim'] in y.dims
+                    and not da.metadata['bout_ydim'] in y.dims
+                )
+            ):
                 # Small regions around X-point do not have segments in x- or y-directions,
                 # so skip
                 # Currently this region does not exist, but there is a small white gap at
@@ -229,16 +237,16 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                 # form
                 dim_order = (da.metadata['bout_xdim'], da.metadata['bout_ydim'])
                 yarg = {da.metadata['bout_ydim']: gridlines['x']}
-                plt.plot(R.isel(**yarg).transpose(*dim_order, transpose_coords=True),
-                         Z.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                plt.plot(x.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                         y.isel(**yarg).transpose(*dim_order, transpose_coords=True),
                          color='k', lw=0.1)
             if gridlines.get('y') is not None:
                 xarg = {da.metadata['bout_xdim']: gridlines['y']}
                 # Need to plot transposed arrays to make gridlines that go in the
                 # y-direction
                 dim_order = (da.metadata['bout_ydim'], da.metadata['bout_xdim'])
-                plt.plot(R.isel(**xarg).transpose(*dim_order, transpose_coords=True),
-                         Z.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                plt.plot(x.isel(**xarg).transpose(*dim_order, transpose_coords=True),
+                         y.isel(**yarg).transpose(*dim_order, transpose_coords=True),
                          color='k', lw=0.1)
 
     ax.set_title(da.name)
@@ -248,9 +256,9 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         targets = False
 
     if separatrix:
-        plot_separatrices(da_regions, ax)
+        plot_separatrices(da_regions, ax, x=x, y=y)
 
     if targets:
-        plot_targets(da_regions, ax, hatching=add_limiter_hatching)
+        plot_targets(da_regions, ax, x=x, y=y, hatching=add_limiter_hatching)
 
     return artists
