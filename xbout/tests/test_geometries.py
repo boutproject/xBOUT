@@ -1,3 +1,5 @@
+import numpy as np
+
 from xarray import Dataset, DataArray
 from xarray.testing import assert_equal
 import pytest
@@ -21,6 +23,8 @@ class TestGeometryRegistration:
         assert "Schwarzschild" in REGISTERED_GEOMETRIES.keys()
 
         original = Dataset()
+        original['dy'] = DataArray(np.ones((3, 4)), dims=('x', 'y'))
+        original.attrs['metadata'] = {}
         updated = apply_geometry(ds=original, geometry_name="Schwarzschild")
         assert_equal(updated['event_horizon'], DataArray(4.0))
 

@@ -61,307 +61,75 @@ def plot_separatrix(da, sep_pos, ax, radial_coord='x'):
 
 def _decompose_regions(da):
 
-    j11, j12, j21, j22, ix1, ix2, nin, _, ny, y_boundary_guards = _get_seps(da)
-    regions = []
-
-    x = da.metadata['bout_xdim']
-    y = da.metadata['bout_ydim']
-    other_dims = list(da.dims)
-    other_dims.remove(x)
-    other_dims.remove(y)
-
-    ystart = 0  # Y index to start the next section
-    if j11 >= 0:
-        # plot lower inner leg
-        region1 = da.isel({y: slice(ystart, (j11 + 1))})
-
-        yind = [j11, j22 + 1]
-        region2 = da.isel({x: slice(0, ix1), y: yind})
-
-        region3 = da.isel({x: slice(ix1, None), y: slice(j11, (j11 + 2))})
-
-        yind = [j22, j11 + 1]
-        region4 = da.isel({x: slice(0, ix1), y: yind})
-
-        regions.extend([region1, region2, region3, region4])
-
-        ystart = j11 + 1
-
-    if j21 + 1 > ystart:
-        # Inner SOL
-        region5 = da.isel(y=slice(ystart, (j21 + 1)))
-        regions.append(region5)
-
-        ystart = j21 + 1
-
-    if j12 > j21:
-        # Contains upper PF region
-
-        # Inner leg
-        region6 = da.isel({x: slice(ix1, None), y: slice(j21, (j21 + 2))})
-        region7 = da.isel({y: slice(ystart, nin)})
-
-        # Outer leg
-        region8 = da.isel({y: slice(nin, (j12 + 1))})
-        region9 = da.isel({x: slice(ix1, None), y: slice(j12, (j12 + 2))})
-
-        yind = [j21, j12 + 1]
-
-        region10 = da.isel({x: slice(0, ix1), y: yind})
-
-        yind = [j21 + 1, j12]
-        region11 = da.isel({x: slice(0, ix1), y: yind})
-
-        regions.extend([region6, region7, region8,
-                        region9, region10, region11])
-
-        ystart = j12 + 1
-    else:
-        ystart -= 1
-
-    if j22 + 1 > ystart:
-        # Outer SOL
-        region12 = da.isel({y: slice(ystart, (j22 + 1))})
-        regions.append(region12)
-
-        ystart = j22 + 1
-
-    if j22 + 1 < ny:
-        # Outer leg
-        region13 = da.isel({x: slice(ix1, None), y: slice(j22, (j22 + 2))})
-        region14 = da.isel({y: slice(ystart, ny)})
-
-        # X-point regions
-        corner1 = da.isel({x: ix1-1, y: j11})
-        corner2 = da.isel({x: ix1, y: j11})
-        corner3 = da.isel({x: ix1, y: j11+1})
-        corner4 = da.isel({x: ix1-1, y: j11+1})
-
-        xregion_lower = xr.concat([corner1, corner2, corner3, corner4],
-                                  dim='dim1')
-
-        corner5 = da.isel({x: ix1-1, y: j22+1})
-        corner6 = da.isel({x: ix1, y: j22+1})
-        corner7 = da.isel({x: ix1, y: j22})
-        corner8 = da.isel({x: ix1-1, y: j22})
-
-        xregion_upper = xr.concat([corner5, corner6, corner7, corner8],
-                                  dim='dim1')
-
-        region15 = xr.concat([xregion_lower, xregion_upper], dim='dim2')
-
-        # re-arrange dimensions so that the new 'dim1' and 'dim2' are at the
-        # end - ensures that a time dimension stays at the beginning
-        region15 = region15.transpose(*other_dims, 'dim2', 'dim1')
-
-        regions.extend([region13, region14, region15])
-
-    if j21 > j11 and j12 > j21 and j22 > j12:
-        # X-point regions
-        corner1 = da.isel({x: ix1-1}, {y: j12})
-        corner2 = da.isel({x: ix1}, {y: j12})
-        corner3 = da.isel({x: ix1}, {y: j12+1})
-        corner4 = da.isel({x: ix1-1}, {y: j12+1})
-
-        xregion_lower = xr.concat([corner1, corner2, corner3, corner4],
-                                  dim='dim1')
-
-        corner5 = da.isel({x: ix1-1}, {y: j21+1})
-        corner6 = da.isel({x: ix1}, {y: j21+1})
-        corner7 = da.isel({x: ix1}, {y: j21})
-        corner8 = da.isel({x: ix1-1}, {y: j21})
-
-        xregion_upper = xr.concat([corner5, corner6, corner7, corner8],
-                                  dim='dim1')
-
-        region16 = xr.concat([xregion_lower, xregion_upper], dim='dim2')
-
-        # re-arrange dimensions so that the new 'dim1' and 'dim2' are at the
-        # end - ensures that a time dimension stays at the beginning
-        region16 = region16.transpose(*other_dims, 'dim2', 'dim1')
-
-        regions.append(region16)
-
-    return regions
+    return {region: da.bout.from_region(region, with_guards=1) for region in da.regions}
 
 
 def _is_core_only(da):
 
-    _, _, _, _, ix1, ix2, _, nx, _, _ = _get_seps(da)
+    nx = da.metadata['nx']
+    ix1 = da.metadata['ixseps1']
+    ix2 = da.metadata['ixseps2']
 
     return (ix1 >= nx and ix2 >= nx)
 
 
-def plot_separatrices(da, ax):
+def plot_separatrices(da, ax, *, x='R', y='Z'):
     """Plot separatrices"""
 
-    j11, j12, j21, j22, ix1, ix2, nin, nx, ny, y_boundary_guards = _get_seps(da)
-
-    R = da.coords['R'].transpose(da.metadata['bout_xdim'],
-                                 da.metadata['bout_ydim']).values
-    Z = da.coords['Z'].transpose(da.metadata['bout_xdim'],
-                                 da.metadata['bout_ydim']).values
-
-    if j22 + 1 < ny:
-        # Lower X-point location
-        Rx = 0.125 * (R[ix1 - 1, j11] + R[ix1, j11]
-                      + R[ix1, j11 + 1] + R[ix1 - 1, j11 + 1]
-                      + R[ix1 - 1, j22 + 1] + R[ix1, j22 + 1]
-                      + R[ix1, j22] + R[ix1 - 1, j22])
-        Zx = 0.125 * (Z[ix1 - 1, j11] + Z[ix1, j11]
-                      + Z[ix1, j11 + 1] + Z[ix1 - 1, j11 + 1]
-                      + Z[ix1 - 1, j22 + 1] + Z[ix1, j22 + 1]
-                      + Z[ix1, j22] + Z[ix1 - 1, j22])
+    if not isinstance(da, dict):
+        da_regions = _decompose_regions(da)
     else:
-        Rx, Zx = None, None
+        da_regions = da
 
-    # Lower inner leg
-    lower_inner_R = np.concatenate(
-        (0.5 * (R[ix1 - 1, 0:(j11 + 1)] + R[ix1, 0:(j11 + 1)]), [Rx]))
-    lower_inner_Z = np.concatenate(
-        (0.5 * (Z[ix1 - 1, 0:(j11 + 1)] + Z[ix1, 0:(j11 + 1)]), [Zx]))
+    da0 = list(da_regions.values())[0]
 
-    # Lower outer leg
-    lower_outer_R = np.concatenate(
-        ([Rx], 0.5 * (R[ix1 - 1, (j22 + 1):] + R[ix1, (j22 + 1):])))
-    lower_outer_Z = np.concatenate(
-        ([Zx], 0.5 * (Z[ix1 - 1, (j22 + 1):] + Z[ix1, (j22 + 1):])))
+    xcoord = da0.metadata['bout_xdim']
+    ycoord = da0.metadata['bout_ydim']
 
-    # Core
-    core_R1 = 0.5 * (R[ix1 - 1, (j11 + 1):(j21 + 1)]
-                     + R[ix1, (j11 + 1):(j21 + 1)])
-    core_R2 = 0.5 * (R[ix1 - 1, (j12 + 1):(j22 + 1)]
-                     + R[ix1, (j12 + 1):(j22 + 1)])
-    core_R = np.concatenate(([Rx], core_R1, core_R2, [Rx]))
-
-    core_Z1 = 0.5 * (Z[ix1 - 1, (j11 + 1):(j21 + 1)]
-                     + Z[ix1, (j11 + 1):(j21 + 1)])
-    core_Z2 = 0.5 * (Z[ix1 - 1, (j12 + 1):(j22 + 1)]
-                     + Z[ix1, (j12 + 1):(j22 + 1)])
-    core_Z = np.concatenate(([Zx], core_Z1, core_Z2, [Zx]))
-
-    ax.plot(lower_inner_R, lower_inner_Z, 'k--')
-    ax.plot(lower_outer_R, lower_outer_Z, 'k--')
-    ax.plot(core_R, core_Z, 'k--')
-
-    # Plot second separatrix
-    if j12 > j21:
-        # Upper X-point location
-        Rx = 0.125 * (R[ix2 - 1, j12] + R[ix2, j12]
-                      + R[ix2, j12 + 1] + R[ix2 - 1, j12 + 1]
-                      + R[ix2 - 1, j21 + 1] + R[ix2, j21 + 1]
-                      + R[ix2, j21] + R[ix2 - 1, j21])
-        Zx = 0.125 * (Z[ix2 - 1, j12] + Z[ix2, j12]
-                      + Z[ix2, j12 + 1] + Z[ix2 - 1, j12 + 1]
-                      + Z[ix2 - 1, j21 + 1] + Z[ix2, j21 + 1]
-                      + Z[ix2, j21] + Z[ix2 - 1, j21])
-    else:
-        Rx, Zx = None, None
-
-    if ix2 != ix1:
-        if ix2 < ix1:
-            raise ValueError("Inner separatrix must be the at the bottom")
-
-        lower_inner_R = 0.5 * (R[ix2 - 1, 0:(j11 + 1)] + R[ix2, 0:(j11 + 1)])
-        lower_inner_Z = 0.5 * (Z[ix2 - 1, 0:(j11 + 1)] + Z[ix2, 0:(j11 + 1)])
-
-        upper_outer_R = 0.5 * (R[ix2 - 1, nin:(j12+1)] + R[ix2, nin:(j12+1)])
-        upper_outer_Z = 0.5 * (Z[ix2 - 1, nin:(j12+1)] + Z[ix2, nin:(j12+1)])
-
-        lower_outer_R = 0.5 * (R[ix2 - 1, (j22 + 1):] + R[ix2, (j22 + 1):])
-        lower_outer_Z = 0.5 * (Z[ix2 - 1, (j22 + 1):] + Z[ix2, (j22 + 1):])
-
-        upper_inner_R = 0.5 * (R[ix2 - 1, (j21+1):nin] + R[ix2, (j21+1):nin])
-        upper_inner_Z = 0.5 * (Z[ix2 - 1, (j21+1):nin] + Z[ix2, (j21+1):nin])
-
-        # Core
-        core_inner_R = 0.5 * (R[ix2 - 1, (j11 + 1):(j21 + 1)]
-                              + R[ix2, (j11 + 1):(j21 + 1)])
-        core_outer_R = 0.5 * (R[ix2 - 1, (j12 + 1):(j22 + 1)]
-                              + R[ix2, (j12 + 1):(j22 + 1)])
-
-        core_inner_Z = 0.5 * (Z[ix2 - 1, (j11 + 1):(j21 + 1)]
-                              + Z[ix2, (j11 + 1):(j21 + 1)])
-        core_outer_Z = 0.5 * (Z[ix2 - 1, (j12 + 1):(j22 + 1)]
-                              + Z[ix2, (j12 + 1):(j22 + 1)])
-
-        inner_R = np.concatenate((lower_inner_R, core_inner_R, [Rx],
-                                  np.flip(upper_outer_R)))
-        inner_Z = np.concatenate((lower_inner_Z, core_inner_Z, [Zx],
-                                  np.flip(upper_outer_Z)))
-        ax.plot(inner_R, inner_Z, 'k--')
-
-        outer_R = np.concatenate((np.flip(lower_outer_R),
-                                  np.flip(core_outer_R), [Rx], upper_inner_R))
-        outer_Z = np.concatenate((np.flip(lower_outer_Z),
-                                  np.flip(core_outer_Z), [Zx], upper_inner_Z))
-        ax.plot(outer_R, outer_Z, 'k--')
-    elif j12 > j21:
-        # Connected double-null - plot separatrices in upper legs
-        upper_outer_R = np.concatenate(
-                (0.5 * (R[ix2 - 1, nin:(j12+1)] + R[ix2, nin:(j12+1)]), [Rx]))
-        upper_outer_Z = np.concatenate(
-                (0.5 * (Z[ix2 - 1, nin:(j12+1)] + Z[ix2, nin:(j12+1)]), [Zx]))
-
-        upper_inner_R = np.concatenate(
-                ([Rx], 0.5 * (R[ix2 - 1, (j21+1):nin] + R[ix2, (j21+1):nin])))
-        upper_inner_Z = np.concatenate(
-                ([Zx], 0.5 * (Z[ix2 - 1, (j21+1):nin] + Z[ix2, (j21+1):nin])))
-
-        ax.plot(upper_inner_R, upper_inner_Z, 'k--')
-        ax.plot(upper_outer_R, upper_outer_Z, 'k--')
+    for da_region in da_regions.values():
+        inner = da_region.region.connection_inner_x
+        if inner is not None:
+            da_inner = da_regions[inner]
+            x_sep = 0.5*(da_inner[x].isel(**{xcoord: -1})
+                         + da_region[x].isel(**{xcoord: 0}))
+            y_sep = 0.5*(da_inner[y].isel(**{xcoord: -1})
+                         + da_region[y].isel(**{xcoord: 0}))
+            ax.plot(x_sep, y_sep, 'k--')
 
 
-def plot_targets(da, ax, hatching=True):
+def plot_targets(da, ax, *, x='R', y='Z', hatching=True):
     """Plot divertor and limiter target plates"""
 
-    j11, j12, j21, j22, ix1, ix2, nin, nx, ny, y_boundary_guards = _get_seps(da)
-
-    R = da.coords['R'].transpose(da.metadata['bout_xdim'],
-                                 da.metadata['bout_ydim']).values
-    Z = da.coords['Z'].transpose(da.metadata['bout_xdim'],
-                                 da.metadata['bout_ydim']).values
-
-    if j22 + 1 < ny:
-        # lower PFR exists
-        xin = 0
+    if not isinstance(da, dict):
+        da_regions = _decompose_regions(da)
     else:
-        xin = ix2
+        da_regions = da
 
-    inner_lower_target_R = R[xin:, y_boundary_guards]
-    inner_lower_target_Z = Z[xin:, y_boundary_guards]
-    [line1] = ax.plot(inner_lower_target_R, inner_lower_target_Z, 'k-',
-                      linewidth=2)
-    if hatching:
-        _add_hatching(line1, ax)
+    da0 = list(da_regions.values())[0]
 
-    outer_lower_target_R = R[xin:, ny - 1 - y_boundary_guards]
-    outer_lower_target_Z = Z[xin:, ny - 1 - y_boundary_guards]
-    [line2] = ax.plot(outer_lower_target_R, outer_lower_target_Z, 'k-',
-                      linewidth=2)
-    if hatching:
-        _add_hatching(line2, ax, reversed=True)
+    xcoord = da0.metadata['bout_xdim']
+    ycoord = da0.metadata['bout_ydim']
 
-    if j21 < nin:
-        # upper PFR exists
-        xin = 0
+    if da0.metadata['keep_yboundaries']:
+        y_boundary_guards = da0.metadata['MYG']
     else:
-        xin = ix2
+        y_boundary_guards = 0
 
-    if j12 > j21:
-        inner_upper_target_R = R[xin:, nin - 1 - y_boundary_guards]
-        inner_upper_target_Z = Z[xin:, nin - 1 - y_boundary_guards]
-        [line3] = ax.plot(inner_upper_target_R, inner_upper_target_Z, 'k-',
-                          linewidth=2)
-        if hatching:
-            _add_hatching(line3, ax, reversed=True)
-
-        outer_upper_target_R = R[xin:, nin + y_boundary_guards]
-        outer_upper_target_Z = Z[xin:, nin + y_boundary_guards]
-        [line4] = ax.plot(outer_upper_target_R, outer_upper_target_Z, 'k-',
-                          linewidth=2)
-        if hatching:
-            _add_hatching(line4, ax)
+    for da_region in da_regions.values():
+        if da_region.region.connection_lower_y is None:
+            # lower target exists
+            x_target = da_region.coords[x].isel(**{ycoord: y_boundary_guards})
+            y_target = da_region.coords[y].isel(**{ycoord: y_boundary_guards})
+            [line] = ax.plot(x_target, y_target, 'k-', linewidth=2)
+            if hatching:
+                _add_hatching(line, ax)
+        if da_region.region.connection_upper_y is None:
+            # upper target exists
+            x_target = da_region.coords[x].isel(**{ycoord: -y_boundary_guards - 1})
+            y_target = da_region.coords[y].isel(**{ycoord: -y_boundary_guards - 1})
+            [line] = ax.plot(x_target, y_target, 'k-', linewidth=2)
+            if hatching:
+                _add_hatching(line, ax, reversed=True)
 
 
 def _add_hatching(line, ax, reversed=False):
@@ -378,13 +146,13 @@ def _add_hatching(line, ax, reversed=False):
         y = np.flip(y)
 
     # TODO redo this to evenly space ticks by physical distance along line
-    num_hatchings = 5
+    num_hatchings = 3
     step = len(x) // num_hatchings
     hatch_inds = np.arange(0, len(x), step)
 
     vx, vy = x.max() - x.min(), y.max() - y.min()
     limiter_line_length = np.linalg.norm((vx, vy))
-    hatch_line_length = (limiter_line_length / num_hatchings) / 1.5
+    hatch_line_length = (limiter_line_length / num_hatchings)
 
     # For each hatching
     for ind in hatch_inds[:-1]:
@@ -410,61 +178,3 @@ def _get_perp_vec(u1, u2, magnitude=0.04):
     v = np.linalg.norm((vx, vy))
     wx, wy = -vy/v * magnitude, vx/v * magnitude
     return wx, wy
-
-
-def _get_seps(da):
-
-    nx = da.metadata['nx']
-    ix1 = da.metadata['ixseps1']
-    ix2 = da.metadata['ixseps2']
-
-    if not da.metadata['keep_xboundaries']:
-        # remove x-boundary cell count from ix1 and ix2
-        x_boundary_guards = da.metadata['MXG']
-        ix1 -= x_boundary_guards
-        ix2 -= x_boundary_guards
-
-    ny = da.metadata['ny']
-    j11 = da.metadata['jyseps1_1']
-    j12 = da.metadata['jyseps1_2']
-    j21 = da.metadata['jyseps2_1']
-    j22 = da.metadata['jyseps2_2']
-    nin = da.metadata.get('ny_inner', j12)
-
-    ny_array = len(da['theta'])
-
-    if da.metadata['keep_yboundaries']:
-        y_boundary_guards = da.metadata['MYG']
-    else:
-        y_boundary_guards = 0
-
-    if ny_array == ny:
-        # No y-boundary cells, or keep_yboundaries is False
-        if y_boundary_guards > 0 and da.metadata['keep_yboundaries']:
-            raise ValueError('keep_yboundaries is True and y_boundary_guards={}, which '
-                             'is greater than 0, but data does not havy y-boundary '
-                             'cells.')
-        y_boundary_guards = 0
-    elif j12 == j21 and ny_array == ny + 2*y_boundary_guards:
-        # single-null with guard cells
-        pass
-    elif j12 > j21 and ny_array == ny + 4*y_boundary_guards:
-        # double-null with guard cells
-        pass
-    else:
-        print('j21={}, j12={}, ny_array={}, ny={}'.format(j21, j12, ny_array, ny))
-        raise ValueError("Unrecognized combination of ny/jyseps")
-
-    # translate topology indices - ones from BOUT++ do not include boundary cells
-    if j21 == j12:
-        upper_y_boundary_guards = 0
-    else:
-        upper_y_boundary_guards = y_boundary_guards
-    j11 += y_boundary_guards
-    j21 += y_boundary_guards
-    nin += y_boundary_guards + upper_y_boundary_guards
-    j12 += y_boundary_guards + 2*upper_y_boundary_guards
-    j22 += y_boundary_guards + 2*upper_y_boundary_guards
-    ny += 2*y_boundary_guards + 2*upper_y_boundary_guards
-
-    return j11, j12, j21, j22, ix1, ix2, nin, nx, ny, y_boundary_guards

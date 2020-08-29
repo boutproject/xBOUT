@@ -100,16 +100,16 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
 
     ax.set_aspect(aspect)
 
-    regions = _decompose_regions(da)
+    da_regions = _decompose_regions(da)
 
     # Plot all regions on same axis
     blocks = []
-    for region in regions:
+    for da_region in da_regions.values():
         # Load values eagerly otherwise for some reason the plotting takes
         # 100's of times longer - for some reason animatplot does not deal
         # well with dask arrays!
-        blocks.append(amp.blocks.Pcolormesh(region.coords[x].values,
-                      region.coords[y].values, region.values, ax=ax, cmap=cmap,
+        blocks.append(amp.blocks.Pcolormesh(da_region.coords[x].values,
+                      da_region.coords[y].values, da_region.values, ax=ax, cmap=cmap,
                       **kwargs))
 
     ax.set_title(da.name)
@@ -121,10 +121,10 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
          targets = False
 
     if separatrix:
-        plot_separatrices(da, ax)
+        plot_separatrices(da_regions, ax, x=x, y=y)
 
     if targets:
-        plot_targets(da, ax, hatching=add_limiter_hatching)
+        plot_targets(da_regions, ax, x=x, y=y, hatching=add_limiter_hatching)
 
     if animate:
         timeline = amp.Timeline(np.arange(da.sizes[animate_over]), fps=fps)
@@ -220,7 +220,7 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
             raise ValueError("Dimension {} is not present in the data" .format(x))
         y = spatial_dims[0]
 
-    data = data.transpose(animate_over, y, x)
+    data = data.transpose(animate_over, y, x, transpose_coords=True)
 
     # Load values eagerly otherwise for some reason the plotting takes
     # 100's of times longer - for some reason animatplot does not deal
@@ -317,7 +317,7 @@ def animate_line(data, animate_over='t', animate=True,
     if (t_read is animate_over):
         pass
     else:
-        data = data.transpose(animate_over, t_read)
+        data = data.transpose(animate_over, t_read, transpose_coords=True)
 
     # Load values eagerly otherwise for some reason the plotting takes
     # 100's of times longer - for some reason animatplot does not deal

@@ -2,8 +2,11 @@ import pytest
 
 import dask.array
 import numpy as np
-from numpy.testing import assert_allclose
+import numpy.testing as npt
+from pathlib import Path
 
+import xarray as xr
+import xarray.testing as xrt
 from xarray.core.utils import dict_equiv
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
@@ -23,7 +26,10 @@ class TestBoutDataArrayMethods:
         assert dict_equiv(ds.attrs, new_ds.attrs)
         assert dict_equiv(ds.metadata, new_ds.metadata)
 
-    @pytest.mark.parametrize('nz', [6, 7, 8, 9])
+    @pytest.mark.parametrize('nz', [pytest.param(6, marks=pytest.mark.long),
+                                    7,
+                                    pytest.param(8, marks=pytest.mark.long),
+                                    pytest.param(9, marks=pytest.mark.long)])
     def test_toFieldAligned(self, tmpdir_factory, bout_xyt_example_files, nz):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, nz), nxpe=1,
                                       nype=1, nt=1)
@@ -49,28 +55,28 @@ class TestBoutDataArrayMethods:
         n_al = n.bout.toFieldAligned()
         for t in range(ds.sizes['t']):
             for z in range(nz):
-                assert_allclose(n_al[t, 0, 0, z].values, 1000.*t + z % nz, rtol=1.e-15, atol=5.e-16)                      # noqa: E501
+                npt.assert_allclose(n_al[t, 0, 0, z].values, 1000.*t + z % nz, rtol=1.e-15, atol=5.e-16)                      # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 0, 1, z].values, 1000.*t + 10.*1. + (z + 1) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+                npt.assert_allclose(n_al[t, 0, 1, z].values, 1000.*t + 10.*1. + (z + 1) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 0, 2, z].values, 1000.*t + 10.*2. + (z + 2) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+                npt.assert_allclose(n_al[t, 0, 2, z].values, 1000.*t + 10.*2. + (z + 2) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 0, 3, z].values, 1000.*t + 10.*3. + (z + 3) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+                npt.assert_allclose(n_al[t, 0, 3, z].values, 1000.*t + 10.*3. + (z + 3) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 1, 0, z].values, 1000.*t + 100.*1 + 10.*0. + (z + 4) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_al[t, 1, 0, z].values, 1000.*t + 100.*1 + 10.*0. + (z + 4) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 1, 1, z].values, 1000.*t + 100.*1 + 10.*1. + (z + 5) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_al[t, 1, 1, z].values, 1000.*t + 100.*1 + 10.*1. + (z + 5) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 1, 2, z].values, 1000.*t + 100.*1 + 10.*2. + (z + 6) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_al[t, 1, 2, z].values, 1000.*t + 100.*1 + 10.*2. + (z + 6) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z + 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_al[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z + 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
     def test_toFieldAligned_dask(self, tmpdir_factory, bout_xyt_example_files):
 
@@ -105,30 +111,33 @@ class TestBoutDataArrayMethods:
         n_al = n.bout.toFieldAligned()
         for t in range(ds.sizes['t']):
             for z in range(nz):
-                assert_allclose(n_al[t, 0, 0, z].values, 1000.*t + z % nz, rtol=1.e-15, atol=5.e-16)                      # noqa: E501
+                npt.assert_allclose(n_al[t, 0, 0, z].values, 1000.*t + z % nz, rtol=1.e-15, atol=5.e-16)                      # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 0, 1, z].values, 1000.*t + 10.*1. + (z + 1) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+                npt.assert_allclose(n_al[t, 0, 1, z].values, 1000.*t + 10.*1. + (z + 1) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 0, 2, z].values, 1000.*t + 10.*2. + (z + 2) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+                npt.assert_allclose(n_al[t, 0, 2, z].values, 1000.*t + 10.*2. + (z + 2) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 0, 3, z].values, 1000.*t + 10.*3. + (z + 3) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+                npt.assert_allclose(n_al[t, 0, 3, z].values, 1000.*t + 10.*3. + (z + 3) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 1, 0, z].values, 1000.*t + 100.*1 + 10.*0. + (z + 4) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_al[t, 1, 0, z].values, 1000.*t + 100.*1 + 10.*0. + (z + 4) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 1, 1, z].values, 1000.*t + 100.*1 + 10.*1. + (z + 5) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_al[t, 1, 1, z].values, 1000.*t + 100.*1 + 10.*1. + (z + 5) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 1, 2, z].values, 1000.*t + 100.*1 + 10.*2. + (z + 6) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_al[t, 1, 2, z].values, 1000.*t + 100.*1 + 10.*2. + (z + 6) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_al[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z + 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_al[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z + 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
-    @pytest.mark.parametrize('nz', [6, 7, 8, 9])
+    @pytest.mark.parametrize('nz', [pytest.param(6, marks=pytest.mark.long),
+                                    7,
+                                    pytest.param(8, marks=pytest.mark.long),
+                                    pytest.param(9, marks=pytest.mark.long)])
     def test_fromFieldAligned(self, tmpdir_factory, bout_xyt_example_files, nz):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, nz), nxpe=1,
                                       nype=1, nt=1)
@@ -154,25 +163,305 @@ class TestBoutDataArrayMethods:
         n_nal = n.bout.fromFieldAligned()
         for t in range(ds.sizes['t']):
             for z in range(nz):
-                assert_allclose(n_nal[t, 0, 0, z].values, 1000.*t + z % nz, rtol=1.e-15, atol=5.e-16)                      # noqa: E501
+                npt.assert_allclose(n_nal[t, 0, 0, z].values, 1000.*t + z % nz, rtol=1.e-15, atol=5.e-16)                      # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_nal[t, 0, 1, z].values, 1000.*t + 10.*1. + (z - 1) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+                npt.assert_allclose(n_nal[t, 0, 1, z].values, 1000.*t + 10.*1. + (z - 1) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_nal[t, 0, 2, z].values, 1000.*t + 10.*2. + (z - 2) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+                npt.assert_allclose(n_nal[t, 0, 2, z].values, 1000.*t + 10.*2. + (z - 2) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_nal[t, 0, 3, z].values, 1000.*t + 10.*3. + (z - 3) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
+                npt.assert_allclose(n_nal[t, 0, 3, z].values, 1000.*t + 10.*3. + (z - 3) % nz, rtol=1.e-15, atol=0.)           # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_nal[t, 1, 0, z].values, 1000.*t + 100.*1 + 10.*0. + (z - 4) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_nal[t, 1, 0, z].values, 1000.*t + 100.*1 + 10.*0. + (z - 4) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_nal[t, 1, 1, z].values, 1000.*t + 100.*1 + 10.*1. + (z - 5) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_nal[t, 1, 1, z].values, 1000.*t + 100.*1 + 10.*1. + (z - 5) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_nal[t, 1, 2, z].values, 1000.*t + 100.*1 + 10.*2. + (z - 6) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_nal[t, 1, 2, z].values, 1000.*t + 100.*1 + 10.*2. + (z - 6) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
             for z in range(nz):
-                assert_allclose(n_nal[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z - 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+                npt.assert_allclose(n_nal[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z - 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
+
+    @pytest.mark.long
+    def test_interpolate_parallel_region_core(self, tmpdir_factory,
+                                              bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
+                                      nype=1, nt=1, grid='grid', guards={'y': 2},
+                                      topology='core')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n = ds['n']
+
+        thetalength = 2.*np.pi
+
+        dtheta = thetalength/16.
+        theta = xr.DataArray(np.linspace(0. - 1.5*dtheta, thetalength + 1.5*dtheta, 20),
+                             dims='theta')
+
+        dtheta_fine = thetalength/128.
+        theta_fine = xr.DataArray(
+                np.linspace(0. + dtheta_fine/2., thetalength - dtheta_fine/2., 128),
+                dims='theta')
+
+        def f(t):
+            t = np.sin(t)
+            return (t**3 - t**2 + t - 1.)
+
+        n.data = f(theta).broadcast_like(n)
+
+        n_highres = n.bout.interpolate_parallel('core')
+
+        expected = f(theta_fine).broadcast_like(n_highres)
+
+        npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
+
+    @pytest.mark.parametrize('res_factor', [pytest.param(2, marks=pytest.mark.long),
+                                            3,
+                                            pytest.param(7, marks=pytest.mark.long),
+                                            pytest.param(18, marks=pytest.mark.long)])
+    def test_interpolate_parallel_region_core_change_n(self, tmpdir_factory,
+                                                       bout_xyt_example_files,
+                                                       res_factor):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
+                                      nype=1, nt=1, grid='grid', guards={'y': 2},
+                                      topology='core')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n = ds['n']
+
+        thetalength = 2.*np.pi
+
+        dtheta = thetalength/16.
+        theta = xr.DataArray(np.linspace(0. - 1.5*dtheta, thetalength + 1.5*dtheta, 20),
+                             dims='theta')
+
+        dtheta_fine = thetalength/res_factor/16.
+        theta_fine = xr.DataArray(
+                np.linspace(0. + dtheta_fine/2., thetalength - dtheta_fine/2.,
+                            res_factor*16),
+                dims='theta')
+
+        def f(t):
+            t = np.sin(t)
+            return (t**3 - t**2 + t - 1.)
+
+        n.data = f(theta).broadcast_like(n)
+
+        n_highres = n.bout.interpolate_parallel('core', n=res_factor)
+
+        expected = f(theta_fine).broadcast_like(n_highres)
+
+        npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
+
+    @pytest.mark.long
+    def test_interpolate_parallel_region_sol(self, tmpdir_factory,
+                                             bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
+                                      nype=1, nt=1, grid='grid', guards={'y': 2},
+                                      topology='sol')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n = ds['n']
+
+        thetalength = 2.*np.pi
+
+        dtheta = thetalength/16.
+        theta = xr.DataArray(np.linspace(0. - 1.5*dtheta, thetalength + 1.5*dtheta, 20),
+                             dims='theta')
+
+        dtheta_fine = thetalength/128.
+        theta_fine = xr.DataArray(
+                np.linspace(0. - 1.5*dtheta_fine, thetalength + 1.5*dtheta_fine, 132),
+                dims='theta')
+
+        def f(t):
+            t = np.sin(t)
+            return (t**3 - t**2 + t - 1.)
+
+        n.data = f(theta).broadcast_like(n)
+
+        n_highres = n.bout.interpolate_parallel('SOL')
+
+        expected = f(theta_fine).broadcast_like(n_highres)
+
+        npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
+
+    def test_interpolate_parallel_region_singlenull(self, tmpdir_factory,
+                                                    bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
+                                      nype=3, nt=1, grid='grid', guards={'y': 2},
+                                      topology='single-null')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n = ds['n']
+
+        thetalength = 2.*np.pi
+
+        dtheta = thetalength/48.
+        theta = xr.DataArray(np.linspace(0. - 1.5*dtheta, thetalength + 1.5*dtheta, 52),
+                             dims='theta')
+
+        dtheta_fine = thetalength/3./128.
+        theta_fine = xr.DataArray(
+                np.linspace(0. + 0.5*dtheta_fine, thetalength - 0.5*dtheta_fine, 3*128),
+                dims='theta')
+
+        def f(t):
+            t = np.sin(3.*t)
+            return (t**3 - t**2 + t - 1.)
+
+        n.data = f(theta).broadcast_like(n)
+
+        f_fine = f(theta_fine)[:128]
+
+        for region in ['inner_PFR', 'inner_SOL']:
+            n_highres = n.bout.interpolate_parallel(region).isel(theta=slice(2, None))
+
+            expected = f_fine.broadcast_like(n_highres)
+
+            npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
+
+        for region in ['core', 'SOL']:
+            n_highres = n.bout.interpolate_parallel(region)
+
+            expected = f_fine.broadcast_like(n_highres)
+
+            npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
+
+        for region in ['outer_PFR', 'outer_SOL']:
+            n_highres = n.bout.interpolate_parallel(region).isel(theta=slice(-2))
+
+            expected = f_fine.broadcast_like(n_highres)
+
+            npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
+
+    def test_interpolate_parallel(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
+                                      nype=3, nt=1, grid='grid', guards={'y': 2},
+                                      topology='single-null')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n = ds['n']
+
+        thetalength = 2.*np.pi
+
+        dtheta = thetalength/48.
+        theta = xr.DataArray(np.linspace(0. - 1.5*dtheta, thetalength + 1.5*dtheta, 52),
+                             dims='theta')
+
+        dtheta_fine = thetalength/3./128.
+        theta_fine = xr.DataArray(
+                np.linspace(0. + 0.5*dtheta_fine, thetalength - 0.5*dtheta_fine, 3*128),
+                dims='theta')
+        x = xr.DataArray(np.arange(3), dims='x')
+
+        def f_y(t):
+            t = np.sin(3.*t)
+            return (t**3 - t**2 + t - 1.)
+
+        f = f_y(theta) * (x + 1.)
+
+        n.data = f.broadcast_like(n)
+
+        f_fine = f_y(theta_fine)*(x + 1.)
+
+        n_highres = n.bout.interpolate_parallel().isel(theta=slice(2, -2))
+
+        expected = f_fine.broadcast_like(n_highres)
+
+        npt.assert_allclose(n_highres.values, expected.values,
+                            rtol=0., atol=1.1e-2)
+
+    def test_interpolate_parallel_sol(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
+                                      nype=1, nt=1, grid='grid', guards={'y': 2},
+                                      topology='sol')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n = ds['n']
+
+        thetalength = 2.*np.pi
+
+        dtheta = thetalength/16.
+        theta = xr.DataArray(np.linspace(0. - 1.5*dtheta, thetalength + 1.5*dtheta, 20),
+                             dims='theta')
+
+        dtheta_fine = thetalength/128.
+        theta_fine = xr.DataArray(
+                np.linspace(0. + 0.5*dtheta_fine, thetalength - 0.5*dtheta_fine, 128),
+                dims='theta')
+        x = xr.DataArray(np.arange(3), dims='x')
+
+        def f_y(t):
+            t = np.sin(t)
+            return (t**3 - t**2 + t - 1.)
+
+        f = f_y(theta) * (x + 1.)
+
+        n.data = f.broadcast_like(n)
+
+        f_fine = f_y(theta_fine)*(x + 1.)
+
+        n_highres = n.bout.interpolate_parallel().isel(theta=slice(2, -2))
+
+        expected = f_fine.broadcast_like(n_highres)
+
+        npt.assert_allclose(n_highres.values, expected.values,
+                            rtol=0., atol=1.1e-2)
+
+    def test_interpolate_parallel_toroidal_points(self, tmpdir_factory,
+                                                  bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
+                                      nype=3, nt=1, grid='grid', guards={'y': 2},
+                                      topology='single-null')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n_highres = ds['n'].bout.interpolate_parallel()
+
+        n_highres_truncated = ds['n'].bout.interpolate_parallel(toroidal_points=2)
+
+        xrt.assert_identical(n_highres_truncated, n_highres.isel(zeta=[0, 2]))
+
+    def test_interpolate_parallel_toroidal_points_list(self, tmpdir_factory,
+                                                       bout_xyt_example_files):
+        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
+                                      nype=3, nt=1, grid='grid', guards={'y': 2},
+                                      topology='single-null')
+
+        ds = open_boutdataset(datapath=path,
+                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
+                              geometry='toroidal', keep_yboundaries=True)
+
+        n_highres = ds['n'].bout.interpolate_parallel()
+
+        points_list = [1, 2]
+
+        n_highres_truncated = ds['n'].bout.interpolate_parallel(
+                                               toroidal_points=points_list)
+
+        xrt.assert_identical(n_highres_truncated, n_highres.isel(zeta=points_list))

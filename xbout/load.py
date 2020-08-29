@@ -164,6 +164,10 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     if run_name:
         ds.name = run_name
 
+    # Set some default settings that are only used in post-processing by xBOUT, not by
+    # BOUT++
+    ds.bout.fine_interpolation_factor = 8
+
     if info == 'terse':
         print("Read in dataset from {}".format(str(Path(datapath))))
     elif info:
@@ -230,6 +234,10 @@ def reload_boutdataset(
             da.attrs["metadata"] = metadata
 
     ds = _add_options(ds, inputfilepath)
+
+    # If geometry was set, apply geometry again
+    if "geometry" in ds.attrs:
+        ds = geometries.apply_geometry(ds, ds.attrs["geometry"])
 
     if info == 'terse':
         print("Read in dataset from {}".format(str(Path(datapath))))
@@ -387,7 +395,7 @@ def _auto_open_mfboutdataset(datapath, chunks=None, info=True,
     ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims, combine='nested',
                            data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
                            preprocess=_preprocess, engine=filetype,
-                           chunks=chunks, **kwargs)
+                           chunks=chunks, join='exact', **kwargs)
 
     # Remove any duplicate time values from concatenation
     _, unique_indices = unique(ds['t_array'], return_index=True)
@@ -669,9 +677,6 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
 
     gridfilepath = Path(datapath)
     grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath))
-    if 'z' in grid_chunks and 'z' not in grid.dims:
-        del grid_chunks['z']
-    grid = grid.chunk(grid_chunks)
 
     # TODO find out what 'yup_xsplit' etc are in the doublenull storm file John gave me
     # For now drop any variables with extra dimensions
@@ -707,5 +712,10 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
                     y=slice(nin + 2 * yboundaries, None, None))
                 grid = xr.concat((grid_lower, grid_upper), dim='y',
                                  data_vars='minimal',
-                                 compat='identical')
+                                 compat='identical', join='exact')
+
+    if 'z' in grid_chunks and 'z' not in grid.dims:
+        del grid_chunks['z']
+    grid = grid.chunk(grid_chunks)
+
     return grid

@@ -16,6 +16,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from dask.diagnostics import ProgressBar
 
+from .geometries import apply_geometry
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
 
@@ -77,6 +78,142 @@ class BoutDatasetAccessor:
             if caching:
                 self.data[aligned_name] = self.data[name].bout.toFieldAligned()
             return self.data[aligned_name]
+
+    @property
+    def regions(self):
+        if "regions" not in self.data.attrs:
+            raise ValueError(
+                "Called a method requiring regions, but these have not been created. "
+                "Please set the 'geometry' option when calling open_boutdataset() to "
+                "create regions."
+            )
+        return self.data.attrs["regions"]
+
+    @property
+    def fine_interpolation_factor(self):
+        """
+        The default factor to increase resolution when doing parallel interpolation
+        """
+        return self.data.metadata['fine_interpolation_factor']
+
+    @fine_interpolation_factor.setter
+    def fine_interpolation_factor(self, n):
+        """
+        Set the default factor to increase resolution when doing parallel interpolation.
+
+        Parameters
+        -----------
+        n : int
+            Factor to increase parallel resolution by
+        """
+        ds = self.data
+        ds.metadata['fine_interpolation_factor'] = n
+        for da in ds.data_vars.values():
+            da.metadata['fine_interpolation_factor'] = n
+
+    def interpolate_parallel(self, variables, **kwargs):
+        """
+        Interpolate in the parallel direction to get a higher resolution version of a
+        subset of variables.
+
+        Note that the high-resolution variables are all loaded into memory, so most
+        likely it is necessary to select only a small number. The toroidal_points
+        argument can also be used to reduce the memory demand.
+
+        Parameters
+        ----------
+        variables : str or sequence of str or ...
+            The names of the variables to interpolate. If 'variables=...' is passed
+            explicitly, then interpolate all variables in the Dataset.
+        n : int, optional
+            The factor to increase the resolution by. Defaults to the value set by
+            BoutDataset.setupParallelInterp(), or 10 if that has not been called.
+        toroidal_points : int or sequence of int, optional
+            If int, number of toroidal points to output, applies a stride to toroidal
+            direction to save memory usage. If sequence of int, the indexes of toroidal
+            points for the output.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataArray.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+
+        Returns
+        -------
+        A new Dataset containing a high-resolution versions of the variables. The new
+        Dataset is a valid BoutDataset, although containing only the specified variables.
+        """
+
+        if variables is ...:
+            variables = [v for v in self.data]
+
+        if isinstance(variables, str):
+            variables = [variables]
+        if isinstance(variables, tuple):
+            variables = list(variables)
+
+        if 'dy' in variables:
+            # dy is treated specially, as it is converted to a coordinate, and then
+            # converted back again below, so must not call
+            # interpolate_parallel('dy').
+            variables.remove('dy')
+
+        # Add extra variables needed to make this a valid Dataset
+        if 'dx' not in variables:
+            variables.append('dx')
+
+        # Need to start with a Dataset with attrs as merge() drops the attrs of the
+        # passed-in argument.
+        # Make sure the first variable has all dimensions so we don't lose any
+        # coordinates
+        def find_with_dims(first_var, dims):
+            if first_var is None:
+                dims = set(dims)
+                for v in variables:
+                    if set(self.data[v].dims) == dims:
+                        first_var = v
+                        break
+            return first_var
+        tcoord = self.data.metadata.get("bout_tdim", "t")
+        zcoord = self.data.metadata.get("bout_zdim", "z")
+        first_var = find_with_dims(None, self.data.dims)
+        first_var = find_with_dims(first_var, set(self.data.dims) - set(tcoord))
+        first_var = find_with_dims(first_var, set(self.data.dims) - set(zcoord))
+        first_var = find_with_dims(first_var, set(self.data.dims)
+                                   - set([tcoord, zcoord]))
+        if first_var is None:
+            raise ValueError(
+                f"Could not find variable to interpolate with both "
+                f"{ds.metadata.get('bout_xdim', 'x')} and "
+                f"{ds.metadata.get('bout_ydim', 'y')} dimensions"
+            )
+        variables.remove(first_var)
+        ds = self.data[first_var].bout.interpolate_parallel(return_dataset=True,
+                                                            **kwargs)
+        xcoord = ds.metadata.get("bout_xdim", "x")
+        ycoord = ds.metadata.get("bout_ydim", "y")
+        for var in variables:
+            da = self.data[var]
+            if xcoord in da.dims and ycoord in da.dims:
+                ds = ds.merge(
+                        da.bout.interpolate_parallel(return_dataset=True, **kwargs)
+                     )
+            elif ycoord not in da.dims:
+                ds[var] = da
+            # Can't interpolate a variable that depends on y but not x, so just skip
+
+        # dy needs to be compatible with the new poloidal coordinate
+        # dy was created as a coordinate in BoutDataArray.interpolate_parallel, here just
+        # need to demote back to a regular variable.
+        ds = ds.reset_coords('dy')
+
+        # Apply geometry
+        if hasattr(ds, 'geometry'):
+            ds = apply_geometry(ds, ds.geometry)
+        # if no geometry was originally applied, then ds has no geometry attribute and we
+        # can continue without applying geometry here
+
+        return ds
+
 
     def save(self, savepath='./boutdata.nc', filetype='NETCDF4',
              variables=None, save_dtype=None, separate_vars=False, pre_load=False):
@@ -157,6 +294,18 @@ class BoutDatasetAccessor:
                 dict_to_attrs(da, 'metadata')
             except KeyError:
                 pass
+
+        if 'regions' in to_save.attrs:
+            # Do not need to save regions as these can be reconstructed from the metadata
+            try:
+                del to_save.attrs['regions']
+            except KeyError:
+                pass
+            for var in chain(to_save.data_vars, to_save.coords):
+                try:
+                    del to_save[var].attrs['regions']
+                except KeyError:
+                    pass
 
         if separate_vars:
             # Save each major variable to a different netCDF file
