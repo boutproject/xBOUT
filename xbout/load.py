@@ -457,8 +457,11 @@ def _read_splitting(filepath, info=True):
                 return val
         else:
             if info is True:
-                print("{key} not found, setting to {default}"
-                      .format(key=key, default=default))
+                print(f"{key} not found, setting to {default}")
+            if default < 0:
+                raise ValueError(
+                    f"Default for {key} is {val}, but negative values are not valid"
+                )
             return default
 
     nxpe = get_nonnegative_scalar(ds, 'NXPE', default=1)
