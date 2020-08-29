@@ -210,27 +210,6 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     # Change names of dimensions to Orthogonal Toroidal ones
     ds = ds.rename(y=coordinates['y'])
 
-    # Add 1D Orthogonal Toroidal coordinates
-    # Make index 'x' a coordinate, useful for handling global indexing
-    nx = ds.dims['x']
-    ds = ds.assign_coords(x=np.arange(nx))
-    _add_attrs_to_var(ds, 'x')
-    ny = ds.dims[coordinates['y']]
-    # dy should always be constant in x, so it is safe to slice to x=0.
-    # [The y-coordinate has to be a 1d coordinate that labels x-z slices of the grid
-    # (similarly x-coordinate is 1d coordinate that labels y-z slices and z-coordinate is
-    # a 1d coordinate that labels x-y slices). A coordinate might have different values
-    # in disconnected regions, but there are no branch-cuts allowed in the x-direction in
-    # BOUT++ (at least for the momement), so the y-coordinate has to be 1d and
-    # single-valued. Therefore similarly dy has to be 1d and single-valued.]
-    # Need drop=True so that the result does not have an x-coordinate value which
-    # prevents it being added as a coordinate.
-    dy = ds['dy'].isel(x=0, drop=True)
-
-    # calculate theta at the centre of each cell
-    theta = dy.cumsum(keep_attrs=True) - dy/2.
-    ds = ds.assign_coords(**{coordinates['y']: theta})
-
     # TODO automatically make this coordinate 1D in simplified cases?
     ds = ds.rename(psixy=coordinates['x'])
     ds = ds.set_coords(coordinates['x'])
@@ -245,16 +224,6 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     # If full data (not just grid file) then toroidal dim will be present
     if 'z' in ds.dims:
         ds = ds.rename(z=coordinates['z'])
-        nz = ds.dims[coordinates['z']]
-        phi0 = 2*np.pi*ds.metadata['ZMIN']
-        phi1 = phi0 + nz*ds.metadata['dz']
-        if not np.isclose(phi1, 2.*np.pi*ds.metadata['ZMAX'], rtol=1.e-15, atol=0.):
-            warn(f"Size of toroidal domain as calculated from nz*dz ({phi1 - phi0}) is "
-                 f"not the same as 2pi*(ZMAX - ZMIN) "
-                 f"({2.*np.pi*ds.metadata['ZMAX'] - phi0}): using value from dz")
-        phi = xr.DataArray(np.linspace(start=phi0, stop=phi1, num=nz, endpoint=False),
-                           dims=coordinates['z'])
-        ds = ds.assign_coords(**{coordinates['z']: phi})
 
         # Record which dimension 'z' was renamed to.
         ds.metadata['bout_zdim'] = coordinates['z']
@@ -269,7 +238,19 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     # Add zShift as a coordinate, so that it gets interpolated along with a variable
     try:
         ds = ds.set_coords('zShift')
-    except KeyError:
+    except ValueError:
+        pass
+    try:
+        ds = ds.set_coords('zShift_CELL_XLOW')
+    except ValueError:
+        pass
+    try:
+        ds = ds.set_coords('zShift_CELL_YLOW')
+    except ValueError:
+        pass
+    try:
+        ds = ds.set_coords('zShift_CELL_ZLOW')
+    except ValueError:
         pass
 
     ds = _create_regions_toroidal(ds)
@@ -311,8 +292,6 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
                          "geometry='s-alpha'")
     ds['r'] = ds['hthe'].isel({ycoord: 0}).squeeze(drop=True)
     ds['r'].attrs['units'] = 'm'
-    # remove x-index coordinate, don't need when we have 'r' as a radial coordinate
-    ds = ds.drop('x')
     ds = ds.set_coords('r')
     ds = ds.rename(x='r')
     ds.metadata['bout_xdim'] = 'r'

@@ -89,6 +89,11 @@ def _update_metadata_increased_resolution(da, n):
     update_ny('ny_inner')
     update_ny('MYSUB')
 
+    # Update attrs of coordinates to be consistent with da
+    for coord in da.coords:
+        da[coord].attrs = {}
+        _add_attrs_to_var(da, coord)
+
     return da
 
 

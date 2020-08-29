@@ -62,6 +62,7 @@ class BoutDataArrayAccessor:
 
         dropIfExists(ds, 'direction_y')
         dropIfExists(ds, 'direction_z')
+        dropIfExists(ds, 'cell_location')
 
         return ds
 
@@ -125,6 +126,14 @@ class BoutDataArrayAccessor:
         if self.data.direction_y != "Standard":
             raise ValueError("Cannot shift a " + self.direction_y + " type field to "
                              + "field-aligned coordinates")
+        if hasattr(self.data, "cell_location") and not (
+            self.data.cell_location == "CELL_CENTRE"
+            or self.data.cell_location == "CELL_ZLOW"
+        ):
+            raise ValueError(
+                f"toFieldAligned does not support staggered grids yet, but "
+                f"location is {self.data.cell_location}."
+            )
         result = self._shiftZ(self.data['zShift'])
         result["direction_y"] = "Aligned"
         return result
@@ -137,6 +146,14 @@ class BoutDataArrayAccessor:
         if self.data.direction_y != "Aligned":
             raise ValueError("Cannot shift a " + self.direction_y + " type field to "
                              + "field-aligned coordinates")
+        if hasattr(self.data, "cell_location") and not (
+            self.data.cell_location == "CELL_CENTRE"
+            or self.data.cell_location == "CELL_ZLOW"
+        ):
+            raise ValueError(
+                f"fromFieldAligned does not support staggered grids yet, but "
+                f"location is {self.data.cell_location}."
+            )
         result = self._shiftZ(-self.data['zShift'])
         result["direction_y"] = "Standard"
         return result
@@ -311,10 +328,13 @@ class BoutDataArrayAccessor:
                              region.yupper + (ybndry_upper - 0.5)*dy,
                              ny_fine + ybndry_lower + ybndry_upper)
 
-        # This prevents da.interp() from being very slow, but don't know why.
+        # This prevents da.interp() from being very slow.
+        # Apparently large attrs (i.e. regions) on a coordinate which is passed as an
+        # argument to dask.array.map_blocks() slow things down, maybe because coordinates
+        # are numpy arrays, not dask arrays?
         # Slow-down was introduced in d062fa9e75c02fbfdd46e5d1104b9b12f034448f when
         # _add_attrs_to_var(updated_ds, ycoord) was added in geometries.py
-        da = da.compute()
+        da[ycoord].attrs = {}
 
         da = da.interp({ycoord: y_fine.data}, assume_sorted=True, method=method,
                        kwargs={'fill_value': 'extrapolate'})
