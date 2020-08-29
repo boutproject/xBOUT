@@ -464,12 +464,12 @@ def _read_splitting(filepath, info=True):
                 )
             return default
 
-    nxpe = get_nonnegative_scalar(ds, 'NXPE', default=1)
-    nype = get_nonnegative_scalar(ds, 'NYPE', default=1)
-    mxg = get_nonnegative_scalar(ds, 'MXG', default=2)
-    myg = get_nonnegative_scalar(ds, 'MYG', default=0)
-    mxsub = get_nonnegative_scalar(ds, 'MXSUB', default=ds.dims['x'] - 2 * mxg)
-    mysub = get_nonnegative_scalar(ds, 'MYSUB', default=ds.dims['y'] - 2 * myg)
+    nxpe = get_nonnegative_scalar(ds, 'NXPE', default=1, info)
+    nype = get_nonnegative_scalar(ds, 'NYPE', default=1, info)
+    mxg = get_nonnegative_scalar(ds, 'MXG', default=2, info)
+    myg = get_nonnegative_scalar(ds, 'MYG', default=0, info)
+    mxsub = get_nonnegative_scalar(ds, 'MXSUB', default=ds.dims['x'] - 2 * mxg, info)
+    mysub = get_nonnegative_scalar(ds, 'MYSUB', default=ds.dims['y'] - 2 * myg, info)
 
     # Check whether this is a single file squashed from the multiple output files of a
     # parallel run (i.e. NXPE*NYPE > 1 even though there is only a single file to read).
