@@ -423,6 +423,7 @@ class BoutDataArrayAccessor:
             if part_region.connection_upper_y is None:
                 part = part.isel({ycoord: slice(
                     -myg if not remove_extra_upper else -myg-1)})
+            del part.attrs["regions"]
             parts.append(part.bout.to_dataset())
 
         result = xr.combine_by_coords(parts)
@@ -442,10 +443,6 @@ class BoutDataArrayAccessor:
             result.metadata['jyseps1_2'] -= 1
             result.metadata['jyseps2_2'] -= 1
             result.metadata['ny'] -= 2
-
-        # regions are not correct now that number of y-points has changed
-        del result.attrs['regions']
-        del result[self.data.name].attrs['regions']
 
         if return_dataset:
             return result
