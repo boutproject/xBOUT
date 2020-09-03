@@ -531,8 +531,6 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
 
     # Create list of lists of filepaths, so that xarray knows how they should
     # be concatenated by xarray.open_mfdataset()
-    # Only possible with this Pull Request to xarray
-    # https://github.com/pydata/xarray/pull/2553
     paths = iter(filepaths)
     paths_grid = [[[next(paths) for x in range(nxpe)]
                                 for y in range(nype)]
@@ -573,8 +571,6 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
 
     if any(keep_boundaries.values()):
         # Work out if this particular dataset contains any boundary cells
-        # Relies on a change to xarray so datasets always have source encoding
-        # See xarray GH issue #2550
         lower_boundaries, upper_boundaries = _infer_contains_boundaries(
             ds, nxpe, nype)
     else:
