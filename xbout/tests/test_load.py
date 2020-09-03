@@ -277,11 +277,7 @@ def create_bout_ds_list(prefix, lengths=(6, 2, 4, 7), nxpe=4, nype=2, nt=1, guar
                                 xproc=i, yproc=j, guards=guards, topology=topology)
             ds_list.append(ds)
 
-    # Sort this in order of num to remove any BOUT-specific structure
-    ds_list_sorted = [ds for filename, ds in sorted(zip(file_list, ds_list))]
-    file_list_sorted = [filename for filename, ds in sorted(zip(file_list, ds_list))]
-
-    return ds_list_sorted, file_list_sorted
+    return ds_list, file_list
 
 
 def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, nype=1,
