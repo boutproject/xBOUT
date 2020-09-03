@@ -28,15 +28,21 @@ class TestBoutDataArrayMethods:
 
     @pytest.mark.parametrize("mxg", [0, pytest.param(2, marks=pytest.mark.long)])
     @pytest.mark.parametrize("myg", [pytest.param(0, marks=pytest.mark.long), 2])
-    @pytest.mark.parametrize("remove_extra_upper", [False, pytest.param(True, marks=pytest.mark.long)])
-    def test_remove_yboundaries(self, tmpdir_factory, bout_xyt_example_files, mxg, myg, remove_extra_upper):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1,
-                nype=6, nt=1, grid='grid', guards={'x': mxg, 'y': myg},
-                topology='connected-double-null', syn_data_type='linear')
+    @pytest.mark.parametrize("remove_extra_upper",
+                             [False, pytest.param(True, marks=pytest.mark.long)])
+    def test_remove_yboundaries(
+        self, tmpdir_factory, bout_xyt_example_files, mxg, myg, remove_extra_upper
+    ):
+        path = bout_xyt_example_files(
+            tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1, nype=6, nt=1, grid='grid',
+            guards={'x': mxg, 'y': myg}, topology='connected-double-null',
+            syn_data_type='linear'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                gridfilepath=Path(path).parent.joinpath('grid.nc'), geometry='toroidal',
-                keep_yboundaries=True)
+        ds = open_boutdataset(
+            datapath=path, gridfilepath=Path(path).parent.joinpath('grid.nc'),
+            geometry='toroidal', keep_yboundaries=True
+        )
 
         path_no_yboundaries = bout_xyt_example_files(
                 tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1, nype=6, nt=1, grid='grid',

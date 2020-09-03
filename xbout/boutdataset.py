@@ -225,11 +225,12 @@ class BoutDatasetAccessor:
         ycoord = self.data.metadata['bout_ydim']
         for v in self.data:
             if xcoord in self.data[v].dims and ycoord in self.data[v].dims:
-                variables.append(self.data[v].bout.remove_yboundaries(return_dataset=True,
-                                                                      **kwargs))
+                variables.append(
+                    self.data[v].bout.remove_yboundaries(return_dataset=True, **kwargs)
+                )
             elif ycoord in self.data[v].dims:
                 raise ValueError(f'{v} only has a {ycoord}-dimension so cannot split '
-                                  'into regions.')
+                                 f'into regions.')
             else:
                 variable = self.data[v]
                 if 'keep_yboundaries' in variable.metadata:
