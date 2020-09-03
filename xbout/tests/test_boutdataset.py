@@ -565,6 +565,53 @@ class TestBoutDatasetMethods:
             'g_12', 'g_13', 'g_23', 'G1', 'G2', 'G3', 'J', 'Bxy', 'dx', 'dy'
         ))
 
+    def test_interpolate_from_unstructured(self, bout_xyt_example_files):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=6,
+            nt=1,
+            grid='grid',
+            topology='disconnected-double-null'
+        )
+
+        ds = open_boutdataset(
+            datapath=dataset_list, gridfilepath=grid_ds, geometry="toroidal"
+        )
+
+        # Set up non-trivial R and Z coordinates so we have something to interpolate to
+        r = ds["x"] / ds["x"][-1] * 0.1 + 0.1
+        theta = ds["theta"] / ds["theta"][-1] * 2. * np.pi
+
+        ds["R"] = r * np.cos(theta)
+        ds["Z"] = 2.0 * r * np.sin(theta)
+
+        ds["n"] = (ds["R"] + ds["Z"]).broadcast_like(ds["n"])
+
+        n = ds["n"]
+
+        NR = 23
+        R_rect = np.linspace(-0.1, 0.1, NR)
+
+        NZ = 37
+        Z_rect = np.linspace(-0.2, 0.2, NZ)
+
+        n_rect = n.bout.interpolate_from_unstructured(R=R_rect, Z=Z_rect)
+
+        # check BoutDataset and BoutDataArray versions are consistent
+        n_rect_from_ds = ds.bout.interpolate_from_unstructured(..., R=R_rect, Z=Z_rect)["n"]
+        npt.assert_allclose(n_rect, n_rect_from_ds)
+
+        # check non-NaN values are correct
+        n_check = R_rect[:, np.newaxis] + Z_rect[np.newaxis, :]
+        n_rect = n_rect.isel(t=0, zeta=0).transpose("R", "Z")
+        mask = ~np.isnan(n_rect.values)
+        npt.assert_allclose(n_rect.values[mask], n_check[mask], atol=1.e-7)
+
+        # Check there were non-nan values to compare in the previous assert_allclose
+        assert int((~np.isnan(n_rect)).count()) == 851
+
 
 class TestLoadInputFile:
     @pytest.mark.skip
