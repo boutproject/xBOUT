@@ -226,6 +226,8 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
             return ds_list
         else:
             return ds_list, grid_ds
+    elif tmpdir_factory is None:
+        raise ValueError("tmpdir_factory required when write_to_disk=False")
 
     save_dir = tmpdir_factory.mktemp("data")
 
@@ -527,8 +529,8 @@ class TestStripMetadata():
 
 # TODO also test loading multiple files which have guard cells
 class TestOpen:
-    def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
-        dataset = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+    def test_single_file(self, bout_xyt_example_files):
+        dataset = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
         actual = open_boutdataset(datapath=dataset, keep_xboundaries=False)
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(),
@@ -536,9 +538,9 @@ class TestOpen:
                                        + _BOUT_TIME_DEPENDENT_META_VARS,
                                        errors='ignore'))
 
-    def test_squashed_file(self, tmpdir_factory, bout_xyt_example_files):
+    def test_squashed_file(self, bout_xyt_example_files):
         dataset = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=3, nt=1, squashed=True
+            None, nxpe=4, nype=3, nt=1, squashed=True
         )
         actual = open_boutdataset(datapath=dataset, keep_xboundaries=False)
         expected = create_bout_ds()
@@ -547,9 +549,9 @@ class TestOpen:
                                        + _BOUT_TIME_DEPENDENT_META_VARS,
                                        errors='ignore'))
 
-    def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
+    def test_combine_along_x(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=1, nt=1, syn_data_type='stepped'
+            None, nxpe=4, nype=1, nt=1, syn_data_type='stepped'
         )
         actual = open_boutdataset(datapath=dataset_list, keep_xboundaries=False)
 
@@ -560,9 +562,9 @@ class TestOpen:
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
                                        errors='ignore'))
 
-    def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
+    def test_combine_along_y(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(
-            tmpdir_factory, nxpe=1, nype=3, nt=1, syn_data_type='stepped'
+            None, nxpe=1, nype=3, nt=1, syn_data_type='stepped'
         )
         actual = open_boutdataset(datapath=dataset_list, keep_xboundaries=False)
 
@@ -577,9 +579,9 @@ class TestOpen:
     def test_combine_along_t(self):
         ...
 
-    def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files):
+    def test_combine_along_xy(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=3, nt=1, syn_data_type='stepped'
+            None, nxpe=4, nype=3, nt=1, syn_data_type='stepped'
         )
         actual = open_boutdataset(datapath=dataset_list, keep_xboundaries=False)
 
