@@ -189,14 +189,16 @@ def bout_xyt_example_files(tmpdir_factory):
 
 def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4, 7),
                             nxpe=4, nype=2, nt=1, guards={}, syn_data_type='random',
-                            grid=None, squashed=False, topology='core'):
+                            grid=None, squashed=False, topology='core',
+                            write_to_disk=False):
     """
-    Mocks up a set of BOUT-like netCDF files, and return the temporary test directory containing them.
+    Mocks up a set of BOUT-like Datasets
 
-    Deletes the temporary directory once that test is done.
+    Either returns list of Datasets (if write_to_disk=False)
+    or writes Datasets to netCDF files and returns the temporary test directory
+    containing them, deleting the temporary directory once that test is done (if
+    write_to_disk=True).
     """
-
-    save_dir = tmpdir_factory.mktemp("data")
 
     if squashed:
         # create a single data-file, but alter the 'nxpe' and 'nype' variables, as if the
@@ -213,14 +215,24 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
                                                  guards=guards, topology=topology,
                                                  syn_data_type=syn_data_type)
 
-    for ds, file_name in zip(ds_list, file_list):
-        ds.to_netcdf(str(save_dir.join(str(file_name))))
-
     if grid is not None:
         xsize = lengths[1]*nxpe
         ysize = lengths[2]*nype
         grid_ds = create_bout_grid_ds(xsize=xsize, ysize=ysize, guards=guards,
                                       topology=topology, ny_inner=3*lengths[2])
+
+    if not write_to_disk:
+        if grid is None:
+            return ds_list
+        else:
+            return ds_list, grid_ds
+
+    save_dir = tmpdir_factory.mktemp("data")
+
+    for ds, file_name in zip(ds_list, file_list):
+        ds.to_netcdf(str(save_dir.join(str(file_name))))
+
+    if grid is not None:
         grid_ds.to_netcdf(str(save_dir.join(grid + ".nc")))
 
     # Return a glob-like path to all files created, which has all file numbers replaced
@@ -251,8 +263,8 @@ def create_bout_ds_list(prefix, lengths=(6, 2, 4, 7), nxpe=4, nype=2, nt=1, guar
 
     file_list = []
     ds_list = []
-    for i in range(nxpe):
-        for j in range(nype):
+    for j in range(nype):
+        for i in range(nxpe):
             num = (i + nxpe * j)
             filename = prefix + "." + str(num) + ".nc"
             file_list.append(filename)
@@ -456,6 +468,10 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     ds['iteration'] = t_length
     ds['t_array'] = DataArray(np.arange(t_length, dtype=float)*10., dims='t')
 
+    # xarray adds this encoding when opening a file. Emulate here as it may be used to
+    # get the file number
+    ds.encoding["source"] = f"BOUT.dmp.{num}.nc"
+
     return ds
 
 
@@ -516,8 +532,8 @@ class TestStripMetadata():
 # TODO also test loading multiple files which have guard cells
 class TestOpen:
     def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
+        dataset = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        actual = open_boutdataset(datapath=dataset, keep_xboundaries=False)
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES
@@ -525,9 +541,10 @@ class TestOpen:
                                        errors='ignore'))
 
     def test_squashed_file(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1,
-                                      squashed=True)
-        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
+        dataset = bout_xyt_example_files(
+            tmpdir_factory, nxpe=4, nype=3, nt=1, squashed=True
+        )
+        actual = open_boutdataset(datapath=dataset, keep_xboundaries=False)
         expected = create_bout_ds()
         xrt.assert_equal(actual.load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES
@@ -535,9 +552,10 @@ class TestOpen:
                                        errors='ignore'))
 
     def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1,
-                                      syn_data_type='stepped')
-        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
+        dataset_list = bout_xyt_example_files(
+            tmpdir_factory, nxpe=4, nype=1, nt=1, syn_data_type='stepped'
+        )
+        actual = open_boutdataset(datapath=dataset_list, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
         expected = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x',
@@ -547,9 +565,10 @@ class TestOpen:
                                        errors='ignore'))
 
     def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=3, nt=1,
-                                      syn_data_type='stepped')
-        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
+        dataset_list = bout_xyt_example_files(
+            tmpdir_factory, nxpe=1, nype=3, nt=1, syn_data_type='stepped'
+        )
+        actual = open_boutdataset(datapath=dataset_list, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
         expected = concat([bout_ds(0), bout_ds(1), bout_ds(2)], dim='y',
@@ -563,9 +582,10 @@ class TestOpen:
         ...
 
     def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=3, nt=1,
-                                      syn_data_type='stepped')
-        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
+        dataset_list = bout_xyt_example_files(
+            tmpdir_factory, nxpe=4, nype=3, nt=1, syn_data_type='stepped'
+        )
+        actual = open_boutdataset(datapath=dataset_list, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
         line1 = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x',
@@ -581,8 +601,10 @@ class TestOpen:
                                        errors='ignore'))
 
     def test_toroidal(self, tmpdir_factory, bout_xyt_example_files):
+        # actually write these to disk to test the loading fully
         path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=3, nt=1,
-                                      syn_data_type='stepped', grid='grid')
+                                      syn_data_type='stepped', grid='grid',
+                                      write_to_disk=True)
         actual = open_boutdataset(datapath=path, geometry='toroidal',
                                   gridfilepath=Path(path).parent.joinpath('grid.nc'))
 
@@ -591,19 +613,26 @@ class TestOpen:
         actual.bout.save(str(save_dir.join('boutdata.nc')))
 
     def test_salpha(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=3, nt=1,
-                                      syn_data_type='stepped', grid='grid')
-        actual = open_boutdataset(datapath=path, geometry='s-alpha',
-                                  gridfilepath=Path(path).parent.joinpath('grid.nc'))
+        dataset_list, grid_ds = bout_xyt_example_files(
+            tmpdir_factory, nxpe=3, nype=3, nt=1, syn_data_type='stepped', grid='grid'
+        )
+        actual = open_boutdataset(datapath=dataset_list, geometry='s-alpha',
+                                  gridfilepath=grid_ds)
 
         # check dataset can be saved
         save_dir = tmpdir_factory.mktemp('data')
         actual.bout.save(str(save_dir.join('boutdata.nc')))
 
     def test_drop_vars(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1,
-                                      syn_data_type='stepped')
-        ds = open_boutdataset(datapath=path, keep_xboundaries=False,
+        datapath = bout_xyt_example_files(
+            tmpdir_factory,
+            nxpe=4,
+            nype=1,
+            nt=1,
+            syn_data_type='stepped',
+            write_to_disk=True
+        )
+        ds = open_boutdataset(datapath=datapath, keep_xboundaries=False,
                               drop_variables=['T'])
 
         assert 'T' not in ds.keys()
