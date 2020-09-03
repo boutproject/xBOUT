@@ -640,11 +640,11 @@ def _create_regions_toroidal(ds):
     ny += 2*ybndry + 2*ybndry_upper
 
     # Note, include guard cells in the created regions, fill them later
-    try:
+    if topology in topologies:
         regions = topologies[topology](ds=ds, ixs1=ixs1, ixs2=ixs2, nx=nx, jys11=jys11,
                                        jys21=jys21, ny_inner=ny_inner, jys12=jys12,
                                        jys22=jys22, ny=ny, ybndry=ybndry)
-    except KeyError:
+    else:
         raise NotImplementedError(f"Topology '{topology}' is not implemented")
 
     _check_connections(regions)
