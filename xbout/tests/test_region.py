@@ -108,8 +108,9 @@ class TestRegion:
 
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
+    @pytest.mark.parametrize("test_dataset", [False, True])
     def test_region_limiter(self, bout_xyt_example_files, guards,
-                            keep_xboundaries, keep_yboundaries):
+                            keep_xboundaries, keep_yboundaries, test_dataset):
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
@@ -151,7 +152,11 @@ class TestRegion:
         # Remove attributes that are expected to be different
         del n_noregions.attrs['regions']
 
-        n_sol = n.bout.from_region('SOL')
+        if test_dataset:
+            ds_sol = ds.bout.from_region("SOL")
+            n_sol = ds_sol["n"]
+        else:
+            n_sol = n.bout.from_region('SOL')
 
         # Remove attributes that are expected to be different
         # Corners may be different because core region 'communicates' in y
@@ -168,9 +173,16 @@ class TestRegion:
             # expect exception for core region due to not having neighbour cells to get
             # coordinate values from
             with pytest.raises(ValueError):
-                n_core = n.bout.from_region('core')
+                if test_dataset:
+                    ds_core = ds.bout.from_region("core")
+                else:
+                    n_core = n.bout.from_region('core')
             return
-        n_core = n.bout.from_region('core')
+        if test_dataset:
+            ds_core = ds.bout.from_region("core")
+            n_core = ds_core["n"]
+        else:
+            n_core = n.bout.from_region('core')
 
         # Remove attributes that are expected to be different
         del n_core.attrs['regions']
