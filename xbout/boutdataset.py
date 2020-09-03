@@ -232,6 +232,53 @@ class BoutDatasetAccessor:
 
         return ds
 
+    def interpolate_from_unstructured(self, variables, *, fill_value=np.nan, **kwargs):
+        """Interpolate Dataset onto new grids of some existing coordinates
+
+        Parameters
+        ----------
+        variables : str or sequence of str or ...
+            The names of the variables to interpolate. If 'variables=...' is passed
+            explicitly, then interpolate all variables in the Dataset.
+        **kwargs : (str, array)
+            Each keyword is the name of a coordinate in the DataArray, the argument is a
+            1d array giving the values of that coordinate on the output grid
+        fill_value : float
+            fill_value passed through to scipy.interpolation.griddata
+
+        Returns
+        -------
+        Dataset
+            Dataset interpolated onto a new, structured grid
+         """
+
+        if variables is ...:
+            variables = [v for v in self.data]
+
+        if isinstance(variables, str):
+            variables = [variables]
+        if isinstance(variables, tuple):
+            variables = list(variables)
+
+        for coord in self.data.coords:
+            if coord not in variables:
+                variables.append(coord)
+
+        ds = self.data[variables[0]].bout.interpolate_from_unstructured(
+            fill_value=fill_value, **kwargs
+        ).to_dataset()
+
+        for v in variables[1:]:
+            ds.merge(
+                self.data[v].bout.interpolate_from_unstructured(
+                    fill_value=fill_value, **kwargs
+                ).to_dataset()
+            )
+
+        ds = ds.set_coords(self.data.coords)
+
+        return ds
+
     def remove_yboundaries(self, **kwargs):
         """
         Remove y-boundary points, if present, from the Dataset
