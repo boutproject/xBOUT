@@ -28,7 +28,8 @@ class TestBoutDataArrayMethods:
 
     @pytest.mark.parametrize("mxg", [0, pytest.param(2, marks=pytest.mark.long)])
     @pytest.mark.parametrize("myg", [pytest.param(0, marks=pytest.mark.long), 2])
-    def test_remove_yboundaries(self, tmpdir_factory, bout_xyt_example_files, mxg, myg):
+    @pytest.mark.parametrize("remove_extra_upper", [False, pytest.param(True, marks=pytest.mark.long)])
+    def test_remove_yboundaries(self, tmpdir_factory, bout_xyt_example_files, mxg, myg, remove_extra_upper):
         path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1,
                 nype=6, nt=1, grid='grid', guards={'x': mxg, 'y': myg},
                 topology='connected-double-null', syn_data_type='linear')
@@ -47,7 +48,16 @@ class TestBoutDataArrayMethods:
                 gridfilepath=Path(path).parent.joinpath('grid.nc'), geometry='toroidal',
                 keep_yboundaries=False)
 
-        n = ds['n'].bout.remove_yboundaries()
+        if remove_extra_upper:
+            ds_no_yboundaries = xr.concat(
+                [
+                    ds_no_yboundaries.isel(theta=slice(None, 11)),
+                    ds_no_yboundaries.isel(theta=slice(12, -1))
+                ],
+                dim="theta"
+            )
+
+        n = ds['n'].bout.remove_yboundaries(remove_extra_upper=remove_extra_upper)
 
         assert n.metadata['keep_yboundaries'] == 0
         npt.assert_equal(n.values, ds_no_yboundaries['n'].values)
