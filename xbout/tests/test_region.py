@@ -26,17 +26,27 @@ class TestRegion:
     @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
-    def test_region_core(self, tmpdir_factory, bout_xyt_example_files, guards,
+    def test_region_core(self, bout_xyt_example_files, guards,
                          keep_xboundaries, keep_yboundaries):
         # Note need to use more than (3*MXG,3*MYG) points per output file
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
-                                      nype=4, nt=1, guards=guards, grid='grid',
-                                      topology='core')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=4,
+            nt=1,
+            guards=guards,
+            grid='grid',
+            topology='core'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_xboundaries=keep_xboundaries,
-                              keep_yboundaries=keep_yboundaries)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_xboundaries=keep_xboundaries,
+            keep_yboundaries=keep_yboundaries
+        )
 
         n = ds['n']
 
@@ -64,17 +74,27 @@ class TestRegion:
     @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
-    def test_region_sol(self, tmpdir_factory, bout_xyt_example_files, guards,
+    def test_region_sol(self, bout_xyt_example_files, guards,
                         keep_xboundaries, keep_yboundaries):
         # Note need to use more than (3*MXG,3*MYG) points per output file
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
-                                      nype=4, nt=1, guards=guards, grid='grid',
-                                      topology='sol')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=4,
+            nt=1,
+            guards=guards,
+            grid='grid',
+            topology='sol'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_xboundaries=keep_xboundaries,
-                              keep_yboundaries=keep_yboundaries)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_xboundaries=keep_xboundaries,
+            keep_yboundaries=keep_yboundaries
+        )
 
         n = ds['n']
 
@@ -88,19 +108,29 @@ class TestRegion:
 
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
-    def test_region_limiter(self, tmpdir_factory, bout_xyt_example_files, guards,
+    def test_region_limiter(self, bout_xyt_example_files, guards,
                             keep_xboundaries, keep_yboundaries):
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
-                                      nype=4, nt=1, guards=guards, grid='grid',
-                                      topology='limiter')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=4,
+            nt=1,
+            guards=guards,
+            grid='grid',
+            topology='limiter'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_xboundaries=keep_xboundaries,
-                              keep_yboundaries=keep_yboundaries)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_xboundaries=keep_xboundaries,
+            keep_yboundaries=keep_yboundaries
+        )
 
         mxg = guards['x']
 
@@ -152,19 +182,29 @@ class TestRegion:
     @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
-    def test_region_xpoint(self, tmpdir_factory, bout_xyt_example_files, guards,
+    def test_region_xpoint(self, bout_xyt_example_files, guards,
                            keep_xboundaries, keep_yboundaries):
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
-                                      nype=4, nt=1, guards=guards, grid='grid',
-                                      topology='xpoint')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=4,
+            nt=1,
+            guards=guards,
+            grid='grid',
+            topology='xpoint'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_xboundaries=keep_xboundaries,
-                              keep_yboundaries=keep_yboundaries)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_xboundaries=keep_xboundaries,
+            keep_yboundaries=keep_yboundaries
+        )
 
         mxg = guards['x']
         myg = guards['y']
@@ -314,19 +354,29 @@ class TestRegion:
     @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
-    def test_region_singlenull(self, tmpdir_factory, bout_xyt_example_files, guards,
+    def test_region_singlenull(self, bout_xyt_example_files, guards,
                                keep_xboundaries, keep_yboundaries):
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
-                                      nype=4, nt=1, guards=guards, grid='grid',
-                                      topology='single-null')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=4,
+            nt=1,
+            guards=guards,
+            grid='grid',
+            topology='single-null'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_xboundaries=keep_xboundaries,
-                              keep_yboundaries=keep_yboundaries)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_xboundaries=keep_xboundaries,
+            keep_yboundaries=keep_yboundaries
+        )
 
         mxg = guards['x']
         myg = guards['y']
@@ -450,19 +500,29 @@ class TestRegion:
     @pytest.mark.long
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
-    def test_region_connecteddoublenull(self, tmpdir_factory, bout_xyt_example_files,
+    def test_region_connecteddoublenull(self, bout_xyt_example_files,
                                         guards, keep_xboundaries, keep_yboundaries):
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
-                                      nype=6, nt=1, guards=guards, grid='grid',
-                                      topology='connected-double-null')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=6,
+            nt=1,
+            guards=guards,
+            grid='grid',
+            topology='connected-double-null'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_xboundaries=keep_xboundaries,
-                              keep_yboundaries=keep_yboundaries)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_xboundaries=keep_xboundaries,
+            keep_yboundaries=keep_yboundaries
+        )
 
         mxg = guards['x']
         myg = guards['y']
@@ -690,19 +750,29 @@ class TestRegion:
 
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
-    def test_region_disconnecteddoublenull(self, tmpdir_factory, bout_xyt_example_files,
+    def test_region_disconnecteddoublenull(self, bout_xyt_example_files,
                                            guards, keep_xboundaries, keep_yboundaries):
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
-                                      nype=6, nt=1, guards=guards, grid='grid',
-                                      topology='disconnected-double-null')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=6,
+            nt=1,
+            guards=guards,
+            grid='grid',
+            topology='disconnected-double-null'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_xboundaries=keep_xboundaries,
-                              keep_yboundaries=keep_yboundaries)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_xboundaries=keep_xboundaries,
+            keep_yboundaries=keep_yboundaries
+        )
 
         mxg = guards['x']
         myg = guards['y']
@@ -1040,19 +1110,29 @@ class TestRegion:
     @pytest.mark.parametrize('with_guards',
                              [0, {'x': 1}, {'theta': 1}, {'x': 1, 'theta': 1}, 1])
     def test_region_disconnecteddoublenull_get_one_guard(
-            self, tmpdir_factory, bout_xyt_example_files, guards, keep_xboundaries,
+            self, bout_xyt_example_files, guards, keep_xboundaries,
             keep_yboundaries, with_guards):
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
-                                      nype=6, nt=1, guards=guards, grid='grid',
-                                      topology='disconnected-double-null')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=6,
+            nt=1,
+            guards=guards,
+            grid='grid',
+            topology='disconnected-double-null'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_xboundaries=keep_xboundaries,
-                              keep_yboundaries=keep_yboundaries)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_xboundaries=keep_xboundaries,
+            keep_yboundaries=keep_yboundaries
+        )
 
         mxg = guards['x']
         myg = guards['y']
