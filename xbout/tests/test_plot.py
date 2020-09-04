@@ -21,9 +21,16 @@ class TestPlot:
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        dataset_list, grid_ds = bout_xyt_example_files(None, lengths=(2, 5, 4, 3), nxpe=3,
-                                      nype=6, nt=1, guards=guards, grid='grid',
-                                      topology='disconnected-double-null')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 5, 4, 3),
+            nxpe=3,
+            nype=6,
+            nt=1,
+            guards=guards,
+            grid='grid',
+            topology='disconnected-double-null'
+        )
 
         ds = open_boutdataset(
             datapath=dataset_list,
