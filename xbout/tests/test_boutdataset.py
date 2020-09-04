@@ -119,9 +119,16 @@ class TestBoutDatasetMethods:
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        dataset_list, grid_ds = bout_xyt_example_files(None, lengths=(2, 3, 4, 3), nxpe=3,
-                                      nype=6, nt=1, guards=guards, grid='grid',
-                                      topology='disconnected-double-null')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=6,
+            nt=1,
+            guards=guards,
+            grid='grid',
+            topology='disconnected-double-null'
+        )
 
         ds = open_boutdataset(
             datapath=dataset_list,
@@ -445,8 +452,15 @@ class TestBoutDatasetMethods:
     def test_interpolate_parallel_all_variables_arg(self, bout_xyt_example_files):
         # Check that passing 'variables=...' to interpolate_parallel() does actually
         # interpolate all the variables
-        dataset_list, grid_ds = bout_xyt_example_files(None, lengths=(2, 3, 4, 3), nxpe=1,
-                                      nype=1, nt=1, grid='grid', topology='sol')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=1,
+            nype=1,
+            nt=1,
+            grid='grid',
+            topology='sol'
+        )
 
         ds = open_boutdataset(
             datapath=dataset_list, gridfilepath=grid_ds, geometry='toroidal'
