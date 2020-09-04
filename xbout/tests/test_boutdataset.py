@@ -90,27 +90,42 @@ class TestBoutDatasetMethods:
 
     @pytest.mark.parametrize("mxg", [0, pytest.param(2, marks=pytest.mark.long)])
     @pytest.mark.parametrize("myg", [pytest.param(0, marks=pytest.mark.long), 2])
-    def test_remove_yboundaries(self, tmpdir_factory, bout_xyt_example_files, mxg, myg):
-        path = bout_xyt_example_files(
-            tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1, nype=6, nt=1, grid='grid',
-            guards={'x': mxg, 'y': myg}, topology='connected-double-null',
+    def test_remove_yboundaries(self, bout_xyt_example_files, mxg, myg):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=1,
+            nype=6,
+            nt=1,
+            grid='grid',
+            guards={'x': mxg, 'y': myg},
+            topology='connected-double-null',
             syn_data_type='linear'
         )
 
         ds = open_boutdataset(
-            datapath=path, gridfilepath=Path(path).parent.joinpath('grid.nc'),
-            geometry='toroidal', keep_yboundaries=True
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_yboundaries=True
         )
 
-        path_no_yboundaries = bout_xyt_example_files(
-            tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1, nype=6, nt=1, grid='grid',
-            guards={'x': mxg, 'y': 0}, topology='connected-double-null',
+        dataset_list_no_yboundaries, grid_ds_no_yboundaries = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=1,
+            nype=6,
+            nt=1,
+            grid='grid',
+            guards={'x': mxg, 'y': 0},
+            topology='connected-double-null',
             syn_data_type='linear'
         )
 
         ds_no_yboundaries = open_boutdataset(
-            datapath=path_no_yboundaries,
-            gridfilepath=Path(path).parent.joinpath('grid.nc'), geometry='toroidal',
+            datapath=dataset_list_no_yboundaries,
+            gridfilepath=grid_ds_no_yboundaries,
+            geometry='toroidal',
             keep_yboundaries=False
         )
 
