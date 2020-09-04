@@ -254,28 +254,39 @@ class BoutDatasetAccessor:
 
         if variables is ...:
             variables = [v for v in self.data]
+            explicit_variables_arg = False
+        else:
+            explicit_variables_arg = True
 
         if isinstance(variables, str):
             variables = [variables]
         if isinstance(variables, tuple):
             variables = list(variables)
 
+        coords_to_interpolate = []
         for coord in self.data.coords:
-            if coord not in variables:
-                variables.append(coord)
+            if coord not in variables and coord not in kwargs:
+                coords_to_interpolate.append(coord)
 
-        ds = self.data[variables[0]].bout.interpolate_from_unstructured(
-            fill_value=fill_value, **kwargs
-        ).to_dataset()
+        ds = xr.Dataset()
 
-        for v in variables[1:]:
-            ds.merge(
-                self.data[v].bout.interpolate_from_unstructured(
-                    fill_value=fill_value, **kwargs
-                ).to_dataset()
-            )
+        for v in variables + coords_to_interpolate:
+            if np.all([c in self.data[v].coords for c in kwargs]):
+                ds = ds.merge(
+                    self.data[v].bout.interpolate_from_unstructured(
+                        fill_value=fill_value, **kwargs
+                    ).to_dataset()
+                )
+            elif explicit_variables_arg and v in variables:
+                # User explicitly requested v to be interpolated
+                raise ValueError(
+                    f"Could not interpolate {v} because it does not depend on all "
+                    f"coordinates {[c for c in kwargs]}"
+                )
+            elif v in coords_to_interpolate:
+                coords_to_interpolate.remove(v)
 
-        ds = ds.set_coords(self.data.coords)
+        ds = ds.set_coords(coords_to_interpolate)
 
         return ds
 

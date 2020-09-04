@@ -642,7 +642,10 @@ class BoutDataArrayAccessor:
         # boundaries[1] is the inner boundary if it exists
         if len(boundaries) > 1:
             path = matplotlib.path.Path(boundaries[1], closed=True, readonly=True)
-            is_contained = path.contains_points(points)
+            is_contained = path.contains_points(points.reshape([-1, 2]))
+            is_contained = is_contained.reshape(
+                coord_arrays[0].shape + (1,)*len(remaining_dims)
+            )
             result = np.where(is_contained, fill_value, result)
 
         if len(boundaries) > 2:
