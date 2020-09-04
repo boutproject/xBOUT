@@ -553,7 +553,14 @@ class BoutDataArrayAccessor:
                                       save_as=save_as, ax=ax, **kwargs)
             return line_block
 
-    def interpolate_from_unstructured(self, *, fill_value=np.nan, **kwargs):
+    def interpolate_from_unstructured(
+        self,
+        *,
+        fill_value=np.nan,
+        structured_output=True,
+        unstructured_dim_name="unstructured_dim",
+        **kwargs
+    ):
         """Interpolate DataArray onto new grids of some existing coordinates
 
         Parameters
@@ -561,8 +568,15 @@ class BoutDataArrayAccessor:
         **kwargs : (str, array)
             Each keyword is the name of a coordinate in the DataArray, the argument is a
             1d array giving the values of that coordinate on the output grid
-        fill_value : float
+        fill_value : float, default np.nan
             fill_value passed through to scipy.interpolation.griddata
+        structured_output : bool, default True
+            If True, treat output coordinates values as a structured grid.
+            If False, output coordinate values must all have the same length and are not
+            broadcast together.
+        unstructured_dim_name : str, default "unstructured_dim"
+            Name used for the dimension in the output that replaces the dimensions of
+            the interpolated coordinates. Only used if structured_output=False.
 
         Returns
         -------
@@ -572,15 +586,35 @@ class BoutDataArrayAccessor:
 
         da = self.data
 
-        new_coords = {
-            name: xr.DataArray(values, dims=name)
-            for name, values in kwargs.items()
-        }
+        if structured_output:
+            new_coords = {
+                name: xr.DataArray(values, dims=name)
+                for name, values in kwargs.items()
+            }
 
-        coord_arrays = tuple(
-            np.meshgrid(*[values for values in kwargs.values()],
-            indexing="ij")
-        )
+            coord_arrays = tuple(
+                np.meshgrid(*[values for values in kwargs.values()],
+                indexing="ij")
+            )
+
+            new_output_dims = [d for d in kwargs]
+        else:
+            new_coords = {
+                name: xr.DataArray(values, dims=unstructured_dim_name)
+                for name, values in kwargs.items()
+            }
+
+            coord_arrays = tuple(kwargs.values())
+
+            lengths = [len(c) for c in coord_arrays]
+            if np.any([l != lengths[0] for l in lengths[1:]]):
+                raise ValueError(
+                    f"When structured_output=False, all the arrays of output coordinate"
+                    f"values must have the same length. Got lengths "
+                    f"{dict((name, len(coord)) for name, coord in kwargs.items())}"
+                )
+
+            new_output_dims = [unstructured_dim_name]
 
         # Figure out number of dimensions in the coordinates to be interpolated
         dims = set()
@@ -661,7 +695,7 @@ class BoutDataArrayAccessor:
 
         result = xr.DataArray(
             result,
-            dims=[d for d in kwargs] + list(remaining_dims),
+            dims=new_output_dims + list(remaining_dims),
             coords=new_coords,
             name=da.name,
             attrs=da.attrs,

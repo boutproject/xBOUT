@@ -232,7 +232,15 @@ class BoutDatasetAccessor:
 
         return ds
 
-    def interpolate_from_unstructured(self, variables, *, fill_value=np.nan, **kwargs):
+    def interpolate_from_unstructured(
+        self,
+        variables,
+        *,
+        fill_value=np.nan,
+        structured_output=True,
+        unstructured_dim_name="unstructured_dim",
+        **kwargs
+    ):
         """Interpolate Dataset onto new grids of some existing coordinates
 
         Parameters
@@ -245,6 +253,13 @@ class BoutDatasetAccessor:
             1d array giving the values of that coordinate on the output grid
         fill_value : float
             fill_value passed through to scipy.interpolation.griddata
+        structured_output : bool, default True
+            If True, treat output coordinates values as a structured grid.
+            If False, output coordinate values must all have the same length and are not
+            broadcast together.
+        unstructured_dim_name : str, default "unstructured_dim"
+            Name used for the dimension in the output that replaces the dimensions of
+            the interpolated coordinates. Only used if structured_output=False.
 
         Returns
         -------
@@ -274,7 +289,10 @@ class BoutDatasetAccessor:
             if np.all([c in self.data[v].coords for c in kwargs]):
                 ds = ds.merge(
                     self.data[v].bout.interpolate_from_unstructured(
-                        fill_value=fill_value, **kwargs
+                        fill_value=fill_value,
+                        structured_output=structured_output,
+                        unstructured_dim_name=unstructured_dim_name,
+                        **kwargs
                     ).to_dataset()
                 )
             elif explicit_variables_arg and v in variables:
