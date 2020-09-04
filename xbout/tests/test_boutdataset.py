@@ -23,19 +23,19 @@ class TestBoutDatasetIsXarrayDataset:
     (With the accessor approach these should pass trivially now.)
     """
 
-    def test_concat(self, tmpdir_factory, bout_xyt_example_files):
-        path1 = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
-        bd1 = open_boutdataset(datapath=path1, inputfilepath=None,
+    def test_concat(self, bout_xyt_example_files):
+        dataset_list1 = bout_xyt_example_files(None, nxpe=3, nype=4, nt=1)
+        bd1 = open_boutdataset(datapath=dataset_list1, inputfilepath=None,
                                keep_xboundaries=False)
-        path2 = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
-        bd2 = open_boutdataset(datapath=path2, inputfilepath=None,
+        dataset_list2 = bout_xyt_example_files(None, nxpe=3, nype=4, nt=1)
+        bd2 = open_boutdataset(datapath=dataset_list2, inputfilepath=None,
                                keep_xboundaries=False)
         result = concat([bd1, bd2], dim='run')
         assert result.dims == {**bd1.dims, 'run': 2}
 
-    def test_isel(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        bd = open_boutdataset(datapath=path, inputfilepath=None,
+    def test_isel(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
+        bd = open_boutdataset(datapath=dataset_list, inputfilepath=None,
                               keep_xboundaries=False)
         actual = bd.isel(x=slice(None,None,2))
         expected = bd.bout.data.isel(x=slice(None,None,2))
@@ -44,9 +44,9 @@ class TestBoutDatasetIsXarrayDataset:
 
 class TestBoutDatasetMethods:
     @pytest.mark.skip
-    def test_test_method(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        ds = open_boutdataset(datapath=path, inputfilepath=None)
+    def test_test_method(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
+        ds = open_boutdataset(datapath=dataset_list, inputfilepath=None)
         #ds = collect(path=path)
         #bd = BoutAccessor(ds)
         print(ds)
@@ -60,9 +60,11 @@ class TestBoutDatasetMethods:
 
         print(ds.bout.extra_data)
 
-    def test_get_field_aligned(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
-        ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
+    def test_get_field_aligned(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(None, nxpe=3, nype=4, nt=1)
+        ds = open_boutdataset(
+            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+        )
 
         ds['psixy'] = ds['x']
         ds['Rxy'] = ds['x']
@@ -106,7 +108,7 @@ class TestBoutDatasetMethods:
     @pytest.mark.parametrize(
         "vars_to_interpolate", [('n', 'T'), pytest.param(..., marks=pytest.mark.long)]
     )
-    def test_interpolate_parallel(self, tmpdir_factory, bout_xyt_example_files,
+    def test_interpolate_parallel(self, bout_xyt_example_files,
                                   guards, keep_xboundaries, keep_yboundaries,
                                   vars_to_interpolate):
         # This test checks that the regions created in the new high-resolution Dataset by
@@ -117,14 +119,24 @@ class TestBoutDatasetMethods:
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
         # when using minimal numbers of processors
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=3,
-                                      nype=6, nt=1, guards=guards, grid='grid',
-                                      topology='disconnected-double-null')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=6,
+            nt=1,
+            guards=guards,
+            grid='grid',
+            topology='disconnected-double-null'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_xboundaries=keep_xboundaries,
-                              keep_yboundaries=keep_yboundaries)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_xboundaries=keep_xboundaries,
+            keep_yboundaries=keep_yboundaries
+        )
 
         # Get high parallel resolution version of ds, and check that
         ds = ds.bout.interpolate_parallel(vars_to_interpolate)
@@ -437,16 +449,22 @@ class TestBoutDatasetMethods:
                                         theta=slice(jys22 + 1 - myg, jys22 + 1)).values,
                                  v_lower_outer_SOL.isel(theta=slice(myg)).values)
 
-    def test_interpolate_parallel_all_variables_arg(self, tmpdir_factory,
-                                                    bout_xyt_example_files):
+    def test_interpolate_parallel_all_variables_arg(self, bout_xyt_example_files):
         # Check that passing 'variables=...' to interpolate_parallel() does actually
         # interpolate all the variables
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 4, 3), nxpe=1,
-                                      nype=1, nt=1, grid='grid', topology='sol')
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=1,
+            nype=1,
+            nt=1,
+            grid='grid',
+            topology='sol'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal')
+        ds = open_boutdataset(
+            datapath=dataset_list, gridfilepath=grid_ds, geometry='toroidal'
+        )
 
         # Get high parallel resolution version of ds, and check that
         ds = ds.bout.interpolate_parallel(...)
@@ -468,9 +486,11 @@ class TestLoadInputFile:
         # TODO Check it contains the same text
 
     @pytest.mark.skip
-    def test_load_options_in_dataset(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
-        ds = open_boutdataset(datapath=path, inputfilepath=EXAMPLE_OPTIONS_FILE_PATH)
+    def test_load_options_in_dataset(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
+        ds = open_boutdataset(
+            datapath=dataset_list, inputfilepath=EXAMPLE_OPTIONS_FILE_PATH
+        )
         assert isinstance(ds.options, BoutOptions)
 
 
@@ -481,7 +501,9 @@ class TestLoadLogFile:
 class TestSave:
     def test_save_all(self, tmpdir_factory, bout_xyt_example_files):
         # Create data
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=5, nt=1)
+        path = bout_xyt_example_files(
+            tmpdir_factory, nxpe=4, nype=5, nt=1, write_to_disk=True
+        )
 
         # Load it as a boutdataset
         original = open_boutdataset(datapath=path, inputfilepath=None)
@@ -504,7 +526,9 @@ class TestSave:
             grid = None
 
         # Create data
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=5, nt=1, grid=grid)
+        path = bout_xyt_example_files(
+            tmpdir_factory, nxpe=4, nype=5, nt=1, grid=grid, write_to_disk=True
+        )
 
         if grid is not None:
             gridpath = str(Path(path).parent) + "/grid.nc"
@@ -533,7 +557,9 @@ class TestSave:
     def test_save_dtype(self, tmpdir_factory, bout_xyt_example_files, save_dtype):
 
         # Create data
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=1, nype=1, nt=1)
+        path = bout_xyt_example_files(
+            tmpdir_factory, nxpe=1, nype=1, nt=1, write_to_grid=True
+        )
 
         # Load it as a boutdataset
         original = open_boutdataset(datapath=path, inputfilepath=None)
@@ -548,7 +574,9 @@ class TestSave:
         assert recovered['n'].values.dtype == np.dtype(save_dtype)
 
     def test_save_separate_variables(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1)
+        path = bout_xyt_example_files(
+            tmpdir_factory, nxpe=4, nype=1, nt=1, write_to_disk=True
+        )
 
         # Load it as a boutdataset
         original = open_boutdataset(datapath=path, inputfilepath=None)
@@ -574,7 +602,9 @@ class TestSave:
         else:
             grid = None
 
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=4, nype=1, nt=1, grid=grid)
+        path = bout_xyt_example_files(
+            tmpdir_factory, nxpe=4, nype=1, nt=1, grid=grid, write_to_disk=True
+        )
 
         if grid is not None:
             gridpath = str(Path(path).parent) + "/grid.nc"

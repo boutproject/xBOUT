@@ -16,9 +16,11 @@ from xbout.geometries import apply_geometry
 
 class TestBoutDataArrayMethods:
 
-    def test_to_dataset(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, nxpe=3, nype=4, nt=1)
-        ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
+    def test_to_dataset(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(None, nxpe=3, nype=4, nt=1)
+        ds = open_boutdataset(
+            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+        )
         da = ds['n']
 
         new_ds = da.bout.to_dataset()
@@ -30,10 +32,13 @@ class TestBoutDataArrayMethods:
                                     7,
                                     pytest.param(8, marks=pytest.mark.long),
                                     pytest.param(9, marks=pytest.mark.long)])
-    def test_to_field_aligned(self, tmpdir_factory, bout_xyt_example_files, nz):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, nz), nxpe=1,
-                                      nype=1, nt=1)
-        ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
+    def test_to_field_aligned(self, bout_xyt_example_files, nz):
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(3, 3, 4, nz), nxpe=1, nype=1, nt=1
+        )
+        ds = open_boutdataset(
+            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+        )
 
         ds['psixy'] = ds['x']
         ds['Rxy'] = ds['x']
@@ -78,13 +83,16 @@ class TestBoutDataArrayMethods:
             for z in range(nz):
                 npt.assert_allclose(n_al[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z + 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
-    def test_to_field_aligned_dask(self, tmpdir_factory, bout_xyt_example_files):
+    def test_to_field_aligned_dask(self, bout_xyt_example_files):
 
         nz = 6
 
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, nz), nxpe=1,
-                                      nype=1, nt=1)
-        ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(3, 3, 4, nz), nxpe=1, nype=1, nt=1
+        )
+        ds = open_boutdataset(
+            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+        )
 
         ds['psixy'] = ds['x']
         ds['Rxy'] = ds['x']
@@ -138,10 +146,13 @@ class TestBoutDataArrayMethods:
                                     7,
                                     pytest.param(8, marks=pytest.mark.long),
                                     pytest.param(9, marks=pytest.mark.long)])
-    def test_from_field_aligned(self, tmpdir_factory, bout_xyt_example_files, nz):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, nz), nxpe=1,
-                                      nype=1, nt=1)
-        ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
+    def test_from_field_aligned(self, bout_xyt_example_files, nz):
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(3, 3, 4, nz), nxpe=1, nype=1, nt=1
+        )
+        ds = open_boutdataset(
+            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+        )
 
         ds['psixy'] = ds['x']
         ds['Rxy'] = ds['x']
@@ -187,11 +198,14 @@ class TestBoutDataArrayMethods:
                 npt.assert_allclose(n_nal[t, 1, 3, z].values, 1000.*t + 100.*1 + 10.*3. + (z - 7) % nz, rtol=1.e-15, atol=0.)  # noqa: E501
 
     @pytest.mark.parametrize('stag_location', ['CELL_XLOW', 'CELL_YLOW', 'CELL_ZLOW'])
-    def test_to_field_aligned_staggered(self, tmpdir_factory, bout_xyt_example_files,
+    def test_to_field_aligned_staggered(self, bout_xyt_example_files,
                                         stag_location):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 8), nxpe=1,
-                                      nype=1, nt=1)
-        ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(3, 3, 4, 8), nxpe=1, nype=1, nt=1
+        )
+        ds = open_boutdataset(
+            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+        )
 
         ds['psixy'] = ds['x']
         ds['Rxy'] = ds['x']
@@ -232,11 +246,14 @@ class TestBoutDataArrayMethods:
         npt.assert_equal(n_stag_al.values, n_al.values)
 
     @pytest.mark.parametrize('stag_location', ['CELL_XLOW', 'CELL_YLOW', 'CELL_ZLOW'])
-    def test_from_field_aligned_staggered(self, tmpdir_factory, bout_xyt_example_files,
+    def test_from_field_aligned_staggered(self, bout_xyt_example_files,
                                           stag_location):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(3, 3, 4, 8), nxpe=1,
-                                      nype=1, nt=1)
-        ds = open_boutdataset(datapath=path, inputfilepath=None, keep_xboundaries=False)
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(3, 3, 4, 8), nxpe=1, nype=1, nt=1
+        )
+        ds = open_boutdataset(
+            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+        )
 
         ds['psixy'] = ds['x']
         ds['Rxy'] = ds['x']
@@ -279,15 +296,24 @@ class TestBoutDataArrayMethods:
         npt.assert_equal(n_stag_al.values, n_nal.values)
 
     @pytest.mark.long
-    def test_interpolate_parallel_region_core(self, tmpdir_factory,
-                                              bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=1, nt=1, grid='grid', guards={'y': 2},
-                                      topology='core')
+    def test_interpolate_parallel_region_core(self, bout_xyt_example_files):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 16, 3),
+            nxpe=1,
+            nype=1,
+            nt=1,
+            grid='grid',
+            guards={'y': 2},
+            topology='core'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_yboundaries=True)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_yboundaries=True
+        )
 
         n = ds['n']
 
@@ -318,16 +344,26 @@ class TestBoutDataArrayMethods:
                                             3,
                                             pytest.param(7, marks=pytest.mark.long),
                                             pytest.param(18, marks=pytest.mark.long)])
-    def test_interpolate_parallel_region_core_change_n(self, tmpdir_factory,
-                                                       bout_xyt_example_files,
-                                                       res_factor):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=1, nt=1, grid='grid', guards={'y': 2},
-                                      topology='core')
+    def test_interpolate_parallel_region_core_change_n(
+        self, bout_xyt_example_files, res_factor
+    ):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 16, 3),
+            nxpe=1,
+            nype=1,
+            nt=1,
+            grid='grid',
+            guards={'y': 2},
+            topology='core'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_yboundaries=True)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_yboundaries=True
+        )
 
         n = ds['n']
 
@@ -356,15 +392,24 @@ class TestBoutDataArrayMethods:
         npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
 
     @pytest.mark.long
-    def test_interpolate_parallel_region_sol(self, tmpdir_factory,
-                                             bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=1, nt=1, grid='grid', guards={'y': 2},
-                                      topology='sol')
+    def test_interpolate_parallel_region_sol(self, bout_xyt_example_files):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 16, 3),
+            nxpe=1,
+            nype=1,
+            nt=1,
+            grid='grid',
+            guards={'y': 2},
+            topology='sol'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_yboundaries=True)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_yboundaries=True
+        )
 
         n = ds['n']
 
@@ -391,15 +436,24 @@ class TestBoutDataArrayMethods:
 
         npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
 
-    def test_interpolate_parallel_region_singlenull(self, tmpdir_factory,
-                                                    bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=3, nt=1, grid='grid', guards={'y': 2},
-                                      topology='single-null')
+    def test_interpolate_parallel_region_singlenull(self, bout_xyt_example_files):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 16, 3),
+            nxpe=1,
+            nype=3,
+            nt=1,
+            grid='grid',
+            guards={'y': 2},
+            topology='single-null'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_yboundaries=True)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_yboundaries=True
+        )
 
         n = ds['n']
 
@@ -443,14 +497,24 @@ class TestBoutDataArrayMethods:
 
             npt.assert_allclose(n_highres.values, expected.values, rtol=0., atol=1.e-2)
 
-    def test_interpolate_parallel(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=3, nt=1, grid='grid', guards={'y': 2},
-                                      topology='single-null')
+    def test_interpolate_parallel(self, bout_xyt_example_files):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 16, 3),
+            nxpe=1,
+            nype=3,
+            nt=1,
+            grid='grid',
+            guards={'y': 2},
+            topology='single-null'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_yboundaries=True)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_yboundaries=True
+        )
 
         n = ds['n']
 
@@ -483,14 +547,24 @@ class TestBoutDataArrayMethods:
         npt.assert_allclose(n_highres.values, expected.values,
                             rtol=0., atol=1.1e-2)
 
-    def test_interpolate_parallel_sol(self, tmpdir_factory, bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=1, nt=1, grid='grid', guards={'y': 2},
-                                      topology='sol')
+    def test_interpolate_parallel_sol(self, bout_xyt_example_files):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 16, 3),
+            nxpe=1,
+            nype=1,
+            nt=1,
+            grid='grid',
+            guards={'y': 2},
+            topology='sol'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_yboundaries=True)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_yboundaries=True
+        )
 
         n = ds['n']
 
@@ -523,15 +597,24 @@ class TestBoutDataArrayMethods:
         npt.assert_allclose(n_highres.values, expected.values,
                             rtol=0., atol=1.1e-2)
 
-    def test_interpolate_parallel_toroidal_points(self, tmpdir_factory,
-                                                  bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=3, nt=1, grid='grid', guards={'y': 2},
-                                      topology='single-null')
+    def test_interpolate_parallel_toroidal_points(self, bout_xyt_example_files):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 16, 3),
+            nxpe=1,
+            nype=3,
+            nt=1,
+            grid='grid',
+            guards={'y': 2},
+            topology='single-null'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_yboundaries=True)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_yboundaries=True
+        )
 
         n_highres = ds['n'].bout.interpolate_parallel()
 
@@ -539,15 +622,24 @@ class TestBoutDataArrayMethods:
 
         xrt.assert_identical(n_highres_truncated, n_highres.isel(zeta=[0, 2]))
 
-    def test_interpolate_parallel_toroidal_points_list(self, tmpdir_factory,
-                                                       bout_xyt_example_files):
-        path = bout_xyt_example_files(tmpdir_factory, lengths=(2, 3, 16, 3), nxpe=1,
-                                      nype=3, nt=1, grid='grid', guards={'y': 2},
-                                      topology='single-null')
+    def test_interpolate_parallel_toroidal_points_list(self, bout_xyt_example_files):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 16, 3),
+            nxpe=1,
+            nype=3,
+            nt=1,
+            grid='grid',
+            guards={'y': 2},
+            topology='single-null'
+        )
 
-        ds = open_boutdataset(datapath=path,
-                              gridfilepath=Path(path).parent.joinpath('grid.nc'),
-                              geometry='toroidal', keep_yboundaries=True)
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_yboundaries=True
+        )
 
         n_highres = ds['n'].bout.interpolate_parallel()
 
