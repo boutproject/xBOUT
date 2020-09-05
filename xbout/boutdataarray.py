@@ -593,8 +593,10 @@ class BoutDataArrayAccessor:
             }
 
             coord_arrays = tuple(
-                np.meshgrid(*[values for values in kwargs.values()],
-                indexing="ij")
+                np.meshgrid(
+                    *[values for values in kwargs.values()],
+                    indexing="ij"
+                )
             )
 
             new_output_dims = [d for d in kwargs]
@@ -607,7 +609,7 @@ class BoutDataArrayAccessor:
             coord_arrays = tuple(kwargs.values())
 
             lengths = [len(c) for c in coord_arrays]
-            if np.any([l != lengths[0] for l in lengths[1:]]):
+            if np.any([x != lengths[0] for x in lengths[1:]]):
                 raise ValueError(
                     f"When structured_output=False, all the arrays of output coordinate"
                     f"values must have the same length. Got lengths "

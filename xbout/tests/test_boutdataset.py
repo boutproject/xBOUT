@@ -600,7 +600,9 @@ class TestBoutDatasetMethods:
         n_rect = n.bout.interpolate_from_unstructured(R=R_rect, Z=Z_rect)
 
         # check BoutDataset and BoutDataArray versions are consistent
-        n_rect_from_ds = ds.bout.interpolate_from_unstructured(..., R=R_rect, Z=Z_rect)["n"]
+        n_rect_from_ds = ds.bout.interpolate_from_unstructured(
+            ..., R=R_rect, Z=Z_rect
+        )["n"]
         npt.assert_allclose(n_rect, n_rect_from_ds)
 
         # check non-NaN values are correct

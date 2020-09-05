@@ -99,7 +99,7 @@ def _update_metadata_increased_resolution(da, n):
 # Utility methods for _get_bounding_surfaces()
 ##############################################
 
-_bounding_surface_checks={}
+_bounding_surface_checks = {}
 
 
 def _check_upper_y(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
@@ -136,6 +136,8 @@ def _check_upper_y(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
         return boundary_points, region.connection_inner_x, "inner_x"
     else:
         return None
+
+
 _bounding_surface_checks["upper_y"] = _check_upper_y
 
 
@@ -173,6 +175,8 @@ def _check_inner_x(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
         return boundary_points, region.connection_lower_y, "lower_y"
     else:
         return None
+
+
 _bounding_surface_checks["inner_x"] = _check_inner_x
 
 
@@ -205,6 +209,8 @@ def _check_lower_y(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
         return boundary_points, region.connection_outer_x, "outer_x"
     else:
         return None
+
+
 _bounding_surface_checks["lower_y"] = _check_lower_y
 
 
@@ -237,6 +243,8 @@ def _check_outer_x(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
         return boundary_points, region.connection_upper_y, "upper_y"
     else:
         return None
+
+
 _bounding_surface_checks["outer_x"] = _check_outer_x
 
 
@@ -287,6 +295,7 @@ def _follow_boundary(ds, start_region, start_direction, xbndry, ybndry, Rcoord, 
             break
 
     return boundary_points, visited_regions
+
 
 def _get_bounding_surfaces(ds, coords):
     """
