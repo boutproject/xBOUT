@@ -612,6 +612,70 @@ class TestBoutDatasetMethods:
         # Check there were non-nan values to compare in the previous assert_allclose
         assert int((~np.isnan(n_rect)).count()) == 851
 
+    def test_interpolate_from_unstructured_unstructured_output(
+        self, bout_xyt_example_files
+    ):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=6,
+            nt=1,
+            grid='grid',
+            topology='disconnected-double-null'
+        )
+
+        ds = open_boutdataset(
+            datapath=dataset_list, gridfilepath=grid_ds, geometry="toroidal"
+        )
+
+        # Set up non-trivial R and Z coordinates so we have something to interpolate to
+        r = ds["x"] / ds["x"][-1] * 0.1 + 0.1
+        theta = ds["theta"] / ds["theta"][-1] * 2. * np.pi
+
+        ds["R"] = r * np.cos(theta)
+        ds["Z"] = 2.0 * r * np.sin(theta)
+
+        ds["n"] = (ds["R"] + ds["Z"]).broadcast_like(ds["n"])
+
+        n = ds["n"]
+
+        # make a set of points within the domain
+        # domain is 'double null' so leave a gap to avoid the 'upper target' boundaries
+        t = np.concatenate([
+            np.linspace(0.2, np.pi - 0.2, 11),
+            np.linspace(np.pi + 0.2, 2.0 * np.pi - 0.2, 13)
+        ])
+        R_unstruct = (0.142679 + .013291 * t / (2.0 * np.pi)) * np.cos(t)
+        Z_unstruct = (0.240837 + .113408 * t / (2.0 * np.pi)) * np.sin(t)
+
+        # check input validation
+        with pytest.raises(ValueError):
+            # input length mismatch
+            n_unstruct = n.bout.interpolate_from_unstructured(
+                R=R_unstruct, Z=Z_unstruct[:-2], structured_output=False
+            )
+        with pytest.raises(ValueError):
+            # input length mismatch
+            n_unstruct = n.bout.interpolate_from_unstructured(
+                R=R_unstruct[:-2], Z=Z_unstruct, structured_output=False
+            )
+
+        n_unstruct = n.bout.interpolate_from_unstructured(
+            R=R_unstruct, Z=Z_unstruct, structured_output=False
+        )
+
+        # check BoutDataset and BoutDataArray versions are consistent
+        n_unstruct_from_ds = ds.bout.interpolate_from_unstructured(
+            ..., R=R_unstruct, Z=Z_unstruct, structured_output=False
+        )["n"]
+        npt.assert_allclose(n_unstruct, n_unstruct_from_ds)
+
+        # check non-NaN values are correct
+        n_check = R_unstruct + Z_unstruct
+        n_unstruct = n_unstruct.isel(t=0, zeta=0)
+        npt.assert_allclose(n_unstruct.values, n_check, atol=1.e-7)
+
 
 class TestLoadInputFile:
     @pytest.mark.skip
