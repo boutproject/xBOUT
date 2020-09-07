@@ -162,15 +162,15 @@ def register_geometry(name):
     return wrapper
 
 
-def _set_default_toroidal_coordinates(coordinates):
+def _set_default_toroidal_coordinates(coordinates, ds):
     if coordinates is None:
         coordinates = {}
 
     # Replace any values that have not been passed in with defaults
-    coordinates['t'] = coordinates.get('t', 't')
-    coordinates['x'] = coordinates.get('x', 'psi_poloidal')
-    coordinates['y'] = coordinates.get('y', 'theta')
-    coordinates['z'] = coordinates.get('z', 'zeta')
+    coordinates['t'] = coordinates.get('t', ds.metadata.get('bout_tdim', 't'))
+    coordinates['x'] = coordinates.get('x', ds.metadata.get('bout_xdim', 'psi_poloidal'))
+    coordinates['y'] = coordinates.get('y', ds.metadata.get('bout_ydim', 'theta'))
+    coordinates['z'] = coordinates.get('z', ds.metadata.get('bout_zdim', 'zeta'))
 
     return coordinates
 
@@ -178,7 +178,7 @@ def _set_default_toroidal_coordinates(coordinates):
 @register_geometry('toroidal')
 def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
-    coordinates = _set_default_toroidal_coordinates(coordinates)
+    coordinates = _set_default_toroidal_coordinates(coordinates, ds)
 
     if set(coordinates.values()).issubset(set(ds.coords).union(ds.dims)):
         # Loading a Dataset which already had the coordinates created for it
@@ -261,7 +261,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 @register_geometry('s-alpha')
 def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
 
-    coordinates = _set_default_toroidal_coordinates(coordinates)
+    coordinates = _set_default_toroidal_coordinates(coordinates, ds)
 
     if set(coordinates.values()).issubset(set(ds.coords).union(ds.dims)):
         # Loading a Dataset which already had the coordinates created for it

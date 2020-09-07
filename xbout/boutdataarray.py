@@ -402,10 +402,15 @@ class BoutDataArrayAccessor:
         if remove_extra_upper:
             # modify jyseps*, ny_inner, ny so that sliced variable gets consistent
             # regions
-            result.metadata['ny_inner'] -= 1
-            result.metadata['jyseps1_2'] -= 1
-            result.metadata['jyseps2_2'] -= 1
-            result.metadata['ny'] -= 2
+            if result.metadata['jyseps1_2'] == result.metadata['jyseps2_1']:
+                # single-null
+                result.metadata['ny'] -= 1
+            else:
+                # double-null
+                result.metadata['ny_inner'] -= 1
+                result.metadata['jyseps1_2'] -= 1
+                result.metadata['jyseps2_2'] -= 1
+                result.metadata['ny'] -= 2
 
         if return_dataset:
             return result
