@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy, deepcopy
 from pprint import pformat as prettyformat
 from functools import partial
 
@@ -206,20 +206,29 @@ class BoutDataArrayAccessor:
                 myg = with_guards
 
         da = self.data.isel(region.get_slices())
-        da.attrs['region'] = region
 
-        if region.connection_inner_x is not None:
-            # get inner x-guard cells for da from the global array
-            da = _concat_inner_guards(da, self.data, mxg)
-        if region.connection_outer_x is not None:
-            # get outer x-guard cells for da from the global array
-            da = _concat_outer_guards(da, self.data, mxg)
-        if region.connection_lower_y is not None:
-            # get lower y-guard cells from the global array
-            da = _concat_lower_guards(da, self.data, mxg, myg)
-        if region.connection_upper_y is not None:
-            # get upper y-guard cells from the global array
-            da = _concat_upper_guards(da, self.data, mxg, myg)
+        # Make sure attrs are unique before we change them
+        da.attrs = copy(da.attrs)
+        # The returned da has only one region
+        single_region = deepcopy(region)
+        da.attrs['regions'] = {name: single_region}
+
+        # get inner x-guard cells for da from the global array
+        da = _concat_inner_guards(da, self.data, mxg)
+        # get outer x-guard cells for da from the global array
+        da = _concat_outer_guards(da, self.data, mxg)
+        # get lower y-guard cells from the global array
+        da = _concat_lower_guards(da, self.data, mxg, myg)
+        # get upper y-guard cells from the global array
+        da = _concat_upper_guards(da, self.data, mxg, myg)
+
+        # If the result (which only has a single region) is passed to from_region a
+        # second time, don't want to slice anything.
+        single_region = list(da.regions.values())[0]
+        single_region.xinner_ind = None
+        single_region.xouter_ind = None
+        single_region.ylower_ind = None
+        single_region.yupper_ind = None
 
         return da
 
@@ -381,6 +390,75 @@ class BoutDataArrayAccessor:
                 da = da.isel(**{zcoord: toroidal_points})
 
         return da
+
+    def remove_yboundaries(self, return_dataset=False, remove_extra_upper=False):
+        """
+        Remove y-boundary points, if present, from the DataArray
+
+        Parameters
+        ----------
+        return_dataset : bool, default False
+            Return the result as a Dataset containing the new DataArray.
+        """
+
+        myg = self.data.metadata['MYG']
+
+        if (
+            (self.metadata['keep_yboundaries'] == 0 or myg == 0)
+            and not remove_extra_upper
+        ):
+            # Ensure we do not modify any other references to metadata
+            self.data.attrs['metadata'] = deepcopy(self.data.metadata)
+            self.data.metadata['keep_yboundaries'] = 0
+            # no y-boundary points to remove
+            if return_dataset:
+                return self.to_dataset()
+            else:
+                return self.data
+        if self.metadata['keep_yboundaries'] == 0:
+            myg = 0
+
+        ycoord = self.data.metadata['bout_ydim']
+        parts = []
+        for region in self.data.regions:
+            part = self.data.bout.from_region(region, with_guards=0)
+            part_region = list(part.regions.values())[0]
+            if part_region.connection_lower_y is None:
+                part = part.isel({ycoord: slice(myg, None)})
+            if part_region.connection_upper_y is None:
+                part = part.isel({ycoord: slice(
+                    -myg if not remove_extra_upper else -myg-1)})
+            del part.attrs["regions"]
+            parts.append(part.bout.to_dataset())
+
+        result = xr.combine_by_coords(parts)
+        # Ensure we do not modify any other references to metadata
+        result.attrs = copy(parts[0].attrs)
+        result.attrs['metadata'] = deepcopy(self.data.metadata)
+        result[self.data.name].attrs['metadata'] = deepcopy(self.data.metadata)
+
+        # result is as if we had not kept y-boundaries when loading
+        result.metadata['keep_yboundaries'] = 0
+        result[self.data.name].metadata['keep_yboundaries'] = 0
+
+        if remove_extra_upper:
+            # modify jyseps*, ny_inner, ny so that sliced variable gets consistent
+            # regions
+            if result.metadata['jyseps1_2'] == result.metadata['jyseps2_1']:
+                # single-null
+                result.metadata['ny'] -= 1
+            else:
+                # double-null
+                result.metadata['ny_inner'] -= 1
+                result.metadata['jyseps1_2'] -= 1
+                result.metadata['jyseps2_2'] -= 1
+                result.metadata['ny'] -= 2
+
+        if return_dataset:
+            return result
+        else:
+            # Extract the DataArray to return
+            return result[self.data.name]
 
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):

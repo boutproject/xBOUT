@@ -28,6 +28,65 @@ class TestBoutDataArrayMethods:
         assert dict_equiv(ds.attrs, new_ds.attrs)
         assert dict_equiv(ds.metadata, new_ds.metadata)
 
+    @pytest.mark.parametrize("mxg", [0, pytest.param(2, marks=pytest.mark.long)])
+    @pytest.mark.parametrize("myg", [pytest.param(0, marks=pytest.mark.long), 2])
+    @pytest.mark.parametrize("remove_extra_upper",
+                             [False, pytest.param(True, marks=pytest.mark.long)])
+    def test_remove_yboundaries(
+        self, bout_xyt_example_files, mxg, myg, remove_extra_upper
+    ):
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=1,
+            nype=6,
+            nt=1,
+            grid='grid',
+            guards={'x': mxg, 'y': myg},
+            topology='connected-double-null',
+            syn_data_type='linear'
+        )
+
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry='toroidal',
+            keep_yboundaries=True
+        )
+
+        dataset_list_no_yboundaries, grid_ds_no_yboundaries = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=1,
+            nype=6,
+            nt=1,
+            grid='grid',
+            guards={'x': mxg, 'y': 0},
+            topology='connected-double-null',
+            syn_data_type='linear'
+        )
+
+        ds_no_yboundaries = open_boutdataset(
+            datapath=dataset_list_no_yboundaries,
+            gridfilepath=grid_ds_no_yboundaries,
+            geometry='toroidal',
+            keep_yboundaries=False
+        )
+
+        if remove_extra_upper:
+            ds_no_yboundaries = xr.concat(
+                [
+                    ds_no_yboundaries.isel(theta=slice(None, 11)),
+                    ds_no_yboundaries.isel(theta=slice(12, -1))
+                ],
+                dim="theta"
+            )
+
+        n = ds['n'].bout.remove_yboundaries(remove_extra_upper=remove_extra_upper)
+
+        assert n.metadata['keep_yboundaries'] == 0
+        npt.assert_equal(n.values, ds_no_yboundaries['n'].values)
+
     @pytest.mark.parametrize('nz', [pytest.param(6, marks=pytest.mark.long),
                                     7,
                                     pytest.param(8, marks=pytest.mark.long),
