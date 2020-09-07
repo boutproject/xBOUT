@@ -11,8 +11,7 @@ from xarray import register_dataarray_accessor
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 from .plotting.utils import _create_norm
-from .region import (Region, _concat_inner_guards, _concat_outer_guards,
-                     _concat_lower_guards, _concat_upper_guards)
+from .region import _from_region
 from .utils import _update_metadata_increased_resolution
 
 
@@ -189,48 +188,7 @@ class BoutDataArrayAccessor:
             Number of guard cells to include, by default use MXG and MYG from BOUT++.
             Pass a dict to set different numbers for different coordinates.
         """
-
-        region = self.data.regions[name]
-        xcoord = self.data.metadata['bout_xdim']
-        ycoord = self.data.metadata['bout_ydim']
-
-        if with_guards is None:
-            mxg = self.data.metadata['MXG']
-            myg = self.data.metadata['MYG']
-        else:
-            try:
-                mxg = with_guards.get(xcoord, self.data.metadata['MXG'])
-                myg = with_guards.get(ycoord, self.data.metadata['MYG'])
-            except AttributeError:
-                mxg = with_guards
-                myg = with_guards
-
-        da = self.data.isel(region.get_slices())
-
-        # Make sure attrs are unique before we change them
-        da.attrs = copy(da.attrs)
-        # The returned da has only one region
-        single_region = deepcopy(region)
-        da.attrs['regions'] = {name: single_region}
-
-        # get inner x-guard cells for da from the global array
-        da = _concat_inner_guards(da, self.data, mxg)
-        # get outer x-guard cells for da from the global array
-        da = _concat_outer_guards(da, self.data, mxg)
-        # get lower y-guard cells from the global array
-        da = _concat_lower_guards(da, self.data, mxg, myg)
-        # get upper y-guard cells from the global array
-        da = _concat_upper_guards(da, self.data, mxg, myg)
-
-        # If the result (which only has a single region) is passed to from_region a
-        # second time, don't want to slice anything.
-        single_region = list(da.regions.values())[0]
-        single_region.xinner_ind = None
-        single_region.xouter_ind = None
-        single_region.ylower_ind = None
-        single_region.yupper_ind = None
-
-        return da
+        return _from_region(self.data, name, with_guards)
 
     @property
     def fine_interpolation_factor(self):
