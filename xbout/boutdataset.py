@@ -627,7 +627,8 @@ def _find_major_vars(data):
     """
 
     # TODO Use an Ordered Set instead to preserve order of variables in files?
+    tcoord = data.attrs.get("metadata:bout_tdim", "t")
     major_vars = set(var for var in data.data_vars
-                     if ('t' in data[var].dims) and data[var].dims != ('t', ))
+                     if (tcoord in data[var].dims) and data[var].dims != (tcoord, ))
     minor_vars = set(data.data_vars) - set(major_vars)
     return list(major_vars), list(minor_vars)
