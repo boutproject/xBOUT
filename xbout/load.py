@@ -1,10 +1,11 @@
 from copy import copy
 from warnings import warn
 from pathlib import Path
+from py._path.local import LocalPath
 from functools import partial
 from itertools import chain
-import configparser
 
+from boutdata.data import BoutOptionsFile
 import xarray as xr
 from numpy import unique
 
@@ -51,13 +52,17 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
 
     Parameters
     ----------
-    datapath : str, optional
+    datapath : str or (list or tuple of xr.Dataset), optional
         Path to the data to open. Can point to either a set of one or more dump
         files, or a single grid file.
 
         To specify multiple dump files you must enter the path to them as a
         single glob, e.g. './BOUT.dmp.*.nc', or for multiple consecutive runs
         in different directories (in order) then './run*/BOUT.dmp.*.nc'.
+
+        If a list or tuple of xr.Dataset is passed, they will be combined with
+        xr.combine_nested() instead of loading data from disk (intended for unit
+        testing).
     chunks : dict, optional
     inputfilepath : str, optional
     geometry : str, optional
@@ -105,8 +110,11 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         chunks = {}
 
     if pre_squashed:
-        ds = xr.open_mfdataset(datapath, chunks=chunks, combine='nested',
-                               concat_dim=None, **kwargs)
+        if isinstance(datapath, (str, Path, LocalPath)):
+            ds = xr.open_mfdataset(datapath, chunks=chunks, combine='nested',
+                                   concat_dim=None, **kwargs)
+        else:
+            ds = xr.combine_nested(datapath)
     else:
         # Determine if file is a grid file or data dump files
         if _is_dump_files(datapath):
@@ -250,10 +258,7 @@ def reload_boutdataset(
 def _add_options(ds, inputfilepath):
     if inputfilepath:
         # Use Ben's options class to store all input file options
-        with open(inputfilepath, 'r') as f:
-            config_string = "[dummysection]\n" + f.read()
-        options = configparser.ConfigParser()
-        options.read_string(config_string)
+        options = BoutOptionsFile(inputfilepath)
     else:
         options = None
     ds = _set_attrs_on_all_vars(ds, 'options', options)
@@ -363,6 +368,17 @@ def _is_dump_files(datapath):
     grid file. Else assume we have one or more dump files.
     """
 
+    if not isinstance(datapath, (str, Path, LocalPath)):
+        if isinstance(datapath, xr.Dataset):
+            # Has time dimension, so is not a grid Dataset
+            return "t" in datapath.dims
+        elif len(datapath) > 1:
+            # List with multiple Datasets, so is not a grid Dataset
+            return True
+        else:
+            # Single element list of Datasets, or nested list of Datasets
+            return _is_dump_files(datapath[0])
+
     filepaths, filetype = _expand_filepaths(datapath)
 
     if len(filepaths) == 1:
@@ -380,22 +396,50 @@ def _auto_open_mfboutdataset(datapath, chunks=None, info=True,
     if chunks is None:
         chunks = {}
 
-    filepaths, filetype = _expand_filepaths(datapath)
+    if isinstance(datapath, (str, Path, LocalPath)):
+        filepaths, filetype = _expand_filepaths(datapath)
 
-    # Open just one file to read processor splitting
-    nxpe, nype, mxg, myg, mxsub, mysub = _read_splitting(filepaths[0], info)
+        # Open just one file to read processor splitting
+        nxpe, nype, mxg, myg, mxsub, mysub = _read_splitting(filepaths[0], info)
 
-    paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
+        _preprocess = partial(_trim, guards={'x': mxg, 'y': myg},
+                              keep_boundaries={'x': keep_xboundaries,
+                                               'y': keep_yboundaries},
+                              nxpe=nxpe, nype=nype)
 
-    _preprocess = partial(_trim, guards={'x': mxg, 'y': myg},
-                          keep_boundaries={'x': keep_xboundaries,
-                                           'y': keep_yboundaries},
-                          nxpe=nxpe, nype=nype)
+        paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
-    ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims, combine='nested',
-                           data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
-                           preprocess=_preprocess, engine=filetype,
-                           chunks=chunks, join='exact', **kwargs)
+        ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims, combine='nested',
+                               data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
+                               preprocess=_preprocess, engine=filetype,
+                               chunks=chunks, join='exact', **kwargs)
+    else:
+        # datapath was nested list of Datasets
+
+        if isinstance(datapath, xr.Dataset):
+            # normalise as one-element list
+            datapath = [datapath]
+
+        mxg = int(datapath[0]["MXG"])
+        myg = int(datapath[0]["MYG"])
+        nxpe = int(datapath[0]["NXPE"])
+        nype = int(datapath[0]["NYPE"])
+
+        _preprocess = partial(_trim, guards={'x': mxg, 'y': myg},
+                              keep_boundaries={'x': keep_xboundaries,
+                                               'y': keep_yboundaries},
+                              nxpe=nxpe, nype=nype)
+
+        datapath = [_preprocess(x) for x in datapath]
+
+        ds_grid, concat_dims = _arrange_for_concatenation(datapath, nxpe, nype)
+
+        ds = xr.combine_nested(
+            ds_grid,
+            concat_dim=concat_dims,
+            data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
+            join="exact"
+        )
 
     # Remove any duplicate time values from concatenation
     _, unique_indices = unique(ds['t_array'], return_index=True)
@@ -447,21 +491,33 @@ def _read_splitting(filepath, info=True):
     ds = xr.open_dataset(str(filepath))
 
     # Account for case of no parallelisation, when nxpe etc won't be in dataset
-    def get_scalar(ds, key, default=1, info=True):
+    def get_nonnegative_scalar(ds, key, default=1, info=True):
         if key in ds:
-            return ds[key].values
+            val = ds[key].values
+            if val < 0:
+                raise ValueError(f"{key} read from dump files is {val}, but negative"
+                                 f" values are not valid")
+            else:
+                return val
         else:
             if info is True:
-                print("{key} not found, setting to {default}"
-                      .format(key=key, default=default))
+                print(f"{key} not found, setting to {default}")
+            if default < 0:
+                raise ValueError(
+                    f"Default for {key} is {val}, but negative values are not valid"
+                )
             return default
 
-    nxpe = get_scalar(ds, 'NXPE', default=1)
-    nype = get_scalar(ds, 'NYPE', default=1)
-    mxg = get_scalar(ds, 'MXG', default=2)
-    myg = get_scalar(ds, 'MYG', default=0)
-    mxsub = get_scalar(ds, 'MXSUB', default=ds.dims['x'] - 2 * mxg)
-    mysub = get_scalar(ds, 'MYSUB', default=ds.dims['y'] - 2 * myg)
+    nxpe = get_nonnegative_scalar(ds, 'NXPE', default=1, info=info)
+    nype = get_nonnegative_scalar(ds, 'NYPE', default=1, info=info)
+    mxg = get_nonnegative_scalar(ds, 'MXG', default=2, info=info)
+    myg = get_nonnegative_scalar(ds, 'MYG', default=0, info=info)
+    mxsub = get_nonnegative_scalar(
+        ds, 'MXSUB', default=ds.dims['x'] - 2 * mxg, info=info
+    )
+    mysub = get_nonnegative_scalar(
+        ds, 'MYSUB', default=ds.dims['y'] - 2 * myg, info=info
+    )
 
     # Check whether this is a single file squashed from the multiple output files of a
     # parallel run (i.e. NXPE*NYPE > 1 even though there is only a single file to read).
@@ -522,8 +578,6 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
 
     # Create list of lists of filepaths, so that xarray knows how they should
     # be concatenated by xarray.open_mfdataset()
-    # Only possible with this Pull Request to xarray
-    # https://github.com/pydata/xarray/pull/2553
     paths = iter(filepaths)
     paths_grid = [[[next(paths) for x in range(nxpe)]
                                 for y in range(nype)]
@@ -564,8 +618,6 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
 
     if any(keep_boundaries.values()):
         # Work out if this particular dataset contains any boundary cells
-        # Relies on a change to xarray so datasets always have source encoding
-        # See xarray GH issue #2550
         lower_boundaries, upper_boundaries = _infer_contains_boundaries(
             ds, nxpe, nype)
     else:
@@ -670,8 +722,11 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
     for dim in unrecognised_chunk_dims:
         del grid_chunks[dim]
 
-    gridfilepath = Path(datapath)
-    grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath))
+    if isinstance(datapath, (str, Path, LocalPath)):
+        gridfilepath = Path(datapath)
+        grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath))
+    else:
+        grid = datapath
 
     # TODO find out what 'yup_xsplit' etc are in the doublenull storm file John gave me
     # For now drop any variables with extra dimensions

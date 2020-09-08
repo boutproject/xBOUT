@@ -1,4 +1,5 @@
 import collections
+from copy import copy
 from pprint import pformat as prettyformat
 from functools import partial
 from itertools import chain
@@ -19,7 +20,8 @@ from dask.diagnostics import ProgressBar
 from .geometries import apply_geometry
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
-from .utils import _split_into_restarts
+from .region import _from_region
+from .utils import _get_bounding_surfaces, _split_into_restarts
 
 
 @xr.register_dataset_accessor('bout')
@@ -56,7 +58,7 @@ class BoutDatasetAccessor:
     #    return 'boutdata.BoutDataset(', {}, ',', {}, ')'.format(self.datapath,
     #  self.prefix)
 
-    def getFieldAligned(self, name, caching=True):
+    def get_field_aligned(self, name, caching=True):
         """
         Get a field-aligned version of a variable, calculating (and caching in the
         Dataset) if necessary
@@ -77,8 +79,23 @@ class BoutDatasetAccessor:
             return result
         except KeyError:
             if caching:
-                self.data[aligned_name] = self.data[name].bout.toFieldAligned()
+                self.data[aligned_name] = self.data[name].bout.to_field_aligned()
             return self.data[aligned_name]
+
+    def from_region(self, name, with_guards=None):
+        """
+        Get a logically-rectangular section of data from a certain region.
+        Includes guard cells from neighbouring regions.
+
+        Parameters
+        ----------
+        name : str
+            Region to get data for
+        with_guards : int or dict of int, optional
+            Number of guard cells to include, by default use MXG and MYG from BOUT++.
+            Pass a dict to set different numbers for different coordinates.
+        """
+        return _from_region(self.data, name, with_guards)
 
     @property
     def regions(self):
@@ -215,6 +232,149 @@ class BoutDatasetAccessor:
 
         return ds
 
+    def interpolate_from_unstructured(
+        self,
+        variables,
+        *,
+        fill_value=np.nan,
+        structured_output=True,
+        unstructured_dim_name="unstructured_dim",
+        **kwargs
+    ):
+        """Interpolate Dataset onto new grids of some existing coordinates
+
+        Parameters
+        ----------
+        variables : str or sequence of str or ...
+            The names of the variables to interpolate. If 'variables=...' is passed
+            explicitly, then interpolate all variables in the Dataset.
+        **kwargs : (str, array)
+            Each keyword is the name of a coordinate in the DataArray, the argument is a
+            1d array giving the values of that coordinate on the output grid
+        fill_value : float
+            fill_value passed through to scipy.interpolation.griddata
+        structured_output : bool, default True
+            If True, treat output coordinates values as a structured grid.
+            If False, output coordinate values must all have the same length and are not
+            broadcast together.
+        unstructured_dim_name : str, default "unstructured_dim"
+            Name used for the dimension in the output that replaces the dimensions of
+            the interpolated coordinates. Only used if structured_output=False.
+
+        Returns
+        -------
+        Dataset
+            Dataset interpolated onto a new, structured grid
+         """
+
+        if variables is ...:
+            variables = [v for v in self.data]
+            explicit_variables_arg = False
+        else:
+            explicit_variables_arg = True
+
+        if isinstance(variables, str):
+            variables = [variables]
+        if isinstance(variables, tuple):
+            variables = list(variables)
+
+        coords_to_interpolate = []
+        for coord in self.data.coords:
+            if coord not in variables and coord not in kwargs:
+                coords_to_interpolate.append(coord)
+
+        ds = xr.Dataset()
+
+        for v in variables + coords_to_interpolate:
+            if np.all([c in self.data[v].coords for c in kwargs]):
+                ds = ds.merge(
+                    self.data[v].bout.interpolate_from_unstructured(
+                        fill_value=fill_value,
+                        structured_output=structured_output,
+                        unstructured_dim_name=unstructured_dim_name,
+                        **kwargs
+                    ).to_dataset()
+                )
+            elif explicit_variables_arg and v in variables:
+                # User explicitly requested v to be interpolated
+                raise ValueError(
+                    f"Could not interpolate {v} because it does not depend on all "
+                    f"coordinates {[c for c in kwargs]}"
+                )
+            elif v in coords_to_interpolate:
+                coords_to_interpolate.remove(v)
+
+        ds = ds.set_coords(coords_to_interpolate)
+
+        return ds
+
+    def remove_yboundaries(self, **kwargs):
+        """
+        Remove y-boundary points, if present, from the Dataset
+        """
+
+        variables = []
+        xcoord = self.data.metadata['bout_xdim']
+        ycoord = self.data.metadata['bout_ydim']
+        new_metadata = None
+        for v in self.data:
+            if xcoord in self.data[v].dims and ycoord in self.data[v].dims:
+                variables.append(
+                    self.data[v].bout.remove_yboundaries(return_dataset=True, **kwargs)
+                )
+                new_metadata = variables[-1].metadata
+            elif ycoord in self.data[v].dims:
+                raise ValueError(f'{v} only has a {ycoord}-dimension so cannot split '
+                                 f'into regions.')
+            else:
+                variable = self.data[v]
+                if 'keep_yboundaries' in variable.metadata:
+                    variable.attrs['metadata'] = copy(variable.metadata)
+                    variable.metadata['keep_yboundaries'] = 0
+                variables.append(variable.bout.to_dataset())
+        if new_metadata is None:
+            # were no 2d or 3d variables so do not have updated jyseps*, ny_inner but
+            # does not matter because missing metadata is only useful for 2d or 3d
+            # variables
+            new_metadata = variables[0].metadata
+
+        result = xr.merge(variables)
+
+        result.attrs = copy(self.data.attrs)
+
+        # Copy metadata to get possibly modified jyseps*, ny_inner, ny
+        result.attrs['metadata'] = new_metadata
+
+        if "regions" in result.attrs:
+            # regions are not correct for modified BoutDataset
+            del result.attrs["regions"]
+
+        # call to re-create regions
+        result = apply_geometry(result, self.data.geometry)
+
+        return result
+
+    def get_bounding_surfaces(self, coords=("R", "Z")):
+        """
+        Get bounding surfaces.
+        Surfaces are returned as arrays of points describing a polygon, assuming the
+        third spatial dimension is a symmetry direction.
+
+        Parameters
+        ----------
+        coords : (str, str), default ("R", "Z")
+            Pair of names of coordinates whose values are used to give the positions of
+            the points in the result
+
+        Returns
+        -------
+        result : list of DataArrays
+            Each DataArray in the list contains points on a boundary, with size
+            (<number of points in the bounding polygon>, 2). Points wind clockwise around
+            the outside domain, and anti-clockwise around the inside (if there is an
+            inner boundary).
+        """
+        return _get_bounding_surfaces(self.data, coords)
 
     def save(self, savepath='./boutdata.nc', filetype='NETCDF4',
              variables=None, save_dtype=None, separate_vars=False, pre_load=False):
@@ -593,7 +753,8 @@ def _find_major_vars(data):
     """
 
     # TODO Use an Ordered Set instead to preserve order of variables in files?
+    tcoord = data.attrs.get("metadata:bout_tdim", "t")
     major_vars = set(var for var in data.data_vars
-                     if ('t' in data[var].dims) and data[var].dims != ('t', ))
+                     if (tcoord in data[var].dims) and data[var].dims != (tcoord, ))
     minor_vars = set(data.data_vars) - set(major_vars)
     return list(major_vars), list(minor_vars)
