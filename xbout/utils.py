@@ -99,7 +99,11 @@ def _update_metadata_increased_resolution(da, n):
 
 def _check_new_nxpe(ds, nxpe):
     # Check nxpe is valid
-    if (ds.metadata["nx"] - 2*ds.metadata["MXG"]) % nxpe != 0:
+
+    nx = ds.metadata["nx"] - 2*ds.metadata["MXG"]
+    mxsub = nx // nxpe
+
+    if nx % nxpe != 0:
         raise ValueError(
             f"nxpe={nxpe} must divide total number of points "
             f"nx-2*MXG={ds.metadata['nx'] - 2*ds.metadata['MXG']}"
@@ -107,19 +111,19 @@ def _check_new_nxpe(ds, nxpe):
     if (
         ds.metadata["ixseps1"] >= 0
         and ds.metadata["ixseps1"] <= ds.metadata["nx"]
-        and (ds.metadata["ixseps1"] - ds.metadata["MXG"]) % nxpe != 0
+        and (ds.metadata["ixseps1"] - ds.metadata["MXG"]) % mxsub != 0
     ):
         raise ValueError(
-            f"nxpe={nxpe} must divide number of points inside first separatrix "
+            f"mxsub={mxsub} must divide number of points inside first separatrix "
             f"ixseps1-MXG={ds.metadata['ixseps1'] - ds.metadata['MXG']}"
         )
     if (
         ds.metadata["ixseps2"] >= 0
         and ds.metadata["ixseps2"] <= ds.metadata["nx"]
-        and (ds.metadata["ixseps2"] - ds.metadata["MXG"]) % nxpe != 0
+        and (ds.metadata["ixseps2"] - ds.metadata["MXG"]) % mxsub != 0
     ):
         raise ValueError(
-            f"nxpe={nxpe} must divide number of points inside second separatrix "
+            f"mxsub={mxsub} must divide number of points inside second separatrix "
             f"ixseps2-MXG={ds.metadata['ixseps2'] - ds.metadata['MXG']}"
         )
 
@@ -128,6 +132,7 @@ def _check_new_nype(ds, nype):
     # Check nype is valid
 
     ny = ds.metadata["ny"]
+    mysub = ny // nype
 
     if ny % nype != 0:
         raise ValueError(
@@ -136,43 +141,43 @@ def _check_new_nype(ds, nype):
     if (
         ds.metadata["jyseps1_1"] >= 0
         and ds.metadata["jyseps1_1"] <= ny
-        and (ds.metadata["jyseps1_1"] + 1) % nype != 0
+        and (ds.metadata["jyseps1_1"] + 1) % mysub != 0
     ):
         raise ValueError(
-            f"nype={nype} must divide jyseps1_1+1={ds.metadata['jyseps1_1'] + 1}"
+            f"mysub={mysub} must divide jyseps1_1+1={ds.metadata['jyseps1_1'] + 1}"
         )
     if (
         ds.metadata["jyseps2_1"] >= 0
         and ds.metadata["jyseps2_1"] <= ny
         and ds.metadata["jyseps1_2"] != ds.metadata["jyseps2_1"]
-        and (ds.metadata["jyseps2_1"] + 1) % nype != 0
+        and (ds.metadata["jyseps2_1"] + 1) % mysub != 0
     ):
         raise ValueError(
-            f"nype={nype} must divide jyseps2_1+1={ds.metadata['jyseps2_1'] + 1}"
+            f"mysub={mysub} must divide jyseps2_1+1={ds.metadata['jyseps2_1'] + 1}"
         )
     if (
         ds.metadata["jyseps1_2"] != ds.metadata["jyseps2_1"]
-        and ds.metadata["ny_inner"] % nype != 0
+        and ds.metadata["ny_inner"] % mysub != 0
     ):
         raise ValueError(
-            f"nype={nype} must divide ny_inner={ds.metadata['ny_inner']}"
+            f"mysub={mysub} must divide ny_inner={ds.metadata['ny_inner']}"
         )
     if (
         ds.metadata["jyseps1_2"] >= 0
         and ds.metadata["jyseps1_2"] <= ny
         and ds.metadata["jyseps1_2"] != ds.metadata["jyseps2_1"]
-        and (ds.metadata["jyseps1_2"] + 1) % nype != 0
+        and (ds.metadata["jyseps1_2"] + 1) % mysub != 0
     ):
         raise ValueError(
-            f"nype={nype} must divide jyseps1_2+1={ds.metadata['jyseps1_2'] + 1}"
+            f"mysub={mysub} must divide jyseps1_2+1={ds.metadata['jyseps1_2'] + 1}"
         )
     if (
         ds.metadata["jyseps2_2"] >= 0
-        and ds.metadata["jyseps2_2"] <= ny
-        and (ds.metadata["jyseps2_2"] + 1) % nype != 0
+        and ds.metadata["jyseps2_2"] < ny
+        and (ds.metadata["jyseps2_2"] + 1) % mysub != 0
     ):
         raise ValueError(
-            f"nype={nype} must divide jyseps2_2+1={ds.metadata['jyseps2_2'] + 1}"
+            f"mysub={mysub} must divide jyseps2_2+1={ds.metadata['jyseps2_2'] + 1}"
         )
 
 
