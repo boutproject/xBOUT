@@ -316,11 +316,13 @@ class BoutDatasetAccessor:
         variables = []
         xcoord = self.data.metadata['bout_xdim']
         ycoord = self.data.metadata['bout_ydim']
+        new_metadata = None
         for v in self.data:
             if xcoord in self.data[v].dims and ycoord in self.data[v].dims:
                 variables.append(
                     self.data[v].bout.remove_yboundaries(return_dataset=True, **kwargs)
                 )
+                new_metadata = variables[-1].metadata
             elif ycoord in self.data[v].dims:
                 raise ValueError(f'{v} only has a {ycoord}-dimension so cannot split '
                                  f'into regions.')
@@ -330,11 +332,22 @@ class BoutDatasetAccessor:
                     variable.attrs['metadata'] = copy(variable.metadata)
                     variable.metadata['keep_yboundaries'] = 0
                 variables.append(variable.bout.to_dataset())
+        if new_metadata is None:
+            # were no 2d or 3d variables so do not have updated jyseps*, ny_inner but
+            # does not matter because missing metadata is only useful for 2d or 3d
+            # variables
+            new_metadata = variables[0].metadata
 
         result = xr.merge(variables)
-        result.attrs = variables[0].attrs
+
+        result.attrs = copy(self.data.attrs)
+
         # Copy metadata to get possibly modified jyseps*, ny_inner, ny
-        result.attrs['metadata'] = variables[0].metadata
+        result.attrs['metadata'] = new_metadata
+
+        if "regions" in result.attrs:
+            # regions are not correct for modified BoutDataset
+            del result.attrs["regions"]
 
         # call to re-create regions
         result = apply_geometry(result, self.data.geometry)
@@ -713,7 +726,8 @@ def _find_major_vars(data):
     """
 
     # TODO Use an Ordered Set instead to preserve order of variables in files?
+    tcoord = data.attrs.get("metadata:bout_tdim", "t")
     major_vars = set(var for var in data.data_vars
-                     if ('t' in data[var].dims) and data[var].dims != ('t', ))
+                     if (tcoord in data[var].dims) and data[var].dims != (tcoord, ))
     minor_vars = set(data.data_vars) - set(major_vars)
     return list(major_vars), list(minor_vars)
