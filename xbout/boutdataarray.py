@@ -3,7 +3,9 @@ from pprint import pformat as prettyformat
 from functools import partial
 
 import dask.array
+import matplotlib.path
 import numpy as np
+from scipy.interpolate import griddata as scipy_griddata
 
 import xarray as xr
 from xarray import register_dataarray_accessor
@@ -12,7 +14,7 @@ from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 from .plotting.utils import _create_norm
 from .region import _from_region
-from .utils import _update_metadata_increased_resolution
+from .utils import _update_metadata_increased_resolution, _get_bounding_surfaces
 
 
 @register_dataarray_accessor('bout')
@@ -418,6 +420,28 @@ class BoutDataArrayAccessor:
             # Extract the DataArray to return
             return result[self.data.name]
 
+    def get_bounding_surfaces(self, coords=("R", "Z")):
+        """
+        Get bounding surfaces.
+        Surfaces are returned as arrays of points describing a polygon, assuming the
+        third spatial dimension is a symmetry direction.
+
+        Parameters
+        ----------
+        coords : (str, str), default ("R", "Z")
+            Pair of names of coordinates whose values are used to give the positions of
+            the points in the result
+
+        Returns
+        -------
+        result : list of DataArrays
+            Each DataArray in the list contains points on a boundary, with size
+            (<number of points in the bounding polygon>, 2). Points wind clockwise around
+            the outside domain, and anti-clockwise around the inside (if there is an
+            inner boundary).
+        """
+        return _get_bounding_surfaces(self.data, coords)
+
     def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
                   save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):
         """
@@ -533,6 +557,158 @@ class BoutDataArrayAccessor:
                                       sep_pos=sep_pos, animate=animate, fps=fps,
                                       save_as=save_as, ax=ax, **kwargs)
             return line_block
+
+    def interpolate_from_unstructured(
+        self,
+        *,
+        fill_value=np.nan,
+        structured_output=True,
+        unstructured_dim_name="unstructured_dim",
+        **kwargs
+    ):
+        """Interpolate DataArray onto new grids of some existing coordinates
+
+        Parameters
+        ----------
+        **kwargs : (str, array)
+            Each keyword is the name of a coordinate in the DataArray, the argument is a
+            1d array giving the values of that coordinate on the output grid
+        fill_value : float, default np.nan
+            fill_value passed through to scipy.interpolation.griddata
+        structured_output : bool, default True
+            If True, treat output coordinates values as a structured grid.
+            If False, output coordinate values must all have the same length and are not
+            broadcast together.
+        unstructured_dim_name : str, default "unstructured_dim"
+            Name used for the dimension in the output that replaces the dimensions of
+            the interpolated coordinates. Only used if structured_output=False.
+
+        Returns
+        -------
+        DataArray
+            Data interpolated onto a new, structured grid
+        """
+
+        da = self.data
+
+        if structured_output:
+            new_coords = {
+                name: xr.DataArray(values, dims=name)
+                for name, values in kwargs.items()
+            }
+
+            coord_arrays = tuple(
+                np.meshgrid(
+                    *[values for values in kwargs.values()],
+                    indexing="ij"
+                )
+            )
+
+            new_output_dims = [d for d in kwargs]
+        else:
+            new_coords = {
+                name: xr.DataArray(values, dims=unstructured_dim_name)
+                for name, values in kwargs.items()
+            }
+
+            coord_arrays = tuple(kwargs.values())
+
+            lengths = [len(c) for c in coord_arrays]
+            if np.any([x != lengths[0] for x in lengths[1:]]):
+                raise ValueError(
+                    f"When structured_output=False, all the arrays of output coordinate"
+                    f"values must have the same length. Got lengths "
+                    f"{dict((name, len(coord)) for name, coord in kwargs.items())}"
+                )
+
+            new_output_dims = [unstructured_dim_name]
+
+        # Figure out number of dimensions in the coordinates to be interpolated
+        dims = set()
+        for coord in kwargs:
+            dims = dims.union(da[coord].dims)
+        dims = tuple(dims)
+        ndim = len(dims)
+
+        # dimensions that are not being interpolated
+        remaining_dims = tuple(d for d in da.dims if d not in dims)
+
+        # Select interpolation method
+        if ndim <= 2:
+            # "cubic" only available for 1d or 2d interpolation
+            method = "cubic"
+        else:
+            method = "linear"
+
+        # extend input coordinates to cover all dims, so we can flatten them
+        input_coords = []
+        for coord in kwargs:
+            data = da[coord]
+            missing_dims = tuple(set(dims) - set(data.dims))
+            expand = {dim: da.sizes[dim] for dim in missing_dims}
+            expand_positions = tuple(dims.index(d) for d in missing_dims)
+            da[coord] = data.expand_dims(expand, axis=expand_positions)
+
+        # scipy.interpolate.griddata requires the axis being interpolated to be the first
+        # one, so stack together 'dims', and then transpose so the resulting stacked
+        # dimension is the first
+        dims_name_list = [d for d in da.dims if d in dims]
+        stacked_dim_name = "stacked_" + "_".join(dims_name_list)
+        stacked = da.stack({stacked_dim_name: dims_name_list})
+        stacked = stacked.transpose(*((stacked_dim_name,) + remaining_dims),
+                                    transpose_coords=True)
+
+        result = scipy_griddata(
+            tuple(stacked[coord] for coord in kwargs),
+            stacked,
+            coord_arrays,
+            method=method,
+            fill_value=fill_value,
+        )
+
+        # griddata only sets points outside the 'convex hull' to fill_value
+        # Nicer to set all points outside the grid boundaries to fill_value
+        ###################################################################
+        boundaries = self.get_bounding_surfaces(coords=[c for c in kwargs])
+        points = np.stack(coord_arrays, axis=-1)
+
+        # boundaries[0] is the outer boundary
+        path = matplotlib.path.Path(boundaries[0], closed=True, readonly=True)
+        is_contained = path.contains_points(points.reshape([-1, 2]))
+        is_contained = is_contained.reshape(
+            coord_arrays[0].shape + (1,)*len(remaining_dims)
+        )
+        result = np.where(is_contained, result, fill_value)
+
+        # boundaries[1] is the inner boundary if it exists
+        if len(boundaries) > 1:
+            path = matplotlib.path.Path(boundaries[1], closed=True, readonly=True)
+            is_contained = path.contains_points(points.reshape([-1, 2]))
+            is_contained = is_contained.reshape(
+                coord_arrays[0].shape + (1,)*len(remaining_dims)
+            )
+            result = np.where(is_contained, fill_value, result)
+
+        if len(boundaries) > 2:
+            raise ValueError(f"Found {len(boundaries)} boundaries, expected at most 2")
+
+        # Create DataArray to return, with as much metadata as possible retained
+        ########################################################################
+        new_coords.update({
+            name: array
+            for name, array in stacked.coords.items()
+            if stacked_dim_name not in array.dims
+        })
+
+        result = xr.DataArray(
+            result,
+            dims=new_output_dims + list(remaining_dims),
+            coords=new_coords,
+            name=da.name,
+            attrs=da.attrs,
+        )
+
+        return result
 
     # BOUT-specific plotting functionality: methods that plot on a poloidal (R-Z) plane
     def contour(self, ax=None, **kwargs):

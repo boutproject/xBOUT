@@ -21,6 +21,7 @@ from .geometries import apply_geometry
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
 from .region import _from_region
+from .utils import _get_bounding_surfaces
 
 
 @xr.register_dataset_accessor('bout')
@@ -231,6 +232,82 @@ class BoutDatasetAccessor:
 
         return ds
 
+    def interpolate_from_unstructured(
+        self,
+        variables,
+        *,
+        fill_value=np.nan,
+        structured_output=True,
+        unstructured_dim_name="unstructured_dim",
+        **kwargs
+    ):
+        """Interpolate Dataset onto new grids of some existing coordinates
+
+        Parameters
+        ----------
+        variables : str or sequence of str or ...
+            The names of the variables to interpolate. If 'variables=...' is passed
+            explicitly, then interpolate all variables in the Dataset.
+        **kwargs : (str, array)
+            Each keyword is the name of a coordinate in the DataArray, the argument is a
+            1d array giving the values of that coordinate on the output grid
+        fill_value : float
+            fill_value passed through to scipy.interpolation.griddata
+        structured_output : bool, default True
+            If True, treat output coordinates values as a structured grid.
+            If False, output coordinate values must all have the same length and are not
+            broadcast together.
+        unstructured_dim_name : str, default "unstructured_dim"
+            Name used for the dimension in the output that replaces the dimensions of
+            the interpolated coordinates. Only used if structured_output=False.
+
+        Returns
+        -------
+        Dataset
+            Dataset interpolated onto a new, structured grid
+         """
+
+        if variables is ...:
+            variables = [v for v in self.data]
+            explicit_variables_arg = False
+        else:
+            explicit_variables_arg = True
+
+        if isinstance(variables, str):
+            variables = [variables]
+        if isinstance(variables, tuple):
+            variables = list(variables)
+
+        coords_to_interpolate = []
+        for coord in self.data.coords:
+            if coord not in variables and coord not in kwargs:
+                coords_to_interpolate.append(coord)
+
+        ds = xr.Dataset()
+
+        for v in variables + coords_to_interpolate:
+            if np.all([c in self.data[v].coords for c in kwargs]):
+                ds = ds.merge(
+                    self.data[v].bout.interpolate_from_unstructured(
+                        fill_value=fill_value,
+                        structured_output=structured_output,
+                        unstructured_dim_name=unstructured_dim_name,
+                        **kwargs
+                    ).to_dataset()
+                )
+            elif explicit_variables_arg and v in variables:
+                # User explicitly requested v to be interpolated
+                raise ValueError(
+                    f"Could not interpolate {v} because it does not depend on all "
+                    f"coordinates {[c for c in kwargs]}"
+                )
+            elif v in coords_to_interpolate:
+                coords_to_interpolate.remove(v)
+
+        ds = ds.set_coords(coords_to_interpolate)
+
+        return ds
+
     def remove_yboundaries(self, **kwargs):
         """
         Remove y-boundary points, if present, from the Dataset
@@ -276,6 +353,28 @@ class BoutDatasetAccessor:
         result = apply_geometry(result, self.data.geometry)
 
         return result
+
+    def get_bounding_surfaces(self, coords=("R", "Z")):
+        """
+        Get bounding surfaces.
+        Surfaces are returned as arrays of points describing a polygon, assuming the
+        third spatial dimension is a symmetry direction.
+
+        Parameters
+        ----------
+        coords : (str, str), default ("R", "Z")
+            Pair of names of coordinates whose values are used to give the positions of
+            the points in the result
+
+        Returns
+        -------
+        result : list of DataArrays
+            Each DataArray in the list contains points on a boundary, with size
+            (<number of points in the bounding polygon>, 2). Points wind clockwise around
+            the outside domain, and anti-clockwise around the inside (if there is an
+            inner boundary).
+        """
+        return _get_bounding_surfaces(self.data, coords)
 
     def save(self, savepath='./boutdata.nc', filetype='NETCDF4',
              variables=None, save_dtype=None, separate_vars=False, pre_load=False):
