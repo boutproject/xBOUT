@@ -108,24 +108,6 @@ def _check_new_nxpe(ds, nxpe):
             f"nxpe={nxpe} must divide total number of points "
             f"nx-2*MXG={ds.metadata['nx'] - 2*ds.metadata['MXG']}"
         )
-    if (
-        ds.metadata["ixseps1"] >= 0
-        and ds.metadata["ixseps1"] <= ds.metadata["nx"]
-        and (ds.metadata["ixseps1"] - ds.metadata["MXG"]) % mxsub != 0
-    ):
-        raise ValueError(
-            f"mxsub={mxsub} must divide number of points inside first separatrix "
-            f"ixseps1-MXG={ds.metadata['ixseps1'] - ds.metadata['MXG']}"
-        )
-    if (
-        ds.metadata["ixseps2"] >= 0
-        and ds.metadata["ixseps2"] <= ds.metadata["nx"]
-        and (ds.metadata["ixseps2"] - ds.metadata["MXG"]) % mxsub != 0
-    ):
-        raise ValueError(
-            f"mxsub={mxsub} must divide number of points inside second separatrix "
-            f"ixseps2-MXG={ds.metadata['ixseps2'] - ds.metadata['MXG']}"
-        )
 
 
 def _check_new_nype(ds, nype):
