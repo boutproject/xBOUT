@@ -834,8 +834,10 @@ class TestSave:
 
 
 class TestSaveRestart:
+
+    @pytest.mark.parametrize("tind", [None, pytest.param(1, marks=pytest.mark.long)])
     def test_to_restart(
-        self, tmpdir_factory, bout_xyt_example_files
+        self, tmpdir_factory, bout_xyt_example_files, tind
     ):
         nxpe = 3
         nype = 2
@@ -852,7 +854,10 @@ class TestSaveRestart:
 
         # Save it to a netCDF file
         savepath = Path(path).parent
-        ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
+        if tind is None:
+            ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
+        else:
+            ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype, tind=tind)
 
         mxsub = nx // nxpe
         mysub = ny // nype
@@ -862,8 +867,13 @@ class TestSaveRestart:
 
                 restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
 
+                if tind is None:
+                    t = -1
+                else:
+                    t = tind
+
                 check_ds = ds.isel(
-                    t=-1,
+                    t=t,
                     x=slice(proc_xind*mxsub, (proc_xind + 1)*mxsub),
                     y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
                 ).load()
