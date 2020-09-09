@@ -795,6 +795,11 @@ class TestSave:
             # Compare equal (not identical because attributes are changed when saving)
             xrt.assert_equal(recovered[var], original[var])
 
+        # test open_boutdataset() on dataset saved with separate_vars=True
+        savepath = str(Path(path).parent) + '/temp_boutdata_*.nc'
+        recovered = open_boutdataset(savepath)
+        xrt.assert_identical(original, recovered)
+
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables(
         self, tmpdir_factory, bout_xyt_example_files, geometry
