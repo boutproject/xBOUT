@@ -136,6 +136,10 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         metadata['keep_yboundaries'] = int(keep_yboundaries)
         ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
 
+        # Set some default settings that are only used in post-processing by xBOUT, not by
+        # BOUT++
+        ds.bout.fine_interpolation_factor = 8
+
         for var in _BOUT_TIME_DEPENDENT_META_VARS:
             if var in ds:
                 # Assume different processors in x & y have same iteration etc.
@@ -171,10 +175,6 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
 
     if run_name:
         ds.name = run_name
-
-    # Set some default settings that are only used in post-processing by xBOUT, not by
-    # BOUT++
-    ds.bout.fine_interpolation_factor = 8
 
     if info == 'terse':
         print("Read in dataset from {}".format(str(Path(datapath))))
