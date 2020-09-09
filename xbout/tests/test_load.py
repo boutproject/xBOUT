@@ -349,6 +349,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
 
     ds['MXG'] = mxg
     ds['MYG'] = myg
+    ds['MZG'] = 0
     ds['nx'] = nx
     ds['ny'] = ny
     ds['nz'] = nz
@@ -362,7 +363,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     if topology == 'core':
         ds['ixseps1'] = nx
         ds['ixseps2'] = nx
-        ds['jyseps1_1'] = 0
+        ds['jyseps1_1'] = -1
         ds['jyseps2_1'] = ny//2 - 1
         ds['jyseps1_2'] = ny//2 - 1
         ds['jyseps2_2'] = ny
@@ -370,7 +371,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     elif topology == 'sol':
         ds['ixseps1'] = 0
         ds['ixseps2'] = 0
-        ds['jyseps1_1'] = 0
+        ds['jyseps1_1'] = -1
         ds['jyseps2_1'] = ny//2 - 1
         ds['jyseps1_2'] = ny//2 - 1
         ds['jyseps2_2'] = ny
@@ -378,7 +379,7 @@ def create_bout_ds(syn_data_type='random', lengths=(6, 2, 4, 7), num=0, nxpe=1, 
     elif topology == 'limiter':
         ds['ixseps1'] = nx//2
         ds['ixseps2'] = nx
-        ds['jyseps1_1'] = 0
+        ds['jyseps1_1'] = -1
         ds['jyseps2_1'] = ny//2 - 1
         ds['jyseps1_2'] = ny//2 - 1
         ds['jyseps2_2'] = ny
@@ -507,10 +508,10 @@ def create_bout_grid_ds(xsize=2, ysize=4, guards={}, topology='core', ny_inner=0
 
 # Note, MYPE, PE_XIND and PE_YIND not included, since they are different for each
 # processor and so are dropped when loading datasets.
-METADATA_VARS = ['BOUT_VERSION', 'NXPE', 'NYPE', 'NZPE', 'MXG', 'MYG', 'nx', 'ny', 'nz',
-                 'MZ', 'MXSUB', 'MYSUB', 'MZSUB', 'ixseps1', 'ixseps2', 'jyseps1_1',
-                 'jyseps1_2', 'jyseps2_1', 'jyseps2_2', 'ny_inner', 'zperiod', 'ZMIN',
-                 'ZMAX', 'dz']
+METADATA_VARS = ['BOUT_VERSION', 'NXPE', 'NYPE', 'NZPE', 'MXG', 'MYG', 'MZG', 'nx', 'ny',
+                 'nz', 'MZ', 'MXSUB', 'MYSUB', 'MZSUB', 'ixseps1', 'ixseps2',
+                 'jyseps1_1', 'jyseps1_2', 'jyseps2_1', 'jyseps2_2', 'ny_inner',
+                 'zperiod', 'ZMIN', 'ZMAX', 'dz']
 
 
 class TestStripMetadata():
