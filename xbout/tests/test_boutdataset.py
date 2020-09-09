@@ -834,4 +834,221 @@ class TestSave:
 
 
 class TestSaveRestart:
-    pass
+
+    @pytest.mark.parametrize("tind", [None, pytest.param(1, marks=pytest.mark.long)])
+    def test_to_restart(
+        self, tmpdir_factory, bout_xyt_example_files, tind
+    ):
+        nxpe = 3
+        nype = 2
+
+        path = bout_xyt_example_files(
+            tmpdir_factory,
+            nxpe=nxpe,
+            nype=nype,
+            nt=1,
+            lengths=[6, 4, 4, 7],
+            guards={"x": 2, "y": 2},
+            write_to_disk=True,
+        )
+
+        # Load it as a boutdataset
+        ds = open_boutdataset(datapath=path)
+
+        nx = ds.metadata["nx"]
+        ny = ds.metadata["ny"]
+
+        # Save it to a netCDF file
+        savepath = Path(path).parent
+        if tind is None:
+            ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
+        else:
+            ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype, tind=tind)
+
+        mxsub = (nx - 4) // nxpe
+        mysub = ny // nype
+        for proc_yind in range(nype):
+            for proc_xind in range(nxpe):
+                num = nxpe*proc_yind + proc_xind
+
+                restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
+
+                if tind is None:
+                    t = -1
+                else:
+                    t = tind
+
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
+                check_ds = ds.isel(
+                    t=t,
+                    x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
+                    y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
+                ).load()
+
+                for v in restart_ds:
+                    if v in check_ds:
+                        xrt.assert_equal(restart_ds[v], check_ds[v])
+                    else:
+                        if v == "hist_hi":
+                            assert restart_ds[v].values == -1
+                        elif v == "tt":
+                            assert restart_ds[v].values == check_ds["t_array"]
+                        else:
+                            assert restart_ds[v].values == check_ds.metadata[v]
+
+    def test_to_restart_change_npe(
+        self, tmpdir_factory, bout_xyt_example_files
+    ):
+        nxpe_in = 3
+        nype_in = 2
+
+        nxpe = 2
+        nype = 4
+
+        path = bout_xyt_example_files(
+            tmpdir_factory,
+            nxpe=nxpe_in,
+            nype=nype_in,
+            nt=1,
+            lengths=[6, 4, 4, 7],
+            guards={"x": 2, "y": 2},
+            write_to_disk=True,
+        )
+
+        # Load it as a boutdataset
+        ds = open_boutdataset(datapath=path)
+
+        nx = ds.metadata["nx"]
+        ny = ds.metadata["ny"]
+
+        # Save it to a netCDF file
+        savepath = Path(path).parent
+        ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
+
+        mxsub = (nx - 4) // nxpe
+        mysub = ny // nype
+        for proc_yind in range(nype):
+            for proc_xind in range(nxpe):
+                num = nxpe*proc_yind + proc_xind
+
+                restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
+
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
+                check_ds = ds.isel(
+                    t=-1,
+                    x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
+                    y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
+                ).load()
+
+                for v in restart_ds:
+                    if v in check_ds:
+                        xrt.assert_equal(restart_ds[v], check_ds[v])
+                    else:
+                        if v in ["NXPE", "NYPE", "MXSUB", "MYSUB"]:
+                            pass
+                        elif v == "hist_hi":
+                            assert restart_ds[v].values == -1
+                        elif v == "tt":
+                            assert restart_ds[v].values == check_ds["t_array"]
+                        else:
+                            assert restart_ds[v].values == check_ds.metadata[v]
+
+    @pytest.mark.long
+    def test_to_restart_change_npe_doublenull(
+        self, tmpdir_factory, bout_xyt_example_files
+    ):
+        nxpe_in = 3
+        nype_in = 6
+
+        nxpe = 1
+        nype = 12
+
+        path = bout_xyt_example_files(
+            tmpdir_factory,
+            nxpe=nxpe_in,
+            nype=nype_in,
+            nt=1,
+            guards={"x": 2, "y": 2},
+            lengths=(6, 5, 4, 7),
+            topology="disconnected-double-null",
+            write_to_disk=True
+        )
+
+        # Load it as a boutdataset
+        ds = open_boutdataset(datapath=path)
+
+        nx = ds.metadata["nx"]
+        ny = ds.metadata["ny"]
+
+        # Save it to a netCDF file
+        savepath = Path(path).parent
+        ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
+
+        mxsub = (nx - 4) // nxpe
+        mysub = ny // nype
+        for proc_yind in range(nype):
+            for proc_xind in range(nxpe):
+                num = nxpe*proc_yind + proc_xind
+
+                restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
+
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
+                check_ds = ds.isel(
+                    t=-1,
+                    x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
+                    y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
+                ).load()
+
+                for v in restart_ds:
+                    if v in check_ds:
+                        xrt.assert_equal(restart_ds[v], check_ds[v])
+                    else:
+                        if v in ["NXPE", "NYPE", "MXSUB", "MYSUB"]:
+                            pass
+                        elif v == "hist_hi":
+                            assert restart_ds[v].values == -1
+                        elif v == "tt":
+                            assert restart_ds[v].values == check_ds["t_array"]
+                        else:
+                            assert restart_ds[v].values == check_ds.metadata[v]
+
+    @pytest.mark.long
+    @pytest.mark.parametrize("npes", [(2, 6), (3, 4)])
+    def test_to_restart_change_npe_doublenull_expect_fail(
+        self, tmpdir_factory, bout_xyt_example_files, npes
+    ):
+        nxpe_in = 3
+        nype_in = 6
+
+        nxpe, nype = npes
+
+        path = bout_xyt_example_files(
+            tmpdir_factory,
+            nxpe=nxpe_in,
+            nype=nype_in,
+            nt=1,
+            guards={"x": 2, "y": 2},
+            lengths=(6, 5, 4, 7),
+            topology="disconnected-double-null",
+            write_to_disk=True
+        )
+
+        # Load it as a boutdataset
+        ds = open_boutdataset(datapath=path)
+
+        nx = ds.metadata["nx"]
+        ny = ds.metadata["ny"]
+
+        # Save it to a netCDF file
+        savepath = Path(path).parent
+        with pytest.raises(ValueError):
+            ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)

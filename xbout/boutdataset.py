@@ -21,7 +21,7 @@ from .geometries import apply_geometry
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting.utils import _create_norm
 from .region import _from_region
-from .utils import _get_bounding_surfaces
+from .utils import _get_bounding_surfaces, _split_into_restarts
 
 
 @xr.register_dataset_accessor('bout')
@@ -514,36 +514,63 @@ class BoutDatasetAccessor:
 
         return
 
-    def to_restart(self, savepath='.', nxpe=None, nype=None,
-                   original_splitting=False):
+    def to_restart(
+        self,
+        variables=None,
+        *,
+        savepath='.',
+        nxpe=None,
+        nype=None,
+        tind=-1,
+        prefix="BOUT.restart",
+        overwrite=False,
+    ):
         """
-        Write out final timestep as a set of netCDF BOUT.restart files.
+        Write out a timestep as a set of netCDF BOUT.restart files.
 
         If processor decomposition is not specified then data will be saved
         using the decomposition it had when loaded.
 
         Parameters
         ----------
-        savepath : str
-        nxpe : int
-        nype : int
+        variables : str or sequence of str, optional
+            The evolving variables needed in the restart files. If not given explicitly,
+            all time-evolving variables in the Dataset will be used, which may result in
+            larger restart files than necessary.
+        savepath : str, default '.'
+            Directory to save the created restart files under
+        nxpe : int, optional
+            Number of processors in the x-direction. If not given, keep the number used
+            for the original simulation
+        nype : int, optional
+            Number of processors in the y-direction. If not given, keep the number used
+            for the original simulation
+        tind : int, default -1
+            Time-index of the slice to write to the restart files
+        prefix : str, default "BOUT.restart"
+            Prefix to use for names of restart files
+        overwrite : bool, default False
+            By default, raises if restart file already exists. Set to True to overwrite
+            existing files
         """
 
+        if isinstance(variables, str):
+            variables = [variables]
+
         # Set processor decomposition if not given
-        if original_splitting:
-            if any([nxpe, nype]):
-                raise ValueError('Inconsistent choices for domain '
-                                 'decomposition.')
-            else:
-                nxpe, nype = self.metadata['NXPE'], self.metadata['NYPE']
+        if nxpe is None:
+            nxpe = self.metadata['NXPE']
+        if nype is None:
+            nype = self.metadata['NYPE']
 
         # Is this even possible without saving the guard cells?
         # Can they be recreated?
-        restart_datasets, paths = _split_into_restarts(self.data, savepath,
-                                                       nxpe, nype)
+        restart_datasets, paths = _split_into_restarts(
+            self.data, variables, savepath, nxpe, nype, tind, prefix, overwrite,
+        )
+
         with ProgressBar():
             xr.save_mfdataset(restart_datasets, paths, compute=True)
-        return
 
     def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
                      nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
