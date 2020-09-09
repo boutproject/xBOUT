@@ -843,7 +843,13 @@ class TestSaveRestart:
         nype = 2
 
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=nxpe, nype=nype, nt=1, write_to_disk=True
+            tmpdir_factory,
+            nxpe=nxpe,
+            nype=nype,
+            nt=1,
+            lengths=[6, 4, 4, 7],
+            guards={"x": 2, "y": 2},
+            write_to_disk=True,
         )
 
         # Load it as a boutdataset
@@ -859,7 +865,7 @@ class TestSaveRestart:
         else:
             ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype, tind=tind)
 
-        mxsub = nx // nxpe
+        mxsub = (nx - 4) // nxpe
         mysub = ny // nype
         for proc_yind in range(nype):
             for proc_xind in range(nxpe):
@@ -872,9 +878,13 @@ class TestSaveRestart:
                 else:
                     t = tind
 
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
                 check_ds = ds.isel(
                     t=t,
-                    x=slice(proc_xind*mxsub, (proc_xind + 1)*mxsub),
+                    x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
                     y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
                 ).load()
 
@@ -899,7 +909,13 @@ class TestSaveRestart:
         nype = 4
 
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=nxpe_in, nype=nype_in, nt=1, write_to_disk=True
+            tmpdir_factory,
+            nxpe=nxpe_in,
+            nype=nype_in,
+            nt=1,
+            lengths=[6, 4, 4, 7],
+            guards={"x": 2, "y": 2},
+            write_to_disk=True,
         )
 
         # Load it as a boutdataset
@@ -912,7 +928,7 @@ class TestSaveRestart:
         savepath = Path(path).parent
         ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
 
-        mxsub = nx // nxpe
+        mxsub = (nx - 4) // nxpe
         mysub = ny // nype
         for proc_yind in range(nype):
             for proc_xind in range(nxpe):
@@ -920,9 +936,13 @@ class TestSaveRestart:
 
                 restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
 
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
                 check_ds = ds.isel(
                     t=-1,
-                    x=slice(proc_xind*mxsub, (proc_xind + 1)*mxsub),
+                    x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
                     y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
                 ).load()
 
@@ -954,7 +974,8 @@ class TestSaveRestart:
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
-            lengths=(6, 3, 4, 7),
+            guards={"x": 2, "y": 2},
+            lengths=(6, 5, 4, 7),
             topology="disconnected-double-null",
             write_to_disk=True
         )
@@ -969,7 +990,7 @@ class TestSaveRestart:
         savepath = Path(path).parent
         ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
 
-        mxsub = nx // nxpe
+        mxsub = (nx - 4) // nxpe
         mysub = ny // nype
         for proc_yind in range(nype):
             for proc_xind in range(nxpe):
@@ -977,9 +998,13 @@ class TestSaveRestart:
 
                 restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
 
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
                 check_ds = ds.isel(
                     t=-1,
-                    x=slice(proc_xind*mxsub, (proc_xind + 1)*mxsub),
+                    x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
                     y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
                 ).load()
 
@@ -1011,7 +1036,8 @@ class TestSaveRestart:
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
-            lengths=(6, 3, 4, 7),
+            guards={"x": 2, "y": 2},
+            lengths=(6, 5, 4, 7),
             topology="disconnected-double-null",
             write_to_disk=True
         )
