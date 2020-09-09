@@ -45,7 +45,7 @@ except ValueError:
 def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
                      geometry=None, gridfilepath=None, chunks=None,
                      keep_xboundaries=True, keep_yboundaries=False,
-                     run_name=None, info=True, pre_squashed=False, **kwargs):
+                     run_name=None, info=True, **kwargs):
     """
     Load a dataset from a set of BOUT output files, including the input options
     file. Can also load from a grid file.
@@ -94,9 +94,6 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         Useful if you are going to open multiple simulations and compare the
         results.
     info : bool or "terse", optional
-    pre_squashed :  bool, optional
-        Set true when loading from data which was saved as separate variables
-        using ds.bout.save().
     kwargs : optional
         Keyword arguments are passed down to `xarray.open_mfdataset`, which in
         turn extra kwargs down to `xarray.open_dataset`.
@@ -109,40 +106,93 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     if chunks is None:
         chunks = {}
 
-    if pre_squashed:
-        if isinstance(datapath, (str, Path, LocalPath)):
-            ds = xr.open_mfdataset(datapath, chunks=chunks, combine='nested',
-                                   concat_dim=None, **kwargs)
+    input_type = _check_dataset_type(datapath)
+
+    if "reload" in input_type:
+        if input_type == "reload":
+            ds = xr.open_mfdataset(
+                datapath,
+                chunks=chunks,
+                combine='by_coords',
+                data_vars='minimal',
+                **kwargs
+            )
+        elif input_type == "reload_fake":
+            ds = xr.combine_by_coords(datapath, data_vars="minimal").chunk(chunks)
         else:
-            ds = xr.combine_nested(datapath)
+            raise ValueError(f"internal error: unexpected input_type={input_type}")
+
+        def attrs_to_dict(obj, section):
+            result = {}
+            section = section + ":"
+            sectionlength = len(section)
+            for key in list(obj.attrs):
+                if key[:sectionlength] == section:
+                    result[key[sectionlength:]] = obj.attrs.pop(key)
+            return result
+
+        def attrs_remove_section(obj, section):
+            section = section + ":"
+            sectionlength = len(section)
+            has_metadata = False
+            for key in list(obj.attrs):
+                if key[:sectionlength] == section:
+                    has_metadata = True
+                    del obj.attrs[key]
+            return has_metadata
+
+        # Restore metadata from attrs
+        metadata = attrs_to_dict(ds, "metadata")
+        ds.attrs["metadata"] = metadata
+        # Must do this for all variables and coordinates in dataset too
+        for da in chain(ds.data_vars.values(), ds.coords.values()):
+            if attrs_remove_section(da, "metadata"):
+                da.attrs["metadata"] = metadata
+
+        ds = _add_options(ds, inputfilepath)
+
+        # If geometry was set, apply geometry again
+        if "geometry" in ds.attrs:
+            ds = geometries.apply_geometry(ds, ds.attrs["geometry"])
+        else:
+            ds = geometries.apply_geometry(ds, None)
+
+        if info == 'terse':
+            print("Read in dataset from {}".format(str(Path(datapath))))
+        elif info:
+            print("Read in:\n{}".format(ds.bout))
+
+        return ds
+
+    # Determine if file is a grid file or data dump files
+    if "dump" in input_type:
+        # Gather pointers to all numerical data from BOUT++ output files
+        ds = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
+                                      keep_xboundaries=keep_xboundaries,
+                                      keep_yboundaries=keep_yboundaries,
+                                      **kwargs)
+    elif "grid" in input_type:
+        # Its a grid file
+        ds = _open_grid(datapath, chunks=chunks,
+                        keep_xboundaries=keep_xboundaries,
+                        keep_yboundaries=keep_yboundaries)
     else:
-        # Determine if file is a grid file or data dump files
-        if _is_dump_files(datapath):
-            # Gather pointers to all numerical data from BOUT++ output files
-            ds = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
-                                          keep_xboundaries=keep_xboundaries,
-                                          keep_yboundaries=keep_yboundaries,
-                                          **kwargs)
-        else:
-            # Its a grid file
-            ds = _open_grid(datapath, chunks=chunks,
-                            keep_xboundaries=keep_xboundaries,
-                            keep_yboundaries=keep_yboundaries)
+        raise ValueError(f"internal error: unexpected input_type={input_type}")
 
-        ds, metadata = _separate_metadata(ds)
-        # Store as ints because netCDF doesn't support bools, so we can't save
-        # bool attributes
-        metadata['keep_xboundaries'] = int(keep_xboundaries)
-        metadata['keep_yboundaries'] = int(keep_yboundaries)
-        ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
+    ds, metadata = _separate_metadata(ds)
+    # Store as ints because netCDF doesn't support bools, so we can't save
+    # bool attributes
+    metadata['keep_xboundaries'] = int(keep_xboundaries)
+    metadata['keep_yboundaries'] = int(keep_yboundaries)
+    ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
 
-        for var in _BOUT_TIME_DEPENDENT_META_VARS:
-            if var in ds:
-                # Assume different processors in x & y have same iteration etc.
-                latest_top_left = {dim: 0 for dim in ds[var].dims}
-                if 't' in ds[var].dims:
-                    latest_top_left['t'] = -1
-                ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
+    for var in _BOUT_TIME_DEPENDENT_META_VARS:
+        if var in ds:
+            # Assume different processors in x & y have same iteration etc.
+            latest_top_left = {dim: 0 for dim in ds[var].dims}
+            if 't' in ds[var].dims:
+                latest_top_left['t'] = -1
+            ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
 
     ds = _add_options(ds, inputfilepath)
 
@@ -176,76 +226,6 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     # Set some default settings that are only used in post-processing by xBOUT, not by
     # BOUT++
     ds.bout.fine_interpolation_factor = 8
-
-    if info == 'terse':
-        print("Read in dataset from {}".format(str(Path(datapath))))
-    elif info:
-        print("Read in:\n{}".format(ds.bout))
-
-    return ds
-
-
-def reload_boutdataset(
-    datapath, inputfilepath=None, chunks=None, info=True, **kwargs
-):
-    """
-    Reload a BoutDataset saved by bout.save(), restoring it to the state the original
-    Dataset was in when bout.save() was called
-
-    Parameters
-    ----------
-    datapath : str
-        Path to netCDF file where the Dataset to be re-loaded was saved
-    inputfilepath : str, optional
-        'options' are not saved. 'inputfilepath' must be provided if 'options' should
-        be recreated for the reloaded Dataset
-    chunks : dict, optional
-        Passed to `xarray.open_mfdataset` or `xarray.open_dataset`
-    info : bool or "terse", optional
-    kwargs : optional
-        Keyword arguments are passed down to `xarray.open_mfdataset` or
-        `xarray.open_dataset`
-    """
-    ds = xr.open_mfdataset(
-        datapath,
-        chunks=chunks,
-        combine='by_coords',
-        data_vars='minimal',
-        **kwargs
-    )
-
-    def attrs_to_dict(obj, section):
-        result = {}
-        section = section + ":"
-        sectionlength = len(section)
-        for key in list(obj.attrs):
-            if key[:sectionlength] == section:
-                result[key[sectionlength:]] = obj.attrs.pop(key)
-        return result
-
-    def attrs_remove_section(obj, section):
-        section = section + ":"
-        sectionlength = len(section)
-        has_metadata = False
-        for key in list(obj.attrs):
-            if key[:sectionlength] == section:
-                has_metadata = True
-                del obj.attrs[key]
-        return has_metadata
-
-    # Restore metadata from attrs
-    metadata = attrs_to_dict(ds, "metadata")
-    ds.attrs["metadata"] = metadata
-    # Must do this for all variables and coordinates in dataset too
-    for da in chain(ds.data_vars.values(), ds.coords.values()):
-        if attrs_remove_section(da, "metadata"):
-            da.attrs["metadata"] = metadata
-
-    ds = _add_options(ds, inputfilepath)
-
-    # If geometry was set, apply geometry again
-    if "geometry" in ds.attrs:
-        ds = geometries.apply_geometry(ds, ds.attrs["geometry"])
 
     if info == 'terse':
         print("Read in dataset from {}".format(str(Path(datapath))))
@@ -362,32 +342,55 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
     return result
 
 
-def _is_dump_files(datapath):
+def _check_dataset_type(datapath):
     """
-    If there is only one file, and it's not got a time dimension, assume it's a
-    grid file. Else assume we have one or more dump files.
+    Check what type of files we have. Could be:
+    (i) produced by xBOUT
+        - one or several files, include metadata attributes, e.g.
+          'metadata:keep_yboundaries'
+    (ii) grid file
+        - only one file, and no time dimension
+    (iii) produced by BOUT++
+        - one or several files
     """
 
     if not isinstance(datapath, (str, Path, LocalPath)):
+        # not a filepath glob, so presumably Dataset or list of Datasets used for
+        # testing
         if isinstance(datapath, xr.Dataset):
-            # Has time dimension, so is not a grid Dataset
-            return "t" in datapath.dims
+            if "metadata:keep_yboundaries" in datapath.attrs:
+                # (i)
+                return "reload_fake"
+            elif "t" in datapath.dims:
+                # (iii)
+                return "dump_fake"
+            else:
+                # (ii)
+                return "grid_fake"
         elif len(datapath) > 1:
-            # List with multiple Datasets, so is not a grid Dataset
-            return True
+            if "metadata:keep_yboundaries" in datapath[0].attrs:
+                # (i)
+                return "reload_fake"
+            else:
+                # (iii)
+                return "dump_fake"
         else:
             # Single element list of Datasets, or nested list of Datasets
-            return _is_dump_files(datapath[0])
+            return _check_dataset_type(datapath[0])
 
     filepaths, filetype = _expand_filepaths(datapath)
 
-    if len(filepaths) == 1:
-        ds = xr.open_dataset(filepaths[0], engine=filetype)
-        dims = ds.dims
-        ds.close()
-        return True if 't' in dims else False
+    ds = xr.open_dataset(filepaths[0], engine=filetype)
+    ds.close()
+    if "metadata:keep_yboundaries" in ds.attrs:
+        # (i)
+        return "reload"
+    elif len(filepaths) > 1 or "t" in ds.dims:
+        # (iii)
+        return "dump"
     else:
-        return True
+        # (ii)
+        return "grid"
 
 
 def _auto_open_mfboutdataset(datapath, chunks=None, info=True,

@@ -9,7 +9,7 @@ from pathlib import Path
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout.tests.test_region import (params_guards, params_guards_values,
                                      params_boundaries, params_boundaries_values)
-from xbout import BoutDatasetAccessor, open_boutdataset, reload_boutdataset
+from xbout import BoutDatasetAccessor, open_boutdataset
 from xbout.geometries import apply_geometry
 from xbout.utils import _set_attrs_on_all_vars
 
@@ -750,7 +750,7 @@ class TestSave:
         original.bout.save(savepath=savepath)
 
         # Load it again
-        recovered = reload_boutdataset(savepath)
+        recovered = open_boutdataset(savepath)
 
         xrt.assert_identical(original.load(), recovered.load())
 
@@ -827,7 +827,7 @@ class TestSave:
 
         # Load it again
         savepath = str(Path(path).parent) + '/temp_boutdata_*.nc'
-        recovered = reload_boutdataset(savepath)
+        recovered = open_boutdataset(savepath)
 
         # Compare
         xrt.assert_identical(recovered, original)
@@ -872,7 +872,7 @@ class TestSave:
 
         # Load it again
         savepath = str(Path(path).parent) + '/temp_boutdata_*.nc'
-        recovered = reload_boutdataset(savepath)
+        recovered = open_boutdataset(savepath)
 
         # Compare
         xrt.assert_identical(recovered, original)
