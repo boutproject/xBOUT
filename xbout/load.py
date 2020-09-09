@@ -186,7 +186,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
 
 
 def reload_boutdataset(
-    datapath, inputfilepath=None, chunks=None, info=True, pre_squashed=False, **kwargs
+    datapath, inputfilepath=None, chunks=None, info=True, **kwargs
 ):
     """
     Reload a BoutDataset saved by bout.save(), restoring it to the state the original
@@ -202,18 +202,17 @@ def reload_boutdataset(
     chunks : dict, optional
         Passed to `xarray.open_mfdataset` or `xarray.open_dataset`
     info : bool or "terse", optional
-    pre_squashed :  bool, optional
-        Set true when loading from data which was saved as separate variables
-        using ds.bout.save().
     kwargs : optional
         Keyword arguments are passed down to `xarray.open_mfdataset` or
         `xarray.open_dataset`
     """
-    if pre_squashed:
-        ds = xr.open_mfdataset(datapath, chunks=chunks, combine='nested',
-                               concat_dim=None, **kwargs)
-    else:
-        ds = xr.open_dataset(datapath, chunks=chunks, **kwargs)
+    ds = xr.open_mfdataset(
+        datapath,
+        chunks=chunks,
+        combine='by_coords',
+        data_vars='minimal',
+        **kwargs
+    )
 
     def attrs_to_dict(obj, section):
         result = {}

@@ -827,7 +827,52 @@ class TestSave:
 
         # Load it again
         savepath = str(Path(path).parent) + '/temp_boutdata_*.nc'
-        recovered = reload_boutdataset(savepath, pre_squashed=True)
+        recovered = reload_boutdataset(savepath)
+
+        # Compare
+        xrt.assert_identical(recovered, original)
+
+    @pytest.mark.parametrize("geometry", [None, "toroidal"])
+    def test_reload_separate_variables_time_split(
+        self, tmpdir_factory, bout_xyt_example_files, geometry
+    ):
+        if geometry is not None:
+            grid = "grid"
+        else:
+            grid = None
+
+        path = bout_xyt_example_files(
+            tmpdir_factory, nxpe=4, nype=1, nt=1, grid=grid, write_to_disk=True
+        )
+
+        if grid is not None:
+            gridpath = str(Path(path).parent) + "/grid.nc"
+        else:
+            gridpath = None
+
+        # Load it as a boutdataset
+        original = open_boutdataset(
+                       datapath=path,
+                       inputfilepath=None,
+                       geometry=geometry,
+                       gridfilepath=gridpath,
+                   )
+        print(original)
+
+        # Save it to a netCDF file
+        tcoord = original.metadata.get("bout_tdim", "t")
+        savepath = str(Path(path).parent) + '/temp_boutdata_1.nc'
+        original.isel({tcoord: slice(3)}).bout.save(
+            savepath=savepath, separate_vars=True
+        )
+        savepath = str(Path(path).parent) + '/temp_boutdata_2.nc'
+        original.isel({tcoord: slice(3, None)}).bout.save(
+            savepath=savepath, separate_vars=True
+        )
+
+        # Load it again
+        savepath = str(Path(path).parent) + '/temp_boutdata_*.nc'
+        recovered = reload_boutdataset(savepath)
 
         # Compare
         xrt.assert_identical(recovered, original)
