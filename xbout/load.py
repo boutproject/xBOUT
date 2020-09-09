@@ -160,12 +160,13 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
                               mxg=ds.metadata['MXG'])
         else:
             grid = None
-
-        # Update coordinates to match particular geometry of grid
-        ds = geometries.apply_geometry(ds, geometry, grid=grid)
     else:
+        grid = None
         if info:
-            warn("No geometry type found, no coordinates will be added")
+            warn("No geometry type found, no physical coordinates will be added")
+
+    # Update coordinates to match particular geometry of grid
+    ds = geometries.apply_geometry(ds, geometry, grid=grid)
 
     # TODO read and store git commit hashes from output files
 

@@ -887,6 +887,8 @@ class TestSaveRestart:
                     x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
                     y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
                 ).load()
+                t_array = check_ds["t"]
+                check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
                 for v in restart_ds:
                     if v in check_ds:
@@ -895,7 +897,7 @@ class TestSaveRestart:
                         if v == "hist_hi":
                             assert restart_ds[v].values == -1
                         elif v == "tt":
-                            assert restart_ds[v].values == check_ds["t_array"]
+                            assert restart_ds[v].values == t_array
                         else:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
@@ -945,6 +947,8 @@ class TestSaveRestart:
                     x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
                     y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
                 ).load()
+                t_array = check_ds["t"]
+                check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
                 for v in restart_ds:
                     if v in check_ds:
@@ -955,7 +959,7 @@ class TestSaveRestart:
                         elif v == "hist_hi":
                             assert restart_ds[v].values == -1
                         elif v == "tt":
-                            assert restart_ds[v].values == check_ds["t_array"]
+                            assert restart_ds[v].values == t_array
                         else:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
@@ -1007,6 +1011,8 @@ class TestSaveRestart:
                     x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
                     y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
                 ).load()
+                t_array = check_ds["t"]
+                check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
                 for v in restart_ds:
                     if v in check_ds:
@@ -1017,7 +1023,7 @@ class TestSaveRestart:
                         elif v == "hist_hi":
                             assert restart_ds[v].values == -1
                         elif v == "tt":
-                            assert restart_ds[v].values == check_ds["t_array"]
+                            assert restart_ds[v].values == t_array
                         else:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
