@@ -203,10 +203,10 @@ def _pad_y_boundaries(ds):
             ds = xr.concat(
                 [
                     boundary_pad,
-                    ds.isel({ycoord: slice(ny_inner)}),
+                    ds.isel({ycoord: slice(ny_inner)}).load(),
                     boundary_pad,
                     boundary_pad,
-                    ds.isel({ycoord: slice(ny_inner, None)}),
+                    ds.isel({ycoord: slice(ny_inner, None)}).load(),
                     boundary_pad,
                 ],
                 dim=ycoord,
