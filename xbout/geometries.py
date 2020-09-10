@@ -98,27 +98,43 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         # For some geometries xcoord may have already been created by
         # add_geometry_coords, in which case we do not need this.
         nx = updated_ds.dims[xcoord]
-        updated_ds = updated_ds.assign_coords(**{xcoord: np.arange(nx)})
-        _add_attrs_to_var(updated_ds, xcoord)
-    ny = updated_ds.dims[ycoord]
-    # dy should always be constant in x, so it is safe to slice to x=0.
-    # [The y-coordinate has to be a 1d coordinate that labels x-z slices of the grid
-    # (similarly x-coordinate is 1d coordinate that labels y-z slices and
-    # z-coordinate is a 1d coordinate that labels x-y slices). A coordinate might
-    # have different values in disconnected regions, but there are no branch-cuts
-    # allowed in the x-direction in BOUT++ (at least for the momement), so the
-    # y-coordinate has to be 1d and single-valued. Therefore similarly dy has to be
-    # 1d and single-valued.] Need drop=True so that the result does not have an
-    # x-coordinate value which prevents it being added as a coordinate.
-    dy = updated_ds['dy'].isel({xcoord: 0}, drop=True)
 
-    # calculate ycoord at the centre of each cell
-    y = dy.cumsum(keep_attrs=True) - dy/2.
-    updated_ds = updated_ds.assign_coords(**{ycoord: y.values})
-    _add_attrs_to_var(updated_ds, ycoord)
+        # can't use commented out version, uncommented one works around xarray bug
+        # removing attrs
+        # https://github.com/pydata/xarray/issues/4415
+        # https://github.com/pydata/xarray/issues/4393
+        # updated_ds = updated_ds.assign_coords(**{xcoord: np.arange(nx)})
+        updated_ds[xcoord] = (xcoord, np.arange(nx))
+
+        _add_attrs_to_var(updated_ds, xcoord)
+
+    if ycoord not in updated_ds.coords:
+        ny = updated_ds.dims[ycoord]
+        # dy should always be constant in x, so it is safe to slice to x=0.
+        # [The y-coordinate has to be a 1d coordinate that labels x-z slices of the grid
+        # (similarly x-coordinate is 1d coordinate that labels y-z slices and
+        # z-coordinate is a 1d coordinate that labels x-y slices). A coordinate might
+        # have different values in disconnected regions, but there are no branch-cuts
+        # allowed in the x-direction in BOUT++ (at least for the momement), so the
+        # y-coordinate has to be 1d and single-valued. Therefore similarly dy has to be
+        # 1d and single-valued.] Need drop=True so that the result does not have an
+        # x-coordinate value which prevents it being added as a coordinate.
+        dy = updated_ds['dy'].isel({xcoord: 0}, drop=True)
+
+        # calculate ycoord at the centre of each cell
+        y = dy.cumsum(keep_attrs=True) - dy/2.
+
+        # can't use commented out version, uncommented one works around xarray bug
+        # removing attrs
+        # https://github.com/pydata/xarray/issues/4415
+        # https://github.com/pydata/xarray/issues/4393
+        # updated_ds = updated_ds.assign_coords(**{ycoord: y.values})
+        updated_ds[ycoord] = (ycoord, y.values)
+
+        _add_attrs_to_var(updated_ds, ycoord)
 
     # If full data (not just grid file) then toroidal dim will be present
-    if zcoord in updated_ds.dims:
+    if zcoord in updated_ds.dims and zcoord not in updated_ds.coords:
         nz = updated_ds.dims[zcoord]
         z0 = 2*np.pi*updated_ds.metadata['ZMIN']
         z1 = z0 + nz*updated_ds.metadata['dz']
@@ -129,7 +145,14 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
                  f"{2.*np.pi*updated_ds.metadata['ZMAX'] - z0}): using value from dz")
         z = xr.DataArray(np.linspace(start=z0, stop=z1, num=nz, endpoint=False),
                          dims=zcoord)
-        updated_ds = updated_ds.assign_coords(**{zcoord: z})
+
+        # can't use commented out version, uncommented one works around xarray bug
+        # removing attrs
+        # https://github.com/pydata/xarray/issues/4415
+        # https://github.com/pydata/xarray/issues/4393
+        # updated_ds = updated_ds.assign_coords(**{zcoord: z})
+        updated_ds[zcoord] = (zcoord, z.values)
+
         _add_attrs_to_var(updated_ds, zcoord)
 
     return updated_ds
@@ -206,7 +229,14 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
                 raise ValueError("Grid file is required to provide %s. Pass the grid "
                                  "file name as the 'gridfilepath' argument to "
                                  "open_boutdataset().")
-            ds[v] = grid[v]
+            # ds[v] = grid[v]
+            # Work around issue where xarray drops attributes on coordinates when a new
+            # DataArray is assigned to the Dataset, see
+            # https://github.com/pydata/xarray/issues/4415
+            # https://github.com/pydata/xarray/issues/4393
+            # This way adds as a 'Variable' instead of as a 'DataArray'
+            ds[v] = (grid[v].dims, grid[v].values)
+
             _add_attrs_to_var(ds, v)
 
     # Rename 't' if user requested it
