@@ -957,6 +957,9 @@ def _concat_upper_guards(da, da_global, mxg, myg):
 
 
 def _from_region(ds_or_da, name, with_guards):
+    # ensure we do not modify the input
+    ds_or_da = ds_or_da.copy(deep=True)
+
     region = ds_or_da.regions[name]
     xcoord = ds_or_da.metadata['bout_xdim']
     ycoord = ds_or_da.metadata['bout_ydim']
@@ -972,10 +975,8 @@ def _from_region(ds_or_da, name, with_guards):
             mxg = with_guards
             myg = with_guards
 
-    result = ds_or_da.isel(region.get_slices())
+    result = ds_or_da.isel(region.get_slices()).copy()
 
-    # Make sure attrs are unique before we change them
-    result.attrs = copy(result.attrs)
     # The returned result has only one region
     single_region = deepcopy(region)
     result.attrs['regions'] = {name: single_region}
