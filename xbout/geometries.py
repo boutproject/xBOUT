@@ -47,26 +47,29 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     UnregisteredGeometryError
     """
 
-    ds = _set_attrs_on_all_vars(ds, 'geometry', geometry_name)
-
-    try:
-        add_geometry_coords = REGISTERED_GEOMETRIES[geometry_name]
-    except KeyError:
-        message = dedent("""{} is not a registered geometry. Inspect the global
-                         variable REGISTERED_GEOMETRIES to see which geometries
-                         have been registered.""".format(geometry_name))
-        raise UnregisteredGeometryError(message)
-
-    # User-registered functions may accept 'coordinates' and 'grid' arguments, but do not
-    # have to as long as they are not used
-    if coordinates is not None and grid is not None:
-        updated_ds = add_geometry_coords(ds, coordinates=coordinates, grid=grid)
-    elif coordinates is not None:
-        updated_ds = add_geometry_coords(ds, coordinates=coordinates)
-    elif grid is not None:
-        updated_ds = add_geometry_coords(ds, grid=grid)
+    if geometry_name is None:
+        updated_ds = ds
     else:
-        updated_ds = add_geometry_coords(ds)
+        ds = _set_attrs_on_all_vars(ds, 'geometry', geometry_name)
+
+        try:
+            add_geometry_coords = REGISTERED_GEOMETRIES[geometry_name]
+        except KeyError:
+            message = dedent("""{} is not a registered geometry. Inspect the global
+                             variable REGISTERED_GEOMETRIES to see which geometries
+                             have been registered.""".format(geometry_name))
+            raise UnregisteredGeometryError(message)
+
+        # User-registered functions may accept 'coordinates' and 'grid' arguments, but
+        # do not have to as long as they are not used
+        if coordinates is not None and grid is not None:
+            updated_ds = add_geometry_coords(ds, coordinates=coordinates, grid=grid)
+        elif coordinates is not None:
+            updated_ds = add_geometry_coords(ds, coordinates=coordinates)
+        elif grid is not None:
+            updated_ds = add_geometry_coords(ds, grid=grid)
+        else:
+            updated_ds = add_geometry_coords(ds)
 
     # Add global 1D coordinates
     # ######################

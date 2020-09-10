@@ -9,7 +9,7 @@ from pathlib import Path
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout.tests.test_region import (params_guards, params_guards_values,
                                      params_boundaries, params_boundaries_values)
-from xbout import BoutDatasetAccessor, open_boutdataset, reload_boutdataset
+from xbout import BoutDatasetAccessor, open_boutdataset
 from xbout.geometries import apply_geometry
 from xbout.utils import _set_attrs_on_all_vars
 
@@ -750,7 +750,7 @@ class TestSave:
         original.bout.save(savepath=savepath)
 
         # Load it again
-        recovered = reload_boutdataset(savepath)
+        recovered = open_boutdataset(savepath)
 
         xrt.assert_identical(original.load(), recovered.load())
 
@@ -795,6 +795,11 @@ class TestSave:
             # Compare equal (not identical because attributes are changed when saving)
             xrt.assert_equal(recovered[var], original[var])
 
+        # test open_boutdataset() on dataset saved with separate_vars=True
+        savepath = str(Path(path).parent) + '/temp_boutdata_*.nc'
+        recovered = open_boutdataset(savepath)
+        xrt.assert_identical(original, recovered)
+
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables(
         self, tmpdir_factory, bout_xyt_example_files, geometry
@@ -827,7 +832,52 @@ class TestSave:
 
         # Load it again
         savepath = str(Path(path).parent) + '/temp_boutdata_*.nc'
-        recovered = reload_boutdataset(savepath, pre_squashed=True)
+        recovered = open_boutdataset(savepath)
+
+        # Compare
+        xrt.assert_identical(recovered, original)
+
+    @pytest.mark.parametrize("geometry", [None, "toroidal"])
+    def test_reload_separate_variables_time_split(
+        self, tmpdir_factory, bout_xyt_example_files, geometry
+    ):
+        if geometry is not None:
+            grid = "grid"
+        else:
+            grid = None
+
+        path = bout_xyt_example_files(
+            tmpdir_factory, nxpe=4, nype=1, nt=1, grid=grid, write_to_disk=True
+        )
+
+        if grid is not None:
+            gridpath = str(Path(path).parent) + "/grid.nc"
+        else:
+            gridpath = None
+
+        # Load it as a boutdataset
+        original = open_boutdataset(
+                       datapath=path,
+                       inputfilepath=None,
+                       geometry=geometry,
+                       gridfilepath=gridpath,
+                   )
+        print(original)
+
+        # Save it to a netCDF file
+        tcoord = original.metadata.get("bout_tdim", "t")
+        savepath = str(Path(path).parent) + '/temp_boutdata_1.nc'
+        original.isel({tcoord: slice(3)}).bout.save(
+            savepath=savepath, separate_vars=True
+        )
+        savepath = str(Path(path).parent) + '/temp_boutdata_2.nc'
+        original.isel({tcoord: slice(3, None)}).bout.save(
+            savepath=savepath, separate_vars=True
+        )
+
+        # Load it again
+        savepath = str(Path(path).parent) + '/temp_boutdata_*.nc'
+        recovered = open_boutdataset(savepath)
 
         # Compare
         xrt.assert_identical(recovered, original)
@@ -887,6 +937,8 @@ class TestSaveRestart:
                     x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
                     y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
                 ).load()
+                t_array = check_ds["t"]
+                check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
                 for v in restart_ds:
                     if v in check_ds:
@@ -895,7 +947,7 @@ class TestSaveRestart:
                         if v == "hist_hi":
                             assert restart_ds[v].values == -1
                         elif v == "tt":
-                            assert restart_ds[v].values == check_ds["t_array"]
+                            assert restart_ds[v].values == t_array
                         else:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
@@ -945,6 +997,8 @@ class TestSaveRestart:
                     x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
                     y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
                 ).load()
+                t_array = check_ds["t"]
+                check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
                 for v in restart_ds:
                     if v in check_ds:
@@ -955,7 +1009,7 @@ class TestSaveRestart:
                         elif v == "hist_hi":
                             assert restart_ds[v].values == -1
                         elif v == "tt":
-                            assert restart_ds[v].values == check_ds["t_array"]
+                            assert restart_ds[v].values == t_array
                         else:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
@@ -1007,6 +1061,8 @@ class TestSaveRestart:
                     x=slice(2 + proc_xind*mxsub, 2 + (proc_xind + 1)*mxsub),
                     y=slice(proc_yind*mysub, (proc_yind + 1)*mysub)
                 ).load()
+                t_array = check_ds["t"]
+                check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
                 for v in restart_ds:
                     if v in check_ds:
@@ -1017,7 +1073,7 @@ class TestSaveRestart:
                         elif v == "hist_hi":
                             assert restart_ds[v].values == -1
                         elif v == "tt":
-                            assert restart_ds[v].values == check_ds["t_array"]
+                            assert restart_ds[v].values == t_array
                         else:
                             assert restart_ds[v].values == check_ds.metadata[v]
 

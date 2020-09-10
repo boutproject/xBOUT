@@ -347,10 +347,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
             restart_ds["hist_hi"] = hist_hi
 
             # tt is the simulation time where the restart happens
-            # t_array variable may have been assigned as a coordinate and renamed as
-            # tcoord
-            t_array = ds.get("t_array", tcoord)
-            restart_ds["tt"] = t_array.values.flatten()[0]
+            restart_ds["tt"] = ds[tcoord].values.flatten()[0]
 
             restart_datasets.append(restart_ds)
 
