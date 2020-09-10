@@ -37,6 +37,7 @@ class TestOpenGrid:
     def test_open_grid(self, create_example_grid_file):
         example_grid = create_example_grid_file
         result = open_boutdataset(datapath=example_grid)
+        result = result.drop_vars(["x", "y"])
         assert_equal(result, open_dataset(example_grid))
         result.close()
 
@@ -53,6 +54,7 @@ class TestOpenGrid:
         with pytest.warns(UserWarning, match="drop all variables containing "
                                              "the dimensions 'w'"):
             result = open_boutdataset(datapath=dodgy_grid_path)
+        result = result.drop_vars(["x", "y"])
         assert_equal(result, example_grid)
         result.close()
 
@@ -76,6 +78,7 @@ class TestOpenGrid:
     def test_open_grid_chunks(self, create_example_grid_file):
         example_grid = create_example_grid_file
         result = open_boutdataset(datapath=example_grid, chunks={'x': 4, 'y': 5})
+        result = result.drop_vars(["x", "y"])
         assert_equal(result, open_dataset(example_grid))
         result.close()
 
@@ -83,5 +86,6 @@ class TestOpenGrid:
         example_grid = create_example_grid_file
         result = open_boutdataset(datapath=example_grid,
                                   chunks={'anonexistantdimension': 5})
+        result = result.drop_vars(["x", "y"])
         assert_equal(result, open_dataset(example_grid))
         result.close()
