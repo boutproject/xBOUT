@@ -746,7 +746,7 @@ class TestSave:
                    )
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + 'temp_boutdata.nc'
+        savepath = str(Path(path).parent) + '/temp_boutdata.nc'
         original.bout.save(savepath=savepath)
 
         # Load it again
@@ -767,7 +767,7 @@ class TestSave:
         original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + 'temp_boutdata.nc'
+        savepath = str(Path(path).parent) + '/temp_boutdata.nc'
         original.bout.save(savepath=savepath, save_dtype=np.dtype(save_dtype))
 
         # Load it again using bare xarray
