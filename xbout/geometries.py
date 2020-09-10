@@ -84,7 +84,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     ycoord = updated_ds.metadata.get('bout_ydim', 'y')
     zcoord = updated_ds.metadata.get('bout_zdim', 'z')
 
-    if (tcoord not in ds.coords) and (tcoord in ds.dims):
+    if (tcoord not in updated_ds.coords) and (tcoord in updated_ds.dims):
         # Create the time coordinate from t_array
         updated_ds = updated_ds.rename({'t_array': tcoord})
         updated_ds = updated_ds.set_coords(tcoord)
