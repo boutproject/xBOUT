@@ -227,7 +227,7 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
         else:
             return ds_list, grid_ds
     elif tmpdir_factory is None:
-        raise ValueError("tmpdir_factory required when write_to_disk=False")
+        raise ValueError("tmpdir_factory required when write_to_disk=True")
 
     save_dir = tmpdir_factory.mktemp("data")
 
