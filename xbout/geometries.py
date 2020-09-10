@@ -71,6 +71,8 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         else:
             updated_ds = add_geometry_coords(ds)
 
+    del ds
+
     # Add global 1D coordinates
     # ######################
     # Note the global coordinates used here are defined so that they are zero at
