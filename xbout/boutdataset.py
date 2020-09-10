@@ -463,6 +463,8 @@ class BoutDatasetAccessor:
 
         if save_dtype is not None:
             encoding = {v: {"dtype": save_dtype} for v in to_save}
+        else:
+            encoding = None
 
         if separate_vars:
             # Save each major variable to a different netCDF file
