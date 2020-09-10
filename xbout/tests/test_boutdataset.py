@@ -754,13 +754,12 @@ class TestSave:
 
         xrt.assert_identical(original.load(), recovered.load())
 
-    @pytest.mark.skip("saving and loading as float32 does not work")
     @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
     def test_save_dtype(self, tmpdir_factory, bout_xyt_example_files, save_dtype):
 
         # Create data
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=1, nype=1, nt=1, write_to_grid=True
+            tmpdir_factory, nxpe=1, nype=1, nt=1, write_to_disk=True
         )
 
         # Load it as a boutdataset
