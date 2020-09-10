@@ -774,7 +774,7 @@ class TestSave:
         savepath = str(Path(path).parent) + '/temp_boutdata.nc'
         original.bout.save(
             savepath=savepath,
-            save_dtype=np.dtype(save_dtype),
+            save_dtype=save_dtype,
             separate_vars=separate_vars
         )
 
