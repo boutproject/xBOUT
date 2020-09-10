@@ -88,8 +88,11 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
 
     if (tcoord not in updated_ds.coords) and (tcoord in updated_ds.dims):
         # Create the time coordinate from t_array
-        updated_ds = updated_ds.rename({'t_array': tcoord})
-        updated_ds = updated_ds.set_coords(tcoord)
+        # Slightly odd looking way to create coordinate ensures 'index variable' is
+        # created, which using set_coords() does not (possible xarray bug?
+        # https://github.com/pydata/xarray/issues/4417
+        updated_ds[tcoord] = updated_ds["t_array"]
+        updated_ds = updated_ds.drop_vars("t_array")
 
     if xcoord not in updated_ds.coords:
         # Make index 'x' a coordinate, useful for handling global indexing
