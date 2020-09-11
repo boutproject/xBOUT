@@ -746,7 +746,7 @@ class TestSave:
                    )
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + 'temp_boutdata.nc'
+        savepath = str(Path(path).parent) + '/temp_boutdata.nc'
         original.bout.save(savepath=savepath)
 
         # Load it again
@@ -754,26 +754,41 @@ class TestSave:
 
         xrt.assert_identical(original.load(), recovered.load())
 
-    @pytest.mark.skip("saving and loading as float32 does not work")
     @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
-    def test_save_dtype(self, tmpdir_factory, bout_xyt_example_files, save_dtype):
+    @pytest.mark.parametrize(
+        "separate_vars", [False, pytest.param(True, marks=pytest.mark.long)]
+    )
+    def test_save_dtype(
+        self, tmpdir_factory, bout_xyt_example_files, save_dtype, separate_vars
+    ):
 
         # Create data
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=1, nype=1, nt=1, write_to_grid=True
+            tmpdir_factory, nxpe=1, nype=1, nt=1, write_to_disk=True
         )
 
         # Load it as a boutdataset
         original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + 'temp_boutdata.nc'
-        original.bout.save(savepath=savepath, save_dtype=np.dtype(save_dtype))
+        savepath = str(Path(path).parent) + '/temp_boutdata.nc'
+        original.bout.save(
+            savepath=savepath,
+            save_dtype=save_dtype,
+            separate_vars=separate_vars
+        )
 
         # Load it again using bare xarray
-        recovered = open_dataset(savepath)
+        if separate_vars:
+            for v in ["n", "T"]:
+                savepath = str(Path(path).parent) + f'/temp_boutdata_{v}.nc'
+                recovered = open_dataset(savepath)
+                assert recovered[v].values.dtype == np.dtype(save_dtype)
+        else:
+            recovered = open_dataset(savepath)
 
-        assert recovered['n'].values.dtype == np.dtype(save_dtype)
+            for v in original:
+                assert recovered[v].values.dtype == np.dtype(save_dtype)
 
     def test_save_separate_variables(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(
