@@ -495,11 +495,15 @@ class BoutDatasetAccessor:
                 path = Path(savepath)
                 var_savepath = str(path.parent / path.stem) + '_' \
                                + str(major_var) + path.suffix
+                if encoding is not None:
+                    var_encoding = {major_var: encoding[major_var]}
+                else:
+                    var_encoding = None
                 print('Saving ' + major_var + ' data...')
                 with ProgressBar():
                     single_var_ds.to_netcdf(path=str(var_savepath),
                                             format=filetype, compute=True,
-                                            encoding={major_var: encoding[major_var]})
+                                            encoding=var_encoding)
 
                 # Force memory deallocation to limit RAM usage
                 single_var_ds.close()
