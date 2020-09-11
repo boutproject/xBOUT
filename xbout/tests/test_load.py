@@ -227,7 +227,7 @@ def _bout_xyt_example_files(tmpdir_factory, prefix='BOUT.dmp', lengths=(6, 2, 4,
         else:
             return ds_list, grid_ds
     elif tmpdir_factory is None:
-        raise ValueError("tmpdir_factory required when write_to_disk=False")
+        raise ValueError("tmpdir_factory required when write_to_disk=True")
 
     save_dir = tmpdir_factory.mktemp("data")
 
@@ -530,69 +530,110 @@ class TestStripMetadata():
 
 # TODO also test loading multiple files which have guard cells
 class TestOpen:
-    def test_single_file(self, bout_xyt_example_files):
-        dataset = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
-        actual = open_boutdataset(datapath=dataset, keep_xboundaries=False)
+    def test_single_file(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(
+            tmpdir_factory, nxpe=1, nype=1, nt=1, write_to_disk=True
+        )
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds()
-        actual = actual.drop_vars(["x", "y", "z"])
         expected = expected.set_coords("t_array").rename(t_array="t")
-        xrt.assert_equal(actual.load(),
+        xrt.assert_equal(actual.drop_vars(["x", "y", "z"]).load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES
                                        + _BOUT_TIME_DEPENDENT_META_VARS,
                                        errors='ignore'))
 
-    def test_squashed_file(self, bout_xyt_example_files):
-        dataset = bout_xyt_example_files(
+        # check creation without writing to disk gives identical result
+        fake_ds_list = bout_xyt_example_files(
+            None, nxpe=1, nype=1, nt=1
+        )
+        fake = open_boutdataset(datapath=fake_ds_list, keep_xboundaries=False)
+        xrt.assert_identical(actual, fake)
+
+    def test_squashed_file(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(
+            tmpdir_factory, nxpe=4, nype=3, nt=1, squashed=True, write_to_disk=True
+        )
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
+        expected = create_bout_ds()
+        expected = expected.set_coords("t_array").rename(t_array="t")
+        xrt.assert_equal(actual.drop_vars(["x", "y", "z"]).load(),
+                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES
+                                       + _BOUT_TIME_DEPENDENT_META_VARS,
+                                       errors='ignore'))
+
+        # check creation without writing to disk gives identical result
+        fake_ds_list = bout_xyt_example_files(
             None, nxpe=4, nype=3, nt=1, squashed=True
         )
-        actual = open_boutdataset(datapath=dataset, keep_xboundaries=False)
-        expected = create_bout_ds()
-        actual = actual.drop_vars(["x", "y", "z"])
-        expected = expected.set_coords("t_array").rename(t_array="t")
-        xrt.assert_equal(actual.load(),
-                         expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES
-                                       + _BOUT_TIME_DEPENDENT_META_VARS,
-                                       errors='ignore'))
+        fake = open_boutdataset(datapath=fake_ds_list, keep_xboundaries=False)
+        xrt.assert_identical(actual, fake)
 
-    def test_combine_along_x(self, bout_xyt_example_files):
-        dataset_list = bout_xyt_example_files(
-            None, nxpe=4, nype=1, nt=1, syn_data_type='stepped'
+    def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(
+            tmpdir_factory,
+            nxpe=4,
+            nype=1,
+            nt=1,
+            syn_data_type='stepped',
+            write_to_disk=True
         )
-        actual = open_boutdataset(datapath=dataset_list, keep_xboundaries=False)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
         expected = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x',
                           data_vars='minimal')
-        actual = actual.drop_vars(["x", "y", "z"])
         expected = expected.set_coords("t_array").rename(t_array="t")
-        xrt.assert_equal(actual.load(),
+        xrt.assert_equal(actual.drop_vars(["x", "y", "z"]).load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
                                        errors='ignore'))
 
-    def test_combine_along_y(self, bout_xyt_example_files):
-        dataset_list = bout_xyt_example_files(
-            None, nxpe=1, nype=3, nt=1, syn_data_type='stepped'
+        # check creation without writing to disk gives identical result
+        fake_ds_list = bout_xyt_example_files(
+            None, nxpe=4, nype=1, nt=1, syn_data_type='stepped'
         )
-        actual = open_boutdataset(datapath=dataset_list, keep_xboundaries=False)
+        fake = open_boutdataset(datapath=fake_ds_list, keep_xboundaries=False)
+        xrt.assert_identical(actual, fake)
+
+    def test_combine_along_y(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(
+            tmpdir_factory,
+            nxpe=1,
+            nype=3,
+            nt=1,
+            syn_data_type='stepped',
+            write_to_disk=True
+        )
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
         expected = concat([bout_ds(0), bout_ds(1), bout_ds(2)], dim='y',
                           data_vars='minimal')
-        actual = actual.drop_vars(["x", "y", "z"])
         expected = expected.set_coords("t_array").rename(t_array="t")
-        xrt.assert_equal(actual.load(),
+        xrt.assert_equal(actual.drop_vars(["x", "y", "z"]).load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
                                        errors='ignore'))
+
+        # check creation without writing to disk gives identical result
+        fake_ds_list = bout_xyt_example_files(
+            None, nxpe=1, nype=3, nt=1, syn_data_type='stepped'
+        )
+        fake = open_boutdataset(datapath=fake_ds_list, keep_xboundaries=False)
+        xrt.assert_identical(actual, fake)
 
     @pytest.mark.skip
     def test_combine_along_t(self):
         ...
 
-    def test_combine_along_xy(self, bout_xyt_example_files):
-        dataset_list = bout_xyt_example_files(
-            None, nxpe=4, nype=3, nt=1, syn_data_type='stepped'
+    def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(
+            tmpdir_factory,
+            nxpe=4,
+            nype=3,
+            nt=1,
+            syn_data_type='stepped',
+            write_to_disk=True,
         )
-        actual = open_boutdataset(datapath=dataset_list, keep_xboundaries=False)
+        actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         bout_ds = create_bout_ds
         line1 = concat([bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)], dim='x',
@@ -603,11 +644,17 @@ class TestOpen:
                        data_vars='minimal')
         expected = concat([line1, line2, line3], dim='y',
                           data_vars='minimal')
-        actual = actual.drop_vars(["x", "y", "z"])
         expected = expected.set_coords("t_array").rename(t_array="t")
-        xrt.assert_equal(actual.load(),
+        xrt.assert_equal(actual.drop_vars(["x", "y", "z"]).load(),
                          expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
                                        errors='ignore'))
+
+        # check creation without writing to disk gives identical result
+        fake_ds_list = bout_xyt_example_files(
+            None, nxpe=4, nype=3, nt=1, syn_data_type='stepped'
+        )
+        fake = open_boutdataset(datapath=fake_ds_list, keep_xboundaries=False)
+        xrt.assert_identical(actual, fake)
 
     def test_toroidal(self, tmpdir_factory, bout_xyt_example_files):
         # actually write these to disk to test the loading fully
@@ -621,16 +668,40 @@ class TestOpen:
         save_dir = tmpdir_factory.mktemp('data')
         actual.bout.save(str(save_dir.join('boutdata.nc')))
 
-    def test_salpha(self, tmpdir_factory, bout_xyt_example_files):
-        dataset_list, grid_ds = bout_xyt_example_files(
-            tmpdir_factory, nxpe=3, nype=3, nt=1, syn_data_type='stepped', grid='grid'
+        # check creation without writing to disk gives identical result
+        fake_ds_list, fake_grid_ds = bout_xyt_example_files(
+            None, nxpe=3, nype=3, nt=1, syn_data_type='stepped', grid='grid',
         )
-        actual = open_boutdataset(datapath=dataset_list, geometry='s-alpha',
-                                  gridfilepath=grid_ds)
+        fake = open_boutdataset(
+            datapath=fake_ds_list, geometry='toroidal', gridfilepath=fake_grid_ds
+        )
+        xrt.assert_identical(actual, fake)
+
+    def test_salpha(self, tmpdir_factory, bout_xyt_example_files):
+        path = bout_xyt_example_files(
+            tmpdir_factory,
+            nxpe=3,
+            nype=3,
+            nt=1,
+            syn_data_type='stepped',
+            grid='grid',
+            write_to_disk=True,
+        )
+        actual = open_boutdataset(datapath=path, geometry='s-alpha',
+                                  gridfilepath=Path(path).parent.joinpath('grid.nc'))
 
         # check dataset can be saved
         save_dir = tmpdir_factory.mktemp('data')
         actual.bout.save(str(save_dir.join('boutdata.nc')))
+
+        # check creation without writing to disk gives identical result
+        fake_ds_list, fake_grid_ds = bout_xyt_example_files(
+            None, nxpe=3, nype=3, nt=1, syn_data_type='stepped', grid='grid'
+        )
+        fake = open_boutdataset(
+            datapath=fake_ds_list, geometry='s-alpha', gridfilepath=fake_grid_ds
+        )
+        xrt.assert_identical(actual, fake)
 
     def test_drop_vars(self, tmpdir_factory, bout_xyt_example_files):
         datapath = bout_xyt_example_files(
