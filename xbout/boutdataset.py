@@ -416,13 +416,6 @@ class BoutDatasetAccessor:
         if savepath is None:
             raise ValueError('Must provide a path to which to save the data.')
 
-        if save_dtype is not None:
-            # Workaround to keep attributes while calling astype. See
-            # https://github.com/pydata/xarray/issues/2049
-            # https://github.com/pydata/xarray/pull/2070
-            for da in chain(to_save.values(), to_save.coords.values()):
-                da.data = da.data.astype(save_dtype)
-
         # make shallow copy of Dataset, so we do not modify the attributes of the data
         # when we change things to save
         to_save = to_save.copy()
@@ -468,6 +461,11 @@ class BoutDatasetAccessor:
                 except KeyError:
                     pass
 
+        if save_dtype is not None:
+            encoding = {v: {"dtype": save_dtype} for v in to_save}
+        else:
+            encoding = None
+
         if separate_vars:
             # Save each major variable to a different netCDF file
 
@@ -497,10 +495,15 @@ class BoutDatasetAccessor:
                 path = Path(savepath)
                 var_savepath = str(path.parent / path.stem) + '_' \
                                + str(major_var) + path.suffix
+                if encoding is not None:
+                    var_encoding = {major_var: encoding[major_var]}
+                else:
+                    var_encoding = None
                 print('Saving ' + major_var + ' data...')
                 with ProgressBar():
                     single_var_ds.to_netcdf(path=str(var_savepath),
-                                            format=filetype, compute=True)
+                                            format=filetype, compute=True,
+                                            encoding=var_encoding)
 
                 # Force memory deallocation to limit RAM usage
                 single_var_ds.close()
@@ -510,7 +513,8 @@ class BoutDatasetAccessor:
             # Save data to a single file
             print('Saving data...')
             with ProgressBar():
-                to_save.to_netcdf(path=savepath, format=filetype, compute=True)
+                to_save.to_netcdf(path=savepath, format=filetype, compute=True,
+                                  encoding=encoding)
 
         return
 
