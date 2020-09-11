@@ -1,4 +1,6 @@
 import pytest
+import matplotlib
+from matplotlib import pyplot as plt
 import numpy as np
 import xarray as xr
 
@@ -82,6 +84,23 @@ class TestAnimate:
         assert isinstance(animation.blocks[0], Line)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
+
+    def test_animate_list_1d_multiline(self, create_test_file):
+
+        save_dir, ds = create_test_file
+
+        animation = ds.isel(y=2, z=3).bout.animate_list([['n', 'T'], ds['T'].isel(x=2),
+                                                         ds['n'].isel(y=1, z=2)])
+
+        assert isinstance(animation.blocks[0], Line)
+        assert isinstance(animation.blocks[1], Line)
+        assert isinstance(animation.blocks[2], Pcolormesh)
+        assert isinstance(animation.blocks[3], Line)
+
+        # check there were actually 3 subplots
+        assert len(
+            [x for x in plt.gcf().get_axes() if isinstance(x, matplotlib.axes.Subplot)]
+        ) == 3
 
     def test_animate_list_animate_over(self, create_test_file):
 
