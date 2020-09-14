@@ -9,7 +9,7 @@ from xbout.calc.turbulence import rms
 class TestRootMeanSquare:
     def test_no_dim(self):
         dat = np.array([5, 7, 3.2, -1, -4.4])
-        orig = DataArray(dat, dims=['x'])
+        orig = DataArray(dat, dims=["x"])
 
         # Need to supply dimension
         with pytest.raises(ValueError):
@@ -17,21 +17,21 @@ class TestRootMeanSquare:
 
     def test_1d(self):
         dat = np.array([5, 7, 3.2, -1, -4.4])
-        orig = DataArray(dat, dims=['x'])
+        orig = DataArray(dat, dims=["x"])
 
-        sum_squares = np.sum(dat**2)
-        mean_squares = sum_squares/dat.size
+        sum_squares = np.sum(dat ** 2)
+        mean_squares = sum_squares / dat.size
         rootmeansquare = np.sqrt(mean_squares)
 
         expected = rootmeansquare
-        actual = rms(orig, dim='x').values
+        actual = rms(orig, dim="x").values
         npt.assert_equal(actual, expected)
 
-    @pytest.mark.parametrize('dim, axis', [('t', 1), ('x', 0)])
+    @pytest.mark.parametrize("dim, axis", [("t", 1), ("x", 0)])
     def test_reduce_2d(self, dim, axis):
         dat = np.array([[5, 7, 3.2, -1, -4.4], [-1, -2.5, 0, 8, 3.0]])
-        orig = DataArray(dat, dims=['x', 't'])
-        sum_squares = np.sum(dat**2, axis=axis)
+        orig = DataArray(dat, dims=["x", "t"])
+        sum_squares = np.sum(dat ** 2, axis=axis)
         mean_squares = sum_squares / dat.shape[axis]
         rootmeansquare = np.sqrt(mean_squares)
 
@@ -41,13 +41,13 @@ class TestRootMeanSquare:
 
     def test_reduce_2d_dask(self):
         dat = np.array([[5, 7, 3.2, -1, -4.4], [-1, -2.5, 0, 8, 3.0]])
-        orig = DataArray(dat, dims=['x', 't'])
-        chunked = orig.chunk({'x': 1})
+        orig = DataArray(dat, dims=["x", "t"])
+        chunked = orig.chunk({"x": 1})
         axis = 1
-        sum_squares = np.sum(dat**2, axis=axis)
+        sum_squares = np.sum(dat ** 2, axis=axis)
         mean_squares = sum_squares / dat.shape[axis]
         rootmeansquare = np.sqrt(mean_squares)
 
         expected = rootmeansquare
-        actual = rms(chunked, dim='t').values
+        actual = rms(chunked, dim="t").values
         npt.assert_equal(actual, expected)

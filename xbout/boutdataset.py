@@ -24,7 +24,7 @@ from .region import _from_region
 from .utils import _get_bounding_surfaces, _split_into_restarts
 
 
-@xr.register_dataset_accessor('bout')
+@xr.register_dataset_accessor("bout")
 class BoutDatasetAccessor:
     """
     Contains BOUT-specific methods to use on BOUT++ datasets opened using
@@ -36,8 +36,8 @@ class BoutDatasetAccessor:
 
     def __init__(self, ds):
         self.data = ds
-        self.metadata = ds.attrs.get('metadata')  # None if just grid file
-        self.options = ds.attrs.get('options')  # None if no inp file
+        self.metadata = ds.attrs.get("metadata")  # None if just grid file
+        self.options = ds.attrs.get("options")  # None if no inp file
 
     def __str__(self):
         """
@@ -47,14 +47,16 @@ class BoutDatasetAccessor:
         """
 
         styled = partial(prettyformat, indent=4, compact=True)
-        text = "<xbout.BoutDataset>\n" + \
-               "Contains:\n{}\n".format(str(self.data)) + \
-               "Metadata:\n{}\n".format(styled(self.metadata))
+        text = (
+            "<xbout.BoutDataset>\n"
+            + "Contains:\n{}\n".format(str(self.data))
+            + "Metadata:\n{}\n".format(styled(self.metadata))
+        )
         if self.options:
             text += "Options:\n{}".format(styled(self.options))
         return text
 
-    #def __repr__(self):
+    # def __repr__(self):
     #    return 'boutdata.BoutDataset(', {}, ',', {}, ')'.format(self.datapath,
     #  self.prefix)
 
@@ -70,12 +72,14 @@ class BoutDatasetAccessor:
         caching : bool, optional
             Save the field-aligned variable in the Dataset (default: True)
         """
-        aligned_name = name + '_aligned'
+        aligned_name = name + "_aligned"
         try:
             result = self.data[aligned_name]
-            if result.direction_y != 'Aligned':
-                raise ValueError(aligned_name + " exists, but is not field-aligned, it "
-                                 "has direction_y=" + result.direction_y)
+            if result.direction_y != "Aligned":
+                raise ValueError(
+                    aligned_name + " exists, but is not field-aligned, it "
+                    "has direction_y=" + result.direction_y
+                )
             return result
         except KeyError:
             if caching:
@@ -112,7 +116,7 @@ class BoutDatasetAccessor:
         """
         The default factor to increase resolution when doing parallel interpolation
         """
-        return self.data.metadata['fine_interpolation_factor']
+        return self.data.metadata["fine_interpolation_factor"]
 
     @fine_interpolation_factor.setter
     def fine_interpolation_factor(self, n):
@@ -125,9 +129,9 @@ class BoutDatasetAccessor:
             Factor to increase parallel resolution by
         """
         ds = self.data
-        ds.metadata['fine_interpolation_factor'] = n
+        ds.metadata["fine_interpolation_factor"] = n
         for da in ds.data_vars.values():
-            da.metadata['fine_interpolation_factor'] = n
+            da.metadata["fine_interpolation_factor"] = n
 
     def interpolate_parallel(self, variables, **kwargs):
         """
@@ -169,15 +173,15 @@ class BoutDatasetAccessor:
         if isinstance(variables, tuple):
             variables = list(variables)
 
-        if 'dy' in variables:
+        if "dy" in variables:
             # dy is treated specially, as it is converted to a coordinate, and then
             # converted back again below, so must not call
             # interpolate_parallel('dy').
-            variables.remove('dy')
+            variables.remove("dy")
 
         # Add extra variables needed to make this a valid Dataset
-        if 'dx' not in variables:
-            variables.append('dx')
+        if "dx" not in variables:
+            variables.append("dx")
 
         # Need to start with a Dataset with attrs as merge() drops the attrs of the
         # passed-in argument.
@@ -191,13 +195,15 @@ class BoutDatasetAccessor:
                         first_var = v
                         break
             return first_var
+
         tcoord = self.data.metadata.get("bout_tdim", "t")
         zcoord = self.data.metadata.get("bout_zdim", "z")
         first_var = find_with_dims(None, self.data.dims)
         first_var = find_with_dims(first_var, set(self.data.dims) - set(tcoord))
         first_var = find_with_dims(first_var, set(self.data.dims) - set(zcoord))
-        first_var = find_with_dims(first_var, set(self.data.dims)
-                                   - set([tcoord, zcoord]))
+        first_var = find_with_dims(
+            first_var, set(self.data.dims) - set([tcoord, zcoord])
+        )
         if first_var is None:
             raise ValueError(
                 f"Could not find variable to interpolate with both "
@@ -205,16 +211,17 @@ class BoutDatasetAccessor:
                 f"{ds.metadata.get('bout_ydim', 'y')} dimensions"
             )
         variables.remove(first_var)
-        ds = self.data[first_var].bout.interpolate_parallel(return_dataset=True,
-                                                            **kwargs)
+        ds = self.data[first_var].bout.interpolate_parallel(
+            return_dataset=True, **kwargs
+        )
         xcoord = ds.metadata.get("bout_xdim", "x")
         ycoord = ds.metadata.get("bout_ydim", "y")
         for var in variables:
             da = self.data[var]
             if xcoord in da.dims and ycoord in da.dims:
                 ds = ds.merge(
-                        da.bout.interpolate_parallel(return_dataset=True, **kwargs)
-                     )
+                    da.bout.interpolate_parallel(return_dataset=True, **kwargs)
+                )
             elif ycoord not in da.dims:
                 ds[var] = da
             # Can't interpolate a variable that depends on y but not x, so just skip
@@ -222,10 +229,10 @@ class BoutDatasetAccessor:
         # dy needs to be compatible with the new poloidal coordinate
         # dy was created as a coordinate in BoutDataArray.interpolate_parallel, here just
         # need to demote back to a regular variable.
-        ds = ds.reset_coords('dy')
+        ds = ds.reset_coords("dy")
 
         # Apply geometry
-        if hasattr(ds, 'geometry'):
+        if hasattr(ds, "geometry"):
             ds = apply_geometry(ds, ds.geometry)
         # if no geometry was originally applied, then ds has no geometry attribute and we
         # can continue without applying geometry here
@@ -239,7 +246,7 @@ class BoutDatasetAccessor:
         fill_value=np.nan,
         structured_output=True,
         unstructured_dim_name="unstructured_dim",
-        **kwargs
+        **kwargs,
     ):
         """Interpolate Dataset onto new grids of some existing coordinates
 
@@ -288,12 +295,14 @@ class BoutDatasetAccessor:
         for v in variables + coords_to_interpolate:
             if np.all([c in self.data[v].coords for c in kwargs]):
                 ds = ds.merge(
-                    self.data[v].bout.interpolate_from_unstructured(
+                    self.data[v]
+                    .bout.interpolate_from_unstructured(
                         fill_value=fill_value,
                         structured_output=structured_output,
                         unstructured_dim_name=unstructured_dim_name,
-                        **kwargs
-                    ).to_dataset()
+                        **kwargs,
+                    )
+                    .to_dataset()
                 )
             elif explicit_variables_arg and v in variables:
                 # User explicitly requested v to be interpolated
@@ -314,8 +323,8 @@ class BoutDatasetAccessor:
         """
 
         variables = []
-        xcoord = self.data.metadata['bout_xdim']
-        ycoord = self.data.metadata['bout_ydim']
+        xcoord = self.data.metadata["bout_xdim"]
+        ycoord = self.data.metadata["bout_ydim"]
         new_metadata = None
         for v in self.data:
             if xcoord in self.data[v].dims and ycoord in self.data[v].dims:
@@ -324,13 +333,15 @@ class BoutDatasetAccessor:
                 )
                 new_metadata = variables[-1].metadata
             elif ycoord in self.data[v].dims:
-                raise ValueError(f'{v} only has a {ycoord}-dimension so cannot split '
-                                 f'into regions.')
+                raise ValueError(
+                    f"{v} only has a {ycoord}-dimension so cannot split "
+                    f"into regions."
+                )
             else:
                 variable = self.data[v]
-                if 'keep_yboundaries' in variable.metadata:
-                    variable.attrs['metadata'] = copy(variable.metadata)
-                    variable.metadata['keep_yboundaries'] = 0
+                if "keep_yboundaries" in variable.metadata:
+                    variable.attrs["metadata"] = copy(variable.metadata)
+                    variable.metadata["keep_yboundaries"] = 0
                 variables.append(variable.bout.to_dataset())
         if new_metadata is None:
             # were no 2d or 3d variables so do not have updated jyseps*, ny_inner but
@@ -343,7 +354,7 @@ class BoutDatasetAccessor:
         result.attrs = copy(self.data.attrs)
 
         # Copy metadata to get possibly modified jyseps*, ny_inner, ny
-        result.attrs['metadata'] = new_metadata
+        result.attrs["metadata"] = new_metadata
 
         if "regions" in result.attrs:
             # regions are not correct for modified BoutDataset
@@ -376,8 +387,15 @@ class BoutDatasetAccessor:
         """
         return _get_bounding_surfaces(self.data, coords)
 
-    def save(self, savepath='./boutdata.nc', filetype='NETCDF4',
-             variables=None, save_dtype=None, separate_vars=False, pre_load=False):
+    def save(
+        self,
+        savepath="./boutdata.nc",
+        filetype="NETCDF4",
+        variables=None,
+        save_dtype=None,
+        separate_vars=False,
+        pre_load=False,
+    ):
         """
         Save data variables to a netCDF file.
 
@@ -410,17 +428,19 @@ class BoutDatasetAccessor:
         else:
             to_save = self.data[variables]
 
-        if savepath == './boutdata.nc':
-            print("Will save data into the current working directory, named as"
-                  " boutdata_[var].nc")
+        if savepath == "./boutdata.nc":
+            print(
+                "Will save data into the current working directory, named as"
+                " boutdata_[var].nc"
+            )
         if savepath is None:
-            raise ValueError('Must provide a path to which to save the data.')
+            raise ValueError("Must provide a path to which to save the data.")
 
         # make shallow copy of Dataset, so we do not modify the attributes of the data
         # when we change things to save
         to_save = to_save.copy()
 
-        options = to_save.attrs.pop('options')
+        options = to_save.attrs.pop("options")
         if options:
             # TODO Convert Ben's options class to a (flattened) nested
             # dictionary then store it in ds.attrs?
@@ -432,7 +452,7 @@ class BoutDatasetAccessor:
         # Delete placeholders for options on each variable and coordinate
         for var in chain(to_save.data_vars, to_save.coords):
             try:
-                del to_save[var].attrs['options']
+                del to_save[var].attrs["options"]
             except KeyError:
                 pass
 
@@ -441,23 +461,24 @@ class BoutDatasetAccessor:
         def dict_to_attrs(obj, section):
             for key, value in obj.attrs.pop(section).items():
                 obj.attrs[section + ":" + key] = value
-        dict_to_attrs(to_save, 'metadata')
+
+        dict_to_attrs(to_save, "metadata")
         # Must do this for all variables and coordinates in dataset too
         for varname, da in chain(to_save.data_vars.items(), to_save.coords.items()):
             try:
-                dict_to_attrs(da, 'metadata')
+                dict_to_attrs(da, "metadata")
             except KeyError:
                 pass
 
-        if 'regions' in to_save.attrs:
+        if "regions" in to_save.attrs:
             # Do not need to save regions as these can be reconstructed from the metadata
             try:
-                del to_save.attrs['regions']
+                del to_save.attrs["regions"]
             except KeyError:
                 pass
             for var in chain(to_save.data_vars, to_save.coords):
                 try:
-                    del to_save[var].attrs['regions']
+                    del to_save[var].attrs["regions"]
                 except KeyError:
                     pass
 
@@ -473,8 +494,7 @@ class BoutDatasetAccessor:
             # Defined as time-dependent, but not solely time-dependent
             major_vars, minor_vars = _find_major_vars(to_save)
 
-            print("Will save the variables {} separately"
-                  .format(str(major_vars)))
+            print("Will save the variables {} separately".format(str(major_vars)))
 
             # Save each one to separate file
             # TODO perform the save in parallel with save_mfdataset?
@@ -493,17 +513,21 @@ class BoutDatasetAccessor:
                 # Include the name of the variable in the name of the saved
                 # file
                 path = Path(savepath)
-                var_savepath = str(path.parent / path.stem) + '_' \
-                               + str(major_var) + path.suffix
+                var_savepath = (
+                    str(path.parent / path.stem) + "_" + str(major_var) + path.suffix
+                )
                 if encoding is not None:
                     var_encoding = {major_var: encoding[major_var]}
                 else:
                     var_encoding = None
-                print('Saving ' + major_var + ' data...')
+                print("Saving " + major_var + " data...")
                 with ProgressBar():
-                    single_var_ds.to_netcdf(path=str(var_savepath),
-                                            format=filetype, compute=True,
-                                            encoding=var_encoding)
+                    single_var_ds.to_netcdf(
+                        path=str(var_savepath),
+                        format=filetype,
+                        compute=True,
+                        encoding=var_encoding,
+                    )
 
                 # Force memory deallocation to limit RAM usage
                 single_var_ds.close()
@@ -511,10 +535,11 @@ class BoutDatasetAccessor:
                 gc.collect()
         else:
             # Save data to a single file
-            print('Saving data...')
+            print("Saving data...")
             with ProgressBar():
-                to_save.to_netcdf(path=savepath, format=filetype, compute=True,
-                                  encoding=encoding)
+                to_save.to_netcdf(
+                    path=savepath, format=filetype, compute=True, encoding=encoding
+                )
 
         return
 
@@ -522,7 +547,7 @@ class BoutDatasetAccessor:
         self,
         variables=None,
         *,
-        savepath='.',
+        savepath=".",
         nxpe=None,
         nype=None,
         tind=-1,
@@ -563,9 +588,9 @@ class BoutDatasetAccessor:
 
         # Set processor decomposition if not given
         if nxpe is None:
-            nxpe = self.metadata['NXPE']
+            nxpe = self.metadata["NXPE"]
         if nype is None:
-            nype = self.metadata['NYPE']
+            nype = self.metadata["NYPE"]
 
         # Is this even possible without saving the guard cells?
         # Can they be recreated?
@@ -576,10 +601,26 @@ class BoutDatasetAccessor:
         with ProgressBar():
             xr.save_mfdataset(restart_datasets, paths, compute=True)
 
-    def animate_list(self, variables, animate_over='t', save_as=None, show=False, fps=10,
-                     nrows=None, ncols=None, poloidal_plot=False, subplots_adjust=None,
-                     vmin=None, vmax=None, logscale=None, titles=None, aspect='equal',
-                     controls=True, tight_layout=True, **kwargs):
+    def animate_list(
+        self,
+        variables,
+        animate_over="t",
+        save_as=None,
+        show=False,
+        fps=10,
+        nrows=None,
+        ncols=None,
+        poloidal_plot=False,
+        subplots_adjust=None,
+        vmin=None,
+        vmax=None,
+        logscale=None,
+        titles=None,
+        aspect="equal",
+        controls=True,
+        tight_layout=True,
+        **kwargs,
+    ):
         """
         Parameters
         ----------
@@ -636,22 +677,22 @@ class BoutDatasetAccessor:
 
         if nrows is None and ncols is None:
             ncols = int(np.ceil(np.sqrt(nvars)))
-            nrows = int(np.ceil(nvars/ncols))
+            nrows = int(np.ceil(nvars / ncols))
         elif nrows is None:
-            nrows = int(np.ceil(nvars/ncols))
+            nrows = int(np.ceil(nvars / ncols))
         elif ncols is None:
-            ncols = int(np.ceil(nvars/nrows))
+            ncols = int(np.ceil(nvars / nrows))
         else:
-            if nrows*ncols < nvars:
-                raise ValueError('Not enough rows*columns to fit all variables')
+            if nrows * ncols < nvars:
+                raise ValueError("Not enough rows*columns to fit all variables")
 
         fig, axes = plt.subplots(nrows, ncols, squeeze=False)
         axes = axes.flatten()
 
-        ncells = nrows*ncols
+        ncells = nrows * ncols
 
         if nvars < ncells:
-            for index in range(ncells-nvars):
+            for index in range(ncells - nvars):
                 fig.delaxes(axes[ncells - index - 1])
 
         if subplots_adjust is not None:
@@ -660,17 +701,20 @@ class BoutDatasetAccessor:
         def _expand_list_arg(arg, arg_name):
             if isinstance(arg, collections.Sequence) and not isinstance(arg, str):
                 if len(arg) != len(variables):
-                    raise ValueError('if %s is a sequence, it must have the same '
-                                     'number of elements as "variables"' % arg_name)
+                    raise ValueError(
+                        "if %s is a sequence, it must have the same "
+                        'number of elements as "variables"' % arg_name
+                    )
             else:
                 arg = [arg] * len(variables)
             return arg
-        poloidal_plot = _expand_list_arg(poloidal_plot, 'poloidal_plot')
-        vmin = _expand_list_arg(vmin, 'vmin')
-        vmax = _expand_list_arg(vmax, 'vmax')
-        logscale = _expand_list_arg(logscale, 'logscale')
-        titles = _expand_list_arg(titles, 'titles')
-        aspect = _expand_list_arg(aspect, 'aspect')
+
+        poloidal_plot = _expand_list_arg(poloidal_plot, "poloidal_plot")
+        vmin = _expand_list_arg(vmin, "vmin")
+        vmax = _expand_list_arg(vmax, "vmax")
+        logscale = _expand_list_arg(logscale, "logscale")
+        titles = _expand_list_arg(titles, "titles")
+        aspect = _expand_list_arg(aspect, "aspect")
 
         blocks = []
 
@@ -681,11 +725,20 @@ class BoutDatasetAccessor:
                 or isinstance(variable, set)
             )
 
-        for subplot_args in zip(variables, axes, poloidal_plot, vmin, vmax,
-                                logscale, titles, aspect):
+        for subplot_args in zip(
+            variables, axes, poloidal_plot, vmin, vmax, logscale, titles, aspect
+        ):
 
-            (v, ax, this_poloidal_plot, this_vmin, this_vmax, this_logscale,
-             this_title, this_aspect) = subplot_args
+            (
+                v,
+                ax,
+                this_poloidal_plot,
+                this_vmin,
+                this_vmax,
+                this_logscale,
+                this_title,
+                this_aspect,
+            ) = subplot_args
 
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.1)
@@ -720,23 +773,27 @@ class BoutDatasetAccessor:
 
             if ndims == 2:
                 if not is_list(v):
-                    blocks.append(animate_line(
-                        data=data,
-                        ax=ax,
-                        animate_over=animate_over,
-                        animate=False,
-                        **kwargs
-                    ))
-                else:
-                    for w in v:
-                        blocks.append(animate_line(
-                            data=w,
+                    blocks.append(
+                        animate_line(
+                            data=data,
                             ax=ax,
                             animate_over=animate_over,
                             animate=False,
-                            label=w.name,
-                            **kwargs
-                        ))
+                            **kwargs,
+                        )
+                    )
+                else:
+                    for w in v:
+                        blocks.append(
+                            animate_line(
+                                data=w,
+                                ax=ax,
+                                animate_over=animate_over,
+                                animate=False,
+                                label=w.name,
+                                **kwargs,
+                            )
+                        )
                     legend = ax.legend()
                     legend.set_draggable(True)
                     # set 'v' to use for the timeline below
@@ -747,26 +804,46 @@ class BoutDatasetAccessor:
                 if this_vmax is None:
                     this_vmax = data.max().values
 
-                norm = _create_norm(this_logscale, kwargs.get('norm', None), this_vmin,
-                                    this_vmax)
+                norm = _create_norm(
+                    this_logscale, kwargs.get("norm", None), this_vmin, this_vmax
+                )
 
                 if this_poloidal_plot:
-                    var_blocks = animate_poloidal(data, ax=ax, cax=cax,
-                                                  animate_over=animate_over,
-                                                  animate=False, vmin=this_vmin,
-                                                  vmax=this_vmax, norm=norm,
-                                                  aspect=this_aspect, **kwargs)
+                    var_blocks = animate_poloidal(
+                        data,
+                        ax=ax,
+                        cax=cax,
+                        animate_over=animate_over,
+                        animate=False,
+                        vmin=this_vmin,
+                        vmax=this_vmax,
+                        norm=norm,
+                        aspect=this_aspect,
+                        **kwargs,
+                    )
                     for block in var_blocks:
                         blocks.append(block)
                 else:
-                    blocks.append(animate_pcolormesh(data=data, ax=ax, cax=cax,
-                                                     animate_over=animate_over,
-                                                     animate=False, vmin=this_vmin,
-                                                     vmax=this_vmax, norm=norm,
-                                                     **kwargs))
+                    blocks.append(
+                        animate_pcolormesh(
+                            data=data,
+                            ax=ax,
+                            cax=cax,
+                            animate_over=animate_over,
+                            animate=False,
+                            vmin=this_vmin,
+                            vmax=this_vmax,
+                            norm=norm,
+                            **kwargs,
+                        )
+                    )
             else:
-                raise ValueError("Unsupported number of dimensions "
-                                 + str(ndims) + ". Dims are " + str(v.dims))
+                raise ValueError(
+                    "Unsupported number of dimensions "
+                    + str(ndims)
+                    + ". Dims are "
+                    + str(v.dims)
+                )
 
             if this_title is not None:
                 # Replace default title with user-specified one
@@ -777,18 +854,20 @@ class BoutDatasetAccessor:
 
         if tight_layout:
             if subplots_adjust is not None:
-                warnings.warn('tight_layout argument to animate_list() is True, but '
-                              'subplots_adjust argument is not None. subplots_adjust '
-                              'is being ignored.')
+                warnings.warn(
+                    "tight_layout argument to animate_list() is True, but "
+                    "subplots_adjust argument is not None. subplots_adjust "
+                    "is being ignored."
+                )
             if not isinstance(tight_layout, dict):
                 tight_layout = {}
             fig.tight_layout(**tight_layout)
 
         if controls:
-            anim.controls(timeline_slider_args={'text': animate_over})
+            anim.controls(timeline_slider_args={"text": animate_over})
 
         if save_as is not None:
-            anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
+            anim.save(save_as + ".gif", writer=PillowWriter(fps=fps))
 
         if show:
             plt.show()
@@ -805,7 +884,10 @@ def _find_major_vars(data):
 
     # TODO Use an Ordered Set instead to preserve order of variables in files?
     tcoord = data.attrs.get("metadata:bout_tdim", "t")
-    major_vars = set(var for var in data.data_vars
-                     if (tcoord in data[var].dims) and data[var].dims != (tcoord, ))
+    major_vars = set(
+        var
+        for var in data.data_vars
+        if (tcoord in data[var].dims) and data[var].dims != (tcoord,)
+    )
     minor_vars = set(data.data_vars) - set(major_vars)
     return list(major_vars), list(minor_vars)

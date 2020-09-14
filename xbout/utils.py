@@ -29,13 +29,12 @@ def _add_attrs_to_var(ds, varname, copy=False):
 
 
 def _check_filetype(path):
-    if path.suffix == '.nc':
-        filetype = 'netcdf4'
-    elif path.suffix == '.h5netcdf':
-        filetype = 'h5netcdf'
+    if path.suffix == ".nc":
+        filetype = "netcdf4"
+    elif path.suffix == ".h5netcdf":
+        filetype = "h5netcdf"
     else:
-        raise IOError("Do not know how to read file extension {}"
-                      .format(path.suffix))
+        raise IOError("Do not know how to read file extension {}".format(path.suffix))
     return filetype
 
 
@@ -48,8 +47,11 @@ def _separate_metadata(ds):
 
     # Find only the scalar variables
     variables = list(ds.variables)
-    scalar_vars = [var for var in variables
-                   if not any(dim in ['t', 'x', 'y', 'z'] for dim in ds[var].dims)]
+    scalar_vars = [
+        var
+        for var in variables
+        if not any(dim in ["t", "x", "y", "z"] for dim in ds[var].dims)
+    ]
 
     # Save metadata as a dictionary
     metadata_vals = [ds[var].values.item() for var in scalar_vars]
@@ -72,22 +74,24 @@ def _update_metadata_increased_resolution(da, n):
     """
 
     # Take deepcopy to ensure we do not alter metadata of other variables
-    da.attrs['metadata'] = deepcopy(da.metadata)
+    da.attrs["metadata"] = deepcopy(da.metadata)
 
     def update_jyseps(name):
         # If any jyseps<=0, need to leave as is
         if da.metadata[name] > 0:
-            da.metadata[name] = n*(da.metadata[name] + 1) - 1
-    update_jyseps('jyseps1_1')
-    update_jyseps('jyseps2_1')
-    update_jyseps('jyseps1_2')
-    update_jyseps('jyseps2_2')
+            da.metadata[name] = n * (da.metadata[name] + 1) - 1
+
+    update_jyseps("jyseps1_1")
+    update_jyseps("jyseps2_1")
+    update_jyseps("jyseps1_2")
+    update_jyseps("jyseps2_2")
 
     def update_ny(name):
-        da.metadata[name] = n*da.metadata[name]
-    update_ny('ny')
-    update_ny('ny_inner')
-    update_ny('MYSUB')
+        da.metadata[name] = n * da.metadata[name]
+
+    update_ny("ny")
+    update_ny("ny_inner")
+    update_ny("MYSUB")
 
     # Update attrs of coordinates to be consistent with da
     for coord in da.coords:
@@ -100,7 +104,7 @@ def _update_metadata_increased_resolution(da, n):
 def _check_new_nxpe(ds, nxpe):
     # Check nxpe is valid
 
-    nx = ds.metadata["nx"] - 2*ds.metadata["MXG"]
+    nx = ds.metadata["nx"] - 2 * ds.metadata["MXG"]
     mxsub = nx // nxpe
 
     if nx % nxpe != 0:
@@ -186,7 +190,7 @@ def _pad_y_boundaries(ds):
 
     myg = ds.metadata["MYG"]
     ycoord = ds.metadata.get("bout_ydim", "y")
-    has_second_divertor = (ds.metadata["jyseps2_1"] != ds.metadata["jyseps1_2"])
+    has_second_divertor = ds.metadata["jyseps2_1"] != ds.metadata["jyseps1_2"]
 
     if not ds.metadata["keep_yboundaries"] and myg > 0:
         boundary_pad = ds.isel({ycoord: slice(myg)}).copy(deep=True).load()
@@ -227,7 +231,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
     for xproc in range(nxpe):
         for yproc in range(nype):
             # Global processor number
-            i = yproc*nxpe + xproc
+            i = yproc * nxpe + xproc
 
             paths.append(Path(savepath).joinpath(f"{prefix}.{i}.nc"))
             if not overwrite and paths[-1].exists():
@@ -296,7 +300,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
 
     # number of points in the domain on each processor, not including guard or boundary
     # points
-    mxsub = (ds.metadata["nx"] - 2*mxg) // nxpe
+    mxsub = (ds.metadata["nx"] - 2 * mxg) // nxpe
     mysub = ds.metadata["ny"] // nype
 
     # hist_hi represents the number of iterations before the restart. Attempt to
@@ -307,7 +311,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
     if hist_hi < 0:
         hist_hi = -1
 
-    has_second_divertor = (ds.metadata["jyseps2_1"] != ds.metadata["jyseps1_2"])
+    has_second_divertor = ds.metadata["jyseps2_1"] != ds.metadata["jyseps1_2"]
 
     # select desired time-index for the restart files
     ds = ds.isel({tcoord: tind}).persist()
@@ -317,16 +321,13 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
 
     restart_datasets = []
     for xproc in range(nxpe):
-        xslice = slice(xproc*mxsub, (xproc + 1)*mxsub + 2*mxg)
+        xslice = slice(xproc * mxsub, (xproc + 1) * mxsub + 2 * mxg)
         for yproc in range(nype):
             print(f"creating {xproc*nype + yproc + 1}/{nxpe*nype}", end="\r")
-            if (
-                has_second_divertor
-                and yproc*mysub >= ny_inner
-            ):
-                yslice = slice(yproc*mysub + 2*myg, (yproc + 1)*mysub + 4*myg)
+            if has_second_divertor and yproc * mysub >= ny_inner:
+                yslice = slice(yproc * mysub + 2 * myg, (yproc + 1) * mysub + 4 * myg)
             else:
-                yslice = slice(yproc*mysub, (yproc + 1)*mysub + 2*myg)
+                yslice = slice(yproc * mysub, (yproc + 1) * mysub + 2 * myg)
 
             ds_slice = ds.isel({xcoord: xslice, ycoord: yslice})
 
@@ -367,14 +368,10 @@ def _check_upper_y(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
 
     if region.connection_upper_y is None:
         xinner = (
-            xbndry - 1
-            if region.connection_inner_x is None and xbndry > 0
-            else None
+            xbndry - 1 if region.connection_inner_x is None and xbndry > 0 else None
         )
         xouter = (
-            -xbndry - 1
-            if region.connection_outer_x is None and xbndry > 0
-            else None
+            -xbndry - 1 if region.connection_outer_x is None and xbndry > 0 else None
         )
 
         # Reverse order of points to go clockwise around region
@@ -387,9 +384,7 @@ def _check_upper_y(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
             axis=-1,
         )
 
-        boundary_points = np.concatenate(
-            [boundary_points, new_boundary_points]
-        )
+        boundary_points = np.concatenate([boundary_points, new_boundary_points])
 
         return boundary_points, region.connection_inner_x, "inner_x"
     else:
@@ -406,14 +401,10 @@ def _check_inner_x(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
 
     if region.connection_inner_x is None:
         ylower = (
-            ybndry - 1
-            if region.connection_lower_y is None and ybndry > 0
-            else None
+            ybndry - 1 if region.connection_lower_y is None and ybndry > 0 else None
         )
         yupper = (
-            -ybndry - 1
-            if region.connection_upper_y is None and ybndry > 0
-            else None
+            -ybndry - 1 if region.connection_upper_y is None and ybndry > 0 else None
         )
 
         # Reverse order of points to go clockwise around region
@@ -426,9 +417,7 @@ def _check_inner_x(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
             axis=-1,
         )
 
-        boundary_points = np.concatenate(
-            [boundary_points, new_boundary_points]
-        )
+        boundary_points = np.concatenate([boundary_points, new_boundary_points])
 
         return boundary_points, region.connection_lower_y, "lower_y"
     else:
@@ -445,11 +434,7 @@ def _check_lower_y(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
 
     if region.connection_lower_y is None:
         xinner = xbndry if region.connection_inner_x is None else None
-        xouter = (
-            -xbndry
-            if region.connection_outer_x is None and xbndry > 0
-            else None
-        )
+        xouter = -xbndry if region.connection_outer_x is None and xbndry > 0 else None
 
         boundary_slice = {xcoord: slice(xinner, xouter), ycoord: ybndry}
         new_boundary_points = np.stack(
@@ -460,9 +445,7 @@ def _check_lower_y(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
             axis=-1,
         )
 
-        boundary_points = np.concatenate(
-            [boundary_points, new_boundary_points]
-        )
+        boundary_points = np.concatenate([boundary_points, new_boundary_points])
 
         return boundary_points, region.connection_outer_x, "outer_x"
     else:
@@ -479,11 +462,7 @@ def _check_outer_x(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
 
     if region.connection_outer_x is None:
         ylower = ybndry if region.connection_lower_y is None else None
-        yupper = (
-            -ybndry
-            if region.connection_upper_y is None and ybndry > 0
-            else None
-        )
+        yupper = -ybndry if region.connection_upper_y is None and ybndry > 0 else None
 
         boundary_slice = {xcoord: -1 - xbndry, ycoord: slice(ylower, yupper)}
         new_boundary_points = np.stack(
@@ -494,9 +473,7 @@ def _check_outer_x(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
             axis=-1,
         )
 
-        boundary_points = np.concatenate(
-            [boundary_points, new_boundary_points]
-        )
+        boundary_points = np.concatenate([boundary_points, new_boundary_points])
 
         return boundary_points, region.connection_upper_y, "upper_y"
     else:
@@ -533,12 +510,7 @@ def _follow_boundary(ds, start_region, start_direction, xbndry, ybndry, Rcoord, 
 
         for boundary in check_order[direction]:
             result = _bounding_surface_checks[boundary](
-                ds_region,
-                boundary_points,
-                xbndry,
-                ybndry,
-                Rcoord,
-                Zcoord,
+                ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord,
             )
             if result is not None:
                 boundary_points, this_region, direction = result
@@ -684,10 +656,11 @@ def _get_bounding_surfaces(ds, coords):
             )
 
     # Pack the result into a DataArray
-    result = [xr.DataArray(
-        boundary,
-        dims=("boundary", "coord"),
-        coords={"coord": [Rcoord, Zcoord]},
-    ) for boundary in boundaries]
+    result = [
+        xr.DataArray(
+            boundary, dims=("boundary", "coord"), coords={"coord": [Rcoord, Zcoord]},
+        )
+        for boundary in boundaries
+    ]
 
     return result

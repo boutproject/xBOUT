@@ -50,14 +50,18 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     if geometry_name is None:
         updated_ds = ds
     else:
-        ds = _set_attrs_on_all_vars(ds, 'geometry', geometry_name)
+        ds = _set_attrs_on_all_vars(ds, "geometry", geometry_name)
 
         try:
             add_geometry_coords = REGISTERED_GEOMETRIES[geometry_name]
         except KeyError:
-            message = dedent("""{} is not a registered geometry. Inspect the global
+            message = dedent(
+                """{} is not a registered geometry. Inspect the global
                              variable REGISTERED_GEOMETRIES to see which geometries
-                             have been registered.""".format(geometry_name))
+                             have been registered.""".format(
+                    geometry_name
+                )
+            )
             raise UnregisteredGeometryError(message)
 
         # User-registered functions may accept 'coordinates' and 'grid' arguments, but
@@ -81,10 +85,10 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     # long as these bounds are consistent with the global coordinates defined in
     # Region.__init__() (we will only use these coordinates for interpolation) and it is
     # simplest to calculate them with cumsum().
-    tcoord = updated_ds.metadata.get('bout_tdim', 't')
-    xcoord = updated_ds.metadata.get('bout_xdim', 'x')
-    ycoord = updated_ds.metadata.get('bout_ydim', 'y')
-    zcoord = updated_ds.metadata.get('bout_zdim', 'z')
+    tcoord = updated_ds.metadata.get("bout_tdim", "t")
+    xcoord = updated_ds.metadata.get("bout_xdim", "x")
+    ycoord = updated_ds.metadata.get("bout_ydim", "y")
+    zcoord = updated_ds.metadata.get("bout_zdim", "z")
 
     if (tcoord not in updated_ds.coords) and (tcoord in updated_ds.dims):
         # Create the time coordinate from t_array
@@ -122,10 +126,10 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         # y-coordinate has to be 1d and single-valued. Therefore similarly dy has to be
         # 1d and single-valued.] Need drop=True so that the result does not have an
         # x-coordinate value which prevents it being added as a coordinate.
-        dy = updated_ds['dy'].isel({xcoord: 0}, drop=True)
+        dy = updated_ds["dy"].isel({xcoord: 0}, drop=True)
 
         # calculate ycoord at the centre of each cell
-        y = dy.cumsum(keep_attrs=True) - dy/2.
+        y = dy.cumsum(keep_attrs=True) - dy / 2.0
 
         # can't use commented out version, uncommented one works around xarray bug
         # removing attrs
@@ -139,15 +143,19 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     # If full data (not just grid file) then toroidal dim will be present
     if zcoord in updated_ds.dims and zcoord not in updated_ds.coords:
         nz = updated_ds.dims[zcoord]
-        z0 = 2*np.pi*updated_ds.metadata['ZMIN']
-        z1 = z0 + nz*updated_ds.metadata['dz']
-        if not np.isclose(z1, 2.*np.pi*updated_ds.metadata['ZMAX'],
-                          rtol=1.e-15, atol=0.):
-            warn(f"Size of toroidal domain as calculated from nz*dz ({str(z1 - z0)}"
-                 f" is not the same as 2pi*(ZMAX - ZMIN) ("
-                 f"{2.*np.pi*updated_ds.metadata['ZMAX'] - z0}): using value from dz")
-        z = xr.DataArray(np.linspace(start=z0, stop=z1, num=nz, endpoint=False),
-                         dims=zcoord)
+        z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
+        z1 = z0 + nz * updated_ds.metadata["dz"]
+        if not np.isclose(
+            z1, 2.0 * np.pi * updated_ds.metadata["ZMAX"], rtol=1.0e-15, atol=0.0
+        ):
+            warn(
+                f"Size of toroidal domain as calculated from nz*dz ({str(z1 - z0)}"
+                f" is not the same as 2pi*(ZMAX - ZMIN) ("
+                f"{2.*np.pi*updated_ds.metadata['ZMAX'] - z0}): using value from dz"
+            )
+        z = xr.DataArray(
+            np.linspace(start=z0, stop=z1, num=nz, endpoint=False), dims=zcoord
+        )
 
         # can't use commented out version, uncommented one works around xarray bug
         # removing attrs
@@ -184,12 +192,15 @@ def register_geometry(name):
 
     def wrapper(add_geometry_coords):
         if name in REGISTERED_GEOMETRIES:
-            warn("There is aready a geometry type registered with the "
-                 "name {}, it will be overrided".format(name))
+            warn(
+                "There is aready a geometry type registered with the "
+                "name {}, it will be overrided".format(name)
+            )
 
         REGISTERED_GEOMETRIES[name] = add_geometry_coords
 
         return add_geometry_coords
+
     return wrapper
 
 
@@ -198,15 +209,17 @@ def _set_default_toroidal_coordinates(coordinates, ds):
         coordinates = {}
 
     # Replace any values that have not been passed in with defaults
-    coordinates['t'] = coordinates.get('t', ds.metadata.get('bout_tdim', 't'))
-    coordinates['x'] = coordinates.get('x', ds.metadata.get('bout_xdim', 'psi_poloidal'))
-    coordinates['y'] = coordinates.get('y', ds.metadata.get('bout_ydim', 'theta'))
-    coordinates['z'] = coordinates.get('z', ds.metadata.get('bout_zdim', 'zeta'))
+    coordinates["t"] = coordinates.get("t", ds.metadata.get("bout_tdim", "t"))
+    coordinates["x"] = coordinates.get(
+        "x", ds.metadata.get("bout_xdim", "psi_poloidal")
+    )
+    coordinates["y"] = coordinates.get("y", ds.metadata.get("bout_ydim", "theta"))
+    coordinates["z"] = coordinates.get("z", ds.metadata.get("bout_zdim", "zeta"))
 
     return coordinates
 
 
-@register_geometry('toroidal')
+@register_geometry("toroidal")
 def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates, ds)
@@ -217,21 +230,27 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         return ds
 
     # Check whether coordinates names conflict with variables in ds
-    bad_names = [name for name in coordinates.values() if name in ds and name not in ds.coords]
+    bad_names = [
+        name for name in coordinates.values() if name in ds and name not in ds.coords
+    ]
     if bad_names:
-        raise ValueError("Coordinate names {} clash with variables in the dataset. "
-                         "Register a different geometry to provide alternative names. "
-                         "It may be useful to use the 'coordinates' argument to "
-                         "add_toroidal_geometry_coords() for this.".format(bad_names))
+        raise ValueError(
+            "Coordinate names {} clash with variables in the dataset. "
+            "Register a different geometry to provide alternative names. "
+            "It may be useful to use the 'coordinates' argument to "
+            "add_toroidal_geometry_coords() for this.".format(bad_names)
+        )
 
     # Get extra geometry information from grid file if it's not in the dump files
-    needed_variables = ['psixy', 'Rxy', 'Zxy']
+    needed_variables = ["psixy", "Rxy", "Zxy"]
     for v in needed_variables:
         if v not in ds:
             if grid is None:
-                raise ValueError("Grid file is required to provide %s. Pass the grid "
-                                 "file name as the 'gridfilepath' argument to "
-                                 "open_boutdataset().")
+                raise ValueError(
+                    "Grid file is required to provide %s. Pass the grid "
+                    "file name as the 'gridfilepath' argument to "
+                    "open_boutdataset()."
+                )
             # ds[v] = grid[v]
             # Work around issue where xarray drops attributes on coordinates when a new
             # DataArray is assigned to the Dataset, see
@@ -243,51 +262,51 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
             _add_attrs_to_var(ds, v)
 
     # Rename 't' if user requested it
-    ds = ds.rename(t=coordinates['t'])
+    ds = ds.rename(t=coordinates["t"])
 
     # Change names of dimensions to Orthogonal Toroidal ones
-    ds = ds.rename(y=coordinates['y'])
+    ds = ds.rename(y=coordinates["y"])
 
     # TODO automatically make this coordinate 1D in simplified cases?
-    ds = ds.rename(psixy=coordinates['x'])
-    ds = ds.set_coords(coordinates['x'])
-    ds[coordinates['x']].attrs['units'] = 'Wb'
+    ds = ds.rename(psixy=coordinates["x"])
+    ds = ds.set_coords(coordinates["x"])
+    ds[coordinates["x"]].attrs["units"] = "Wb"
 
     # Record which dimensions 't', 'x', and 'y' were renamed to.
-    ds.metadata['bout_tdim'] = coordinates['t']
+    ds.metadata["bout_tdim"] = coordinates["t"]
     # x dimension not renamed, so this is still 'x'
-    ds.metadata['bout_xdim'] = 'x'
-    ds.metadata['bout_ydim'] = coordinates['y']
+    ds.metadata["bout_xdim"] = "x"
+    ds.metadata["bout_ydim"] = coordinates["y"]
 
     # If full data (not just grid file) then toroidal dim will be present
-    if 'z' in ds.dims:
-        ds = ds.rename(z=coordinates['z'])
+    if "z" in ds.dims:
+        ds = ds.rename(z=coordinates["z"])
 
         # Record which dimension 'z' was renamed to.
-        ds.metadata['bout_zdim'] = coordinates['z']
+        ds.metadata["bout_zdim"] = coordinates["z"]
 
     # Add 2D Cylindrical coordinates
-    if ('R' not in ds) and ('Z' not in ds):
-        ds = ds.rename(Rxy='R', Zxy='Z')
-        ds = ds.set_coords(('R', 'Z'))
+    if ("R" not in ds) and ("Z" not in ds):
+        ds = ds.rename(Rxy="R", Zxy="Z")
+        ds = ds.set_coords(("R", "Z"))
     else:
-        ds = ds.set_coords(('Rxy', 'Zxy'))
+        ds = ds.set_coords(("Rxy", "Zxy"))
 
     # Add zShift as a coordinate, so that it gets interpolated along with a variable
     try:
-        ds = ds.set_coords('zShift')
+        ds = ds.set_coords("zShift")
     except ValueError:
         pass
     try:
-        ds = ds.set_coords('zShift_CELL_XLOW')
+        ds = ds.set_coords("zShift_CELL_XLOW")
     except ValueError:
         pass
     try:
-        ds = ds.set_coords('zShift_CELL_YLOW')
+        ds = ds.set_coords("zShift_CELL_YLOW")
     except ValueError:
         pass
     try:
-        ds = ds.set_coords('zShift_CELL_ZLOW')
+        ds = ds.set_coords("zShift_CELL_ZLOW")
     except ValueError:
         pass
 
@@ -296,7 +315,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     return ds
 
 
-@register_geometry('s-alpha')
+@register_geometry("s-alpha")
 def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates, ds)
@@ -306,36 +325,38 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
         ds = _create_regions_toroidal(ds)
         return ds
 
-
     ds = add_toroidal_geometry_coords(ds, coordinates=coordinates, grid=grid)
 
     # Get extra geometry information from grid file if it's not in the dump files
     # Add 'hthe' from grid file, needed below for radial coordinate
-    if 'hthe' not in ds:
+    if "hthe" not in ds:
         hthe_from_grid = True
         ycoord = "y"
         if grid is None:
-            raise ValueError("Grid file is required to provide %s. Pass the grid "
-                             "file name as the 'gridfilepath' argument to "
-                             "open_boutdataset().")
-        ds['hthe'] = grid['hthe']
-        _add_attrs_to_var(ds, 'hthe')
+            raise ValueError(
+                "Grid file is required to provide %s. Pass the grid "
+                "file name as the 'gridfilepath' argument to "
+                "open_boutdataset()."
+            )
+        ds["hthe"] = grid["hthe"]
+        _add_attrs_to_var(ds, "hthe")
     else:
         hthe_from_grid = False
         ycoord = coordinates["y"]
 
     # Add 1D radial coordinate
-    if 'r' in ds:
-        raise ValueError("Cannot have variable 'r' in dataset when using "
-                         "geometry='s-alpha'")
-    ds['r'] = ds['hthe'].isel({ycoord: 0}).squeeze(drop=True)
-    ds['r'].attrs['units'] = 'm'
-    ds = ds.set_coords('r')
-    ds = ds.rename(x='r')
-    ds.metadata['bout_xdim'] = 'r'
+    if "r" in ds:
+        raise ValueError(
+            "Cannot have variable 'r' in dataset when using " "geometry='s-alpha'"
+        )
+    ds["r"] = ds["hthe"].isel({ycoord: 0}).squeeze(drop=True)
+    ds["r"].attrs["units"] = "m"
+    ds = ds.set_coords("r")
+    ds = ds.rename(x="r")
+    ds.metadata["bout_xdim"] = "r"
 
     if hthe_from_grid:
         # remove hthe because it does not have correct metadata
-        del ds['hthe']
+        del ds["hthe"]
 
     return ds

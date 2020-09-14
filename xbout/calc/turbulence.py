@@ -11,7 +11,7 @@ def _rms_gufunc(x):
     return np.sqrt(np.mean(squares, axis=-1))
 
 
-def rms(da, dim=None, dask='parallelized', keep_attrs=True):
+def rms(da, dim=None, dask="parallelized", keep_attrs=True):
     """
     Reduces a dataarray by calculating the root mean square along the dimension
     dim.
@@ -19,14 +19,18 @@ def rms(da, dim=None, dask='parallelized', keep_attrs=True):
 
     # TODO If dim is None then take the root mean square along all dimensions?
     if dim is None:
-        raise ValueError('Must supply a dimension along which to calculate rms')
+        raise ValueError("Must supply a dimension along which to calculate rms")
 
-    rms = xr.apply_ufunc(_rms_gufunc, da,
-                         input_core_dims=[[dim]],
-                         dask=dask, output_dtypes=[da.dtype],
-                         keep_attrs=keep_attrs)
+    rms = xr.apply_ufunc(
+        _rms_gufunc,
+        da,
+        input_core_dims=[[dim]],
+        dask=dask,
+        output_dtypes=[da.dtype],
+        keep_attrs=keep_attrs,
+    )
 
     # Return the name of the da as variable_rms
-    rms.name = str(da.name) + '_rms'
+    rms.name = str(da.name) + "_rms"
 
     return rms
