@@ -1,0 +1,21 @@
+# This workflow will lint the repo with black
+
+name: Python package
+
+on:
+  [push, pull_request]
+
+jobs:
+  black:
+
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Check formatting with black
+      run: |
+        pip install black
+        black --check .
