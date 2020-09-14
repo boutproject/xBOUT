@@ -15,11 +15,23 @@ from . import geometries
 from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype
 
 
-_BOUT_PER_PROC_VARIABLES = ['wall_time', 'wtime', 'wtime_rhs', 'wtime_invert',
-                            'wtime_comms', 'wtime_io', 'wtime_per_rhs',
-                            'wtime_per_rhs_e', 'wtime_per_rhs_i', 
-                            'hist_hi', 'tt', 'PE_XIND', 'PE_YIND', 'MYPE']
-_BOUT_TIME_DEPENDENT_META_VARS = ['iteration']
+_BOUT_PER_PROC_VARIABLES = [
+    "wall_time",
+    "wtime",
+    "wtime_rhs",
+    "wtime_invert",
+    "wtime_comms",
+    "wtime_io",
+    "wtime_per_rhs",
+    "wtime_per_rhs_e",
+    "wtime_per_rhs_i",
+    "hist_hi",
+    "tt",
+    "PE_XIND",
+    "PE_YIND",
+    "MYPE",
+]
+_BOUT_TIME_DEPENDENT_META_VARS = ["iteration"]
 
 
 # This code should run whenever any function from this module is imported
@@ -28,24 +40,36 @@ _BOUT_TIME_DEPENDENT_META_VARS = ['iteration']
 try:
     xr.set_options(keep_attrs=True)
 except ValueError:
-    raise ImportError("For dataset attributes to be permanent you need to be "
-                      "using the development version of xarray - found at "
-                      "https://github.com/pydata/xarray/")
+    raise ImportError(
+        "For dataset attributes to be permanent you need to be "
+        "using the development version of xarray - found at "
+        "https://github.com/pydata/xarray/"
+    )
 try:
     xr.set_options(file_cache_maxsize=256)
 except ValueError:
-    raise ImportError("For open and closing of netCDF files correctly you need"
-                      " to be using the development version of xarray - found"
-                      " at https://github.com/pydata/xarray/")
+    raise ImportError(
+        "For open and closing of netCDF files correctly you need"
+        " to be using the development version of xarray - found"
+        " at https://github.com/pydata/xarray/"
+    )
 
 
 # TODO somehow check that we have access to the latest version of auto_combine
 
 
-def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
-                     geometry=None, gridfilepath=None, chunks=None,
-                     keep_xboundaries=True, keep_yboundaries=False,
-                     run_name=None, info=True, **kwargs):
+def open_boutdataset(
+    datapath="./BOUT.dmp.*.nc",
+    inputfilepath=None,
+    geometry=None,
+    gridfilepath=None,
+    chunks=None,
+    keep_xboundaries=True,
+    keep_yboundaries=False,
+    run_name=None,
+    info=True,
+    **kwargs,
+):
     """
     Load a dataset from a set of BOUT output files, including the input options
     file. Can also load from a grid file.
@@ -113,9 +137,9 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
             ds = xr.open_mfdataset(
                 datapath,
                 chunks=chunks,
-                combine='by_coords',
-                data_vars='minimal',
-                **kwargs
+                combine="by_coords",
+                data_vars="minimal",
+                **kwargs,
             )
         elif input_type == "reload_fake":
             ds = xr.combine_by_coords(datapath, data_vars="minimal").chunk(chunks)
@@ -157,7 +181,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
         else:
             ds = geometries.apply_geometry(ds, None)
 
-        if info == 'terse':
+        if info == "terse":
             print("Read in dataset from {}".format(str(Path(datapath))))
         elif info:
             print("Read in:\n{}".format(ds.bout))
@@ -167,47 +191,56 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     # Determine if file is a grid file or data dump files
     if "dump" in input_type:
         # Gather pointers to all numerical data from BOUT++ output files
-        ds = _auto_open_mfboutdataset(datapath=datapath, chunks=chunks,
-                                      keep_xboundaries=keep_xboundaries,
-                                      keep_yboundaries=keep_yboundaries,
-                                      **kwargs)
+        ds = _auto_open_mfboutdataset(
+            datapath=datapath,
+            chunks=chunks,
+            keep_xboundaries=keep_xboundaries,
+            keep_yboundaries=keep_yboundaries,
+            **kwargs,
+        )
     elif "grid" in input_type:
         # Its a grid file
-        ds = _open_grid(datapath, chunks=chunks,
-                        keep_xboundaries=keep_xboundaries,
-                        keep_yboundaries=keep_yboundaries)
+        ds = _open_grid(
+            datapath,
+            chunks=chunks,
+            keep_xboundaries=keep_xboundaries,
+            keep_yboundaries=keep_yboundaries,
+        )
     else:
         raise ValueError(f"internal error: unexpected input_type={input_type}")
 
     ds, metadata = _separate_metadata(ds)
     # Store as ints because netCDF doesn't support bools, so we can't save
     # bool attributes
-    metadata['keep_xboundaries'] = int(keep_xboundaries)
-    metadata['keep_yboundaries'] = int(keep_yboundaries)
-    ds = _set_attrs_on_all_vars(ds, 'metadata', metadata)
+    metadata["keep_xboundaries"] = int(keep_xboundaries)
+    metadata["keep_yboundaries"] = int(keep_yboundaries)
+    ds = _set_attrs_on_all_vars(ds, "metadata", metadata)
 
     for var in _BOUT_TIME_DEPENDENT_META_VARS:
         if var in ds:
             # Assume different processors in x & y have same iteration etc.
             latest_top_left = {dim: 0 for dim in ds[var].dims}
-            if 't' in ds[var].dims:
-                latest_top_left['t'] = -1
+            if "t" in ds[var].dims:
+                latest_top_left["t"] = -1
             ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
 
     ds = _add_options(ds, inputfilepath)
 
     if geometry is None:
         if geometry in ds.attrs:
-            geometry = ds.attrs.get('geometry')
+            geometry = ds.attrs.get("geometry")
     if geometry:
         if info:
             print("Applying {} geometry conventions".format(geometry))
 
         if gridfilepath is not None:
-            grid = _open_grid(gridfilepath, chunks=chunks,
-                              keep_xboundaries=keep_xboundaries,
-                              keep_yboundaries=keep_yboundaries,
-                              mxg=ds.metadata['MXG'])
+            grid = _open_grid(
+                gridfilepath,
+                chunks=chunks,
+                keep_xboundaries=keep_xboundaries,
+                keep_yboundaries=keep_yboundaries,
+                mxg=ds.metadata["MXG"],
+            )
         else:
             grid = None
     else:
@@ -227,7 +260,7 @@ def open_boutdataset(datapath='./BOUT.dmp.*.nc', inputfilepath=None,
     # BOUT++
     ds.bout.fine_interpolation_factor = 8
 
-    if info == 'terse':
+    if info == "terse":
         print("Read in dataset from {}".format(str(Path(datapath))))
     elif info:
         print("Read in:\n{}".format(ds.bout))
@@ -241,12 +274,22 @@ def _add_options(ds, inputfilepath):
         options = BoutOptionsFile(inputfilepath)
     else:
         options = None
-    ds = _set_attrs_on_all_vars(ds, 'options', options)
+    ds = _set_attrs_on_all_vars(ds, "options", options)
     return ds
 
 
-def collect(varname, xind=None, yind=None, zind=None, tind=None,
-            path=".", yguards=False, xguards=True, info=True, prefix="BOUT.dmp"):
+def collect(
+    varname,
+    xind=None,
+    yind=None,
+    zind=None,
+    tind=None,
+    path=".",
+    yguards=False,
+    xguards=True,
+    info=True,
+    prefix="BOUT.dmp",
+):
 
     from os.path import join
 
@@ -292,8 +335,9 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
 
     datapath = join(path, prefix + "*.nc")
 
-    ds = _auto_open_mfboutdataset(datapath, keep_xboundaries=xguards,
-                                  keep_yboundaries=yguards, info=info)
+    ds = _auto_open_mfboutdataset(
+        datapath, keep_xboundaries=xguards, keep_yboundaries=yguards, info=info
+    )
 
     if varname not in ds:
         raise KeyError("No variable, {} was found in {}.".format(varname, datapath))
@@ -310,7 +354,7 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
             indexer = [ind]
         elif isinstance(ind, list):
             start, end = ind
-            indexer = slice(start, end+1)
+            indexer = slice(start, end + 1)
         elif ind is not None:
             indexer = ind
         else:
@@ -320,15 +364,15 @@ def collect(varname, xind=None, yind=None, zind=None, tind=None,
             selection[dim] = indexer
 
     try:
-        version = ds['BOUT_VERSION']
+        version = ds["BOUT_VERSION"]
     except KeyError:
         # If BOUT Version is not saved in the dataset
         version = 0
 
     # Subtraction of z-dimensional data occurs in boutdata.collect
     # if BOUT++ version is old - same feature added here
-    if (version < 3.5) and ('z' in dims):
-        zsize = int(ds['nz']) - 1
+    if (version < 3.5) and ("z" in dims):
+        zsize = int(ds["nz"]) - 1
         ds = ds.isel(z=slice(zsize))
 
     if selection:
@@ -393,9 +437,14 @@ def _check_dataset_type(datapath):
         return "grid"
 
 
-def _auto_open_mfboutdataset(datapath, chunks=None, info=True,
-                             keep_xboundaries=False, keep_yboundaries=False,
-                             **kwargs):
+def _auto_open_mfboutdataset(
+    datapath,
+    chunks=None,
+    info=True,
+    keep_xboundaries=False,
+    keep_yboundaries=False,
+    **kwargs,
+):
     if chunks is None:
         chunks = {}
 
@@ -405,17 +454,27 @@ def _auto_open_mfboutdataset(datapath, chunks=None, info=True,
         # Open just one file to read processor splitting
         nxpe, nype, mxg, myg, mxsub, mysub = _read_splitting(filepaths[0], info)
 
-        _preprocess = partial(_trim, guards={'x': mxg, 'y': myg},
-                              keep_boundaries={'x': keep_xboundaries,
-                                               'y': keep_yboundaries},
-                              nxpe=nxpe, nype=nype)
+        _preprocess = partial(
+            _trim,
+            guards={"x": mxg, "y": myg},
+            keep_boundaries={"x": keep_xboundaries, "y": keep_yboundaries},
+            nxpe=nxpe,
+            nype=nype,
+        )
 
         paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
-        ds = xr.open_mfdataset(paths_grid, concat_dim=concat_dims, combine='nested',
-                               data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
-                               preprocess=_preprocess, engine=filetype,
-                               chunks=chunks, join='exact', **kwargs)
+        ds = xr.open_mfdataset(
+            paths_grid,
+            concat_dim=concat_dims,
+            combine="nested",
+            data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
+            preprocess=_preprocess,
+            engine=filetype,
+            chunks=chunks,
+            join="exact",
+            **kwargs,
+        )
     else:
         # datapath was nested list of Datasets
 
@@ -428,10 +487,13 @@ def _auto_open_mfboutdataset(datapath, chunks=None, info=True,
         nxpe = int(datapath[0]["NXPE"])
         nype = int(datapath[0]["NYPE"])
 
-        _preprocess = partial(_trim, guards={'x': mxg, 'y': myg},
-                              keep_boundaries={'x': keep_xboundaries,
-                                               'y': keep_yboundaries},
-                              nxpe=nxpe, nype=nype)
+        _preprocess = partial(
+            _trim,
+            guards={"x": mxg, "y": myg},
+            keep_boundaries={"x": keep_xboundaries, "y": keep_yboundaries},
+            nxpe=nxpe,
+            nype=nype,
+        )
 
         datapath = [_preprocess(x) for x in datapath]
 
@@ -441,11 +503,11 @@ def _auto_open_mfboutdataset(datapath, chunks=None, info=True,
             ds_grid,
             concat_dim=concat_dims,
             data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
-            join="exact"
+            join="exact",
         )
 
     # Remove any duplicate time values from concatenation
-    _, unique_indices = unique(ds['t_array'], return_index=True)
+    _, unique_indices = unique(ds["t_array"], return_index=True)
     return ds.isel(t=unique_indices)
 
 
@@ -458,15 +520,17 @@ def _expand_filepaths(datapath):
     filepaths = _expand_wildcards(path)
 
     if not filepaths:
-        raise IOError("No datafiles found matching datapath={}"
-                      .format(datapath))
+        raise IOError("No datafiles found matching datapath={}".format(datapath))
 
     if len(filepaths) > 128:
-        warn("Trying to open a large number of files - setting xarray's"
-             " `file_cache_maxsize` global option to {} to accommodate this. "
-             "Recommend using `xr.set_options(file_cache_maxsize=NUM)`"
-             " to explicitly set this to a large enough value."
-             .format(str(len(filepaths))))
+        warn(
+            "Trying to open a large number of files - setting xarray's"
+            " `file_cache_maxsize` global option to {} to accommodate this. "
+            "Recommend using `xr.set_options(file_cache_maxsize=NUM)`"
+            " to explicitly set this to a large enough value.".format(
+                str(len(filepaths))
+            )
+        )
         xr.set_options(file_cache_maxsize=len(filepaths))
 
     return filepaths, filetype
@@ -498,8 +562,10 @@ def _read_splitting(filepath, info=True):
         if key in ds:
             val = ds[key].values
             if val < 0:
-                raise ValueError(f"{key} read from dump files is {val}, but negative"
-                                 f" values are not valid")
+                raise ValueError(
+                    f"{key} read from dump files is {val}, but negative"
+                    f" values are not valid"
+                )
             else:
                 return val
         else:
@@ -511,37 +577,37 @@ def _read_splitting(filepath, info=True):
                 )
             return default
 
-    nxpe = get_nonnegative_scalar(ds, 'NXPE', default=1, info=info)
-    nype = get_nonnegative_scalar(ds, 'NYPE', default=1, info=info)
-    mxg = get_nonnegative_scalar(ds, 'MXG', default=2, info=info)
-    myg = get_nonnegative_scalar(ds, 'MYG', default=0, info=info)
+    nxpe = get_nonnegative_scalar(ds, "NXPE", default=1, info=info)
+    nype = get_nonnegative_scalar(ds, "NYPE", default=1, info=info)
+    mxg = get_nonnegative_scalar(ds, "MXG", default=2, info=info)
+    myg = get_nonnegative_scalar(ds, "MYG", default=0, info=info)
     mxsub = get_nonnegative_scalar(
-        ds, 'MXSUB', default=ds.dims['x'] - 2 * mxg, info=info
+        ds, "MXSUB", default=ds.dims["x"] - 2 * mxg, info=info
     )
     mysub = get_nonnegative_scalar(
-        ds, 'MYSUB', default=ds.dims['y'] - 2 * myg, info=info
+        ds, "MYSUB", default=ds.dims["y"] - 2 * myg, info=info
     )
 
     # Check whether this is a single file squashed from the multiple output files of a
     # parallel run (i.e. NXPE*NYPE > 1 even though there is only a single file to read).
-    nx = ds['nx'].values
-    ny = ds['ny'].values
-    nx_file = ds.dims['x']
-    ny_file = ds.dims['y']
+    nx = ds["nx"].values
+    ny = ds["ny"].values
+    nx_file = ds.dims["x"]
+    ny_file = ds.dims["y"]
     if nxpe > 1 or nype > 1:
         # if nxpe = nype = 1, was only one process anyway, so no need to check for
         # squashing
-        if nx_file == nx or nx_file == nx - 2*mxg:
-            has_xboundaries = (nx_file == nx)
+        if nx_file == nx or nx_file == nx - 2 * mxg:
+            has_xboundaries = nx_file == nx
             if not has_xboundaries:
                 mxg = 0
 
             # Check if there are two divertor targets present
-            if ds['jyseps1_2'] > ds['jyseps2_1']:
+            if ds["jyseps1_2"] > ds["jyseps2_1"]:
                 upper_target_cells = myg
             else:
                 upper_target_cells = 0
-            if ny_file == ny or ny_file == ny + 2*myg + 2*upper_target_cells:
+            if ny_file == ny or ny_file == ny + 2 * myg + 2 * upper_target_cells:
                 # This file contains all the points, possibly including guard cells
 
                 has_yboundaries = not (ny_file == ny)
@@ -582,19 +648,19 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     # Create list of lists of filepaths, so that xarray knows how they should
     # be concatenated by xarray.open_mfdataset()
     paths = iter(filepaths)
-    paths_grid = [[[next(paths) for x in range(nxpe)]
-                                for y in range(nype)]
-                                for t in range(n_runs)]
+    paths_grid = [
+        [[next(paths) for x in range(nxpe)] for y in range(nype)] for t in range(n_runs)
+    ]
 
     # Dimensions along which no concatenation is needed are still present as
     # single-element lists, so need to concatenation along dim=None for those
     concat_dims = [None, None, None]
     if len(filepaths) > nprocs:
-        concat_dims[0] = 't'
+        concat_dims[0] = "t"
     if nype > 1:
-        concat_dims[1] = 'y'
+        concat_dims[1] = "y"
     if nxpe > 1:
-        concat_dims[2] = 'x'
+        concat_dims[2] = "x"
 
     return paths_grid, concat_dims
 
@@ -621,27 +687,27 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
 
     if any(keep_boundaries.values()):
         # Work out if this particular dataset contains any boundary cells
-        lower_boundaries, upper_boundaries = _infer_contains_boundaries(
-            ds, nxpe, nype)
+        lower_boundaries, upper_boundaries = _infer_contains_boundaries(ds, nxpe, nype)
     else:
         lower_boundaries, upper_boundaries = {}, {}
 
     selection = {}
     for dim in ds.dims:
-        lower = _get_limit('lower', dim, keep_boundaries, lower_boundaries,
-                           guards)
-        upper = _get_limit('upper', dim, keep_boundaries, upper_boundaries,
-                           guards)
+        lower = _get_limit("lower", dim, keep_boundaries, lower_boundaries, guards)
+        upper = _get_limit("upper", dim, keep_boundaries, upper_boundaries, guards)
         selection[dim] = slice(lower, upper)
     trimmed_ds = ds.isel(**selection)
 
     # Ignore FieldPerps for now
     for name in trimmed_ds:
-        if (trimmed_ds[name].dims == ('x', 'z')
-                or trimmed_ds[name].dims == ('t', 'x', 'z')):
+        if trimmed_ds[name].dims == ("x", "z") or trimmed_ds[name].dims == (
+            "t",
+            "x",
+            "z",
+        ):
             trimmed_ds = trimmed_ds.drop(name)
 
-    return trimmed_ds.drop(_BOUT_PER_PROC_VARIABLES, errors='ignore')
+    return trimmed_ds.drop(_BOUT_PER_PROC_VARIABLES, errors="ignore")
 
 
 def _infer_contains_boundaries(ds, nxpe, nype):
@@ -650,42 +716,42 @@ def _infer_contains_boundaries(ds, nxpe, nype):
     dataset contains boundary cells, and on which side.
     """
 
-    if nxpe*nype == 1:
+    if nxpe * nype == 1:
         # single file, always contains boundaries
-        return {'x': True, 'y': True}, {'x': True, 'y': True}
+        return {"x": True, "y": True}, {"x": True, "y": True}
 
     try:
-        xproc = int(ds['PE_XIND'])
-        yproc = int(ds['PE_YIND'])
+        xproc = int(ds["PE_XIND"])
+        yproc = int(ds["PE_YIND"])
     except KeyError:
         # output file from BOUT++ earlier than 4.3
         # Use knowledge that BOUT names its output files as /folder/prefix.num.nc, with a
         # numbering scheme
         # num = nxpe*i + j, where i={0, ..., nype}, j={0, ..., nxpe}
-        filename = ds.encoding['source']
+        filename = ds.encoding["source"]
         *prefix, filenum, extension = Path(filename).suffixes
-        filenum = int(filenum.replace('.', ''))
+        filenum = int(filenum.replace(".", ""))
         xproc = filenum % nxpe
         yproc = filenum // nxpe
 
     lower_boundaries, upper_boundaries = {}, {}
 
-    lower_boundaries['x'] = xproc == 0
-    upper_boundaries['x'] = xproc == nxpe-1
+    lower_boundaries["x"] = xproc == 0
+    upper_boundaries["x"] = xproc == nxpe - 1
 
-    lower_boundaries['y'] = yproc == 0
-    upper_boundaries['y'] = yproc == nype-1
+    lower_boundaries["y"] = yproc == 0
+    upper_boundaries["y"] = yproc == nype - 1
 
-    jyseps2_1 = int(ds['jyseps2_1'])
-    jyseps1_2 = int(ds['jyseps1_2'])
+    jyseps2_1 = int(ds["jyseps2_1"])
+    jyseps1_2 = int(ds["jyseps1_2"])
     if jyseps1_2 > jyseps2_1:
         # second divertor present
-        ny_inner = int(ds['ny_inner'])
-        mysub = int(ds['MYSUB'])
-        if mysub*(yproc + 1) == ny_inner:
-            upper_boundaries['y'] = True
-        elif mysub*yproc == ny_inner:
-            lower_boundaries['y'] = True
+        ny_inner = int(ds["ny_inner"])
+        mysub = int(ds["MYSUB"])
+        if mysub * (yproc + 1) == ny_inner:
+            upper_boundaries["y"] = True
+        elif mysub * yproc == ny_inner:
+            lower_boundaries["y"] = True
 
     return lower_boundaries, upper_boundaries
 
@@ -697,9 +763,9 @@ def _get_limit(side, dim, keep_boundaries, boundaries, guards):
         if boundaries.get(dim, False):
             limit = None
         else:
-            limit = guards[dim] if side == 'lower' else -guards[dim]
+            limit = guards[dim] if side == "lower" else -guards[dim]
     elif guards.get(dim, False):
-        limit = guards[dim] if side == 'lower' else -guards[dim]
+        limit = guards[dim] if side == "lower" else -guards[dim]
     else:
         limit = None
 
@@ -715,7 +781,7 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
     boundaries to deal with different conventions in a BOUT grid file.
     """
 
-    acceptable_dims = ['x', 'y', 'z']
+    acceptable_dims = ["x", "y", "z"]
 
     # Passing 'chunks' with dimensions that are not present in the dataset causes an
     # error. A gridfile will be missing 't' and may be missing 'z' dimensions that dump
@@ -739,7 +805,8 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
         # pytest warnings capture - doesn't match strings containing brackets
         warn(
             "Will drop all variables containing the dimensions {} because "
-            "they are not recognised".format(str(unrecognised_dims)[1:-1]))
+            "they are not recognised".format(str(unrecognised_dims)[1:-1])
+        )
         grid = grid.drop_dims(unrecognised_dims)
 
     if not keep_xboundaries:
@@ -748,7 +815,7 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
             grid = grid.isel(x=slice(xboundaries, -xboundaries, None))
     if not keep_yboundaries:
         try:
-            yboundaries = int(grid['y_boundary_guards'])
+            yboundaries = int(grid["y_boundary_guards"])
         except KeyError:
             # y_boundary_guards variable not in grid file - older grid files
             # never had y-boundary cells
@@ -756,19 +823,22 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
         if yboundaries > 0:
             # Remove y-boundary cells from first divertor target
             grid = grid.isel(y=slice(yboundaries, -yboundaries, None))
-            if grid['jyseps1_2'] > grid['jyseps2_1']:
+            if grid["jyseps1_2"] > grid["jyseps2_1"]:
                 # There is a second divertor target, remove y-boundary cells
                 # there too
-                nin = int(grid['ny_inner'])
+                nin = int(grid["ny_inner"])
                 grid_lower = grid.isel(y=slice(None, nin, None))
-                grid_upper = grid.isel(
-                    y=slice(nin + 2 * yboundaries, None, None))
-                grid = xr.concat((grid_lower, grid_upper), dim='y',
-                                 data_vars='minimal',
-                                 compat='identical', join='exact')
+                grid_upper = grid.isel(y=slice(nin + 2 * yboundaries, None, None))
+                grid = xr.concat(
+                    (grid_lower, grid_upper),
+                    dim="y",
+                    data_vars="minimal",
+                    compat="identical",
+                    join="exact",
+                )
 
-    if 'z' in grid_chunks and 'z' not in grid.dims:
-        del grid_chunks['z']
+    if "z" in grid_chunks and "z" not in grid.dims:
+        del grid_chunks["z"]
     grid = grid.chunk(grid_chunks)
 
     return grid

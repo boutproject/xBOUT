@@ -17,7 +17,7 @@ from .region import _from_region
 from .utils import _update_metadata_increased_resolution, _get_bounding_surfaces
 
 
-@register_dataarray_accessor('bout')
+@register_dataarray_accessor("bout")
 class BoutDataArrayAccessor:
     """
     Contains BOUT-specific methods to use on BOUT++ dataarrays opened by
@@ -29,8 +29,8 @@ class BoutDataArrayAccessor:
 
     def __init__(self, da):
         self.data = da
-        self.metadata = da.attrs.get('metadata')  # None if just grid file
-        self.options = da.attrs.get('options')  # None if no inp file
+        self.metadata = da.attrs.get("metadata")  # None if just grid file
+        self.options = da.attrs.get("options")  # None if no inp file
 
     def __str__(self):
         """
@@ -40,9 +40,11 @@ class BoutDataArrayAccessor:
         """
 
         styled = partial(prettyformat, indent=4, compact=True)
-        text = "<xbout.BoutDataset>\n" + \
-               "Contains:\n{}\n".format(str(self.data)) + \
-               "Metadata:\n{}\n".format(styled(self.metadata))
+        text = (
+            "<xbout.BoutDataset>\n"
+            + "Contains:\n{}\n".format(str(self.data))
+            + "Metadata:\n{}\n".format(styled(self.metadata))
+        )
         if self.options:
             text += "Options:\n{}".format(styled(self.options))
         return text
@@ -61,9 +63,9 @@ class BoutDataArrayAccessor:
             if name in ds.attrs:
                 del ds.attrs[name]
 
-        dropIfExists(ds, 'direction_y')
-        dropIfExists(ds, 'direction_z')
-        dropIfExists(ds, 'cell_location')
+        dropIfExists(ds, "direction_y")
+        dropIfExists(ds, "direction_z")
+        dropIfExists(ds, "cell_location")
 
         return ds
 
@@ -86,23 +88,23 @@ class BoutDataArrayAccessor:
         else:
             fft = np.fft
 
-        nz = self.data.metadata['nz']
-        zlength = nz*self.data.metadata['dz']
+        nz = self.data.metadata["nz"]
+        zlength = nz * self.data.metadata["dz"]
         nmodes = nz // 2 + 1
 
         # Get axis position of dimension to transform
-        axis = self.data.dims.index(self.data.metadata['bout_zdim'])
+        axis = self.data.dims.index(self.data.metadata["bout_zdim"])
 
         # Create list the dimensions of FFT'd array
         fft_dims = list(deepcopy(self.data.dims))
-        fft_dims[axis] = 'kz'
+        fft_dims[axis] = "kz"
 
         # Fourier transform to get the DataArray in k-space
         data_fft = fft.rfft(self.data.data, axis=axis)
 
         # Complex phase for rotation by angle zShift
-        kz = 2.*np.pi*xr.DataArray(np.arange(0, nmodes), dims='kz')/zlength
-        phase = 1.j*kz*zShift
+        kz = 2.0 * np.pi * xr.DataArray(np.arange(0, nmodes), dims="kz") / zlength
+        phase = 1.0j * kz * zShift
 
         # Ensure dimensions are in correct order for numpy broadcasting
         extra_dims = deepcopy(fft_dims)
@@ -124,20 +126,26 @@ class BoutDataArrayAccessor:
         Transform DataArray to field-aligned coordinates, which are shifted with respect
         to the base coordinates by an angle zShift
         """
-        if (self.data.cell_location == 'CELL_CENTRE'
-                or self.data.cell_location == 'CELL_ZLOW'):
-            zShift_coord = 'zShift'
+        if (
+            self.data.cell_location == "CELL_CENTRE"
+            or self.data.cell_location == "CELL_ZLOW"
+        ):
+            zShift_coord = "zShift"
         else:
-            zShift_coord = 'zShift_' + self.data.cell_location
+            zShift_coord = "zShift_" + self.data.cell_location
 
         if self.data.direction_y != "Standard":
-            raise ValueError(f"Cannot shift a {self.data.direction_y} type field to "
-                             "field-aligned coordinates")
+            raise ValueError(
+                f"Cannot shift a {self.data.direction_y} type field to "
+                "field-aligned coordinates"
+            )
 
         if zShift_coord not in self.data.coords:
-            raise ValueError(f"{zShift_coord} missing, cannot shift "
-                             f"{self.data.cell_location} field {self.data.name} to "
-                             f"field-aligned coordinates")
+            raise ValueError(
+                f"{zShift_coord} missing, cannot shift "
+                f"{self.data.cell_location} field {self.data.name} to "
+                f"field-aligned coordinates"
+            )
 
         result = self._shift_z(self.data[zShift_coord])
         result.attrs["direction_y"] = "Aligned"
@@ -148,20 +156,26 @@ class BoutDataArrayAccessor:
         Transform DataArray from field-aligned coordinates, which are shifted with
         respect to the base coordinates by an angle zShift
         """
-        if (self.data.cell_location == 'CELL_CENTRE'
-                or self.data.cell_location == 'CELL_ZLOW'):
-            zShift_coord = 'zShift'
+        if (
+            self.data.cell_location == "CELL_CENTRE"
+            or self.data.cell_location == "CELL_ZLOW"
+        ):
+            zShift_coord = "zShift"
         else:
-            zShift_coord = 'zShift_' + self.data.cell_location
+            zShift_coord = "zShift_" + self.data.cell_location
 
         if self.data.direction_y != "Aligned":
-            raise ValueError(f"Cannot shift a {self.data.direction_y} type field from "
-                             "field-aligned coordinates")
+            raise ValueError(
+                f"Cannot shift a {self.data.direction_y} type field from "
+                "field-aligned coordinates"
+            )
 
         if zShift_coord not in self.data.coords:
-            raise ValueError(f"{zShift_coord} missing, cannot shift "
-                             f"{self.data.cell_location} field {self.data.name} from "
-                             f"field-aligned coordinates")
+            raise ValueError(
+                f"{zShift_coord} missing, cannot shift "
+                f"{self.data.cell_location} field {self.data.name} from "
+                f"field-aligned coordinates"
+            )
 
         result = self._shift_z(-self.data[zShift_coord])
         result.attrs["direction_y"] = "Standard"
@@ -197,7 +211,7 @@ class BoutDataArrayAccessor:
         """
         The default factor to increase resolution when doing parallel interpolation
         """
-        return self.data.metadata['fine_interpolation_factor']
+        return self.data.metadata["fine_interpolation_factor"]
 
     @fine_interpolation_factor.setter
     def fine_interpolation_factor(self, n):
@@ -209,10 +223,17 @@ class BoutDataArrayAccessor:
         n : int
             Factor to increase parallel resolution by
         """
-        self.data.metadata['fine_interpolation_factor'] = n
+        self.data.metadata["fine_interpolation_factor"] = n
 
-    def interpolate_parallel(self, region=None, *, n=None, toroidal_points=None,
-                             method='cubic', return_dataset=False):
+    def interpolate_parallel(
+        self,
+        region=None,
+        *,
+        n=None,
+        toroidal_points=None,
+        method="cubic",
+        return_dataset=False,
+    ):
         """
         Interpolate in the parallel direction to get a higher resolution version of the
         variable.
@@ -248,17 +269,19 @@ class BoutDataArrayAccessor:
             # Call the single-region version of this method for each region, and combine
             # the results together
             parts = [
-                self.interpolate_parallel(region, n=n, toroidal_points=toroidal_points,
-                                          method=method).bout.to_dataset()
-                for region in self.data.regions]
+                self.interpolate_parallel(
+                    region, n=n, toroidal_points=toroidal_points, method=method
+                ).bout.to_dataset()
+                for region in self.data.regions
+            ]
 
             # 'region' is not the same for all parts, and should not exist in the result,
             # so delete before merging
             for part in parts:
-                if 'region' in part.attrs:
-                    del part.attrs['region']
-                if 'region' in part[self.data.name].attrs:
-                    del part[self.data.name].attrs['region']
+                if "region" in part.attrs:
+                    del part.attrs["region"]
+                if "region" in part[self.data.name].attrs:
+                    del part[self.data.name].attrs["region"]
 
             result = xr.combine_by_coords(parts)
 
@@ -271,12 +294,12 @@ class BoutDataArrayAccessor:
         # Select a particular 'region' and interpolate to higher parallel resolution
         da = self.data
         region = da.regions[region]
-        tcoord = da.metadata['bout_tdim']
-        xcoord = da.metadata['bout_xdim']
-        ycoord = da.metadata['bout_ydim']
-        zcoord = da.metadata['bout_zdim']
+        tcoord = da.metadata["bout_tdim"]
+        xcoord = da.metadata["bout_xdim"]
+        ycoord = da.metadata["bout_ydim"]
+        zcoord = da.metadata["bout_zdim"]
 
-        if zcoord in da.dims and da.direction_y != 'Aligned':
+        if zcoord in da.dims and da.direction_y != "Aligned":
             aligned_input = False
             da = da.bout.to_field_aligned()
         else:
@@ -288,22 +311,24 @@ class BoutDataArrayAccessor:
         da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
         da = da.chunk({ycoord: None})
 
-        ny_fine = n*region.ny
-        dy = (region.yupper - region.ylower)/ny_fine
+        ny_fine = n * region.ny
+        dy = (region.yupper - region.ylower) / ny_fine
 
-        myg = da.metadata['MYG']
-        if da.metadata['keep_yboundaries'] and region.connection_lower_y is None:
+        myg = da.metadata["MYG"]
+        if da.metadata["keep_yboundaries"] and region.connection_lower_y is None:
             ybndry_lower = myg
         else:
             ybndry_lower = 0
-        if da.metadata['keep_yboundaries'] and region.connection_upper_y is None:
+        if da.metadata["keep_yboundaries"] and region.connection_upper_y is None:
             ybndry_upper = myg
         else:
             ybndry_upper = 0
 
-        y_fine = np.linspace(region.ylower - (ybndry_lower - 0.5)*dy,
-                             region.yupper + (ybndry_upper - 0.5)*dy,
-                             ny_fine + ybndry_lower + ybndry_upper)
+        y_fine = np.linspace(
+            region.ylower - (ybndry_lower - 0.5) * dy,
+            region.yupper + (ybndry_upper - 0.5) * dy,
+            ny_fine + ybndry_lower + ybndry_upper,
+        )
 
         # This prevents da.interp() from being very slow.
         # Apparently large attrs (i.e. regions) on a coordinate which is passed as an
@@ -313,15 +338,20 @@ class BoutDataArrayAccessor:
         # _add_attrs_to_var(updated_ds, ycoord) was added in geometries.py
         da[ycoord].attrs = {}
 
-        da = da.interp({ycoord: y_fine.data}, assume_sorted=True, method=method,
-                       kwargs={'fill_value': 'extrapolate'})
+        da = da.interp(
+            {ycoord: y_fine.data},
+            assume_sorted=True,
+            method=method,
+            kwargs={"fill_value": "extrapolate"},
+        )
 
         da = _update_metadata_increased_resolution(da, n)
 
         # Add dy to da as a coordinate. This will only be temporary, once we have
         # combined the regions together, we will demote dy to a regular variable
-        dy_array = xr.DataArray(np.full([da.sizes[xcoord], da.sizes[ycoord]], dy),
-                                dims=[xcoord, ycoord])
+        dy_array = xr.DataArray(
+            np.full([da.sizes[xcoord], da.sizes[ycoord]], dy), dims=[xcoord, ycoord]
+        )
         # need a view of da with only x- and y-dimensions, unfortunately no neat way to
         # do this with isel
         da_2d = da
@@ -335,7 +365,7 @@ class BoutDataArrayAccessor:
         # Remove regions which have incorrect information for the high-resolution grid.
         # New regions will be generated when creating a new Dataset in
         # BoutDataset.getHighParallelResVars
-        del da.attrs['regions']
+        del da.attrs["regions"]
 
         if not aligned_input:
             # Want output in non-aligned coordinates
@@ -344,7 +374,7 @@ class BoutDataArrayAccessor:
         if toroidal_points is not None and zcoord in da.sizes:
             if isinstance(toroidal_points, int):
                 nz = len(da[zcoord])
-                zstride = (nz + toroidal_points - 1)//toroidal_points
+                zstride = (nz + toroidal_points - 1) // toroidal_points
                 da = da.isel(**{zcoord: slice(None, None, zstride)})
             else:
                 da = da.isel(**{zcoord: toroidal_points})
@@ -361,24 +391,23 @@ class BoutDataArrayAccessor:
             Return the result as a Dataset containing the new DataArray.
         """
 
-        myg = self.data.metadata['MYG']
+        myg = self.data.metadata["MYG"]
 
         if (
-            (self.metadata['keep_yboundaries'] == 0 or myg == 0)
-            and not remove_extra_upper
-        ):
+            self.metadata["keep_yboundaries"] == 0 or myg == 0
+        ) and not remove_extra_upper:
             # Ensure we do not modify any other references to metadata
-            self.data.attrs['metadata'] = deepcopy(self.data.metadata)
-            self.data.metadata['keep_yboundaries'] = 0
+            self.data.attrs["metadata"] = deepcopy(self.data.metadata)
+            self.data.metadata["keep_yboundaries"] = 0
             # no y-boundary points to remove
             if return_dataset:
                 return self.to_dataset()
             else:
                 return self.data
-        if self.metadata['keep_yboundaries'] == 0:
+        if self.metadata["keep_yboundaries"] == 0:
             myg = 0
 
-        ycoord = self.data.metadata['bout_ydim']
+        ycoord = self.data.metadata["bout_ydim"]
         parts = []
         for region in self.data.regions:
             part = self.data.bout.from_region(region, with_guards=0)
@@ -386,33 +415,34 @@ class BoutDataArrayAccessor:
             if part_region.connection_lower_y is None:
                 part = part.isel({ycoord: slice(myg, None)})
             if part_region.connection_upper_y is None:
-                part = part.isel({ycoord: slice(
-                    -myg if not remove_extra_upper else -myg-1)})
+                part = part.isel(
+                    {ycoord: slice(-myg if not remove_extra_upper else -myg - 1)}
+                )
             del part.attrs["regions"]
             parts.append(part.bout.to_dataset())
 
         result = xr.combine_by_coords(parts)
         # Ensure we do not modify any other references to metadata
         result.attrs = copy(parts[0].attrs)
-        result.attrs['metadata'] = deepcopy(self.data.metadata)
-        result[self.data.name].attrs['metadata'] = deepcopy(self.data.metadata)
+        result.attrs["metadata"] = deepcopy(self.data.metadata)
+        result[self.data.name].attrs["metadata"] = deepcopy(self.data.metadata)
 
         # result is as if we had not kept y-boundaries when loading
-        result.metadata['keep_yboundaries'] = 0
-        result[self.data.name].metadata['keep_yboundaries'] = 0
+        result.metadata["keep_yboundaries"] = 0
+        result[self.data.name].metadata["keep_yboundaries"] = 0
 
         if remove_extra_upper:
             # modify jyseps*, ny_inner, ny so that sliced variable gets consistent
             # regions
-            if result.metadata['jyseps1_2'] == result.metadata['jyseps2_1']:
+            if result.metadata["jyseps1_2"] == result.metadata["jyseps2_1"]:
                 # single-null
-                result.metadata['ny'] -= 1
+                result.metadata["ny"] -= 1
             else:
                 # double-null
-                result.metadata['ny_inner'] -= 1
-                result.metadata['jyseps1_2'] -= 1
-                result.metadata['jyseps2_2'] -= 1
-                result.metadata['ny'] -= 2
+                result.metadata["ny_inner"] -= 1
+                result.metadata["jyseps1_2"] -= 1
+                result.metadata["jyseps2_2"] -= 1
+                result.metadata["ny"] -= 2
 
         if return_dataset:
             return result
@@ -442,8 +472,19 @@ class BoutDataArrayAccessor:
         """
         return _get_bounding_surfaces(self.data, coords)
 
-    def animate2D(self, animate_over='t', x=None, y=None, animate=True, fps=10,
-                  save_as=None, ax=None, poloidal_plot=False, logscale=None, **kwargs):
+    def animate2D(
+        self,
+        animate_over="t",
+        x=None,
+        y=None,
+        animate=True,
+        fps=10,
+        save_as=None,
+        ax=None,
+        poloidal_plot=False,
+        logscale=None,
+        **kwargs,
+    ):
         """
         Plots a color plot which is animated with time over the specified
         coordinate.
@@ -490,36 +531,64 @@ class BoutDataArrayAccessor:
         n_dims = len(data.dims)
 
         if n_dims == 3:
-            vmin = kwargs['vmin'] if 'vmin' in kwargs else data.min().values
-            vmax = kwargs['vmax'] if 'vmax' in kwargs else data.max().values
-            kwargs['norm'] = _create_norm(logscale, kwargs.get('norm', None), vmin, vmax)
+            vmin = kwargs["vmin"] if "vmin" in kwargs else data.min().values
+            vmax = kwargs["vmax"] if "vmax" in kwargs else data.max().values
+            kwargs["norm"] = _create_norm(
+                logscale, kwargs.get("norm", None), vmin, vmax
+            )
 
             if poloidal_plot:
-                print("{} data passed has {} dimensions - making poloidal plot with "
-                      "animate_poloidal()".format(variable, str(n_dims)))
+                print(
+                    "{} data passed has {} dimensions - making poloidal plot with "
+                    "animate_poloidal()".format(variable, str(n_dims))
+                )
                 if x is not None:
-                    kwargs['x'] = x
+                    kwargs["x"] = x
                 if y is not None:
-                    kwargs['y'] = y
-                poloidal_blocks = animate_poloidal(data, animate_over=animate_over,
-                                                   animate=animate, fps=fps,
-                                                   save_as=save_as, ax=ax, **kwargs)
+                    kwargs["y"] = y
+                poloidal_blocks = animate_poloidal(
+                    data,
+                    animate_over=animate_over,
+                    animate=animate,
+                    fps=fps,
+                    save_as=save_as,
+                    ax=ax,
+                    **kwargs,
+                )
                 return poloidal_blocks
             else:
-                print("{} data passed has {} dimensions - will use "
-                      "animatplot.blocks.Pcolormesh()".format(variable, str(n_dims)))
-                pcolormesh_block = animate_pcolormesh(data=data,
-                                                      animate_over=animate_over, x=x,
-                                                      y=y, animate=animate, fps=fps,
-                                                      save_as=save_as, ax=ax, **kwargs)
+                print(
+                    "{} data passed has {} dimensions - will use "
+                    "animatplot.blocks.Pcolormesh()".format(variable, str(n_dims))
+                )
+                pcolormesh_block = animate_pcolormesh(
+                    data=data,
+                    animate_over=animate_over,
+                    x=x,
+                    y=y,
+                    animate=animate,
+                    fps=fps,
+                    save_as=save_as,
+                    ax=ax,
+                    **kwargs,
+                )
                 return pcolormesh_block
         else:
             raise ValueError(
                 "Data passed has an unsupported number of dimensions "
-                "({})".format(str(n_dims)))
+                "({})".format(str(n_dims))
+            )
 
-    def animate1D(self, animate_over='t', animate=True, fps=10, save_as=None,
-                  sep_pos=None, ax=None, **kwargs):
+    def animate1D(
+        self,
+        animate_over="t",
+        animate=True,
+        fps=10,
+        save_as=None,
+        sep_pos=None,
+        ax=None,
+        **kwargs,
+    ):
         """
         Plots a line plot which is animated over time over the specified coordinate.
 
@@ -551,11 +620,20 @@ class BoutDataArrayAccessor:
         n_dims = len(data.dims)
 
         if n_dims == 2:
-            print("{} data passed has {} dimensions - will use "
-                  "animatplot.blocks.Line()".format(variable, str(n_dims)))
-            line_block = animate_line(data=data, animate_over=animate_over,
-                                      sep_pos=sep_pos, animate=animate, fps=fps,
-                                      save_as=save_as, ax=ax, **kwargs)
+            print(
+                "{} data passed has {} dimensions - will use "
+                "animatplot.blocks.Line()".format(variable, str(n_dims))
+            )
+            line_block = animate_line(
+                data=data,
+                animate_over=animate_over,
+                sep_pos=sep_pos,
+                animate=animate,
+                fps=fps,
+                save_as=save_as,
+                ax=ax,
+                **kwargs,
+            )
             return line_block
 
     def interpolate_from_unstructured(
@@ -564,7 +642,7 @@ class BoutDataArrayAccessor:
         fill_value=np.nan,
         structured_output=True,
         unstructured_dim_name="unstructured_dim",
-        **kwargs
+        **kwargs,
     ):
         """Interpolate DataArray onto new grids of some existing coordinates
 
@@ -593,15 +671,11 @@ class BoutDataArrayAccessor:
 
         if structured_output:
             new_coords = {
-                name: xr.DataArray(values, dims=name)
-                for name, values in kwargs.items()
+                name: xr.DataArray(values, dims=name) for name, values in kwargs.items()
             }
 
             coord_arrays = tuple(
-                np.meshgrid(
-                    *[values for values in kwargs.values()],
-                    indexing="ij"
-                )
+                np.meshgrid(*[values for values in kwargs.values()], indexing="ij")
             )
 
             new_output_dims = [d for d in kwargs]
@@ -655,8 +729,9 @@ class BoutDataArrayAccessor:
         dims_name_list = [d for d in da.dims if d in dims]
         stacked_dim_name = "stacked_" + "_".join(dims_name_list)
         stacked = da.stack({stacked_dim_name: dims_name_list})
-        stacked = stacked.transpose(*((stacked_dim_name,) + remaining_dims),
-                                    transpose_coords=True)
+        stacked = stacked.transpose(
+            *((stacked_dim_name,) + remaining_dims), transpose_coords=True
+        )
 
         result = scipy_griddata(
             tuple(stacked[coord] for coord in kwargs),
@@ -676,7 +751,7 @@ class BoutDataArrayAccessor:
         path = matplotlib.path.Path(boundaries[0], closed=True, readonly=True)
         is_contained = path.contains_points(points.reshape([-1, 2]))
         is_contained = is_contained.reshape(
-            coord_arrays[0].shape + (1,)*len(remaining_dims)
+            coord_arrays[0].shape + (1,) * len(remaining_dims)
         )
         result = np.where(is_contained, result, fill_value)
 
@@ -685,7 +760,7 @@ class BoutDataArrayAccessor:
             path = matplotlib.path.Path(boundaries[1], closed=True, readonly=True)
             is_contained = path.contains_points(points.reshape([-1, 2]))
             is_contained = is_contained.reshape(
-                coord_arrays[0].shape + (1,)*len(remaining_dims)
+                coord_arrays[0].shape + (1,) * len(remaining_dims)
             )
             result = np.where(is_contained, fill_value, result)
 
@@ -694,11 +769,13 @@ class BoutDataArrayAccessor:
 
         # Create DataArray to return, with as much metadata as possible retained
         ########################################################################
-        new_coords.update({
-            name: array
-            for name, array in stacked.coords.items()
-            if stacked_dim_name not in array.dims
-        })
+        new_coords.update(
+            {
+                name: array
+                for name, array in stacked.coords.items()
+                if stacked_dim_name not in array.dims
+            }
+        )
 
         result = xr.DataArray(
             result,

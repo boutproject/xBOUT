@@ -8,9 +8,10 @@ import xarray as xr
 def _create_norm(logscale, norm, vmin, vmax):
     if logscale:
         if norm is not None:
-            raise ValueError("norm and logscale cannot both be passed at the same "
-                             "time.")
-        if vmin*vmax > 0:
+            raise ValueError(
+                "norm and logscale cannot both be passed at the same " "time."
+            )
+        if vmin * vmax > 0:
             # vmin and vmax have the same sign, so can use standard log-scale
             norm = mpl.colors.LogNorm(vmin=vmin, vmax=vmax)
         else:
@@ -18,7 +19,7 @@ def _create_norm(logscale, norm, vmin, vmax):
             if not isinstance(logscale, bool):
                 linear_scale = logscale
             else:
-                linear_scale = 1.e-5
+                linear_scale = 1.0e-5
             linear_threshold = min(abs(vmin), abs(vmax)) * linear_scale
             norm = mpl.colors.SymLogNorm(linear_threshold, vmin=vmin, vmax=vmax)
     elif norm is None:
@@ -27,7 +28,7 @@ def _create_norm(logscale, norm, vmin, vmax):
     return norm
 
 
-def plot_separatrix(da, sep_pos, ax, radial_coord='x'):
+def plot_separatrix(da, sep_pos, ax, radial_coord="x"):
     """
     Plots the separatrix as a black dotted line.
 
@@ -42,9 +43,11 @@ def plot_separatrix(da, sep_pos, ax, radial_coord='x'):
     dims = da.dims
     if radial_coord not in dims:
 
-        warnings.warn("Cannot plot separatrix as domain does not cross "
-                      "separatrix, as it does not have a radial dimension",
-                      Warning)
+        warnings.warn(
+            "Cannot plot separatrix as domain does not cross "
+            "separatrix, as it does not have a radial dimension",
+            Warning,
+        )
         return
 
     else:
@@ -54,7 +57,7 @@ def plot_separatrix(da, sep_pos, ax, radial_coord='x'):
         sep_x_pos = x_coord_vals[sep_pos]
 
         # Plot a vertical line at that location on the plot
-        ax.axvline(x=sep_x_pos, linewidth=2, color="black", linestyle='--')
+        ax.axvline(x=sep_x_pos, linewidth=2, color="black", linestyle="--")
 
         return ax
 
@@ -66,14 +69,14 @@ def _decompose_regions(da):
 
 def _is_core_only(da):
 
-    nx = da.metadata['nx']
-    ix1 = da.metadata['ixseps1']
-    ix2 = da.metadata['ixseps2']
+    nx = da.metadata["nx"]
+    ix1 = da.metadata["ixseps1"]
+    ix2 = da.metadata["ixseps2"]
 
-    return (ix1 >= nx and ix2 >= nx)
+    return ix1 >= nx and ix2 >= nx
 
 
-def plot_separatrices(da, ax, *, x='R', y='Z'):
+def plot_separatrices(da, ax, *, x="R", y="Z"):
     """Plot separatrices"""
 
     if not isinstance(da, dict):
@@ -83,21 +86,23 @@ def plot_separatrices(da, ax, *, x='R', y='Z'):
 
     da0 = list(da_regions.values())[0]
 
-    xcoord = da0.metadata['bout_xdim']
-    ycoord = da0.metadata['bout_ydim']
+    xcoord = da0.metadata["bout_xdim"]
+    ycoord = da0.metadata["bout_ydim"]
 
     for da_region in da_regions.values():
         inner = list(da_region.regions.values())[0].connection_inner_x
         if inner in da_regions:
             da_inner = da_regions[inner]
-            x_sep = 0.5*(da_inner[x].isel(**{xcoord: -1})
-                         + da_region[x].isel(**{xcoord: 0}))
-            y_sep = 0.5*(da_inner[y].isel(**{xcoord: -1})
-                         + da_region[y].isel(**{xcoord: 0}))
-            ax.plot(x_sep, y_sep, 'k--')
+            x_sep = 0.5 * (
+                da_inner[x].isel(**{xcoord: -1}) + da_region[x].isel(**{xcoord: 0})
+            )
+            y_sep = 0.5 * (
+                da_inner[y].isel(**{xcoord: -1}) + da_region[y].isel(**{xcoord: 0})
+            )
+            ax.plot(x_sep, y_sep, "k--")
 
 
-def plot_targets(da, ax, *, x='R', y='Z', hatching=True):
+def plot_targets(da, ax, *, x="R", y="Z", hatching=True):
     """Plot divertor and limiter target plates"""
 
     if not isinstance(da, dict):
@@ -107,11 +112,11 @@ def plot_targets(da, ax, *, x='R', y='Z', hatching=True):
 
     da0 = list(da_regions.values())[0]
 
-    xcoord = da0.metadata['bout_xdim']
-    ycoord = da0.metadata['bout_ydim']
+    xcoord = da0.metadata["bout_xdim"]
+    ycoord = da0.metadata["bout_ydim"]
 
-    if da0.metadata['keep_yboundaries']:
-        y_boundary_guards = da0.metadata['MYG']
+    if da0.metadata["keep_yboundaries"]:
+        y_boundary_guards = da0.metadata["MYG"]
     else:
         y_boundary_guards = 0
 
@@ -120,14 +125,14 @@ def plot_targets(da, ax, *, x='R', y='Z', hatching=True):
             # lower target exists
             x_target = da_region.coords[x].isel(**{ycoord: y_boundary_guards})
             y_target = da_region.coords[y].isel(**{ycoord: y_boundary_guards})
-            [line] = ax.plot(x_target, y_target, 'k-', linewidth=2)
+            [line] = ax.plot(x_target, y_target, "k-", linewidth=2)
             if hatching:
                 _add_hatching(line, ax)
         if list(da_region.regions.values())[0].connection_upper_y is None:
             # upper target exists
             x_target = da_region.coords[x].isel(**{ycoord: -y_boundary_guards - 1})
             y_target = da_region.coords[y].isel(**{ycoord: -y_boundary_guards - 1})
-            [line] = ax.plot(x_target, y_target, 'k-', linewidth=2)
+            [line] = ax.plot(x_target, y_target, "k-", linewidth=2)
             if hatching:
                 _add_hatching(line, ax, reversed=True)
 
@@ -152,21 +157,22 @@ def _add_hatching(line, ax, reversed=False):
 
     vx, vy = x.max() - x.min(), y.max() - y.min()
     limiter_line_length = np.linalg.norm((vx, vy))
-    hatch_line_length = (limiter_line_length / num_hatchings)
+    hatch_line_length = limiter_line_length / num_hatchings
 
     # For each hatching
     for ind in hatch_inds[:-1]:
         # Compute local perpendicular vector
-        dx, dy = _get_perp_vec((x[ind], y[ind]), (x[ind+1], y[ind+1]),
-                               magnitude=hatch_line_length)
+        dx, dy = _get_perp_vec(
+            (x[ind], y[ind]), (x[ind + 1], y[ind + 1]), magnitude=hatch_line_length
+        )
 
         # Rotate by 60 degrees
-        t = -np.pi/3
+        t = -np.pi / 3
         new_dx = dx * np.cos(t) - dy * np.sin(t)
         new_dy = dx * np.sin(t) + dy * np.cos(t)
 
         # Draw
-        ax.plot([x[ind], x[ind]+new_dx], [y[ind], y[ind]+new_dy], 'k-')
+        ax.plot([x[ind], x[ind] + new_dx], [y[ind], y[ind] + new_dy], "k-")
 
 
 def _get_perp_vec(u1, u2, magnitude=0.04):
@@ -174,7 +180,7 @@ def _get_perp_vec(u1, u2, magnitude=0.04):
 
     x1, y1 = u1
     x2, y2 = u2
-    vx, vy = x2-x1, y2-y1
+    vx, vy = x2 - x1, y2 - y1
     v = np.linalg.norm((vx, vy))
-    wx, wy = -vy/v * magnitude, vx/v * magnitude
+    wx, wy = -vy / v * magnitude, vx / v * magnitude
     return wx, wy

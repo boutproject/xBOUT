@@ -4,8 +4,13 @@ import numpy as np
 
 import xarray as xr
 
-from .utils import (_create_norm, _decompose_regions, _is_core_only, plot_separatrices,
-                    plot_targets)
+from .utils import (
+    _create_norm,
+    _decompose_regions,
+    _is_core_only,
+    plot_separatrices,
+    plot_targets,
+)
 
 
 def regions(da, ax=None, **kwargs):
@@ -15,8 +20,8 @@ def regions(da, ax=None, **kwargs):
     Uses matplotlib.pcolormesh
     """
 
-    x = kwargs.pop('x', 'R')
-    y = kwargs.pop('y', 'Z')
+    x = kwargs.pop("x", "R")
+    y = kwargs.pop("y", "Z")
 
     if len(da.dims) != 2:
         raise ValueError("da must be 2D (x,y)")
@@ -26,19 +31,44 @@ def regions(da, ax=None, **kwargs):
 
     da_regions = _decompose_regions(da)
 
-    colored_regions = [xr.full_like(da_region, fill_value=num / len(regions))
-                       for num, da_region in enumerate(da_regions.values())]
+    colored_regions = [
+        xr.full_like(da_region, fill_value=num / len(regions))
+        for num, da_region in enumerate(da_regions.values())
+    ]
 
-    return [region.plot.pcolormesh(x=x, y=y, vmin=0, vmax=1, cmap='tab20',
-                                   infer_intervals=False, add_colorbar=False, ax=ax,
-                                   **kwargs)
-            for region in colored_regions]
+    return [
+        region.plot.pcolormesh(
+            x=x,
+            y=y,
+            vmin=0,
+            vmax=1,
+            cmap="tab20",
+            infer_intervals=False,
+            add_colorbar=False,
+            ax=ax,
+            **kwargs
+        )
+        for region in colored_regions
+    ]
 
 
-def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
-                   add_limiter_hatching=True, gridlines=None, cmap=None,
-                   norm=None, logscale=None, vmin=None, vmax=None, aspect=None,
-                   **kwargs):
+def plot2d_wrapper(
+    da,
+    method,
+    *,
+    ax=None,
+    separatrix=True,
+    targets=True,
+    add_limiter_hatching=True,
+    gridlines=None,
+    cmap=None,
+    norm=None,
+    logscale=None,
+    vmin=None,
+    vmax=None,
+    aspect=None,
+    **kwargs
+):
     """
     Make a 2D plot using an xarray method, taking into account branch cuts (X-points).
 
@@ -95,8 +125,8 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
     """
 
     # TODO generalise this
-    x = kwargs.pop('x', 'R')
-    y = kwargs.pop('y', 'Z')
+    x = kwargs.pop("x", "R")
+    y = kwargs.pop("y", "Z")
 
     if len(da.dims) != 2:
         raise ValueError("da must be 2D (x,y)")
@@ -107,7 +137,7 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         fig = ax.get_figure()
 
     if aspect is None:
-        aspect = 'equal'
+        aspect = "equal"
     ax.set_aspect(aspect)
 
     if vmin is None:
@@ -117,25 +147,25 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
 
     # set up 'levels' if needed
     if method is xr.plot.contourf or method is xr.plot.contour:
-        levels = kwargs.get('levels', 7)
+        levels = kwargs.get("levels", 7)
         if isinstance(levels, np.int):
             levels = np.linspace(vmin, vmax, levels, endpoint=True)
             # put levels back into kwargs
-            kwargs['levels'] = levels
+            kwargs["levels"] = levels
         else:
             levels = np.array(list(levels))
-            kwargs['levels'] = levels
+            kwargs["levels"] = levels
             vmin = np.min(levels)
             vmax = np.max(levels)
 
-        levels = kwargs.get('levels', 7)
+        levels = kwargs.get("levels", 7)
         if isinstance(levels, np.int):
             levels = np.linspace(vmin, vmax, levels, endpoint=True)
             # put levels back into kwargs
-            kwargs['levels'] = levels
+            kwargs["levels"] = levels
         else:
             levels = np.array(list(levels))
-            kwargs['levels'] = levels
+            kwargs["levels"] = levels
             vmin = np.min(levels)
             vmax = np.max(levels)
 
@@ -150,8 +180,10 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         # average the levels so that colors in the colorbar represent the intervals
         # between the levels, as contourf colors filled regions between the given levels.
         cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
-                'discrete cmap', sm.to_rgba(0.5*(levels[:-1] + levels[1:])),
-                len(levels) - 1)
+            "discrete cmap",
+            sm.to_rgba(0.5 * (levels[:-1] + levels[1:])),
+            len(levels) - 1,
+        )
         # re-make sm with new cmap
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
@@ -161,12 +193,13 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         norm = matplotlib.colors.Normalize(vmin=levels[0], vmax=levels[-1])
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         cmap = matplotlib.colors.ListedColormap(
-                sm.to_rgba(levels), name='discrete cmap')
+            sm.to_rgba(levels), name="discrete cmap"
+        )
     else:
         # pass vmin and vmax through kwargs as they are not used for contourf or contour
         # plots
-        kwargs['vmin'] = vmin
-        kwargs['vmax'] = vmax
+        kwargs["vmin"] = vmin
+        kwargs["vmax"] = vmax
 
         # create colorbar
         norm = _create_norm(logscale, norm, vmin, vmax)
@@ -176,16 +209,26 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         fig.colorbar(sm, ax=ax)
 
     if method is xr.plot.pcolormesh:
-        if 'infer_intervals' not in kwargs:
-            kwargs['infer_intervals'] = False
+        if "infer_intervals" not in kwargs:
+            kwargs["infer_intervals"] = False
 
     da_regions = _decompose_regions(da)
 
     # Plot all regions on same axis
     add_labels = [True] + [False] * (len(da_regions) - 1)
-    artists = [method(region, x=x, y=y, ax=ax, add_colorbar=False, add_labels=add_label,
-               cmap=cmap, **kwargs)
-               for region, add_label in zip(da_regions.values(), add_labels)]
+    artists = [
+        method(
+            region,
+            x=x,
+            y=y,
+            ax=ax,
+            add_colorbar=False,
+            add_labels=add_label,
+            cmap=cmap,
+            **kwargs
+        )
+        for region, add_label in zip(da_regions.values(), add_labels)
+    ]
 
     if method is xr.plot.contour:
         # using extend='neither' guarantees that the ends of the colorbar will be
@@ -195,13 +238,13 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
         # be nicer to always draw triangular ends as if there are always values below
         # vmin and above vmax, but there does not seem to be an option available to force
         # this.
-        extend = kwargs.get('extend', 'neither')
+        extend = kwargs.get("extend", "neither")
         fig.colorbar(artists[0], ax=ax, extend=extend)
 
     if gridlines is not None:
         # convert gridlines to dict
         if not isinstance(gridlines, dict):
-            gridlines = {'x': gridlines, 'y': gridlines}
+            gridlines = {"x": gridlines, "y": gridlines}
 
         for key, value in gridlines.items():
             if value is True:
@@ -210,44 +253,49 @@ def plot2d_wrapper(da, method, *, ax=None, separatrix=True, targets=True,
                 gridlines[key] = slice(0, None, value)
             elif value is not None:
                 if not isinstance(value, slice):
-                    raise ValueError('Argument passed to gridlines must be bool, int or '
-                                     'slice. Got a ' + type(value) + ', ' + str(value))
+                    raise ValueError(
+                        "Argument passed to gridlines must be bool, int or "
+                        "slice. Got a " + type(value) + ", " + str(value)
+                    )
 
         x_regions = [da_region[x] for da_region in da_regions.values()]
         y_regions = [da_region[y] for da_region in da_regions.values()]
 
         for x, y in zip(x_regions, y_regions):
             if (
-                (
-                    not da.metadata['bout_xdim'] in x.dims
-                    and not da.metadata['bout_ydim'] in x.dims
-                )
-                or (
-                    not da.metadata['bout_xdim'] in y.dims
-                    and not da.metadata['bout_ydim'] in y.dims
-                )
+                not da.metadata["bout_xdim"] in x.dims
+                and not da.metadata["bout_ydim"] in x.dims
+            ) or (
+                not da.metadata["bout_xdim"] in y.dims
+                and not da.metadata["bout_ydim"] in y.dims
             ):
                 # Small regions around X-point do not have segments in x- or y-directions,
                 # so skip
                 # Currently this region does not exist, but there is a small white gap at
                 # the X-point, so we might add it back in future
                 continue
-            if gridlines.get('x') is not None:
+            if gridlines.get("x") is not None:
                 # transpose in case Dataset or DataArray has been transposed away from the usual
                 # form
-                dim_order = (da.metadata['bout_xdim'], da.metadata['bout_ydim'])
-                yarg = {da.metadata['bout_ydim']: gridlines['x']}
-                plt.plot(x.isel(**yarg).transpose(*dim_order, transpose_coords=True),
-                         y.isel(**yarg).transpose(*dim_order, transpose_coords=True),
-                         color='k', lw=0.1)
-            if gridlines.get('y') is not None:
-                xarg = {da.metadata['bout_xdim']: gridlines['y']}
+                dim_order = (da.metadata["bout_xdim"], da.metadata["bout_ydim"])
+                yarg = {da.metadata["bout_ydim"]: gridlines["x"]}
+                plt.plot(
+                    x.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                    y.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                    color="k",
+                    lw=0.1,
+                )
+            if gridlines.get("y") is not None:
+                xarg = {da.metadata["bout_xdim"]: gridlines["y"]}
                 # Need to plot transposed arrays to make gridlines that go in the
                 # y-direction
-                dim_order = (da.metadata['bout_ydim'], da.metadata['bout_xdim'])
-                plt.plot(x.isel(**xarg).transpose(*dim_order, transpose_coords=True),
-                         y.isel(**yarg).transpose(*dim_order, transpose_coords=True),
-                         color='k', lw=0.1)
+                dim_order = (da.metadata["bout_ydim"], da.metadata["bout_xdim"])
+                plt.plot(
+                    x.isel(**xarg).transpose(*dim_order, transpose_coords=True),
+                    y.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                    color="k",
+                    lw=0.1,
+                )
 
     ax.set_title(da.name)
 

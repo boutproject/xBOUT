@@ -8,10 +8,25 @@ from .utils import _decompose_regions, _is_core_only, plot_separatrices, plot_ta
 from matplotlib.animation import PillowWriter
 
 
-def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True,
-                     targets=True, add_limiter_hatching=True, cmap=None, vmin=None,
-                     vmax=None, animate=True, save_as=None, fps=10, controls=True,
-                     aspect='equal', **kwargs):
+def animate_poloidal(
+    da,
+    *,
+    ax=None,
+    cax=None,
+    animate_over="t",
+    separatrix=True,
+    targets=True,
+    add_limiter_hatching=True,
+    cmap=None,
+    vmin=None,
+    vmax=None,
+    animate=True,
+    save_as=None,
+    fps=10,
+    controls=True,
+    aspect="equal",
+    **kwargs
+):
     """
     Make a 2D plot in R-Z coordinates using animatplotlib's Pcolormesh, taking into
     account branch cuts (X-points).
@@ -61,8 +76,8 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
     """
 
     # TODO generalise this
-    x = kwargs.pop('x', 'R')
-    y = kwargs.pop('y', 'Z')
+    x = kwargs.pop("x", "R")
+    y = kwargs.pop("y", "Z")
 
     # Check plot is the right orientation
     spatial_dims = list(da.dims)
@@ -70,8 +85,9 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
     try:
         spatial_dims.remove(animate_over)
     except ValueError:
-        raise ValueError("Dimension animate_over={} is not present in the data"
-                         .format(animate_over))
+        raise ValueError(
+            "Dimension animate_over={} is not present in the data".format(animate_over)
+        )
 
     if len(da.dims) != 3:
         raise ValueError("da must be 2+1D (t,x,y)")
@@ -87,12 +103,15 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
         vmax = da.max().values
 
     # pass vmin and vmax through kwargs as they are not used for contour plots
-    kwargs['vmin'] = vmin
-    kwargs['vmax'] = vmax
+    kwargs["vmin"] = vmin
+    kwargs["vmax"] = vmax
 
     # create colorbar
-    norm = (kwargs['norm'] if 'norm' in kwargs
-            else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax))
+    norm = (
+        kwargs["norm"]
+        if "norm" in kwargs
+        else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    )
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
     cmap = sm.get_cmap()
@@ -108,17 +127,24 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
         # Load values eagerly otherwise for some reason the plotting takes
         # 100's of times longer - for some reason animatplot does not deal
         # well with dask arrays!
-        blocks.append(amp.blocks.Pcolormesh(da_region.coords[x].values,
-                      da_region.coords[y].values, da_region.values, ax=ax, cmap=cmap,
-                      **kwargs))
+        blocks.append(
+            amp.blocks.Pcolormesh(
+                da_region.coords[x].values,
+                da_region.coords[y].values,
+                da_region.values,
+                ax=ax,
+                cmap=cmap,
+                **kwargs
+            )
+        )
 
     ax.set_title(da.name)
     ax.set_xlabel(x)
     ax.set_ylabel(y)
 
     if _is_core_only(da):
-         separatrix = False
-         targets = False
+        separatrix = False
+        targets = False
 
     if separatrix:
         plot_separatrices(da_regions, ax, x=x, y=y)
@@ -131,19 +157,32 @@ def animate_poloidal(da, *, ax=None, cax=None, animate_over='t', separatrix=True
         anim = amp.Animation(blocks, timeline)
 
         if controls:
-            anim.controls(timeline_slider_args={'text': animate_over})
+            anim.controls(timeline_slider_args={"text": animate_over})
 
         if save_as is not None:
             if save_as is True:
                 save_as = "{}_over_{}".format(da.name, animate_over)
-            anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
+            anim.save(save_as + ".gif", writer=PillowWriter(fps=fps))
 
     return blocks
 
 
-def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
-                       vmin=None, vmax=None, vsymmetric=False, fps=10, save_as=None,
-                       ax=None, cax=None, controls=True, **kwargs):
+def animate_pcolormesh(
+    data,
+    animate_over="t",
+    x=None,
+    y=None,
+    animate=True,
+    vmin=None,
+    vmax=None,
+    vsymmetric=False,
+    fps=10,
+    save_as=None,
+    ax=None,
+    cax=None,
+    controls=True,
+    **kwargs
+):
     """
     Plots a color plot which is animated with time over the specified
     coordinate.
@@ -197,13 +236,14 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
     spatial_dims = list(data.dims)
 
     if len(data.dims) != 3:
-        raise ValueError('Data passed to animate_imshow must be 3-dimensional')
+        raise ValueError("Data passed to animate_imshow must be 3-dimensional")
 
     try:
         spatial_dims.remove(animate_over)
     except ValueError:
-        raise ValueError("Dimension animate_over={} is not present in the data"
-                         .format(animate_over))
+        raise ValueError(
+            "Dimension animate_over={} is not present in the data".format(animate_over)
+        )
 
     if x is None and y is None:
         x, y = spatial_dims
@@ -211,13 +251,13 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
         try:
             spatial_dims.remove(y)
         except ValueError:
-            raise ValueError("Dimension {} is not present in the data" .format(y))
+            raise ValueError("Dimension {} is not present in the data".format(y))
         x = spatial_dims[0]
     elif y is None:
         try:
             spatial_dims.remove(x)
         except ValueError:
-            raise ValueError("Dimension {} is not present in the data" .format(x))
+            raise ValueError("Dimension {} is not present in the data".format(x))
         y = spatial_dims[0]
 
     data = data.transpose(animate_over, y, x, transpose_coords=True)
@@ -243,9 +283,15 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
     # explicitly x- and y-value arrays, although in principle these should not
     # be necessary.
     ny, nx = image_data.shape[1:]
-    pcolormesh_block = amp.blocks.Pcolormesh(np.arange(float(nx)), np.arange(float(ny)),
-                                             image_data, vmin=vmin, vmax=vmax, ax=ax,
-                                             **kwargs)
+    pcolormesh_block = amp.blocks.Pcolormesh(
+        np.arange(float(nx)),
+        np.arange(float(ny)),
+        image_data,
+        vmin=vmin,
+        vmax=vmax,
+        ax=ax,
+        **kwargs
+    )
 
     if animate:
         timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
@@ -261,19 +307,29 @@ def animate_pcolormesh(data, animate_over='t', x=None, y=None, animate=True,
 
     if animate:
         if controls:
-            anim.controls(timeline_slider_args={'text': animate_over})
+            anim.controls(timeline_slider_args={"text": animate_over})
 
         if save_as is not None:
             if save_as is True:
                 save_as = "{}_over_{}".format(variable, animate_over)
-            anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
+            anim.save(save_as + ".gif", writer=PillowWriter(fps=fps))
 
     return pcolormesh_block
 
 
-def animate_line(data, animate_over='t', animate=True,
-                 vmin=None, vmax=None, fps=10, save_as=None, sep_pos=None, ax=None,
-                 controls=True, **kwargs):
+def animate_line(
+    data,
+    animate_over="t",
+    animate=True,
+    vmin=None,
+    vmax=None,
+    fps=10,
+    save_as=None,
+    sep_pos=None,
+    ax=None,
+    controls=True,
+    **kwargs
+):
     """
     Plots a line plot which is animated with time.
 
@@ -314,7 +370,7 @@ def animate_line(data, animate_over='t', animate=True,
 
     # Check plot is the right orientation
     t_read, x_read = data.dims
-    if (t_read is animate_over):
+    if t_read is animate_over:
         pass
     else:
         data = data.transpose(animate_over, t_read, transpose_coords=True)
@@ -349,15 +405,15 @@ def animate_line(data, animate_over='t', animate=True,
 
     # Plot separatrix
     if sep_pos:
-        ax.plot_vline(sep_pos, '--')
+        ax.plot_vline(sep_pos, "--")
 
     if animate:
         if controls:
-            anim.controls(timeline_slider_args={'text': animate_over})
+            anim.controls(timeline_slider_args={"text": animate_over})
 
         if save_as is not None:
             if save_as is True:
                 save_as = "{}_over_{}".format(variable, animate_over)
-            anim.save(save_as + '.gif', writer=PillowWriter(fps=fps))
+            anim.save(save_as + ".gif", writer=PillowWriter(fps=fps))
 
     return line_block
