@@ -272,7 +272,7 @@ class BoutDatasetAccessor:
         -------
         Dataset
             Dataset interpolated onto a new, structured grid
-         """
+        """
 
         if variables is ...:
             variables = [v for v in self.data]
@@ -418,7 +418,7 @@ class BoutDatasetAccessor:
         --------
         If `separate_vars=True`, then multiple files will be created. These can
         all be opened and merged in one go using a call of the form:
-        
+
         ds = xr.open_mfdataset('boutdata_*.nc', combine='nested', concat_dim=None)
         """
 
@@ -595,7 +595,14 @@ class BoutDatasetAccessor:
         # Is this even possible without saving the guard cells?
         # Can they be recreated?
         restart_datasets, paths = _split_into_restarts(
-            self.data, variables, savepath, nxpe, nype, tind, prefix, overwrite,
+            self.data,
+            variables,
+            savepath,
+            nxpe,
+            nype,
+            tind,
+            prefix,
+            overwrite,
         )
 
         with ProgressBar():

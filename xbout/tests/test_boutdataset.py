@@ -873,7 +873,10 @@ class TestSave:
 
         # Load it as a boutdataset
         original = open_boutdataset(
-            datapath=path, inputfilepath=None, geometry=geometry, gridfilepath=gridpath,
+            datapath=path,
+            inputfilepath=None,
+            geometry=geometry,
+            gridfilepath=gridpath,
         )
 
         # Save it to a netCDF file
@@ -964,7 +967,10 @@ class TestSave:
 
         # Load it as a boutdataset
         original = open_boutdataset(
-            datapath=path, inputfilepath=None, geometry=geometry, gridfilepath=gridpath,
+            datapath=path,
+            inputfilepath=None,
+            geometry=geometry,
+            gridfilepath=gridpath,
         )
 
         # Save it to a netCDF file
@@ -998,7 +1004,10 @@ class TestSave:
 
         # Load it as a boutdataset
         original = open_boutdataset(
-            datapath=path, inputfilepath=None, geometry=geometry, gridfilepath=gridpath,
+            datapath=path,
+            inputfilepath=None,
+            geometry=geometry,
+            gridfilepath=gridpath,
         )
         print(original)
 

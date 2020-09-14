@@ -856,7 +856,12 @@ class TestOpen:
 
         # check creation without writing to disk gives identical result
         fake_ds_list, fake_grid_ds = bout_xyt_example_files(
-            None, nxpe=3, nype=3, nt=1, syn_data_type="stepped", grid="grid",
+            None,
+            nxpe=3,
+            nype=3,
+            nt=1,
+            syn_data_type="stepped",
+            grid="grid",
         )
         fake = open_boutdataset(
             datapath=fake_ds_list, geometry="toroidal", gridfilepath=fake_grid_ds
