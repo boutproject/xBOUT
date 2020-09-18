@@ -101,6 +101,69 @@ def _update_metadata_increased_resolution(da, n):
     return da
 
 
+def _1d_coord_from_spacing(spacing, dim, ds=None, *, origin_at=None):
+    """
+    Create a 1d coordinate varying along the dimension 'dim' from the grid spacing
+    'spacing', with the grid points in the centres of the cells with width given by
+    'spacing'.
+
+    Parameters
+    ----------
+    spacing : DataArray or scalar
+        The grid spacing. If a DataArray, must include dimension 'dim' and must be
+        constant in any other dimensions.
+    dim : str
+        The dimension to create a coordinate for
+    ds : DataArray or Dataset, optional
+        If spacing is a scalar, a Dataset or DataArray containing dimension 'dim' must
+        be passed to determine the size of the dimension
+    origin_at : string, {["lower"], "centre", "upper"}
+        Where to put the origin of the coordinate. Can be at lower edge, centre, or
+        upper edge of the grid
+    """
+    if origin_at is None:
+        origin_at = "lower"
+
+    if not isinstance(spacing, xr.DataArray):
+        # spacing is a scalar
+        if ds is None:
+            raise ValueError("ds must be passed when spacing is a scalar")
+        n = ds.sizes[dim]
+        coord_values = (np.arange(n, dtype=float) + 0.5) * spacing
+        total_length = n * spacing
+    else:
+        other_dims = set(spacing.dims) - set([dim])
+        if not np.all(spacing.min(dim=other_dims) == spacing.max(dim=other_dims)):
+            raise ValueError(
+                f"Spacing is not constant in dimensions other than {dim}. Cannot "
+                f"create coordinate"
+            )
+
+        # make spacing 1d
+        spacing = spacing.isel({d: 0 for d in other_dims})
+
+        # xarray stores coordinates as numpy (not dask) arrays anyway, so use .values
+        # here to evaluate the task-graph (if there is one)
+        spacing = spacing.values
+
+        coord_values = spacing.cumsum()
+        total_length = coord_values[-1]
+
+        # adjust to cell mid-point positions
+        coord_values = coord_values - 0.5 * spacing
+
+    if origin_at == "lower":
+        pass
+    elif origin_at == "centre":
+        coord_values = coord_values - 0.5 * total_length
+    elif origin_at == "upper":
+        coord_values = coord_values - total_length
+    else:
+        raise ValueError(f"Unrecognised argument origin_at={origin_at}")
+
+    return xr.Variable(dim, coord_values)
+
+
 def _check_new_nxpe(ds, nxpe):
     # Check nxpe is valid
 
