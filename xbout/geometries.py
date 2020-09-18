@@ -5,7 +5,7 @@ import xarray as xr
 import numpy as np
 
 from .region import Region, _create_regions_toroidal
-from .utils import _add_attrs_to_var, _set_attrs_on_all_vars
+from .utils import _add_attrs_to_var, _set_attrs_on_all_vars, _1d_coord_from_spacing
 
 REGISTERED_GEOMETRIES = {}
 
@@ -117,31 +117,31 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
 
     if ycoord not in updated_ds.coords:
         ny = updated_ds.dims[ycoord]
-        # dy should always be constant in x, so it is safe to slice to x=0.
-        # [The y-coordinate has to be a 1d coordinate that labels x-z slices of the grid
-        # (similarly x-coordinate is 1d coordinate that labels y-z slices and
-        # z-coordinate is a 1d coordinate that labels x-y slices). A coordinate might
-        # have different values in disconnected regions, but there are no branch-cuts
-        # allowed in the x-direction in BOUT++ (at least for the momement), so the
-        # y-coordinate has to be 1d and single-valued. Therefore similarly dy has to be
-        # 1d and single-valued.] Need drop=True so that the result does not have an
-        # x-coordinate value which prevents it being added as a coordinate.
-        dy = updated_ds["dy"].isel({xcoord: 0}, drop=True)
+        # dy should always be constant in x, so it is safe to convert to a 1d
+        # coordinate.  [The y-coordinate has to be a 1d coordinate that labels x-z
+        # slices of the grid (similarly x-coordinate is 1d coordinate that labels y-z
+        # slices and z-coordinate is a 1d coordinate that labels x-y slices). A
+        # coordinate might have different values in disconnected regions, but there are
+        # no branch-cuts allowed in the x-direction in BOUT++ (at least for the
+        # momement), so the y-coordinate has to be 1d and single-valued. Therefore
+        # similarly dy has to be 1d and single-valued.]
 
         # calculate ycoord at the centre of each cell
-        y = dy.cumsum(keep_attrs=True) - dy / 2.0
+        y = _1d_coord_from_spacing(updated_ds["dy"], ycoord)
 
         # can't use commented out version, uncommented one works around xarray bug
-        # removing attrs
+        # removing attrs as _1d_coord_from_spacing returns an xr.Variable
         # https://github.com/pydata/xarray/issues/4415
         # https://github.com/pydata/xarray/issues/4393
         # updated_ds = updated_ds.assign_coords(**{ycoord: y.values})
-        updated_ds[ycoord] = (ycoord, y.values)
+        updated_ds[ycoord] = y
 
         _add_attrs_to_var(updated_ds, ycoord)
 
     # If full data (not just grid file) then toroidal dim will be present
     if zcoord in updated_ds.dims and zcoord not in updated_ds.coords:
+        # Generates a coordinate whose value is 0 on the first grid point, not dz/2, to
+        # match how BOUT++ generates fields from input file expressions.
         nz = updated_ds.dims[zcoord]
         z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
         z1 = z0 + nz * updated_ds.metadata["dz"]
