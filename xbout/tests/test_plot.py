@@ -2,6 +2,7 @@ import pytest
 
 from pathlib import Path
 from matplotlib import pyplot as plt
+import numpy as np
 
 from xbout import open_boutdataset
 from xbout.tests.test_load import bout_xyt_example_files
@@ -53,6 +54,11 @@ class TestPlot:
             keep_xboundaries=keep_xboundaries,
             keep_yboundaries=keep_yboundaries,
         )
+
+        ds["R"] = ds["R"].copy(deep=True)
+        ds["R"].data[:, :] = np.linspace(0.0, 1.0, ds.sizes["x"])[:, np.newaxis]
+        ds["Z"] = ds["Z"].copy(deep=True)
+        ds["Z"].data[:, :] = np.linspace(0.0, 1.0, ds.sizes["theta"])[np.newaxis, :]
 
         n = ds["n"].isel(t=-1, zeta=0)
 
