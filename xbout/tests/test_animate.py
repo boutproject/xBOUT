@@ -46,11 +46,15 @@ class TestAnimate:
         assert animation.ax.get_xlabel() == "y"
         assert animation.ax.get_ylabel() == "z"
 
+        plt.close()
+
         animation = ds["n"].isel(y=2).bout.animate2D(save_as="%s/testxz" % save_dir)
 
         assert isinstance(animation, Pcolormesh)
         assert animation.ax.get_xlabel() == "x"
         assert animation.ax.get_ylabel() == "z"
+
+        plt.close()
 
         animation = ds["n"].isel(z=3).bout.animate2D(save_as="%s/testxy" % save_dir)
 
@@ -58,12 +62,16 @@ class TestAnimate:
         assert animation.ax.get_xlabel() == "x"
         assert animation.ax.get_ylabel() == "y"
 
+        plt.close()
+
     def test_animate1D(self, create_test_file):
 
         save_dir, ds = create_test_file
         animation = ds["n"].isel(y=2, z=0).bout.animate1D(save_as="%s/test" % save_dir)
 
         assert isinstance(animation, Line)
+
+        plt.close()
 
     def test_animate_list(self, create_test_file):
 
@@ -77,6 +85,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
 
+        plt.close()
+
     def test_animate_list_1d_default(self, create_test_file):
 
         save_dir, ds = create_test_file
@@ -88,6 +98,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[0], Line)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
+
+        plt.close()
 
     def test_animate_list_1d_multiline(self, create_test_file):
 
@@ -114,6 +126,8 @@ class TestAnimate:
             == 3
         )
 
+        plt.close()
+
     def test_animate_list_animate_over(self, create_test_file):
 
         save_dir, ds = create_test_file
@@ -125,6 +139,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
+
+        plt.close()
 
     def test_animate_list_save_as(self, create_test_file):
 
@@ -139,6 +155,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
 
+        plt.close()
+
     def test_animate_list_fps(self, create_test_file):
 
         save_dir, ds = create_test_file
@@ -152,6 +170,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[2], Line)
         assert animation.timeline.fps == 42
 
+        plt.close()
+
     def test_animate_list_nrows(self, create_test_file):
 
         save_dir, ds = create_test_file
@@ -164,6 +184,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
 
+        plt.close()
+
     def test_animate_list_ncols(self, create_test_file):
 
         save_dir, ds = create_test_file
@@ -175,6 +197,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
+
+        plt.close()
 
     def test_animate_list_not_enough_nrowsncols(self, create_test_file):
 
@@ -226,6 +250,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
 
+        plt.close()
+
     def test_animate_list_subplots_adjust(self, create_test_file):
 
         save_dir, ds = create_test_file
@@ -239,6 +265,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
 
+        plt.close()
+
     def test_animate_list_vmin(self, create_test_file):
 
         save_dir, ds = create_test_file
@@ -250,6 +278,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
+
+        plt.close()
 
     def test_animate_list_vmin_list(self, create_test_file):
 
@@ -263,6 +293,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
 
+        plt.close()
+
     def test_animate_list_vmax(self, create_test_file):
 
         save_dir, ds = create_test_file
@@ -274,6 +306,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
+
+        plt.close()
 
     def test_animate_list_vmax_list(self, create_test_file):
 
@@ -287,6 +321,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
 
+        plt.close()
+
     def test_animate_list_logscale(self, create_test_file):
 
         save_dir, ds = create_test_file
@@ -298,6 +334,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
+
+        plt.close()
 
     def test_animate_list_logscale_float(self, create_test_file):
 
@@ -311,6 +349,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
 
+        plt.close()
+
     def test_animate_list_logscale_list(self, create_test_file):
 
         save_dir, ds = create_test_file
@@ -323,6 +363,8 @@ class TestAnimate:
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
+
+        plt.close()
 
     def test_animate_list_titles_list(self, create_test_file):
 
@@ -338,3 +380,5 @@ class TestAnimate:
         assert animation.blocks[1].ax.title.get_text() == "T"
         assert isinstance(animation.blocks[2], Line)
         assert animation.blocks[2].ax.title.get_text() == "b"
+
+        plt.close()
