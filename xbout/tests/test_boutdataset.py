@@ -143,8 +143,8 @@ class TestBoutDatasetMethods:
             assert ds[v].metadata["keep_yboundaries"] == 0
 
         # expect theta coordinate to be different, so ignore
-        ds = ds.drop("theta")
-        ds_no_yboundaries = ds_no_yboundaries.drop("theta")
+        ds = ds.drop_vars("theta")
+        ds_no_yboundaries = ds_no_yboundaries.drop_vars("theta")
 
         # expect MYG can be different, so ignore
         del ds.metadata["MYG"]

@@ -677,7 +677,7 @@ class TestStripMetadata:
 
         ds, metadata = _separate_metadata(original)
 
-        assert original.drop(
+        assert original.drop_vars(
             METADATA_VARS + _BOUT_PER_PROC_VARIABLES + _BOUT_TIME_DEPENDENT_META_VARS,
             errors="ignore",
         ).equals(ds)
@@ -695,7 +695,7 @@ class TestOpen:
         expected = expected.set_coords("t_array").rename(t_array="t")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
-            expected.drop(
+            expected.drop_vars(
                 METADATA_VARS
                 + _BOUT_PER_PROC_VARIABLES
                 + _BOUT_TIME_DEPENDENT_META_VARS,
@@ -717,7 +717,7 @@ class TestOpen:
         expected = expected.set_coords("t_array").rename(t_array="t")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
-            expected.drop(
+            expected.drop_vars(
                 METADATA_VARS
                 + _BOUT_PER_PROC_VARIABLES
                 + _BOUT_TIME_DEPENDENT_META_VARS,
@@ -750,7 +750,9 @@ class TestOpen:
         expected = expected.set_coords("t_array").rename(t_array="t")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
-            expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"),
+            expected.drop_vars(
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
+            ),
         )
 
         # check creation without writing to disk gives identical result
@@ -778,7 +780,9 @@ class TestOpen:
         expected = expected.set_coords("t_array").rename(t_array="t")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
-            expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"),
+            expected.drop_vars(
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
+            ),
         )
 
         # check creation without writing to disk gives identical result
@@ -823,7 +827,9 @@ class TestOpen:
         expected = expected.set_coords("t_array").rename(t_array="t")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
-            expected.drop(METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"),
+            expected.drop_vars(
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
+            ),
         )
 
         # check creation without writing to disk gives identical result

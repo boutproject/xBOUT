@@ -705,9 +705,9 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
             "x",
             "z",
         ):
-            trimmed_ds = trimmed_ds.drop(name)
+            trimmed_ds = trimmed_ds.drop_vars(name)
 
-    return trimmed_ds.drop(_BOUT_PER_PROC_VARIABLES, errors="ignore")
+    return trimmed_ds.drop_vars(_BOUT_PER_PROC_VARIABLES, errors="ignore")
 
 
 def _infer_contains_boundaries(ds, nxpe, nype):

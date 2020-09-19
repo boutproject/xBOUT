@@ -431,7 +431,7 @@ class TestBoutDataArrayMethods:
             ds["zShift_" + stag_location] = zShift
             ds["zShift_" + stag_location].attrs["cell_location"] = stag_location
             ds = ds.set_coords("zShift_" + stag_location)
-            ds = ds.drop("zShift")
+            ds = ds.drop_vars("zShift")
 
             with pytest.raises(ValueError):
                 # Check shifting non-staggered field fails without zShift
@@ -482,7 +482,7 @@ class TestBoutDataArrayMethods:
             ds["zShift_" + stag_location] = zShift
             ds["zShift_" + stag_location].attrs["cell_location"] = stag_location
             ds = ds.set_coords("zShift_" + stag_location)
-            ds = ds.drop("zShift")
+            ds = ds.drop_vars("zShift")
 
             with pytest.raises(ValueError):
                 # Check shifting non-staggered field fails without zShift
