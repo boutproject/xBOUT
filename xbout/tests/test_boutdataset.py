@@ -29,21 +29,24 @@ class TestBoutDatasetIsXarrayDataset:
 
     def test_concat(self, bout_xyt_example_files):
         dataset_list1 = bout_xyt_example_files(None, nxpe=3, nype=4, nt=1)
-        bd1 = open_boutdataset(
-            datapath=dataset_list1, inputfilepath=None, keep_xboundaries=False
-        )
+        with pytest.warns(UserWarning):
+            bd1 = open_boutdataset(
+                datapath=dataset_list1, inputfilepath=None, keep_xboundaries=False
+            )
         dataset_list2 = bout_xyt_example_files(None, nxpe=3, nype=4, nt=1)
-        bd2 = open_boutdataset(
-            datapath=dataset_list2, inputfilepath=None, keep_xboundaries=False
-        )
+        with pytest.warns(UserWarning):
+            bd2 = open_boutdataset(
+                datapath=dataset_list2, inputfilepath=None, keep_xboundaries=False
+            )
         result = concat([bd1, bd2], dim="run")
         assert result.dims == {**bd1.dims, "run": 2}
 
     def test_isel(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
-        bd = open_boutdataset(
-            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
-        )
+        with pytest.warns(UserWarning):
+            bd = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
         actual = bd.isel(x=slice(None, None, 2))
         expected = bd.bout.data.isel(x=slice(None, None, 2))
         xrt.assert_equal(actual, expected)
@@ -69,9 +72,10 @@ class TestBoutDatasetMethods:
 
     def test_get_field_aligned(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(None, nxpe=3, nype=4, nt=1)
-        ds = open_boutdataset(
-            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
-        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
 
         ds["psixy"] = ds["x"]
         ds["Rxy"] = ds["x"]
@@ -842,7 +846,8 @@ class TestSave:
         )
 
         # Load it as a boutdataset
-        original = open_boutdataset(datapath=path, inputfilepath=None)
+        with pytest.warns(UserWarning):
+            original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
         savepath = str(Path(path).parent) + "temp_boutdata.nc"
@@ -872,12 +877,21 @@ class TestSave:
             gridpath = None
 
         # Load it as a boutdataset
-        original = open_boutdataset(
-            datapath=path,
-            inputfilepath=None,
-            geometry=geometry,
-            gridfilepath=gridpath,
-        )
+        if geometry is None:
+            with pytest.warns(UserWarning):
+                original = open_boutdataset(
+                    datapath=path,
+                    inputfilepath=None,
+                    geometry=geometry,
+                    gridfilepath=gridpath,
+                )
+        else:
+            original = open_boutdataset(
+                datapath=path,
+                inputfilepath=None,
+                geometry=geometry,
+                gridfilepath=gridpath,
+            )
 
         # Save it to a netCDF file
         savepath = str(Path(path).parent) + "/temp_boutdata.nc"
@@ -902,7 +916,8 @@ class TestSave:
         )
 
         # Load it as a boutdataset
-        original = open_boutdataset(datapath=path, inputfilepath=None)
+        with pytest.warns(UserWarning):
+            original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
         savepath = str(Path(path).parent) + "/temp_boutdata.nc"
@@ -928,7 +943,8 @@ class TestSave:
         )
 
         # Load it as a boutdataset
-        original = open_boutdataset(datapath=path, inputfilepath=None)
+        with pytest.warns(UserWarning):
+            original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
         savepath = str(Path(path).parent) + "/temp_boutdata.nc"
@@ -966,12 +982,21 @@ class TestSave:
             gridpath = None
 
         # Load it as a boutdataset
-        original = open_boutdataset(
-            datapath=path,
-            inputfilepath=None,
-            geometry=geometry,
-            gridfilepath=gridpath,
-        )
+        if geometry is None:
+            with pytest.warns(UserWarning):
+                original = open_boutdataset(
+                    datapath=path,
+                    inputfilepath=None,
+                    geometry=geometry,
+                    gridfilepath=gridpath,
+                )
+        else:
+            original = open_boutdataset(
+                datapath=path,
+                inputfilepath=None,
+                geometry=geometry,
+                gridfilepath=gridpath,
+            )
 
         # Save it to a netCDF file
         savepath = str(Path(path).parent) + "/temp_boutdata.nc"
@@ -1003,13 +1028,21 @@ class TestSave:
             gridpath = None
 
         # Load it as a boutdataset
-        original = open_boutdataset(
-            datapath=path,
-            inputfilepath=None,
-            geometry=geometry,
-            gridfilepath=gridpath,
-        )
-        print(original)
+        if geometry is None:
+            with pytest.warns(UserWarning):
+                original = open_boutdataset(
+                    datapath=path,
+                    inputfilepath=None,
+                    geometry=geometry,
+                    gridfilepath=gridpath,
+                )
+        else:
+            original = open_boutdataset(
+                datapath=path,
+                inputfilepath=None,
+                geometry=geometry,
+                gridfilepath=gridpath,
+            )
 
         # Save it to a netCDF file
         tcoord = original.metadata.get("bout_tdim", "t")
@@ -1047,7 +1080,8 @@ class TestSaveRestart:
         )
 
         # Load it as a boutdataset
-        ds = open_boutdataset(datapath=path)
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(datapath=path)
 
         nx = ds.metadata["nx"]
         ny = ds.metadata["ny"]
@@ -1113,7 +1147,8 @@ class TestSaveRestart:
         )
 
         # Load it as a boutdataset
-        ds = open_boutdataset(datapath=path)
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(datapath=path)
 
         nx = ds.metadata["nx"]
         ny = ds.metadata["ny"]
@@ -1177,7 +1212,8 @@ class TestSaveRestart:
         )
 
         # Load it as a boutdataset
-        ds = open_boutdataset(datapath=path)
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(datapath=path)
 
         nx = ds.metadata["nx"]
         ny = ds.metadata["ny"]
@@ -1241,7 +1277,8 @@ class TestSaveRestart:
         )
 
         # Load it as a boutdataset
-        ds = open_boutdataset(datapath=path)
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(datapath=path)
 
         nx = ds.metadata["nx"]
         ny = ds.metadata["ny"]

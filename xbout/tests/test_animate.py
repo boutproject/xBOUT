@@ -24,7 +24,8 @@ def create_test_file(tmpdir_factory):
     for ds, file_name in zip(ds_list, file_list):
         ds.to_netcdf(str(save_dir.join(str(file_name))))
 
-    ds = open_boutdataset(save_dir.join("BOUT.dmp.*.nc"))  # Open test data
+    with pytest.warns(UserWarning):
+        ds = open_boutdataset(save_dir.join("BOUT.dmp.*.nc"))  # Open test data
 
     return save_dir, ds
 
@@ -256,10 +257,11 @@ class TestAnimate:
 
         save_dir, ds = create_test_file
 
-        animation = ds.isel(z=3).bout.animate_list(
-            ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)],
-            subplots_adjust={"hspace": 4, "wspace": 5},
-        )
+        with pytest.warns(UserWarning):
+            animation = ds.isel(z=3).bout.animate_list(
+                ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)],
+                subplots_adjust={"hspace": 4, "wspace": 5},
+            )
 
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)

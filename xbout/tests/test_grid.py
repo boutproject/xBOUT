@@ -36,7 +36,8 @@ def create_example_grid_file(tmpdir_factory):
 class TestOpenGrid:
     def test_open_grid(self, create_example_grid_file):
         example_grid = create_example_grid_file
-        result = open_boutdataset(datapath=example_grid)
+        with pytest.warns(UserWarning):
+            result = open_boutdataset(datapath=example_grid)
         result = result.drop_vars(["x", "y"])
         assert_equal(result, open_dataset(example_grid))
         result.close()
@@ -78,16 +79,18 @@ class TestOpenGrid:
 
     def test_open_grid_chunks(self, create_example_grid_file):
         example_grid = create_example_grid_file
-        result = open_boutdataset(datapath=example_grid, chunks={"x": 4, "y": 5})
+        with pytest.warns(UserWarning):
+            result = open_boutdataset(datapath=example_grid, chunks={"x": 4, "y": 5})
         result = result.drop_vars(["x", "y"])
         assert_equal(result, open_dataset(example_grid))
         result.close()
 
     def test_open_grid_chunks_not_in_grid(self, create_example_grid_file):
         example_grid = create_example_grid_file
-        result = open_boutdataset(
-            datapath=example_grid, chunks={"anonexistantdimension": 5}
-        )
+        with pytest.warns(UserWarning):
+            result = open_boutdataset(
+                datapath=example_grid, chunks={"anonexistantdimension": 5}
+            )
         result = result.drop_vars(["x", "y"])
         assert_equal(result, open_dataset(example_grid))
         result.close()
