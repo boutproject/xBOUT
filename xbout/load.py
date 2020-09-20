@@ -1,7 +1,6 @@
 from copy import copy
 from warnings import warn
 from pathlib import Path
-from py._path.local import LocalPath
 from functools import partial
 from itertools import chain
 
@@ -12,7 +11,7 @@ from numpy import unique
 from natsort import natsorted
 
 from . import geometries
-from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype
+from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype, _is_path
 
 
 _BOUT_PER_PROC_VARIABLES = [
@@ -398,7 +397,7 @@ def _check_dataset_type(datapath):
         - one or several files
     """
 
-    if not isinstance(datapath, (str, Path, LocalPath)):
+    if not _is_path(datapath):
         # not a filepath glob, so presumably Dataset or list of Datasets used for
         # testing
         if isinstance(datapath, xr.Dataset):
@@ -448,7 +447,7 @@ def _auto_open_mfboutdataset(
     if chunks is None:
         chunks = {}
 
-    if isinstance(datapath, (str, Path, LocalPath)):
+    if _is_path(datapath):
         filepaths, filetype = _expand_filepaths(datapath)
 
         # Open just one file to read processor splitting
@@ -791,7 +790,7 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
     for dim in unrecognised_chunk_dims:
         del grid_chunks[dim]
 
-    if isinstance(datapath, (str, Path, LocalPath)):
+    if _is_path(datapath):
         gridfilepath = Path(datapath)
         grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath))
     else:
