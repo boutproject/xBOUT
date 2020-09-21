@@ -38,6 +38,14 @@ def _check_filetype(path):
     return filetype
 
 
+def _is_path(p):
+    try:
+        Path(p)
+        return True
+    except TypeError:
+        return False
+
+
 def _separate_metadata(ds):
     """
     Extract the metadata (nxpe, myg etc.) from the Dataset.
