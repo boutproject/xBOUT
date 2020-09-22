@@ -9,7 +9,7 @@ def _create_norm(logscale, norm, vmin, vmax):
     if logscale:
         if norm is not None:
             raise ValueError(
-                "norm and logscale cannot both be passed at the same " "time."
+                "norm and logscale cannot both be passed at the same time."
             )
         if vmin * vmax > 0:
             # vmin and vmax have the same sign, so can use standard log-scale

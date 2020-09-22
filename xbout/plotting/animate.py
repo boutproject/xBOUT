@@ -102,10 +102,6 @@ def animate_poloidal(
     if vmax is None:
         vmax = da.max().values
 
-    # pass vmin and vmax through kwargs as they are not used for contour plots
-    kwargs["vmin"] = vmin
-    kwargs["vmax"] = vmax
-
     # create colorbar
     norm = (
         kwargs["norm"]
@@ -267,14 +263,17 @@ def animate_pcolormesh(
     # well with dask arrays!
     image_data = data.values
 
-    # If not specified, determine max and min values across entire data series
-    if vmax is None:
-        vmax = np.max(image_data)
-    if vmin is None:
-        vmin = np.min(image_data)
-    if vsymmetric:
-        vmax = max(np.abs(vmin), np.abs(vmax))
-        vmin = -vmax
+    if "norm" not in kwargs:
+        # If not specified, determine max and min values across entire data series
+        if vmax is None:
+            vmax = np.max(image_data)
+        if vmin is None:
+            vmin = np.min(image_data)
+        if vsymmetric:
+            vmax = max(np.abs(vmin), np.abs(vmax))
+            vmin = -vmax
+        kwargs["vmin"] = vmin
+        kwargs["vmax"] = vmax
 
     if not ax:
         fig, ax = plt.subplots()
@@ -284,13 +283,7 @@ def animate_pcolormesh(
     # be necessary.
     ny, nx = image_data.shape[1:]
     pcolormesh_block = amp.blocks.Pcolormesh(
-        np.arange(float(nx)),
-        np.arange(float(ny)),
-        image_data,
-        vmin=vmin,
-        vmax=vmax,
-        ax=ax,
-        **kwargs
+        np.arange(float(nx)), np.arange(float(ny)), image_data, ax=ax, **kwargs
     )
 
     if animate:
