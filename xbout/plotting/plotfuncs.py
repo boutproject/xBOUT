@@ -241,15 +241,7 @@ def plot2d_wrapper(
     ]
 
     if method is xr.plot.contour:
-        # using extend='neither' guarantees that the ends of the colorbar will be
-        # consistent, regardless of whether artists[0] happens to have any values below
-        # vmin or above vmax. Unfortunately it does not seem to be possible to combine
-        # all the QuadContourSet objects in artists to have this done properly. It would
-        # be nicer to always draw triangular ends as if there are always values below
-        # vmin and above vmax, but there does not seem to be an option available to force
-        # this.
-        extend = kwargs.get("extend", "neither")
-        fig.colorbar(artists[0], ax=ax, extend=extend)
+        fig.colorbar(artists[0], ax=ax)
 
     if gridlines is not None:
         # convert gridlines to dict
