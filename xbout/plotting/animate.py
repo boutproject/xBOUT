@@ -26,6 +26,7 @@ def animate_poloidal(
     fps=10,
     controls=True,
     aspect="equal",
+    extend=None,
     **kwargs
 ):
     """
@@ -66,6 +67,8 @@ def animate_poloidal(
         If False, do not add the timeline and pause button to the animation
     aspect : str or None, optional
         Argument to set_aspect()
+    extend : str or None, optional
+        Passed to fig.colorbar()
     **kwargs : optional
         Additional arguments are passed on to the animation method
         animatplot.blocks.Pcolormesh
@@ -112,7 +115,7 @@ def animate_poloidal(
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
     cmap = sm.get_cmap()
-    fig.colorbar(sm, ax=ax, cax=cax)
+    fig.colorbar(sm, ax=ax, cax=cax, extend=extend)
 
     ax.set_aspect(aspect)
 
@@ -188,6 +191,7 @@ def animate_pcolormesh(
     save_as=None,
     ax=None,
     cax=None,
+    extend=None,
     controls=True,
     **kwargs
 ):
@@ -231,6 +235,8 @@ def animate_pcolormesh(
     cax : Axes, optional
         Matplotlib axes instance where the colorbar will be plotted. If None, the default
         position created by matplotlab.figure.Figure.colorbar() will be used.
+    extend : str or None, optional
+        Passed to fig.colorbar()
     controls : bool, optional
         If False, do not add the timeline and pause button to the animation
     kwargs : dict, optional
@@ -313,7 +319,7 @@ def animate_pcolormesh(
         timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
         anim = amp.Animation([pcolormesh_block], timeline)
 
-    cbar = plt.colorbar(pcolormesh_block.quad, ax=ax, cax=cax)
+    cbar = plt.colorbar(pcolormesh_block.quad, ax=ax, cax=cax, extend=extend)
     cbar.ax.set_ylabel(variable)
 
     # Add title and axis labels
