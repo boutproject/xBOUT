@@ -9,16 +9,6 @@ from .utils import _decompose_regions, _is_core_only, plot_separatrices, plot_ta
 from matplotlib.animation import PillowWriter
 
 
-if (
-    "pcolor.shading" in matplotlib.rcParams
-    and matplotlib.rcParams["pcolor.shading"] == "flat"
-):
-    # "flat" was the old matplotlib default which discarded the last row and column if
-    # X, Y and Z were all equal in size. The new "auto" should be better. Need to set
-    # this explicitly because "flat" is the default during a deprecation cycle.
-    matplotlib.rcParams["pcolor.shading"] = "auto"
-
-
 def animate_poloidal(
     da,
     *,
