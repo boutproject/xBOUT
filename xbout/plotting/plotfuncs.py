@@ -1,6 +1,7 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import warnings
 
 import xarray as xr
 
@@ -36,20 +37,33 @@ def regions(da, ax=None, **kwargs):
         for num, da_region in enumerate(da_regions.values())
     ]
 
-    return [
-        region.plot.pcolormesh(
-            x=x,
-            y=y,
-            vmin=0,
-            vmax=1,
-            cmap="tab20",
-            infer_intervals=False,
-            add_colorbar=False,
-            ax=ax,
-            **kwargs
+    with warnings.catch_warnings():
+        # The coordinates we pass are a logically rectangular grid, so should be fine
+        # even if this warning is triggered.
+        warnings.filterwarnings(
+            "ignore",
+            "The input coordinates to pcolormesh are interpreted as cell centers, but "
+            "are not monotonically increasing or decreasing. This may lead to "
+            "incorrectly calculated cell edges, in which case, please supply explicit "
+            "cell edges to pcolormesh.",
+            UserWarning,
         )
-        for region in colored_regions
-    ]
+        result = [
+            region.plot.pcolormesh(
+                x=x,
+                y=y,
+                vmin=0,
+                vmax=1,
+                cmap="tab20",
+                infer_intervals=False,
+                add_colorbar=False,
+                ax=ax,
+                **kwargs
+            )
+            for region in colored_regions
+        ]
+
+    return result
 
 
 def plot2d_wrapper(
@@ -67,6 +81,7 @@ def plot2d_wrapper(
     vmin=None,
     vmax=None,
     aspect=None,
+    extend=None,
     **kwargs
 ):
     """
@@ -112,6 +127,8 @@ def plot2d_wrapper(
         Maximum value for the color scale
     aspect : str or float, optional
         Passed to ax.set_aspect(). By default 'equal' is used.
+    extend : str or None, optional
+        Passed to fig.colorbar()
     levels : int or iterable, optional
         Only used by contour or contourf, sets the number of levels (if int) or the level
         values (if iterable)
@@ -144,6 +161,11 @@ def plot2d_wrapper(
         vmin = da.min().values
     if vmax is None:
         vmax = da.max().values
+
+    if extend is None:
+        # Replicate default for older matplotlib that does not handle extend=None
+        # matplotlib-3.3 definitely does not need this. Not sure about 3.0, 3.1, 3.2.
+        extend = "neither"
 
     # set up 'levels' if needed
     if method is xr.plot.contourf or method is xr.plot.contour:
@@ -187,7 +209,7 @@ def plot2d_wrapper(
         # re-make sm with new cmap
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
-        fig.colorbar(sm, ticks=levels, ax=ax)
+        fig.colorbar(sm, ticks=levels, ax=ax, extend=extend)
     elif method is xr.plot.contour:
         # create colormap to be shared by all regions
         norm = matplotlib.colors.Normalize(vmin=levels[0], vmax=levels[-1])
@@ -206,7 +228,7 @@ def plot2d_wrapper(
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cmap = sm.get_cmap()
-        fig.colorbar(sm, ax=ax)
+        fig.colorbar(sm, ax=ax, extend=extend)
 
     if method is xr.plot.pcolormesh:
         if "infer_intervals" not in kwargs:
@@ -216,30 +238,33 @@ def plot2d_wrapper(
 
     # Plot all regions on same axis
     add_labels = [True] + [False] * (len(da_regions) - 1)
-    artists = [
-        method(
-            region,
-            x=x,
-            y=y,
-            ax=ax,
-            add_colorbar=False,
-            add_labels=add_label,
-            cmap=cmap,
-            **kwargs
+    with warnings.catch_warnings():
+        # The coordinates we pass are a logically rectangular grid, so should be fine
+        # even if this warning is triggered by pcolor or pcolormesh
+        warnings.filterwarnings(
+            "ignore",
+            "The input coordinates to pcolormesh are interpreted as cell centers, but "
+            "are not monotonically increasing or decreasing. This may lead to "
+            "incorrectly calculated cell edges, in which case, please supply explicit "
+            "cell edges to pcolormesh.",
+            UserWarning,
         )
-        for region, add_label in zip(da_regions.values(), add_labels)
-    ]
+        artists = [
+            method(
+                region,
+                x=x,
+                y=y,
+                ax=ax,
+                add_colorbar=False,
+                add_labels=add_label,
+                cmap=cmap,
+                **kwargs
+            )
+            for region, add_label in zip(da_regions.values(), add_labels)
+        ]
 
     if method is xr.plot.contour:
-        # using extend='neither' guarantees that the ends of the colorbar will be
-        # consistent, regardless of whether artists[0] happens to have any values below
-        # vmin or above vmax. Unfortunately it does not seem to be possible to combine
-        # all the QuadContourSet objects in artists to have this done properly. It would
-        # be nicer to always draw triangular ends as if there are always values below
-        # vmin and above vmax, but there does not seem to be an option available to force
-        # this.
-        extend = kwargs.get("extend", "neither")
-        fig.colorbar(artists[0], ax=ax, extend=extend)
+        fig.colorbar(artists[0], ax=ax)
 
     if gridlines is not None:
         # convert gridlines to dict

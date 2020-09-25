@@ -23,7 +23,8 @@ class TestAccuracyAgainstOldCollect:
         expected = old_collect(var, path=test_dir, xguards=True, yguards=False)
 
         # Test against new standard - open_boutdataset
-        ds = open_boutdataset(test_dir.join("BOUT.dmp.0.nc"))
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(test_dir.join("BOUT.dmp.0.nc"))
         actual = ds[var].values
 
         assert expected.shape == actual.shape
@@ -51,7 +52,8 @@ class TestAccuracyAgainstOldCollect:
         expected = old_collect(var, path=test_dir, prefix="BOUT.dmp", xguards=True)
 
         # Test against new standard - open_boutdataset
-        ds = open_boutdataset(test_dir.join("BOUT.dmp.*.nc"))
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(test_dir.join("BOUT.dmp.*.nc"))
         actual = ds[var].values
 
         assert expected.shape == actual.shape
@@ -79,7 +81,8 @@ class TestAccuracyAgainstOldCollect:
         expected = old_collect(var, path=test_dir, prefix="BOUT.dmp", xguards=True)
 
         # Test against new standard - .open_boutdataset
-        ds = open_boutdataset(test_dir.join("BOUT.dmp.*.nc"))
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(test_dir.join("BOUT.dmp.*.nc"))
         actual = ds[var].values
 
         assert expected.shape == actual.shape
@@ -107,7 +110,8 @@ class TestAccuracyAgainstOldCollect:
         expected = old_collect(var, path=test_dir, prefix="BOUT.dmp", xguards=True)
 
         # Test against new standard - .open_boutdataset
-        ds = open_boutdataset(test_dir.join("BOUT.dmp.*.nc"))
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(test_dir.join("BOUT.dmp.*.nc"))
         actual = ds[var].values
 
         assert expected.shape == actual.shape
@@ -127,7 +131,8 @@ class TestAccuracyAgainstOldCollect:
         generated_ds = create_bout_ds(syn_data_type="linear")
         generated_ds.to_netcdf(str(test_dir.join("BOUT.dmp.0.nc")))
 
-        ds = open_boutdataset(test_dir.join("BOUT.dmp.*.nc"))
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(test_dir.join("BOUT.dmp.*.nc"))
 
         for v in METADATA_VARS:
             expected = old_collect(v, path=test_dir)

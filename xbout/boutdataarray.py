@@ -531,8 +531,8 @@ class BoutDataArrayAccessor:
         n_dims = len(data.dims)
 
         if n_dims == 3:
-            vmin = kwargs["vmin"] if "vmin" in kwargs else data.min().values
-            vmax = kwargs["vmax"] if "vmax" in kwargs else data.max().values
+            vmin = kwargs.pop("vmin") if "vmin" in kwargs else data.min().values
+            vmax = kwargs.pop("vmax") if "vmax" in kwargs else data.max().values
             kwargs["norm"] = _create_norm(
                 logscale, kwargs.get("norm", None), vmin, vmax
             )

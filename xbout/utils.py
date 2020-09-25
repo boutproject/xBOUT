@@ -65,7 +65,7 @@ def _separate_metadata(ds):
     metadata_vals = [ds[var].values.item() for var in scalar_vars]
     metadata = dict(zip(scalar_vars, metadata_vals))
 
-    return ds.drop(scalar_vars), metadata
+    return ds.drop_vars(scalar_vars), metadata
 
 
 def _update_metadata_increased_resolution(da, n):

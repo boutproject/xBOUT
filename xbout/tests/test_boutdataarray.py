@@ -17,9 +17,10 @@ from xbout.geometries import apply_geometry
 class TestBoutDataArrayMethods:
     def test_to_dataset(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(None, nxpe=3, nype=4, nt=1)
-        ds = open_boutdataset(
-            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
-        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
         da = ds["n"]
 
         new_ds = da.bout.to_dataset()
@@ -100,9 +101,10 @@ class TestBoutDataArrayMethods:
         dataset_list = bout_xyt_example_files(
             None, lengths=(3, 3, 4, nz), nxpe=1, nype=1, nt=1
         )
-        ds = open_boutdataset(
-            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
-        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
 
         ds["psixy"] = ds["x"]
         ds["Rxy"] = ds["x"]
@@ -196,9 +198,10 @@ class TestBoutDataArrayMethods:
         dataset_list = bout_xyt_example_files(
             None, lengths=(3, 3, 4, nz), nxpe=1, nype=1, nt=1
         )
-        ds = open_boutdataset(
-            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
-        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
 
         ds["psixy"] = ds["x"]
         ds["Rxy"] = ds["x"]
@@ -303,9 +306,10 @@ class TestBoutDataArrayMethods:
         dataset_list = bout_xyt_example_files(
             None, lengths=(3, 3, 4, nz), nxpe=1, nype=1, nt=1
         )
-        ds = open_boutdataset(
-            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
-        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
 
         ds["psixy"] = ds["x"]
         ds["Rxy"] = ds["x"]
@@ -397,9 +401,10 @@ class TestBoutDataArrayMethods:
         dataset_list = bout_xyt_example_files(
             None, lengths=(3, 3, 4, 8), nxpe=1, nype=1, nt=1
         )
-        ds = open_boutdataset(
-            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
-        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
 
         ds["psixy"] = ds["x"]
         ds["Rxy"] = ds["x"]
@@ -431,7 +436,7 @@ class TestBoutDataArrayMethods:
             ds["zShift_" + stag_location] = zShift
             ds["zShift_" + stag_location].attrs["cell_location"] = stag_location
             ds = ds.set_coords("zShift_" + stag_location)
-            ds = ds.drop("zShift")
+            ds = ds.drop_vars("zShift")
 
             with pytest.raises(ValueError):
                 # Check shifting non-staggered field fails without zShift
@@ -446,9 +451,10 @@ class TestBoutDataArrayMethods:
         dataset_list = bout_xyt_example_files(
             None, lengths=(3, 3, 4, 8), nxpe=1, nype=1, nt=1
         )
-        ds = open_boutdataset(
-            datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
-        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
 
         ds["psixy"] = ds["x"]
         ds["Rxy"] = ds["x"]
@@ -482,7 +488,7 @@ class TestBoutDataArrayMethods:
             ds["zShift_" + stag_location] = zShift
             ds["zShift_" + stag_location].attrs["cell_location"] = stag_location
             ds = ds.set_coords("zShift_" + stag_location)
-            ds = ds.drop("zShift")
+            ds = ds.drop_vars("zShift")
 
             with pytest.raises(ValueError):
                 # Check shifting non-staggered field fails without zShift

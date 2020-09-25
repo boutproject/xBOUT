@@ -624,6 +624,7 @@ class BoutDatasetAccessor:
         logscale=None,
         titles=None,
         aspect="equal",
+        extend=None,
         controls=True,
         tight_layout=True,
         **kwargs,
@@ -670,6 +671,8 @@ class BoutDatasetAccessor:
             a certain variable
         aspect : str or None, or sequence of str or None, optional
             Argument to set_aspect() for each plot
+        extend : str or None, optional
+            Passed to fig.colorbar()
         controls : bool, optional
             If set to False, do not show the time-slider or pause button
         tight_layout : bool or dict, optional
@@ -706,7 +709,7 @@ class BoutDatasetAccessor:
             fig.subplots_adjust(**subplots_adjust)
 
         def _expand_list_arg(arg, arg_name):
-            if isinstance(arg, collections.Sequence) and not isinstance(arg, str):
+            if isinstance(arg, collections.abc.Sequence) and not isinstance(arg, str):
                 if len(arg) != len(variables):
                     raise ValueError(
                         "if %s is a sequence, it must have the same "
@@ -722,6 +725,7 @@ class BoutDatasetAccessor:
         logscale = _expand_list_arg(logscale, "logscale")
         titles = _expand_list_arg(titles, "titles")
         aspect = _expand_list_arg(aspect, "aspect")
+        extend = _expand_list_arg(extend, "extend")
 
         blocks = []
 
@@ -733,7 +737,7 @@ class BoutDatasetAccessor:
             )
 
         for subplot_args in zip(
-            variables, axes, poloidal_plot, vmin, vmax, logscale, titles, aspect
+            variables, axes, poloidal_plot, vmin, vmax, logscale, titles, aspect, extend
         ):
 
             (
@@ -745,6 +749,7 @@ class BoutDatasetAccessor:
                 this_logscale,
                 this_title,
                 this_aspect,
+                this_extend,
             ) = subplot_args
 
             divider = make_axes_locatable(ax)
@@ -826,6 +831,7 @@ class BoutDatasetAccessor:
                         vmax=this_vmax,
                         norm=norm,
                         aspect=this_aspect,
+                        extend=this_extend,
                         **kwargs,
                     )
                     for block in var_blocks:
@@ -841,6 +847,7 @@ class BoutDatasetAccessor:
                             vmin=this_vmin,
                             vmax=this_vmax,
                             norm=norm,
+                            extend=this_extend,
                             **kwargs,
                         )
                     )

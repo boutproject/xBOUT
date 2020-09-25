@@ -2,6 +2,7 @@ import pytest
 
 from pathlib import Path
 from matplotlib import pyplot as plt
+import numpy as np
 
 from xbout import open_boutdataset
 from xbout.tests.test_load import bout_xyt_example_files
@@ -54,50 +55,73 @@ class TestPlot:
             keep_yboundaries=keep_yboundaries,
         )
 
+        ds["R"] = ds["R"].copy(deep=True)
+        ds["R"].data[:, :] = np.linspace(0.0, 1.0, ds.sizes["x"])[:, np.newaxis]
+        ds["Z"] = ds["Z"].copy(deep=True)
+        ds["Z"].data[:, :] = np.linspace(0.0, 1.0, ds.sizes["theta"])[np.newaxis, :]
+
         n = ds["n"].isel(t=-1, zeta=0)
 
         n.bout.from_region("lower_inner_PFR", with_guards=with_guards).bout.pcolormesh()
+        plt.close()
 
         n.bout.from_region(
             "lower_inner_intersep", with_guards=with_guards
         ).bout.contourf()
+        plt.close()
 
         n.bout.from_region("lower_inner_SOL", with_guards=with_guards).bout.contour()
+        plt.close()
 
         plt.figure()
         n.bout.from_region("inner_core", with_guards=with_guards).plot()
+        plt.close()
 
         n.bout.from_region("inner_intersep", with_guards=with_guards).bout.pcolormesh()
+        plt.close()
 
         n.bout.from_region("inner_SOL", with_guards=with_guards).bout.contourf()
+        plt.close()
 
         n.bout.from_region("upper_inner_PFR", with_guards=with_guards).bout.contour()
+        plt.close()
 
         plt.figure()
         n.bout.from_region("upper_inner_intersep", with_guards=with_guards).plot()
+        plt.close()
 
         n.bout.from_region("upper_inner_SOL", with_guards=with_guards).bout.pcolormesh()
+        plt.close()
 
         n.bout.from_region("upper_outer_PFR", with_guards=with_guards).bout.contourf()
+        plt.close()
 
         n.bout.from_region(
             "upper_outer_intersep", with_guards=with_guards
         ).bout.contour()
+        plt.close()
 
         plt.figure()
         n.bout.from_region("upper_outer_SOL", with_guards=with_guards).plot()
+        plt.close()
 
         n.bout.from_region("outer_core", with_guards=with_guards).bout.pcolormesh()
+        plt.close()
 
         n.bout.from_region("outer_intersep", with_guards=with_guards).bout.contourf()
+        plt.close()
 
         n.bout.from_region("outer_SOL", with_guards=with_guards).bout.contour()
+        plt.close()
 
         plt.figure()
         n.bout.from_region("lower_outer_PFR", with_guards=with_guards).plot()
+        plt.close()
 
         n.bout.from_region(
             "lower_outer_intersep", with_guards=with_guards
         ).bout.pcolormesh()
+        plt.close()
 
         n.bout.from_region("lower_outer_SOL", with_guards=with_guards).bout.contourf()
+        plt.close()

@@ -27,7 +27,7 @@ def create_example_grid_file(tmpdir_factory):
     save_dir = tmpdir_factory.mktemp("griddata")
 
     # Save
-    filepath = save_dir.join("grid.nc")
+    filepath = str(save_dir.join("grid.nc"))
     grid.to_netcdf(filepath, engine="netcdf4")
 
     return Path(filepath)
@@ -36,7 +36,8 @@ def create_example_grid_file(tmpdir_factory):
 class TestOpenGrid:
     def test_open_grid(self, create_example_grid_file):
         example_grid = create_example_grid_file
-        result = open_boutdataset(datapath=example_grid)
+        with pytest.warns(UserWarning):
+            result = open_boutdataset(datapath=example_grid)
         result = result.drop_vars(["x", "y"])
         assert_equal(result, open_dataset(example_grid))
         result.close()
@@ -47,7 +48,7 @@ class TestOpenGrid:
         new_var = DataArray(name="new", data=[[1, 2], [8, 9]], dims=["x", "w"])
 
         dodgy_grid_directory = tmpdir_factory.mktemp("dodgy_grid")
-        dodgy_grid_path = dodgy_grid_directory.join("dodgy_grid.nc")
+        dodgy_grid_path = str(dodgy_grid_directory.join("dodgy_grid.nc"))
         merge([example_grid, new_var]).to_netcdf(dodgy_grid_path, engine="netcdf4")
 
         with pytest.warns(
@@ -78,16 +79,18 @@ class TestOpenGrid:
 
     def test_open_grid_chunks(self, create_example_grid_file):
         example_grid = create_example_grid_file
-        result = open_boutdataset(datapath=example_grid, chunks={"x": 4, "y": 5})
+        with pytest.warns(UserWarning):
+            result = open_boutdataset(datapath=example_grid, chunks={"x": 4, "y": 5})
         result = result.drop_vars(["x", "y"])
         assert_equal(result, open_dataset(example_grid))
         result.close()
 
     def test_open_grid_chunks_not_in_grid(self, create_example_grid_file):
         example_grid = create_example_grid_file
-        result = open_boutdataset(
-            datapath=example_grid, chunks={"anonexistantdimension": 5}
-        )
+        with pytest.warns(UserWarning):
+            result = open_boutdataset(
+                datapath=example_grid, chunks={"anonexistantdimension": 5}
+            )
         result = result.drop_vars(["x", "y"])
         assert_equal(result, open_dataset(example_grid))
         result.close()

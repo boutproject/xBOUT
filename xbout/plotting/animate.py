@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import warnings
 
 import animatplot as amp
 
@@ -25,6 +26,7 @@ def animate_poloidal(
     fps=10,
     controls=True,
     aspect="equal",
+    extend=None,
     **kwargs
 ):
     """
@@ -65,6 +67,8 @@ def animate_poloidal(
         If False, do not add the timeline and pause button to the animation
     aspect : str or None, optional
         Argument to set_aspect()
+    extend : str or None, optional
+        Passed to fig.colorbar()
     **kwargs : optional
         Additional arguments are passed on to the animation method
         animatplot.blocks.Pcolormesh
@@ -102,9 +106,10 @@ def animate_poloidal(
     if vmax is None:
         vmax = da.max().values
 
-    # pass vmin and vmax through kwargs as they are not used for contour plots
-    kwargs["vmin"] = vmin
-    kwargs["vmax"] = vmax
+    if extend is None:
+        # Replicate default for older matplotlib that does not handle extend=None
+        # matplotlib-3.3 definitely does not need this. Not sure about 3.0, 3.1, 3.2.
+        extend = "neither"
 
     # create colorbar
     norm = (
@@ -115,7 +120,7 @@ def animate_poloidal(
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
     cmap = sm.get_cmap()
-    fig.colorbar(sm, ax=ax, cax=cax)
+    fig.colorbar(sm, ax=ax, cax=cax, extend=extend)
 
     ax.set_aspect(aspect)
 
@@ -123,20 +128,31 @@ def animate_poloidal(
 
     # Plot all regions on same axis
     blocks = []
-    for da_region in da_regions.values():
-        # Load values eagerly otherwise for some reason the plotting takes
-        # 100's of times longer - for some reason animatplot does not deal
-        # well with dask arrays!
-        blocks.append(
-            amp.blocks.Pcolormesh(
-                da_region.coords[x].values,
-                da_region.coords[y].values,
-                da_region.values,
-                ax=ax,
-                cmap=cmap,
-                **kwargs
-            )
+    with warnings.catch_warnings():
+        # The coordinates we pass are a logically rectangular grid, so should be fine
+        # even if this warning is triggered by pcolor or pcolormesh
+        warnings.filterwarnings(
+            "ignore",
+            "The input coordinates to pcolormesh are interpreted as cell centers, but "
+            "are not monotonically increasing or decreasing. This may lead to "
+            "incorrectly calculated cell edges, in which case, please supply explicit "
+            "cell edges to pcolormesh.",
+            UserWarning,
         )
+        for da_region in da_regions.values():
+            # Load values eagerly otherwise for some reason the plotting takes
+            # 100's of times longer - for some reason animatplot does not deal
+            # well with dask arrays!
+            blocks.append(
+                amp.blocks.Pcolormesh(
+                    da_region.coords[x].values,
+                    da_region.coords[y].values,
+                    da_region.values,
+                    ax=ax,
+                    cmap=cmap,
+                    **kwargs
+                )
+            )
 
     ax.set_title(da.name)
     ax.set_xlabel(x)
@@ -180,6 +196,7 @@ def animate_pcolormesh(
     save_as=None,
     ax=None,
     cax=None,
+    extend=None,
     controls=True,
     **kwargs
 ):
@@ -223,6 +240,8 @@ def animate_pcolormesh(
     cax : Axes, optional
         Matplotlib axes instance where the colorbar will be plotted. If None, the default
         position created by matplotlab.figure.Figure.colorbar() will be used.
+    extend : str or None, optional
+        Passed to fig.colorbar()
     controls : bool, optional
         If False, do not add the timeline and pause button to the animation
     kwargs : dict, optional
@@ -260,6 +279,11 @@ def animate_pcolormesh(
             raise ValueError("Dimension {} is not present in the data".format(x))
         y = spatial_dims[0]
 
+    if extend is None:
+        # Replicate default for older matplotlib that does not handle extend=None
+        # matplotlib-3.3 definitely does not need this. Not sure about 3.0, 3.1, 3.2.
+        extend = "neither"
+
     data = data.transpose(animate_over, y, x, transpose_coords=True)
 
     # Load values eagerly otherwise for some reason the plotting takes
@@ -267,14 +291,17 @@ def animate_pcolormesh(
     # well with dask arrays!
     image_data = data.values
 
-    # If not specified, determine max and min values across entire data series
-    if vmax is None:
-        vmax = np.max(image_data)
-    if vmin is None:
-        vmin = np.min(image_data)
-    if vsymmetric:
-        vmax = max(np.abs(vmin), np.abs(vmax))
-        vmin = -vmax
+    if "norm" not in kwargs:
+        # If not specified, determine max and min values across entire data series
+        if vmax is None:
+            vmax = np.max(image_data)
+        if vmin is None:
+            vmin = np.min(image_data)
+        if vsymmetric:
+            vmax = max(np.abs(vmin), np.abs(vmax))
+            vmin = -vmax
+        kwargs["vmin"] = vmin
+        kwargs["vmax"] = vmax
 
     if not ax:
         fig, ax = plt.subplots()
@@ -283,21 +310,26 @@ def animate_pcolormesh(
     # explicitly x- and y-value arrays, although in principle these should not
     # be necessary.
     ny, nx = image_data.shape[1:]
-    pcolormesh_block = amp.blocks.Pcolormesh(
-        np.arange(float(nx)),
-        np.arange(float(ny)),
-        image_data,
-        vmin=vmin,
-        vmax=vmax,
-        ax=ax,
-        **kwargs
-    )
+    with warnings.catch_warnings():
+        # The coordinates we pass are a logically rectangular grid, so should be fine
+        # even if this warning is triggered by pcolor or pcolormesh
+        warnings.filterwarnings(
+            "ignore",
+            "The input coordinates to pcolormesh are interpreted as cell centers, but "
+            "are not monotonically increasing or decreasing. This may lead to "
+            "incorrectly calculated cell edges, in which case, please supply explicit "
+            "cell edges to pcolormesh.",
+            UserWarning,
+        )
+        pcolormesh_block = amp.blocks.Pcolormesh(
+            np.arange(float(nx)), np.arange(float(ny)), image_data, ax=ax, **kwargs
+        )
 
     if animate:
         timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
         anim = amp.Animation([pcolormesh_block], timeline)
 
-    cbar = plt.colorbar(pcolormesh_block.quad, ax=ax, cax=cax)
+    cbar = plt.colorbar(pcolormesh_block.quad, ax=ax, cax=cax, extend=extend)
     cbar.ax.set_ylabel(variable)
 
     # Add title and axis labels
