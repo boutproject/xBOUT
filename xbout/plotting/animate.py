@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import warnings
 
 import animatplot as amp
 
@@ -129,20 +130,31 @@ def animate_poloidal(
 
     # Plot all regions on same axis
     blocks = []
-    for da_region in da_regions.values():
-        # Load values eagerly otherwise for some reason the plotting takes
-        # 100's of times longer - for some reason animatplot does not deal
-        # well with dask arrays!
-        blocks.append(
-            amp.blocks.Pcolormesh(
-                da_region.coords[x].values,
-                da_region.coords[y].values,
-                da_region.values,
-                ax=ax,
-                cmap=cmap,
-                **kwargs
-            )
+    with warnings.catch_warnings():
+        # The coordinates we pass are a logically rectangular grid, so should be fine
+        # even if this warning is triggered by pcolor or pcolormesh
+        warnings.filterwarnings(
+            "ignore",
+            "The input coordinates to pcolormesh are interpreted as cell centers, but "
+            "are not monotonically increasing or decreasing. This may lead to "
+            "incorrectly calculated cell edges, in which case, please supply explicit "
+            "cell edges to pcolormesh.",
+            UserWarning,
         )
+        for da_region in da_regions.values():
+            # Load values eagerly otherwise for some reason the plotting takes
+            # 100's of times longer - for some reason animatplot does not deal
+            # well with dask arrays!
+            blocks.append(
+                amp.blocks.Pcolormesh(
+                    da_region.coords[x].values,
+                    da_region.coords[y].values,
+                    da_region.values,
+                    ax=ax,
+                    cmap=cmap,
+                    **kwargs
+                )
+            )
 
     ax.set_title(da.name)
     ax.set_xlabel(x)
@@ -292,9 +304,20 @@ def animate_pcolormesh(
     # explicitly x- and y-value arrays, although in principle these should not
     # be necessary.
     ny, nx = image_data.shape[1:]
-    pcolormesh_block = amp.blocks.Pcolormesh(
-        np.arange(float(nx)), np.arange(float(ny)), image_data, ax=ax, **kwargs
-    )
+    with warnings.catch_warnings():
+        # The coordinates we pass are a logically rectangular grid, so should be fine
+        # even if this warning is triggered by pcolor or pcolormesh
+        warnings.filterwarnings(
+            "ignore",
+            "The input coordinates to pcolormesh are interpreted as cell centers, but "
+            "are not monotonically increasing or decreasing. This may lead to "
+            "incorrectly calculated cell edges, in which case, please supply explicit "
+            "cell edges to pcolormesh.",
+            UserWarning,
+        )
+        pcolormesh_block = amp.blocks.Pcolormesh(
+            np.arange(float(nx)), np.arange(float(ny)), image_data, ax=ax, **kwargs
+        )
 
     if animate:
         timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)

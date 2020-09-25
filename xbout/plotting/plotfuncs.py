@@ -1,6 +1,7 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import warnings
 
 import xarray as xr
 
@@ -46,20 +47,33 @@ def regions(da, ax=None, **kwargs):
         for num, da_region in enumerate(da_regions.values())
     ]
 
-    return [
-        region.plot.pcolormesh(
-            x=x,
-            y=y,
-            vmin=0,
-            vmax=1,
-            cmap="tab20",
-            infer_intervals=False,
-            add_colorbar=False,
-            ax=ax,
-            **kwargs
+    with warnings.catch_warnings():
+        # The coordinates we pass are a logically rectangular grid, so should be fine
+        # even if this warning is triggered.
+        warnings.filterwarnings(
+            "ignore",
+            "The input coordinates to pcolormesh are interpreted as cell centers, but "
+            "are not monotonically increasing or decreasing. This may lead to "
+            "incorrectly calculated cell edges, in which case, please supply explicit "
+            "cell edges to pcolormesh.",
+            UserWarning,
         )
-        for region in colored_regions
-    ]
+        result = [
+            region.plot.pcolormesh(
+                x=x,
+                y=y,
+                vmin=0,
+                vmax=1,
+                cmap="tab20",
+                infer_intervals=False,
+                add_colorbar=False,
+                ax=ax,
+                **kwargs
+            )
+            for region in colored_regions
+        ]
+
+    return result
 
 
 def plot2d_wrapper(
@@ -226,19 +240,30 @@ def plot2d_wrapper(
 
     # Plot all regions on same axis
     add_labels = [True] + [False] * (len(da_regions) - 1)
-    artists = [
-        method(
-            region,
-            x=x,
-            y=y,
-            ax=ax,
-            add_colorbar=False,
-            add_labels=add_label,
-            cmap=cmap,
-            **kwargs
+    with warnings.catch_warnings():
+        # The coordinates we pass are a logically rectangular grid, so should be fine
+        # even if this warning is triggered by pcolor or pcolormesh
+        warnings.filterwarnings(
+            "ignore",
+            "The input coordinates to pcolormesh are interpreted as cell centers, but "
+            "are not monotonically increasing or decreasing. This may lead to "
+            "incorrectly calculated cell edges, in which case, please supply explicit "
+            "cell edges to pcolormesh.",
+            UserWarning,
         )
-        for region, add_label in zip(da_regions.values(), add_labels)
-    ]
+        artists = [
+            method(
+                region,
+                x=x,
+                y=y,
+                ax=ax,
+                add_colorbar=False,
+                add_labels=add_label,
+                cmap=cmap,
+                **kwargs
+            )
+            for region, add_label in zip(da_regions.values(), add_labels)
+        ]
 
     if method is xr.plot.contour:
         fig.colorbar(artists[0], ax=ax)
