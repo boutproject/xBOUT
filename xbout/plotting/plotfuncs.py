@@ -162,6 +162,11 @@ def plot2d_wrapper(
     if vmax is None:
         vmax = da.max().values
 
+    if extend is None:
+        # Replicate default for older matplotlib that does not handle extend=None
+        # matplotlib-3.3 definitely does not need this. Not sure about 3.0, 3.1, 3.2.
+        extend = "neither"
+
     # set up 'levels' if needed
     if method is xr.plot.contourf or method is xr.plot.contour:
         levels = kwargs.get("levels", 7)

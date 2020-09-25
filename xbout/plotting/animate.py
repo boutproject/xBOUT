@@ -106,6 +106,11 @@ def animate_poloidal(
     if vmax is None:
         vmax = da.max().values
 
+    if extend is None:
+        # Replicate default for older matplotlib that does not handle extend=None
+        # matplotlib-3.3 definitely does not need this. Not sure about 3.0, 3.1, 3.2.
+        extend = "neither"
+
     # create colorbar
     norm = (
         kwargs["norm"]
@@ -273,6 +278,11 @@ def animate_pcolormesh(
         except ValueError:
             raise ValueError("Dimension {} is not present in the data".format(x))
         y = spatial_dims[0]
+
+    if extend is None:
+        # Replicate default for older matplotlib that does not handle extend=None
+        # matplotlib-3.3 definitely does not need this. Not sure about 3.0, 3.1, 3.2.
+        extend = "neither"
 
     data = data.transpose(animate_over, y, x, transpose_coords=True)
 
