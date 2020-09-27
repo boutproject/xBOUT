@@ -699,6 +699,109 @@ class TestBoutDatasetMethods:
             )
         )
 
+    def test_integrate_midpoints_slab(self, bout_xyt_example_files):
+        # Create data
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(4, 100, 110, 120), nxpe=1, nype=1, nt=1, syn_data_type=1
+        )
+
+        ds = open_boutdataset(dataset_list)
+
+        t = np.linspace(0.0, 8.0, 4)[:, np.newaxis, np.newaxis, np.newaxis]
+        x = np.linspace(0.05, 9.95, 100)[np.newaxis, :, np.newaxis, np.newaxis]
+        y = np.linspace(0.1, 21.9, 110)[np.newaxis, np.newaxis, :, np.newaxis]
+        z = np.linspace(0.15, 35.85, 120)[np.newaxis, np.newaxis, np.newaxis, :]
+        ds["t"].data[...] = t.squeeze()
+        ds["dx"].data[...] = 0.1
+        ds["dy"].data[...] = 0.2
+        ds.metadata["dz"] = 0.3
+
+        tfunc = 1.5 * t
+        xfunc = x ** 2
+        yfunc = 10.0 * y - y ** 2
+        zfunc = 2.0 * z ** 2 - 30.0 * z
+        ds["n"].data[...] = tfunc * xfunc * yfunc * zfunc
+
+        tintegral = 48.0
+        xintegral = 1000.0 / 3.0
+        yintegral = 5.0 * 22.0 ** 2 - 22.0 ** 3 / 3.0
+        zintegral = 2.0 * 36.0 ** 3 / 3.0 - 15.0 * 36.0 ** 2
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims="t"),
+            (tintegral * xfunc * yfunc * zfunc).squeeze(),
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims="x"),
+            (tfunc * xintegral * yfunc * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims="y"),
+            (tfunc * xfunc * yintegral * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims="z"),
+            (tfunc * xfunc * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x"]),
+            (tintegral * xintegral * yfunc * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "y"]),
+            (tintegral * xfunc * yintegral * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "z"]),
+            (tintegral * xfunc * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x", "y"]),
+            (tfunc * xintegral * yintegral * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x", "z"]),
+            (tfunc * xintegral * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["y", "z"]),
+            (tfunc * xfunc * yintegral * zintegral).squeeze(),
+            rtol=1.2e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "y"]),
+            (tintegral * xintegral * yintegral * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "z"]),
+            (tintegral * xintegral * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "y", "z"]),
+            (tintegral * xfunc * yintegral * zintegral).squeeze(),
+            rtol=1.2e-4,
+        )
+        # default dims
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n"),
+            (tfunc * xintegral * yintegral * zintegral).squeeze(),
+            rtol=1.4e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "y", "z"]),
+            (tintegral * xintegral * yintegral * zintegral),
+            rtol=1.4e-4,
+        )
+
     def test_interpolate_from_unstructured(self, bout_xyt_example_files):
         dataset_list, grid_ds = bout_xyt_example_files(
             None,
