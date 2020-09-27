@@ -239,6 +239,136 @@ class BoutDatasetAccessor:
 
         return ds
 
+    def integrate_midpoints(self, variable, *, dims=None):
+        """
+        Integrate using the midpoint rule for spatial dimensions, and trapezium rule for
+        time.
+
+        The quantity being integrated is assumed to be a scalar variable.
+
+        When doing a 1d integral in the 'y' dimension, integral is calculated as a
+        poloidal integral if the variable is on the standard grid ('direction_y'
+        attribute is "Standard"), or as a parallel-to-B integral if the variable is on
+        the field-aligned grid ('direction_y' attribute is "Aligned").
+
+        Is a method of BoutDataset method rather than of BoutDataArray so we can use
+        other variables like `dx`, `dy`, `J` for the integration.
+
+        Note the xarray.DataArray.integrate() method uses the trapezium rule, which is
+        not consistent with the way BOUT++ defines grid spacings as cell widths. Also,
+        this way for example::
+
+            inner = da.isel(x=slice(i)).bout.integrate_midpoints()
+            outer = da.isel(x=slice(i, None).bout.integrate_midpoints()
+            total = da.bout.integrate_midpoints()
+            inner + outer == total
+
+        while with the trapezium rule you would have to select ``radial=slice(i+1)`` for
+        inner to get a similar relation to be true.
+
+        Parameters
+        ----------
+        variable : str or DataArray
+            Name of the variable to integrate, or the variable itself as a DataArray.
+        dims : str or list of str
+            Dimensions to integrate over. Can be any combination of of the dimensions of
+            the Dataset. Defaults to integration over all spatial dimensions.
+        """
+        ds = self.data
+
+        tcoord = ds.metadata["bout_tdim"]
+        xcoord = ds.metadata["bout_xdim"]
+        ycoord = ds.metadata["bout_ydim"]
+        zcoord = ds.metadata["bout_zdim"]
+
+        if dims is None:
+            dims = []
+            if xcoord in ds.dims:
+                dims.append(xcoord)
+            if ycoord in ds.dims:
+                dims.append(ycoord)
+            if zcoord in ds.dims:
+                dims.append(zcoord)
+        elif isinstance(dims, str):
+            dims = [dims]
+
+        dx = ds["dx"]
+        dy = ds["dy"]
+        dz = ds.metadata["dz"]
+
+        # Work out the spatial volume element
+        if xcoord in dims and ycoord in dims and zcoord in dims:
+            # Volume integral, use the 3d Jacobian "J"
+            spatial_volume_element = ds["J"] * dx * dy * dz
+        elif xcoord in dims and ycoord in dims:
+            # 2d integral on poloidal planes
+            # Need to work out Jacobian from metric coefficients
+            # J = 1/sqrt(det(g_2d))
+            # det(g_2d) = g11*g22 - 2*g12
+            g = ds["g11"] * ds["g22"] - 2.0 * ds["g12"]
+            J = 1.0 / np.sqrt(g)
+            spatial_volume_element = J * dx * dy
+        elif xcoord in dims and zcoord in dims:
+            # 2d integral on toroidal planes
+            # Need to work out Jacobian from metric coefficients
+            # J = 1/sqrt(det(g_2d))
+            # det(g_2d) = g11*g33 - 2*g13
+            g = ds["g11"] * ds["g33"] - 2.0 * ds["g13"]
+            J = 1.0 / np.sqrt(g)
+            spatial_volume_element = J * dx * dz
+        elif ycoord in dims and zcoord in dims:
+            # 2d integral on flux-surfaces
+            # Need to work out Jacobian from metric coefficients
+            # J = 1/sqrt(det(g_2d))
+            # det(g_2d) = g22*g33 - 2*g23
+            g = ds["g22"] * ds["g33"] - 2.0 * ds["g23"]
+            J = 1.0 / np.sqrt(g)
+            spatial_volume_element = J * dy * dz
+        elif xcoord in dims:
+            # 1d radial integral, line element is sqrt(g_11)*dx
+            spatial_volume_element = np.sqrt(ds["g_11"]) * dx
+        elif ycoord in dims:
+            if ds[variable].direction_y == "Standard":
+                # Poloidal integral, line element is sqrt(g_22 - abs(g_23))
+                # For 'orthogonal' coordinates (radial and poloidal directions are
+                # orthogonal) this is equal to 1/sqrt(g22)
+                spatial_volume_element = np.sqrt(ds["g_22"] - np.abs(ds["g_23"])) * dy
+            elif ds[variable].direction_y == "Aligned":
+                # Parallel integral, line element is sqrt(g_22)*dy
+                spatial_volume_element = np.sqrt(ds["g_22"]) * dy
+        elif zcoord in dims:
+            # Toroidal integral, line element is sqrt(g_33)*dz
+            spatial_volume_element = np.sqrt(ds["g_33"]) * dz
+        else:
+            # No spatial integral
+            spatial_volume_element = 1.0
+
+        if isinstance(variable, xr.DataArray):
+            integrand = variable
+        else:
+            integrand = ds[variable]
+
+        spatial_dims = set(dims) - set([tcoord])
+
+        # Need to check if the variable being integrated is a Field2D, which does not
+        # have a z-dimension to sum over. Other variables are OK because metric
+        # coefficients, dx and dy all have both x- and y-dimensions so variable would be
+        # broadcast to include them if necessary
+        missing_z_sum = zcoord in dims and zcoord not in integrand.dims
+
+        integrand = integrand * spatial_volume_element
+
+        integral = integrand.sum(dim=spatial_dims)
+
+        # If integrand is a Field2D, need to multiply by nz if integrating over z
+        if missing_z_sum:
+            integral = integral * ds.sizes[zcoord]
+
+        if tcoord in dims:
+            integral = integral.integrate(dim=tcoord)
+
+        return integral
+
     def interpolate_from_unstructured(
         self,
         variables,
