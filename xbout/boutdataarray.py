@@ -478,6 +478,7 @@ class BoutDataArrayAccessor:
         x=None,
         y=None,
         animate=True,
+        axis_coords=None,
         fps=10,
         save_as=None,
         ax=None,
@@ -504,6 +505,15 @@ class BoutDataArrayAccessor:
             dimension of the data
         animate : bool, optional
             If set to false, do not create the animation, just return the block or blocks
+        axis_coords : None, str, dict
+            Coordinates to use for axis labelling.  Only affects time coordinate.
+            - None: Use the dimension coordinate for each axis, if it exists.
+            - "index": Use the integer index values.
+            - dict: keys are dimension names, values set axis_coords for each axis
+              separately. Values can be: None, "index", the name of a 1d variable or
+              coordinate (which must have the dimension given by 'key'), or a 1d
+              numpy array, dask array or DataArray whose length matches the length of
+              the dimension given by 'key'.
         fps : int, optional
             Frames per second of resulting gif
         save_as : True or str, optional
@@ -550,6 +560,7 @@ class BoutDataArrayAccessor:
                     data,
                     animate_over=animate_over,
                     animate=animate,
+                    axis_coords=axis_coords,
                     fps=fps,
                     save_as=save_as,
                     ax=ax,
@@ -567,6 +578,7 @@ class BoutDataArrayAccessor:
                     x=x,
                     y=y,
                     animate=animate,
+                    axis_coords=axis_coords,
                     fps=fps,
                     save_as=save_as,
                     ax=ax,
@@ -583,6 +595,7 @@ class BoutDataArrayAccessor:
         self,
         animate_over="t",
         animate=True,
+        axis_coords=None,
         fps=10,
         save_as=None,
         sep_pos=None,
@@ -599,6 +612,15 @@ class BoutDataArrayAccessor:
         ----------
         animate_over : str, optional
             Dimension over which to animate
+        axis_coords : None, str, dict
+            Coordinates to use for axis labelling.  Only affects time coordinate.
+            - None: Use the dimension coordinate for each axis, if it exists.
+            - "index": Use the integer index values.
+            - dict: keys are dimension names, values set axis_coords for each axis
+              separately. Values can be: None, "index", the name of a 1d variable or
+              coordinate (which must have the dimension given by 'key'), or a 1d
+              numpy array, dask array or DataArray whose length matches the length of
+              the dimension given by 'key'.
         fps : int, optional
             Frames per second of resulting gif
         save_as : True or str, optional
@@ -627,6 +649,7 @@ class BoutDataArrayAccessor:
             line_block = animate_line(
                 data=data,
                 animate_over=animate_over,
+                axis_coords=axis_coords,
                 sep_pos=sep_pos,
                 animate=animate,
                 fps=fps,
