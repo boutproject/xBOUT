@@ -386,7 +386,13 @@ def animate_pcolormesh(
         anim = amp.Animation([pcolormesh_block], timeline)
 
     cbar = plt.colorbar(pcolormesh_block.quad, ax=ax, cax=cax, extend=extend)
-    cbar.ax.set_ylabel(variable)
+    if "long_name" in data.attrs:
+        cbar_label = data.long_name
+    else:
+        cbar_label = variable
+    if "units" in data.attrs:
+        cbar_label += f" [{data.units}]"
+    cbar.ax.set_ylabel(cbar_label)
 
     # Add title and axis labels
     ax.set_title(variable)
@@ -503,7 +509,13 @@ def animate_line(
     # Add title and axis labels
     ax.set_title(variable)
     ax.set_xlabel(x_label)
-    ax.set_ylabel(variable)
+    if "long_name" in data.attrs:
+        y_label = data.long_name
+    else:
+        y_label = variable
+    if "units" in data.attrs:
+        y_label += f" [{data.units}]"
+    ax.set_ylabel(y_label)
 
     # Plot separatrix
     if sep_pos:
