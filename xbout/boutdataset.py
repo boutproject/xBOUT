@@ -18,7 +18,12 @@ import numpy as np
 from dask.diagnostics import ProgressBar
 
 from .geometries import apply_geometry
-from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
+from .plotting.animate import (
+    animate_poloidal,
+    animate_pcolormesh,
+    animate_line,
+    _parse_coord_option,
+)
 from .plotting.utils import _create_norm
 from .region import _from_region
 from .utils import _get_bounding_surfaces, _split_into_restarts
@@ -618,6 +623,7 @@ class BoutDatasetAccessor:
         nrows=None,
         ncols=None,
         poloidal_plot=False,
+        axis_coords=None,
         subplots_adjust=None,
         vmin=None,
         vmax=None,
@@ -653,6 +659,20 @@ class BoutDatasetAccessor:
         poloidal_plot : bool or sequence of bool, optional
             If set to True, make all 2D animations in the poloidal plane instead of using
             grid coordinates, per variable if sequence is given
+        axis_coords : None, str, dict or list of None, str or dict
+            Coordinates to use for axis labelling.
+            - None: Use the dimension coordinate for each axis, if it exists.
+            - "index": Use the integer index values.
+            - dict: keys are dimension names, values set axis_coords for each axis
+              separately. Values can be: None, "index", the name of a 1d variable or
+              coordinate (which must have the dimension given by 'key'), or a 1d
+              numpy array, dask array or DataArray whose length matches the length of
+              the dimension given by 'key'.
+            Only affects time coordinate for plots with poloidal_plot=True.
+            If a list is passed, it must have the same length as 'variables' and gives
+            the axis_coords setting for each plot individually.
+            The setting to use for the 'animate_over' coordinate can be passed in one or
+            more dict values, but must be the same in all dicts if given more than once.
         subplots_adjust : dict, optional
             Arguments passed to fig.subplots_adjust()()
         vmin : float or sequence of floats
@@ -726,6 +746,7 @@ class BoutDatasetAccessor:
         titles = _expand_list_arg(titles, "titles")
         aspect = _expand_list_arg(aspect, "aspect")
         extend = _expand_list_arg(extend, "extend")
+        axis_coords = _expand_list_arg(axis_coords, "axis_coords")
 
         blocks = []
 
@@ -737,13 +758,23 @@ class BoutDatasetAccessor:
             )
 
         for subplot_args in zip(
-            variables, axes, poloidal_plot, vmin, vmax, logscale, titles, aspect, extend
+            variables,
+            axes,
+            poloidal_plot,
+            axis_coords,
+            vmin,
+            vmax,
+            logscale,
+            titles,
+            aspect,
+            extend,
         ):
 
             (
                 v,
                 ax,
                 this_poloidal_plot,
+                this_axis_coords,
                 this_vmin,
                 this_vmax,
                 this_logscale,
@@ -791,6 +822,7 @@ class BoutDatasetAccessor:
                             ax=ax,
                             animate_over=animate_over,
                             animate=False,
+                            axis_coords=this_axis_coords,
                             **kwargs,
                         )
                     )
@@ -802,6 +834,7 @@ class BoutDatasetAccessor:
                                 ax=ax,
                                 animate_over=animate_over,
                                 animate=False,
+                                axis_coords=this_axis_coords,
                                 label=w.name,
                                 **kwargs,
                             )
@@ -827,6 +860,7 @@ class BoutDatasetAccessor:
                         cax=cax,
                         animate_over=animate_over,
                         animate=False,
+                        axis_coords=this_axis_coords,
                         vmin=this_vmin,
                         vmax=this_vmax,
                         norm=norm,
@@ -844,6 +878,7 @@ class BoutDatasetAccessor:
                             cax=cax,
                             animate_over=animate_over,
                             animate=False,
+                            axis_coords=this_axis_coords,
                             vmin=this_vmin,
                             vmax=this_vmax,
                             norm=norm,
@@ -863,7 +898,26 @@ class BoutDatasetAccessor:
                 # Replace default title with user-specified one
                 ax.set_title(this_title)
 
-        timeline = amp.Timeline(np.arange(v.sizes[animate_over]), fps=fps)
+        if np.all([a == "index" for a in axis_coords]):
+            time_opt = "index"
+        elif np.any([isinstance(a, dict) and animate_over in a for a in axis_coords]):
+            given_values = [
+                a[animate_over]
+                for a in axis_coords
+                if isinstance(a, dict) and animate_over in a
+            ]
+            time_opt = given_values[0]
+            if len(given_values) > 1 and not np.all(
+                [v == time_opt for v in given_values[1:]]
+            ):
+                raise ValueError(
+                    f"Inconsistent axis_coords values given for animate_over "
+                    f"coordinate ({animate_over}). Got {given_values}."
+                )
+        else:
+            time_opt = None
+        time_values, time_label = _parse_coord_option(animate_over, time_opt, self.data)
+        timeline = amp.Timeline(time_values, fps=fps)
         anim = amp.Animation(blocks, timeline)
 
         if tight_layout:
@@ -878,7 +932,7 @@ class BoutDatasetAccessor:
             fig.tight_layout(**tight_layout)
 
         if controls:
-            anim.controls(timeline_slider_args={"text": animate_over})
+            anim.controls(timeline_slider_args={"text": time_label})
 
         if save_as is not None:
             anim.save(save_as + ".gif", writer=PillowWriter(fps=fps))
