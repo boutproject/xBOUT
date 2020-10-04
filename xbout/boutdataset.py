@@ -22,6 +22,7 @@ from .plotting.animate import (
     animate_poloidal,
     animate_pcolormesh,
     animate_line,
+    _normalise_time_coord,
     _parse_coord_option,
 )
 from .plotting.utils import _create_norm
@@ -917,7 +918,9 @@ class BoutDatasetAccessor:
         else:
             time_opt = None
         time_values, time_label = _parse_coord_option(animate_over, time_opt, self.data)
-        timeline = amp.Timeline(time_values, fps=fps)
+        time_values, time_suffix = _normalise_time_coord(time_values)
+
+        timeline = amp.Timeline(time_values, fps=fps, units=time_suffix)
         anim = amp.Animation(blocks, timeline)
 
         if tight_layout:

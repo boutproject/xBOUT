@@ -39,6 +39,24 @@ def _parse_coord_option(coord, axis_coords, da):
         return option_value, None
 
 
+def _normalise_time_coord(time_values):
+    """
+    amp.Timeline() does not do a good job of displaying time values that are very small
+    (they get rounded to zero). This function scales the time values by a power of 10 to
+    get nice values and modifies the units by the scale factor.
+    """
+    tmax = time_values.max()
+    if tmax < 1.0e-2 or tmax > 1.0e6:
+        scale_pow = int(np.floor(np.log10(tmax)))
+        scale_factor = 10 ** scale_pow
+        time_values = time_values / scale_factor
+        suffix = f"e{scale_pow}"
+    else:
+        suffix = ""
+
+    return time_values, suffix
+
+
 def animate_poloidal(
     da,
     *,
@@ -210,8 +228,9 @@ def animate_poloidal(
 
     if animate:
         t_values, t_label = _parse_coord_option(animate_over, axis_coords, da)
+        t_values, t_suffix = _normalise_time_coord(t_values)
 
-        timeline = amp.Timeline(t_values, fps=fps)
+        timeline = amp.Timeline(t_values, fps=fps, units=t_suffix)
         anim = amp.Animation(blocks, timeline)
 
         if controls:
@@ -382,7 +401,9 @@ def animate_pcolormesh(
 
     if animate:
         t_values, t_label = _parse_coord_option(animate_over, axis_coords, data)
-        timeline = amp.Timeline(t_values, fps=fps)
+        t_values, t_suffix = _normalise_time_coord(t_values)
+
+        timeline = amp.Timeline(t_values, fps=fps, units=t_suffix)
         anim = amp.Animation([pcolormesh_block], timeline)
 
     cbar = plt.colorbar(pcolormesh_block.quad, ax=ax, cax=cax, extend=extend)
@@ -503,7 +524,9 @@ def animate_line(
 
     if animate:
         t_values, t_label = _parse_coord_option(animate_over, axis_coords, data)
-        timeline = amp.Timeline(t_values, fps=fps)
+        t_values, t_suffix = _normalise_time_coord(t_values)
+
+        timeline = amp.Timeline(t_values, fps=fps, units=t_suffix)
         anim = amp.Animation([line_block], timeline)
 
     # Add title and axis labels
