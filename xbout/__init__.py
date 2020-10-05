@@ -9,4 +9,13 @@ from .boutdataarray import BoutDataArrayAccessor
 from .plotting.animate import animate_pcolormesh, animate_poloidal
 from .plotting.utils import plot_separatrix
 
-from ._version import __version__
+try:
+    from importlib.metadata import version, PackageNotFoundError
+except ModuleNotFoundError:
+    from importlib_metadata import version, PackageNotFoundError
+try:
+    __version__ = version(__name__)
+except PackageNotFoundError:
+    from setuptools_scm import get_version
+
+    __version__ = get_version(root="..", relative_to=__file__)
