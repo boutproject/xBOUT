@@ -17,30 +17,17 @@ and feel free to raise issues asking questions or making suggestions.
  
 ### Installation
 
-xBOUT is not currently on pip or conda. Therefore to install xBOUT on 
-your system you must first clone the repository using:
-
+With pip:
 ```bash
-git clone git@github.com:boutproject/xBOUT.git
-```
-or
-```bash
-git clone https://github.com/boutproject/xBOUT.git
+pip install --user xbout
 ```
 
-Once cloned navigate to the `xBOUT` directory and run the following command:
-
+With conda:
 ```bash
-pip3 install --user ./
-```
-or
-```bash
-python3 setup.py install
+conda install xbout
 ```
 
-You can run the tests by navigating to the `/xBOUT/` directory and
-entering `pytest`. You can also test your installation of `xBOUT` by
-running `pytest --pyargs xbout`.
+You can test your installation of `xBOUT` by running `pytest --pyargs xbout`.
 
 xBOUT requires other python packages, which will be installed when you 
 run one of the above install commands if they are not already installed on 
@@ -142,6 +129,33 @@ requests.
 If you write a new accessor, then this should really live with the code
 for your BOUT module, but it could potentially be added as an example to
 this repository too.
+
+
+### Developers
+
+Clone the repository with:
+```bash
+git clone git@github.com:boutproject/xBOUT.git
+```
+
+The recommended way to work with `xBOUT` from the git repo is to do an editable
+install with pip. Run this command from the `xBOUT/` directory:
+```bash
+pip install --user -e .
+```
+which will also install all the required dependencies. Dependencies can also be
+installed using pip
+```bash
+pip install --user -r requirements.txt
+```
+or conda
+```
+conda install --file requirements.txt
+```
+It is possible to use `xBOUT` by adding the `xBOUT/` directory to your
+`$PYTHONPATH`.
+
+Test by running `pytest` in the `xBOUT/` directory.
 
 
 ### Development plan
