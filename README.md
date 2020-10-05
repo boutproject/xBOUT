@@ -1,6 +1,6 @@
 # xBOUT
 
-[![Build Status](https://travis-ci.org/boutproject/xBOUT.svg?branch=master)](https://travis-ci.org/boutproject/xBOUT.svg?branch=master)
+[![Build Status](https://github.com/boutproject/xBOUT/workflows/master/badge.svg)](https://github.com/boutproject/xBOUT/actions)
 [![codecov](https://codecov.io/gh/boutproject/xBOUT/branch/master/graph/badge.svg)](https://codecov.io/gh/boutproject/xBOUT)
 
 Documentation: https://xbout.readthedocs.io
