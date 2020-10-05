@@ -1,5 +1,10 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+#
+# This workflow should be an exact duplicate of 'Python package' in
+# pythonpackage.yml, except that it only runs on pushes to master. This is done
+# so that we can refer to this workflow specifically in the status badge in
+# README.md
 
 name: master
 
