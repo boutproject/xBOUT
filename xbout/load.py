@@ -539,7 +539,7 @@ def _expand_wildcards(path):
     """Return list of filepaths matching wildcard"""
 
     # Find first parent directory which does not contain a wildcard
-    base_dir = Path(path.root)
+    base_dir = Path(path.anchor)
 
     # Find path relative to parent
     search_pattern = str(path.relative_to(base_dir))
