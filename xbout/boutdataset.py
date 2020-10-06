@@ -617,7 +617,7 @@ class BoutDatasetAccessor:
     def animate_list(
         self,
         variables,
-        animate_over="t",
+        animate_over=None,
         save_as=None,
         show=False,
         fps=10,
@@ -646,7 +646,7 @@ class BoutDatasetAccessor:
             allow more flexible plots, e.g. with different variables being
             plotted against different axes.
         animate_over : str, optional
-            Dimension over which to animate
+            Dimension over which to animate, defaults to the time dimension
         save_as : str, optional
             If passed, a gif is created with this filename
         show : bool, optional
@@ -703,6 +703,9 @@ class BoutDatasetAccessor:
         **kwargs : dict, optional
             Additional keyword arguments are passed on to each animation function
         """
+
+        if animate_over is None:
+            animate_over = self.metadata.get("bout_tdim", "t")
 
         nvars = len(variables)
 
