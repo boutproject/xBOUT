@@ -72,7 +72,7 @@ def animate_poloidal(
     *,
     ax=None,
     cax=None,
-    animate_over="t",
+    animate_over=None,
     separatrix=True,
     targets=True,
     add_limiter_hatching=True,
@@ -102,6 +102,8 @@ def animate_poloidal(
     cax : Axes, optional
         Matplotlib axes instance where the colorbar will be plotted. If None, the default
         position created by matplotlab.figure.Figure.colorbar() will be used.
+    animate_over : str, optional
+        Dimension over which to animate, defaults to the time dimension
     separatrix : bool, optional
         Add dashed lines showing separatrices
     targets : bool, optional
@@ -146,6 +148,9 @@ def animate_poloidal(
     blocks
         List of animatplot.blocks.Pcolormesh instances
     """
+
+    if animate_over is None:
+        animate_over = da.metadata.get("bout_tdim", "t")
 
     # TODO generalise this
     x = kwargs.pop("x", "R")
@@ -256,7 +261,7 @@ def animate_poloidal(
 
 def animate_pcolormesh(
     data,
-    animate_over="t",
+    animate_over=None,
     x=None,
     y=None,
     animate=True,
@@ -283,7 +288,7 @@ def animate_pcolormesh(
     ----------
     data : xarray.DataArray
     animate_over : str, optional
-        Dimension over which to animate
+        Dimension over which to animate, defaults to the time dimension
     x : str, optional
         Dimension to use on the x axis, default is None - then use the first spatial
         dimension of the data
@@ -329,6 +334,9 @@ def animate_pcolormesh(
         Additional keyword arguments are passed on to the animation function
         animatplot.blocks.Pcolormesh
     """
+
+    if animate_over is None:
+        animate_over = data.metadata.get("bout_tdim", "t")
 
     variable = data.name
 
@@ -444,7 +452,7 @@ def animate_pcolormesh(
 
 def animate_line(
     data,
-    animate_over="t",
+    animate_over=None,
     animate=True,
     axis_coords=None,
     vmin=None,
@@ -465,7 +473,7 @@ def animate_line(
     ----------
     data : xarray.DataArray
     animate_over : str, optional
-        Dimension over which to animate
+        Dimension over which to animate, defaults to the time dimension
     animate : bool, optional
         If set to false, do not create the animation, just return the block
     axis_coords : None, str, dict
@@ -500,6 +508,9 @@ def animate_line(
         Additional keyword arguments are passed on to the plotting function
         animatplot.blocks.Line
     """
+
+    if animate_over is None:
+        animate_over = data.metadata.get("bout_tdim", "t")
 
     variable = data.name
 

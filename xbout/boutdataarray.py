@@ -474,7 +474,7 @@ class BoutDataArrayAccessor:
 
     def animate2D(
         self,
-        animate_over="t",
+        animate_over=None,
         x=None,
         y=None,
         animate=True,
@@ -496,7 +496,7 @@ class BoutDataArrayAccessor:
         Parameters
         ----------
         animate_over : str, optional
-            Dimension over which to animate
+            Dimension over which to animate, defaults to the time dimension
         x : str, optional
             Dimension to use on the x axis, default is None - then use the first spatial
             dimension of the data
@@ -593,7 +593,7 @@ class BoutDataArrayAccessor:
 
     def animate1D(
         self,
-        animate_over="t",
+        animate_over=None,
         animate=True,
         axis_coords=None,
         fps=10,
@@ -611,7 +611,7 @@ class BoutDataArrayAccessor:
         Parameters
         ----------
         animate_over : str, optional
-            Dimension over which to animate
+            Dimension over which to animate, defaults to the time dimension
         axis_coords : None, str, dict
             Coordinates to use for axis labelling.  Only affects time coordinate.
             - None: Use the dimension coordinate for each axis, if it exists.
