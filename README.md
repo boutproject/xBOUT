@@ -24,7 +24,7 @@ pip install --user xbout
 
 With conda:
 ```bash
-conda install xbout
+conda install -c conda-forge xbout
 ```
 
 You can test your installation of `xBOUT` by running `pytest --pyargs xbout`.
