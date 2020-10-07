@@ -37,7 +37,7 @@ or `conda`:
 
 .. code-block:: bash
 
-  conda install xbout
+  conda install -c conda-forge xbout
 
 You can run the tests by running `pytest --pyargs xbout`.
 
