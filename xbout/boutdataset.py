@@ -630,7 +630,7 @@ class BoutDatasetAccessor:
         vmax=None,
         logscale=None,
         titles=None,
-        aspect="equal",
+        aspect=None,
         extend=None,
         controls=True,
         tight_layout=True,
@@ -790,8 +790,6 @@ class BoutDatasetAccessor:
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.1)
 
-            ax.set_aspect(this_aspect)
-
             if is_list(v):
                 for i in range(len(v)):
                     if isinstance(v[i], str):
@@ -817,6 +815,13 @@ class BoutDatasetAccessor:
                 data = v.bout.data
                 ndims = len(data.dims)
                 ax.set_title(data.name)
+
+            if this_aspect is None:
+                if ndims == 3:
+                    this_aspect = "equal"
+                else:
+                    this_aspect = "auto"
+            ax.set_aspect(this_aspect)
 
             if ndims == 2:
                 if not is_list(v):
