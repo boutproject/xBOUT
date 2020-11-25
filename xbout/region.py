@@ -985,6 +985,37 @@ def _create_regions_toroidal(ds):
     return ds
 
 
+def _create_single_region(ds, periodic_y=True):
+    nx = ds.metadata["nx"]
+    ny = ds.metadata["ny"]
+
+    mxg = ds.metadata["MXG"]
+    myg = ds.metadata["MYG"]
+    # keep_yboundaries is 1 if there are y-boundaries and 0 if there are not
+    ybndry = ds.metadata["keep_yboundaries"] * myg
+
+    connection = "all" if periodic_y else None
+
+    regions = {
+        "all": Region(
+            name="all",
+            ds=ds,
+            xouter_ind=0,
+            xinner_ind=nx,
+            ylower_ind=0,
+            yupper_ind=ny,
+            connection_lower_y=connection,
+            connection_upper_y=connection,
+        )
+    }
+
+    _check_connections(regions)
+
+    ds = _set_attrs_on_all_vars(ds, "regions", regions)
+
+    return ds
+
+
 def _concat_inner_guards(da, da_global, mxg):
     """
     Concatenate inner x-guard cells to da, which is in a single region, getting the guard
