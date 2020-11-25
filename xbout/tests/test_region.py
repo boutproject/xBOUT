@@ -54,12 +54,6 @@ class TestRegion:
 
         n = ds["n"]
 
-        if guards["y"] > 0 and not keep_yboundaries:
-            # expect exception for core topology due to not having neighbour cells to get
-            # coordinate values from
-            with pytest.raises(ValueError):
-                n_core = n.bout.from_region("core")
-            return
         n_core = n.bout.from_region("core")
 
         # Remove attributes that are expected to be different
@@ -73,7 +67,9 @@ class TestRegion:
             ybndry = 0
         xrt.assert_identical(
             n.isel(theta=slice(ybndry, -ybndry if ybndry != 0 else None)),
-            n_core.isel(theta=slice(ybndry, -ybndry if ybndry != 0 else None)),
+            n_core.isel(
+                theta=slice(guards["y"], -guards["y"] if guards["y"] != 0 else None)
+            ),
         )
 
     @pytest.mark.long
@@ -186,15 +182,6 @@ class TestRegion:
             ),
         )
 
-        if guards["y"] > 0 and not keep_yboundaries:
-            # expect exception for core region due to not having neighbour cells to get
-            # coordinate values from
-            with pytest.raises(ValueError):
-                if test_dataset:
-                    ds_core = ds.bout.from_region("core")
-                else:
-                    n_core = n.bout.from_region("core")
-            return
         if test_dataset:
             ds_core = ds.bout.from_region("core")
             n_core = ds_core["n"]
@@ -208,7 +195,9 @@ class TestRegion:
                 x=slice(ixs + mxg),
                 theta=slice(ybndry, -ybndry if ybndry != 0 else None),
             ),
-            n_core.isel(theta=slice(ybndry, -ybndry if ybndry != 0 else None)),
+            n_core.isel(
+                theta=slice(guards["y"], -guards["y"] if guards["y"] != 0 else None)
+            ),
         )
 
     @pytest.mark.long
