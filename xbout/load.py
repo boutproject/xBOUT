@@ -270,7 +270,12 @@ def open_boutdataset(
 def _add_options(ds, inputfilepath):
     if inputfilepath:
         # Use Ben's options class to store all input file options
-        options = BoutOptionsFile(inputfilepath)
+        options = BoutOptionsFile(
+            inputfilepath,
+            nx=ds.metadata["nx"],
+            ny=ds.metadata["ny"],
+            nz=ds.metadata["nz"],
+        )
     else:
         options = None
     ds = _set_attrs_on_all_vars(ds, "options", options)
