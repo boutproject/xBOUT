@@ -62,6 +62,15 @@ class TestPlot:
 
         n = ds["n"].isel(t=-1, zeta=0)
 
+        n.bout.contour()
+        plt.close()
+
+        n.bout.contourf()
+        plt.close()
+
+        n.bout.pcolormesh()
+        plt.close()
+
         n.bout.from_region("lower_inner_PFR", with_guards=with_guards).bout.pcolormesh()
         plt.close()
 
