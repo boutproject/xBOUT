@@ -267,8 +267,8 @@ class Region:
         ystop = self.yupper_ind + myg
         if ystart >= self.global_ny:
             # wrap around to beginning of global array
-            ystart -= self.global_ny
-            ystop -= self.global_ny
+            ystart = ystart - self.global_ny
+            ystop = ystop - self.global_ny
         return {
             self.xcoord: slice(xinner, xouter),
             self.ycoord: slice(ystart, ystop),
