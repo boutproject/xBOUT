@@ -196,7 +196,14 @@ def animate_poloidal(
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
     cmap = sm.get_cmap()
-    fig.colorbar(sm, ax=ax, cax=cax, extend=extend)
+    cbar = fig.colorbar(sm, ax=ax, cax=cax, extend=extend)
+    if "long_name" in data.attrs:
+        cbar_label = data.long_name
+    else:
+        cbar_label = variable
+    if "units" in data.attrs:
+        cbar_label += f" [{data.units}]"
+    cbar.ax.set_ylabel(cbar_label)
 
     ax.set_aspect(aspect)
 
