@@ -197,12 +197,12 @@ def animate_poloidal(
     sm.set_array([])
     cmap = sm.get_cmap()
     cbar = fig.colorbar(sm, ax=ax, cax=cax, extend=extend)
-    if "long_name" in data.attrs:
-        cbar_label = data.long_name
+    if "long_name" in da.attrs:
+        cbar_label = da.long_name
     else:
-        cbar_label = variable
-    if "units" in data.attrs:
-        cbar_label += f" [{data.units}]"
+        cbar_label = da.name
+    if "units" in da.attrs:
+        cbar_label += f" [{da.units}]"
     cbar.ax.set_ylabel(cbar_label)
 
     ax.set_aspect(aspect)
