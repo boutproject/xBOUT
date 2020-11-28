@@ -691,7 +691,8 @@ class BoutDatasetAccessor:
             Custom titles for each plot. Pass None in the sequence to use the default for
             a certain variable
         aspect : str or None, or sequence of str or None, optional
-            Argument to set_aspect() for each plot
+            Argument to set_aspect() for each plot. Defaults to "equal" for poloidal
+            plots and "auto" for others.
         extend : str or None, optional
             Passed to fig.colorbar()
         controls : bool, optional
@@ -816,13 +817,6 @@ class BoutDatasetAccessor:
                 ndims = len(data.dims)
                 ax.set_title(data.name)
 
-            if this_aspect is None:
-                if ndims == 3:
-                    this_aspect = "equal"
-                else:
-                    this_aspect = "auto"
-            ax.set_aspect(this_aspect)
-
             if ndims == 2:
                 if not is_list(v):
                     blocks.append(
@@ -832,6 +826,7 @@ class BoutDatasetAccessor:
                             animate_over=animate_over,
                             animate=False,
                             axis_coords=this_axis_coords,
+                            aspect=this_aspect,
                             **kwargs,
                         )
                     )
@@ -844,6 +839,7 @@ class BoutDatasetAccessor:
                                 animate_over=animate_over,
                                 animate=False,
                                 axis_coords=this_axis_coords,
+                                aspect=this_aspect,
                                 label=w.name,
                                 **kwargs,
                             )
@@ -891,6 +887,7 @@ class BoutDatasetAccessor:
                             vmin=this_vmin,
                             vmax=this_vmax,
                             norm=norm,
+                            aspect=this_aspect,
                             extend=this_extend,
                             **kwargs,
                         )

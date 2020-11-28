@@ -532,6 +532,9 @@ class BoutDataArrayAccessor:
             threshold of a symmetric logarithmic scale as
             linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
             passed.
+        aspect : str or None, optional
+            Argument to set_aspect(). Defaults to "equal" for poloidal plots and "equal"
+            for others.
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (animatplot.blocks.Pcolormesh).
@@ -633,6 +636,8 @@ class BoutDataArrayAccessor:
         ax : Axes, optional
             A matplotlib axes instance to plot to. If None, create a new
             figure and axes, and plot to that
+        aspect : str or None, optional
+            Argument to set_aspect(), defaults to "auto"
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (animatplot.blocks.Line).

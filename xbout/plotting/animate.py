@@ -84,7 +84,7 @@ def animate_poloidal(
     save_as=None,
     fps=10,
     controls=True,
-    aspect="equal",
+    aspect=None,
     extend=None,
     **kwargs,
 ):
@@ -136,7 +136,7 @@ def animate_poloidal(
     controls : bool, optional
         If False, do not add the timeline and pause button to the animation
     aspect : str or None, optional
-        Argument to set_aspect()
+        Argument to set_aspect(), defaults to "equal"
     extend : str or None, optional
         Passed to fig.colorbar()
     **kwargs : optional
@@ -151,6 +151,9 @@ def animate_poloidal(
 
     if animate_over is None:
         animate_over = da.metadata.get("bout_tdim", "t")
+
+    if aspect is None:
+        aspect = "equal"
 
     # TODO generalise this
     x = kwargs.pop("x", "R")
@@ -273,6 +276,7 @@ def animate_pcolormesh(
     save_as=None,
     ax=None,
     cax=None,
+    aspect=None,
     extend=None,
     controls=True,
     **kwargs,
@@ -326,6 +330,8 @@ def animate_pcolormesh(
     cax : Axes, optional
         Matplotlib axes instance where the colorbar will be plotted. If None, the default
         position created by matplotlab.figure.Figure.colorbar() will be used.
+    aspect : str or None, optional
+        Argument to set_aspect(), defaults to "auto"
     extend : str or None, optional
         Passed to fig.colorbar()
     controls : bool, optional
@@ -337,6 +343,9 @@ def animate_pcolormesh(
 
     if animate_over is None:
         animate_over = data.metadata.get("bout_tdim", "t")
+
+    if aspect is None:
+        aspect = "auto"
 
     variable = data.name
 
@@ -397,6 +406,8 @@ def animate_pcolormesh(
 
     if not ax:
         fig, ax = plt.subplots()
+
+    ax.set_aspect(aspect)
 
     # Note: animatplot's Pcolormesh gave strange outputs without passing
     # explicitly x- and y-value arrays, although in principle these should not
@@ -461,6 +472,7 @@ def animate_line(
     save_as=None,
     sep_pos=None,
     ax=None,
+    aspect=None,
     controls=True,
     **kwargs,
 ):
@@ -502,6 +514,8 @@ def animate_line(
     ax : Axes, optional
         A matplotlib axes instance to plot to. If None, create a new
         figure and axes, and plot to that
+    aspect : str or None, optional
+        Argument to set_aspect(), defaults to "auto"
     controls : bool, optional
         If False, do not add the timeline and pause button to the animation
     kwargs : dict, optional
@@ -511,6 +525,9 @@ def animate_line(
 
     if animate_over is None:
         animate_over = data.metadata.get("bout_tdim", "t")
+
+    if aspect is None:
+        aspect = "auto"
 
     variable = data.name
 
@@ -537,6 +554,8 @@ def animate_line(
 
     if not ax:
         fig, ax = plt.subplots()
+
+    ax.set_aspect(aspect)
 
     # set range of plot
     ax.set_ylim([vmin, vmax])
