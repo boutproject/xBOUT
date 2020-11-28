@@ -32,7 +32,7 @@ def _parse_coord_option(coord, axis_coords, da):
         else:
             label = coord
         if "units" in c.attrs:
-            label += f" [{c.units}]"
+            label = label + f" [{c.units}]"
         return c, label
     elif option_value == "index":
         return np.arange(da.sizes[coord]), f"{coord} index"
@@ -43,7 +43,7 @@ def _parse_coord_option(coord, axis_coords, da):
         else:
             label = option_value
         if "units" in c.attrs:
-            label += f" [{c.units}]"
+            label = label + f" [{c.units}]"
         return c, label
     else:
         return option_value, None
