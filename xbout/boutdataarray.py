@@ -506,7 +506,7 @@ class BoutDataArrayAccessor:
         animate : bool, optional
             If set to false, do not create the animation, just return the block or blocks
         axis_coords : None, str, dict
-            Coordinates to use for axis labelling.  Only affects time coordinate.
+            Coordinates to use for axis labelling.
             - None: Use the dimension coordinate for each axis, if it exists.
             - "index": Use the integer index values.
             - dict: keys are dimension names, values set axis_coords for each axis
@@ -514,6 +514,7 @@ class BoutDataArrayAccessor:
               coordinate (which must have the dimension given by 'key'), or a 1d
               numpy array, dask array or DataArray whose length matches the length of
               the dimension given by 'key'.
+            Only affects time coordinate for plots with poloidal_plot=True.
         fps : int, optional
             Frames per second of resulting gif
         save_as : True or str, optional
@@ -613,7 +614,7 @@ class BoutDataArrayAccessor:
         animate_over : str, optional
             Dimension over which to animate, defaults to the time dimension
         axis_coords : None, str, dict
-            Coordinates to use for axis labelling.  Only affects time coordinate.
+            Coordinates to use for axis labelling.
             - None: Use the dimension coordinate for each axis, if it exists.
             - "index": Use the integer index values.
             - dict: keys are dimension names, values set axis_coords for each axis
