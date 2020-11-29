@@ -1,4 +1,5 @@
 from copy import copy, deepcopy
+import numpy as np
 import xarray as xr
 from .utils import _set_attrs_on_all_vars
 
@@ -1265,6 +1266,53 @@ def _concat_lower_guards(da, da_global, mxg, myg):
         new_xcoord = da_global[xcoord].isel(**{xcoord: slices[xcoord]})
         new_ycoord = da_global[ycoord].isel(**{ycoord: slices[ycoord]})
 
+        # new_ycoord might not join smoothly onto da[ycoord] for limiter or core-only
+        # geometries where the guard cells have to come from the opposite side of a
+        # branch cut. Need to work around this, or it breaks parallel interpolation.
+        ycoord_increasing = np.any(
+            da[ycoord].isel(**{ycoord: 1}) > da[ycoord].isel(**{ycoord: 0})
+        )
+
+        if ycoord_increasing and np.any(
+            new_ycoord.isel(**{ycoord: -1}) > da[ycoord].isel(**{ycoord: 0})
+        ):
+            if not np.all(
+                new_ycoord.isel(**{ycoord: -1}) > da[ycoord].isel(**{ycoord: 0})
+            ):
+                raise ValueError(
+                    f"Inconsistent {ycoord} - should be either increasing everywhere "
+                    f"or decreasing everywhere"
+                )
+            # Estimate what coordinate values should be by extrapolating linearly from
+            # interior of region. This is exact if the grid spacing is constant, which
+            # it usually is in 'y'
+            offset = (
+                2.0 * da[ycoord].isel(**{ycoord: 0})
+                - da[ycoord].isel(**{ycoord: 1})
+                - new_ycoord.isel(**{ycoord: -1})
+            )
+            new_ycoord = new_ycoord + offset
+
+        elif (not ycoord_increasing) and np.any(
+            new_ycoord.isel(**{ycoord: -1}) < da[ycoord].isel(**{ycoord: 0})
+        ):
+            if not np.all(
+                new_ycoord.isel(**{ycoord: -1}) < da[ycoord].isel(**{ycoord: 0})
+            ):
+                raise ValueError(
+                    f"Inconsistent {ycoord} - should be either increasing everywhere "
+                    f"or decreasing everywhere"
+                )
+            # Estimate what coordinate values should be by extrapolating linearly from
+            # interior of region. This is exact if the grid spacing is constant, which
+            # it usually is in 'y'
+            offset = (
+                2.0 * da[ycoord].isel(**{ycoord: 0})
+                - da[ycoord].isel(**{ycoord: 1})
+                - new_ycoord.isel(**{ycoord: -1})
+            )
+            new_ycoord = new_ycoord + offset
+
         # can't use commented out version, uncommented one works around xarray bug
         # removing attrs
         # https://github.com/pydata/xarray/issues/4415
@@ -1317,6 +1365,53 @@ def _concat_upper_guards(da, da_global, mxg, myg):
 
         new_xcoord = da_global[xcoord].isel(**{xcoord: slices[xcoord]})
         new_ycoord = da_global[ycoord].isel(**{ycoord: slices[ycoord]})
+
+        # new_ycoord might not join smoothly onto da[ycoord] for limiter or core-only
+        # geometries where the guard cells have to come from the opposite side of a
+        # branch cut. Need to work around this, or it breaks parallel interpolation.
+        ycoord_increasing = np.any(
+            da[ycoord].isel(**{ycoord: -1}) > da[ycoord].isel(**{ycoord: -2})
+        )
+
+        if ycoord_increasing and np.any(
+            new_ycoord.isel(**{ycoord: 0}) < da[ycoord].isel(**{ycoord: -1})
+        ):
+            if not np.all(
+                new_ycoord.isel(**{ycoord: 0}) < da[ycoord].isel(**{ycoord: -1})
+            ):
+                raise ValueError(
+                    f"Inconsistent {ycoord} - should be either increasing everywhere "
+                    f"or decreasing everywhere"
+                )
+            # Estimate what coordinate values should be by extrapolating linearly from
+            # interior of region. This is exact if the grid spacing is constant, which
+            # it usually is in 'y'
+            offset = (
+                2.0 * da[ycoord].isel(**{ycoord: -1})
+                - da[ycoord].isel(**{ycoord: -2})
+                - new_ycoord.isel(**{ycoord: 0})
+            )
+            new_ycoord = new_ycoord + offset
+
+        elif (not ycoord_increasing) and np.any(
+            new_ycoord.isel(**{ycoord: 0}) > da[ycoord].isel(**{ycoord: -1})
+        ):
+            if not np.all(
+                new_ycoord.isel(**{ycoord: 0}) > da[ycoord].isel(**{ycoord: -1})
+            ):
+                raise ValueError(
+                    f"Inconsistent {ycoord} - should be either increasing everywhere "
+                    f"or decreasing everywhere"
+                )
+            # Estimate what coordinate values should be by extrapolating linearly from
+            # interior of region. This is exact if the grid spacing is constant, which
+            # it usually is in 'y'
+            offset = (
+                2.0 * da[ycoord].isel(**{ycoord: -1})
+                - da[ycoord].isel(**{ycoord: -2})
+                - new_ycoord.isel(**{ycoord: 0})
+            )
+            new_ycoord = new_ycoord + offset
 
         # can't use commented out version, uncommented one works around xarray bug
         # removing attrs
