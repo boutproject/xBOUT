@@ -474,10 +474,11 @@ class BoutDataArrayAccessor:
 
     def animate2D(
         self,
-        animate_over="t",
+        animate_over=None,
         x=None,
         y=None,
         animate=True,
+        axis_coords=None,
         fps=10,
         save_as=None,
         ax=None,
@@ -495,7 +496,7 @@ class BoutDataArrayAccessor:
         Parameters
         ----------
         animate_over : str, optional
-            Dimension over which to animate
+            Dimension over which to animate, defaults to the time dimension
         x : str, optional
             Dimension to use on the x axis, default is None - then use the first spatial
             dimension of the data
@@ -504,6 +505,16 @@ class BoutDataArrayAccessor:
             dimension of the data
         animate : bool, optional
             If set to false, do not create the animation, just return the block or blocks
+        axis_coords : None, str, dict
+            Coordinates to use for axis labelling.
+            - None: Use the dimension coordinate for each axis, if it exists.
+            - "index": Use the integer index values.
+            - dict: keys are dimension names, values set axis_coords for each axis
+              separately. Values can be: None, "index", the name of a 1d variable or
+              coordinate (which must have the dimension given by 'key'), or a 1d
+              numpy array, dask array or DataArray whose length matches the length of
+              the dimension given by 'key'.
+            Only affects time coordinate for plots with poloidal_plot=True.
         fps : int, optional
             Frames per second of resulting gif
         save_as : True or str, optional
@@ -521,6 +532,9 @@ class BoutDataArrayAccessor:
             threshold of a symmetric logarithmic scale as
             linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
             passed.
+        aspect : str or None, optional
+            Argument to set_aspect(). Defaults to "equal" for poloidal plots and "equal"
+            for others.
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (animatplot.blocks.Pcolormesh).
@@ -550,6 +564,7 @@ class BoutDataArrayAccessor:
                     data,
                     animate_over=animate_over,
                     animate=animate,
+                    axis_coords=axis_coords,
                     fps=fps,
                     save_as=save_as,
                     ax=ax,
@@ -567,6 +582,7 @@ class BoutDataArrayAccessor:
                     x=x,
                     y=y,
                     animate=animate,
+                    axis_coords=axis_coords,
                     fps=fps,
                     save_as=save_as,
                     ax=ax,
@@ -581,8 +597,9 @@ class BoutDataArrayAccessor:
 
     def animate1D(
         self,
-        animate_over="t",
+        animate_over=None,
         animate=True,
+        axis_coords=None,
         fps=10,
         save_as=None,
         sep_pos=None,
@@ -598,7 +615,16 @@ class BoutDataArrayAccessor:
         Parameters
         ----------
         animate_over : str, optional
-            Dimension over which to animate
+            Dimension over which to animate, defaults to the time dimension
+        axis_coords : None, str, dict
+            Coordinates to use for axis labelling.
+            - None: Use the dimension coordinate for each axis, if it exists.
+            - "index": Use the integer index values.
+            - dict: keys are dimension names, values set axis_coords for each axis
+              separately. Values can be: None, "index", the name of a 1d variable or
+              coordinate (which must have the dimension given by 'key'), or a 1d
+              numpy array, dask array or DataArray whose length matches the length of
+              the dimension given by 'key'.
         fps : int, optional
             Frames per second of resulting gif
         save_as : True or str, optional
@@ -610,6 +636,8 @@ class BoutDataArrayAccessor:
         ax : Axes, optional
             A matplotlib axes instance to plot to. If None, create a new
             figure and axes, and plot to that
+        aspect : str or None, optional
+            Argument to set_aspect(), defaults to "auto"
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (animatplot.blocks.Line).
@@ -627,6 +655,7 @@ class BoutDataArrayAccessor:
             line_block = animate_line(
                 data=data,
                 animate_over=animate_over,
+                axis_coords=axis_coords,
                 sep_pos=sep_pos,
                 animate=animate,
                 fps=fps,
