@@ -533,7 +533,7 @@ class BoutDataArrayAccessor:
             linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
             passed.
         aspect : str or None, optional
-            Argument to set_aspect(). Defaults to "equal" for poloidal plots and "equal"
+            Argument to set_aspect(). Defaults to "equal" for poloidal plots and "auto"
             for others.
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
