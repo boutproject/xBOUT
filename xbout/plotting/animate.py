@@ -584,7 +584,7 @@ def animate_line(
     else:
         y_label = variable
     if "units" in data.attrs:
-        y_label += f" [{data.units}]"
+        y_label = y_label + f" [{data.units}]"
     ax.set_ylabel(y_label)
 
     # Plot separatrix
