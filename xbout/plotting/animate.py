@@ -9,25 +9,84 @@ from .utils import _decompose_regions, _is_core_only, plot_separatrices, plot_ta
 from matplotlib.animation import PillowWriter
 
 
+if (
+    "pcolor.shading" in matplotlib.rcParams
+    and matplotlib.rcParams["pcolor.shading"] == "flat"
+):
+    # "flat" was the old matplotlib default which discarded the last row and column if
+    # X, Y and Z were all equal in size. The new "auto" should be better. Need to set
+    # this explicitly because "flat" is the default during a deprecation cycle.
+    matplotlib.rcParams["pcolor.shading"] = "auto"
+
+
+def _parse_coord_option(coord, axis_coords, da):
+    if isinstance(axis_coords, dict):
+        option_value = axis_coords.get(coord, None)
+    else:
+        option_value = axis_coords
+
+    if option_value is None:
+        c = da[coord]
+        if "long_name" in c.attrs:
+            label = c.long_name
+        else:
+            label = coord
+        if "units" in c.attrs:
+            label = label + f" [{c.units}]"
+        return c, label
+    elif option_value == "index":
+        return np.arange(da.sizes[coord]), f"{coord} index"
+    elif isinstance(option_value, str):
+        c = da[option_value]
+        if "long_name" in c.attrs:
+            label = c.long_name
+        else:
+            label = option_value
+        if "units" in c.attrs:
+            label = label + f" [{c.units}]"
+        return c, label
+    else:
+        return option_value, None
+
+
+def _normalise_time_coord(time_values):
+    """
+    amp.Timeline() does not do a good job of displaying time values that are very small
+    (they get rounded to zero). This function scales the time values by a power of 10 to
+    get nice values and modifies the units by the scale factor.
+    """
+    tmax = time_values.max()
+    if tmax < 1.0e-2 or tmax > 1.0e6:
+        scale_pow = int(np.floor(np.log10(tmax)))
+        scale_factor = 10 ** scale_pow
+        time_values = time_values / scale_factor
+        suffix = f"e{scale_pow}"
+    else:
+        suffix = ""
+
+    return time_values, suffix
+
+
 def animate_poloidal(
     da,
     *,
     ax=None,
     cax=None,
-    animate_over="t",
+    animate_over=None,
     separatrix=True,
     targets=True,
     add_limiter_hatching=True,
     cmap=None,
+    axis_coords=None,
     vmin=None,
     vmax=None,
     animate=True,
     save_as=None,
     fps=10,
     controls=True,
-    aspect="equal",
+    aspect=None,
     extend=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Make a 2D plot in R-Z coordinates using animatplotlib's Pcolormesh, taking into
@@ -43,6 +102,8 @@ def animate_poloidal(
     cax : Axes, optional
         Matplotlib axes instance where the colorbar will be plotted. If None, the default
         position created by matplotlab.figure.Figure.colorbar() will be used.
+    animate_over : str, optional
+        Dimension over which to animate, defaults to the time dimension
     separatrix : bool, optional
         Add dashed lines showing separatrices
     targets : bool, optional
@@ -51,6 +112,15 @@ def animate_poloidal(
         Draw hatched areas at the targets
     cmap : matplotlib.colors.Colormap instance, optional
         Colors to use for the plot
+    axis_coords : None, str, dict
+        Coordinates to use for axis labelling. Only affects time coordinate.
+        - None: Use the dimension coordinate for each axis, if it exists.
+        - "index": Use the integer index values.
+        - dict: keys are dimension names, values set axis_coords for each axis
+          separately. Values can be: None, "index", the name of a 1d variable or
+          coordinate (which must have the dimension given by 'key'), or a 1d
+          numpy array, dask array or DataArray whose length matches the length of
+          the dimension given by 'key'.
     vmin : float, optional
         Minimum value for the color scale
     vmax : float, optional
@@ -66,7 +136,7 @@ def animate_poloidal(
     controls : bool, optional
         If False, do not add the timeline and pause button to the animation
     aspect : str or None, optional
-        Argument to set_aspect()
+        Argument to set_aspect(), defaults to "equal"
     extend : str or None, optional
         Passed to fig.colorbar()
     **kwargs : optional
@@ -78,6 +148,12 @@ def animate_poloidal(
     blocks
         List of animatplot.blocks.Pcolormesh instances
     """
+
+    if animate_over is None:
+        animate_over = da.metadata.get("bout_tdim", "t")
+
+    if aspect is None:
+        aspect = "equal"
 
     # TODO generalise this
     x = kwargs.pop("x", "R")
@@ -120,7 +196,14 @@ def animate_poloidal(
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
     cmap = sm.get_cmap()
-    fig.colorbar(sm, ax=ax, cax=cax, extend=extend)
+    cbar = fig.colorbar(sm, ax=ax, cax=cax, extend=extend)
+    if "long_name" in da.attrs:
+        cbar_label = da.long_name
+    else:
+        cbar_label = da.name
+    if "units" in da.attrs:
+        cbar_label += f" [{da.units}]"
+    cbar.ax.set_ylabel(cbar_label)
 
     ax.set_aspect(aspect)
 
@@ -150,7 +233,7 @@ def animate_poloidal(
                     da_region.values,
                     ax=ax,
                     cmap=cmap,
-                    **kwargs
+                    **kwargs,
                 )
             )
 
@@ -169,11 +252,14 @@ def animate_poloidal(
         plot_targets(da_regions, ax, x=x, y=y, hatching=add_limiter_hatching)
 
     if animate:
-        timeline = amp.Timeline(np.arange(da.sizes[animate_over]), fps=fps)
+        t_values, t_label = _parse_coord_option(animate_over, axis_coords, da)
+        t_values, t_suffix = _normalise_time_coord(t_values)
+
+        timeline = amp.Timeline(t_values, fps=fps, units=t_suffix)
         anim = amp.Animation(blocks, timeline)
 
         if controls:
-            anim.controls(timeline_slider_args={"text": animate_over})
+            anim.controls(timeline_slider_args={"text": t_label})
 
         if save_as is not None:
             if save_as is True:
@@ -185,10 +271,11 @@ def animate_poloidal(
 
 def animate_pcolormesh(
     data,
-    animate_over="t",
+    animate_over=None,
     x=None,
     y=None,
     animate=True,
+    axis_coords=None,
     vmin=None,
     vmax=None,
     vsymmetric=False,
@@ -196,9 +283,10 @@ def animate_pcolormesh(
     save_as=None,
     ax=None,
     cax=None,
+    aspect=None,
     extend=None,
     controls=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Plots a color plot which is animated with time over the specified
@@ -211,7 +299,7 @@ def animate_pcolormesh(
     ----------
     data : xarray.DataArray
     animate_over : str, optional
-        Dimension over which to animate
+        Dimension over which to animate, defaults to the time dimension
     x : str, optional
         Dimension to use on the x axis, default is None - then use the first spatial
         dimension of the data
@@ -220,6 +308,15 @@ def animate_pcolormesh(
         dimension of the data
     animate : bool, optional
         If set to false, do not create the animation, just return the block
+    axis_coords : None, str, dict
+        Coordinates to use for axis labelling.
+        - None: Use the dimension coordinate for each axis, if it exists.
+        - "index": Use the integer index values.
+        - dict: keys are dimension names, values set axis_coords for each axis
+          separately. Values can be: None, "index", the name of a 1d variable or
+          coordinate (which must have the dimension given by 'key'), or a 1d
+          numpy array, dask array or DataArray whose length matches the length of
+          the dimension given by 'key'.
     vmin : float, optional
         Minimum value to use for colorbar. Default is to use minimum value of
         data across whole timeseries.
@@ -240,6 +337,8 @@ def animate_pcolormesh(
     cax : Axes, optional
         Matplotlib axes instance where the colorbar will be plotted. If None, the default
         position created by matplotlab.figure.Figure.colorbar() will be used.
+    aspect : str or None, optional
+        Argument to set_aspect(), defaults to "auto"
     extend : str or None, optional
         Passed to fig.colorbar()
     controls : bool, optional
@@ -248,6 +347,12 @@ def animate_pcolormesh(
         Additional keyword arguments are passed on to the animation function
         animatplot.blocks.Pcolormesh
     """
+
+    if animate_over is None:
+        animate_over = data.metadata.get("bout_tdim", "t")
+
+    if aspect is None:
+        aspect = "auto"
 
     variable = data.name
 
@@ -284,6 +389,9 @@ def animate_pcolormesh(
         # matplotlib-3.3 definitely does not need this. Not sure about 3.0, 3.1, 3.2.
         extend = "neither"
 
+    x_values, x_label = _parse_coord_option(x, axis_coords, data)
+    y_values, y_label = _parse_coord_option(y, axis_coords, data)
+
     data = data.transpose(animate_over, y, x, transpose_coords=True)
 
     # Load values eagerly otherwise for some reason the plotting takes
@@ -306,6 +414,8 @@ def animate_pcolormesh(
     if not ax:
         fig, ax = plt.subplots()
 
+    ax.set_aspect(aspect)
+
     # Note: animatplot's Pcolormesh gave strange outputs without passing
     # explicitly x- and y-value arrays, although in principle these should not
     # be necessary.
@@ -322,24 +432,33 @@ def animate_pcolormesh(
             UserWarning,
         )
         pcolormesh_block = amp.blocks.Pcolormesh(
-            np.arange(float(nx)), np.arange(float(ny)), image_data, ax=ax, **kwargs
+            x_values, y_values, image_data, ax=ax, **kwargs
         )
 
     if animate:
-        timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
+        t_values, t_label = _parse_coord_option(animate_over, axis_coords, data)
+        t_values, t_suffix = _normalise_time_coord(t_values)
+
+        timeline = amp.Timeline(t_values, fps=fps, units=t_suffix)
         anim = amp.Animation([pcolormesh_block], timeline)
 
     cbar = plt.colorbar(pcolormesh_block.quad, ax=ax, cax=cax, extend=extend)
-    cbar.ax.set_ylabel(variable)
+    if "long_name" in data.attrs:
+        cbar_label = data.long_name
+    else:
+        cbar_label = variable
+    if "units" in data.attrs:
+        cbar_label += f" [{data.units}]"
+    cbar.ax.set_ylabel(cbar_label)
 
     # Add title and axis labels
     ax.set_title(variable)
-    ax.set_xlabel(x)
-    ax.set_ylabel(y)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
 
     if animate:
         if controls:
-            anim.controls(timeline_slider_args={"text": animate_over})
+            anim.controls(timeline_slider_args={"text": t_label})
 
         if save_as is not None:
             if save_as is True:
@@ -351,16 +470,18 @@ def animate_pcolormesh(
 
 def animate_line(
     data,
-    animate_over="t",
+    animate_over=None,
     animate=True,
+    axis_coords=None,
     vmin=None,
     vmax=None,
     fps=10,
     save_as=None,
     sep_pos=None,
     ax=None,
+    aspect=None,
     controls=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Plots a line plot which is animated with time.
@@ -371,9 +492,18 @@ def animate_line(
     ----------
     data : xarray.DataArray
     animate_over : str, optional
-        Dimension over which to animate
+        Dimension over which to animate, defaults to the time dimension
     animate : bool, optional
         If set to false, do not create the animation, just return the block
+    axis_coords : None, str, dict
+        Coordinates to use for axis labelling.
+        - None: Use the dimension coordinate for each axis, if it exists.
+        - "index": Use the integer index values.
+        - dict: keys are dimension names, values set axis_coords for each axis
+          separately. Values can be: None, "index", the name of a 1d variable or
+          coordinate (which must have the dimension given by 'key'), or a 1d
+          numpy array, dask array or DataArray whose length matches the length of
+          the dimension given by 'key'.
     vmin : float, optional
         Minimum value to use for colorbar. Default is to use minimum value of
         data across whole timeseries.
@@ -391,6 +521,8 @@ def animate_line(
     ax : Axes, optional
         A matplotlib axes instance to plot to. If None, create a new
         figure and axes, and plot to that
+    aspect : str or None, optional
+        Argument to set_aspect(), defaults to "auto"
     controls : bool, optional
         If False, do not add the timeline and pause button to the animation
     kwargs : dict, optional
@@ -398,14 +530,21 @@ def animate_line(
         animatplot.blocks.Line
     """
 
+    if animate_over is None:
+        animate_over = data.metadata.get("bout_tdim", "t")
+
+    if aspect is None:
+        aspect = "auto"
+
     variable = data.name
 
     # Check plot is the right orientation
     t_read, x_read = data.dims
     if t_read is animate_over:
-        pass
+        x = x_read
     else:
         data = data.transpose(animate_over, t_read, transpose_coords=True)
+        x = t_read
 
     # Load values eagerly otherwise for some reason the plotting takes
     # 100's of times longer - for some reason animatplot does not deal
@@ -418,22 +557,35 @@ def animate_line(
     if vmin is None:
         vmin = np.min(image_data)
 
+    x_values, x_label = _parse_coord_option(x, axis_coords, data)
+
     if not ax:
         fig, ax = plt.subplots()
+
+    ax.set_aspect(aspect)
 
     # set range of plot
     ax.set_ylim([vmin, vmax])
 
-    line_block = amp.blocks.Line(image_data, ax=ax, **kwargs)
+    line_block = amp.blocks.Line(x_values, image_data, ax=ax, **kwargs)
 
     if animate:
-        timeline = amp.Timeline(np.arange(data.sizes[animate_over]), fps=fps)
+        t_values, t_label = _parse_coord_option(animate_over, axis_coords, data)
+        t_values, t_suffix = _normalise_time_coord(t_values)
+
+        timeline = amp.Timeline(t_values, fps=fps, units=t_suffix)
         anim = amp.Animation([line_block], timeline)
 
     # Add title and axis labels
     ax.set_title(variable)
-    ax.set_xlabel(x_read)
-    ax.set_ylabel(variable)
+    ax.set_xlabel(x_label)
+    if "long_name" in data.attrs:
+        y_label = data.long_name
+    else:
+        y_label = variable
+    if "units" in data.attrs:
+        y_label = y_label + f" [{data.units}]"
+    ax.set_ylabel(y_label)
 
     # Plot separatrix
     if sep_pos:
@@ -441,7 +593,7 @@ def animate_line(
 
     if animate:
         if controls:
-            anim.controls(timeline_slider_args={"text": animate_over})
+            anim.controls(timeline_slider_args={"text": t_label})
 
         if save_as is not None:
             if save_as is True:
