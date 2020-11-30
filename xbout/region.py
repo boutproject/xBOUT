@@ -62,6 +62,8 @@ class Region:
         self.connection_outer_x = connection_outer_x
         self.connection_lower_y = connection_lower_y
         self.connection_upper_y = connection_upper_y
+        self.global_nx = ds.sizes[ds.metadata["bout_xdim"]]
+        self.global_ny = ds.sizes[ds.metadata["bout_ydim"]]
 
         if ds is not None:
             # self.nx, self.ny should not include boundary points.
@@ -224,9 +226,21 @@ class Region:
         xouter = self.xouter_ind
         if self.connection_outer_x is not None:
             xouter += mxg
+
+        ystart = self.ylower_ind - myg
+        ystop = self.ylower_ind
+        if ystart < 0:
+            # Make sure negative indices wrap around correctly
+            if ystop == 0:
+                ystop = None
+            elif ystop > 0:
+                raise ValueError(
+                    f"'start={ystart}' of lower guards slice is negative, but "
+                    f"'stop={ystop}' is positive. Should not be possible."
+                )
         return {
             self.xcoord: slice(xinner, xouter),
-            self.ycoord: slice(self.ylower_ind - myg, self.ylower_ind),
+            self.ycoord: slice(ystart, ystop),
         }
 
     def get_upper_guards_slices(self, *, myg, mxg=0):
@@ -247,9 +261,17 @@ class Region:
         xouter = self.xouter_ind
         if self.connection_outer_x is not None:
             xouter += mxg
+
+        # wrap around to the beginning of the grid if necessary
+        ystart = self.yupper_ind
+        ystop = self.yupper_ind + myg
+        if ystart >= self.global_ny:
+            # wrap around to beginning of global array
+            ystart = ystart - self.global_ny
+            ystop = ystop - self.global_ny
         return {
             self.xcoord: slice(xinner, xouter),
-            self.ycoord: slice(self.yupper_ind, self.yupper_ind + myg),
+            self.ycoord: slice(ystart, ystop),
         }
 
     def __eq__(self, other):
@@ -1240,15 +1262,6 @@ def _concat_lower_guards(da, da_global, mxg, myg):
         # continuous so that interpolation works correctly near the boundaries.
         slices = region.get_lower_guards_slices(mxg=mxg, myg=myg)
 
-        if slices[ycoord].start < 0:
-            # For core-only or limiter topologies, the lower-y slice may be out of the
-            # global array bounds
-            raise ValueError(
-                "Trying to fill a slice which is not present in the global array, "
-                "so do not have coordinate values for it. Try setting "
-                "keep_yboundaries=True when calling open_boutdataset."
-            )
-
         new_xcoord = da_global[xcoord].isel(**{xcoord: slices[xcoord]})
         new_ycoord = da_global[ycoord].isel(**{ycoord: slices[ycoord]})
 
@@ -1301,15 +1314,6 @@ def _concat_upper_guards(da, da_global, mxg, myg):
         # neighbouring region, not communicated ones. Ensures the coordinates are
         # continuous so that interpolation works correctly near the boundaries.
         slices = region.get_upper_guards_slices(mxg=mxg, myg=myg)
-
-        if slices[ycoord].stop > da_global.sizes[ycoord]:
-            # For core-only or limiter topologies, the upper-y slice may be out of the
-            # global array bounds
-            raise ValueError(
-                "Trying to fill a slice which is not present in the global array, "
-                "so do not have coordinate values for it. Try setting "
-                "keep_yboundaries=True when calling open_boutdataset."
-            )
 
         new_xcoord = da_global[xcoord].isel(**{xcoord: slices[xcoord]})
         new_ycoord = da_global[ycoord].isel(**{ycoord: slices[ycoord]})

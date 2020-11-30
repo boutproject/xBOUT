@@ -93,11 +93,26 @@ def plot_separatrices(da, ax, *, x="R", y="Z"):
         inner = list(da_region.regions.values())[0].connection_inner_x
         if inner in da_regions:
             da_inner = da_regions[inner]
+
+            try:
+                da_region, da_inner = xr.align(da_region, da_inner)
+            except ValueError:
+                # For geometries with a limiter, the closed field-line region may have
+                # guard cells while the open field line region does not. Also the
+                # closed-field line guard cells may (if the region is connected to
+                # itself) have duplicated coordinate values, which xr.align() cannot
+                # handle. Use np.unique() to remove the duplicated coordinate values
+                _, unique_yinds = np.unique(da_inner[ycoord], return_index=True)
+                da_inner = da_inner.isel(**{ycoord: unique_yinds})
+
+            # Put da_inner second as the unique_yinds selection may mess up the order of
+            # points. xarray will align the coordinates with the first argument (to the
+            # addition here).
             x_sep = 0.5 * (
-                da_inner[x].isel(**{xcoord: -1}) + da_region[x].isel(**{xcoord: 0})
+                da_region[x].isel(**{xcoord: 0}) + da_inner[x].isel(**{xcoord: -1})
             )
             y_sep = 0.5 * (
-                da_inner[y].isel(**{xcoord: -1}) + da_region[y].isel(**{xcoord: 0})
+                da_region[y].isel(**{xcoord: 0}) + da_inner[y].isel(**{xcoord: -1})
             )
             ax.plot(x_sep, y_sep, "k--")
 
