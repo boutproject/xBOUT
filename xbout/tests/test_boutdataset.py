@@ -699,6 +699,64 @@ class TestBoutDatasetMethods:
             )
         )
 
+    def test_interpolate_parallel_limiter(
+        self,
+        bout_xyt_example_files,
+    ):
+        # This test checks that the regions created in the new high-resolution Dataset by
+        # interpolate_parallel are correct.
+        # This test does not test the accuracy of the parallel interpolation (there are
+        # other tests for that).
+
+        # Note using more than MXG x-direction points and MYG y-direction points per
+        # output file ensures tests for whether boundary cells are present do not fail
+        # when using minimal numbers of processors
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=6,
+            nt=1,
+            guards={"x": 2, "y": 2},
+            grid="grid",
+            topology="limiter",
+        )
+
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry="toroidal",
+            keep_xboundaries=True,
+            keep_yboundaries=False,
+        )
+
+        # Get high parallel resolution version of ds, and check that
+        ds = ds.bout.interpolate_parallel(["n", "T"])
+
+        mxg = 2
+        myg = 2
+
+        ixs1 = ds.metadata["ixseps1"]
+
+        for var in ["n", "T"]:
+            v = ds[var]
+            v_noregions = v.copy(deep=True)
+
+            # Remove attributes that are expected to be different
+            del v_noregions.attrs["regions"]
+
+            v_core = v.bout.from_region("core", with_guards={"theta": 0})
+
+            # Remove attributes that are expected to be different
+            del v_core.attrs["regions"]
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 + mxg)), v_core)
+
+            v_sol = v.bout.from_region("SOL")
+
+            # Remove attributes that are expected to be different
+            del v_sol.attrs["regions"]
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 - mxg, None)), v_sol)
+
     def test_interpolate_from_unstructured(self, bout_xyt_example_files):
         dataset_list, grid_ds = bout_xyt_example_files(
             None,
