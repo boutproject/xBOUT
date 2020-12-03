@@ -45,6 +45,12 @@ xBOUT will install the required python packages when you run one of
 the above install commands if they are not already installed on your
 system.
 
+Examples
+--------
+
+You can find some example notebooks demonstrating various features of
+:py:mod:`xbout` here: https://github.com/boutproject/xBOUT-examples
+
 Indices and tables
 ==================
 
