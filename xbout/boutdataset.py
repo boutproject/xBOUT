@@ -59,7 +59,7 @@ class BoutDatasetAccessor:
             + "Metadata:\n{}\n".format(styled(self.metadata))
         )
         if self.options:
-            text += "Options:\n{}".format(styled(self.options))
+            text += "Options:\n{}".format(self.options)
         return text
 
     # def __repr__(self):
