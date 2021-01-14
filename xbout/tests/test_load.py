@@ -273,6 +273,14 @@ def _bout_xyt_example_files(
     if squashed:
         # create a single data-file, but alter the 'nxpe' and 'nype' variables, as if the
         # file had been created by combining a set of BOUT.dmp.*.nc files
+        mxg = guards.get("x", 0)
+        myg = guards.get("y", 0)
+        lengths = (
+            lengths[0],
+            lengths[1] * nxpe + 2 * mxg,
+            lengths[2] * nype + 2 * myg,
+            lengths[3],
+        )
         ds_list, file_list = create_bout_ds_list(
             prefix=prefix,
             lengths=lengths,
@@ -716,7 +724,7 @@ class TestOpen:
         )
         with pytest.warns(UserWarning):
             actual = open_boutdataset(datapath=path, keep_xboundaries=False)
-        expected = create_bout_ds()
+        expected = create_bout_ds(lengths=(6, 8, 12, 7))
         expected = expected.set_coords("t_array").rename(t_array="t")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),

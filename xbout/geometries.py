@@ -47,7 +47,8 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     UnregisteredGeometryError
     """
 
-    if geometry_name is None:
+    if geometry_name is None or geometry_name == "":
+        ds = _set_attrs_on_all_vars(ds, "geometry", "")
         updated_ds = ds
     else:
         ds = _set_attrs_on_all_vars(ds, "geometry", geometry_name)
@@ -290,6 +291,9 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
         # Record which dimension 'z' was renamed to.
         ds.metadata["bout_zdim"] = coordinates["z"]
+
+    # Ensure metadata is the same on all variables
+    ds = _set_attrs_on_all_vars(ds, "metadata", ds.metadata)
 
     # Add 2D Cylindrical coordinates
     if ("R" not in ds) and ("Z" not in ds):

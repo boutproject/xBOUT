@@ -238,10 +238,7 @@ class BoutDatasetAccessor:
         ds = ds.reset_coords("dy")
 
         # Apply geometry
-        if hasattr(ds, "geometry"):
-            ds = apply_geometry(ds, ds.geometry)
-        # if no geometry was originally applied, then ds has no geometry attribute and we
-        # can continue without applying geometry here
+        ds = apply_geometry(ds, ds.geometry)
 
         return ds
 
