@@ -494,9 +494,9 @@ class TestBoutDataArrayMethods:
                 # Check shifting non-staggered field fails without zShift
                 ds["T"].bout.from_field_aligned()
 
-        n_stag_al = ds["n"].bout.from_field_aligned()
+        n_stag_nal = ds["n"].bout.from_field_aligned()
 
-        npt.assert_equal(n_stag_al.values, n_nal.values)
+        npt.assert_equal(n_stag_nal.values, n_nal.values)
 
     @pytest.mark.long
     def test_interpolate_parallel_region_core(self, bout_xyt_example_files):
