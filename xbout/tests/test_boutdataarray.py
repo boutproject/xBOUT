@@ -126,6 +126,9 @@ class TestBoutDataArrayMethods:
 
         n.attrs["direction_y"] = "Standard"
         n_al = n.bout.to_field_aligned()
+
+        assert n_al.direction_y == "Aligned"
+
         for t in range(ds.sizes["t"]):
             for z in range(nz):
                 npt.assert_allclose(
@@ -228,6 +231,9 @@ class TestBoutDataArrayMethods:
 
         n.attrs["direction_y"] = "Standard"
         n_al = n.bout.to_field_aligned()
+
+        assert n_al.direction_y == "Aligned"
+
         for t in range(ds.sizes["t"]):
             for z in range(nz):
                 npt.assert_allclose(
@@ -331,6 +337,9 @@ class TestBoutDataArrayMethods:
 
         n.attrs["direction_y"] = "Aligned"
         n_nal = n.bout.from_field_aligned()
+
+        assert n_nal.direction_y == "Standard"
+
         for t in range(ds.sizes["t"]):
             for z in range(nz):
                 npt.assert_allclose(
@@ -426,6 +435,8 @@ class TestBoutDataArrayMethods:
 
         n_al = n.bout.to_field_aligned().copy(deep=True)
 
+        assert n_al.direction_y == "Aligned"
+
         # make 'n' staggered
         ds["n"].attrs["cell_location"] = stag_location
 
@@ -477,6 +488,8 @@ class TestBoutDataArrayMethods:
         ds["T"].attrs["direction_y"] = "Aligned"
 
         n_nal = n.bout.from_field_aligned().copy(deep=True)
+
+        assert n_nal.direction_y == "Standard"
 
         # make 'n' staggered
         ds["n"].attrs["cell_location"] = stag_location
