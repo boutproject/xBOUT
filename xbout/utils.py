@@ -257,7 +257,7 @@ def _pad_x_boundaries(ds):
             if xcoord in boundary_pad[v].dims:
                 boundary_pad[v].values[...] = np.nan
         ds = xr.concat(
-            [boundary_pad, ds.load, boundary_pad], dim=xcoord, data_vars="minimal"
+            [boundary_pad, ds.load(), boundary_pad], dim=xcoord, data_vars="minimal"
         )
 
     return ds

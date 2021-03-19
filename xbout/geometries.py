@@ -268,8 +268,9 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
             _add_attrs_to_var(ds, v)
 
-    # Rename 't' if user requested it
-    ds = ds.rename(t=coordinates["t"])
+    if "t" in ds.dims:
+        # Rename 't' if user requested it
+        ds = ds.rename(t=coordinates["t"])
 
     # Change names of dimensions to Orthogonal Toroidal ones
     ds = ds.rename(y=coordinates["y"])
