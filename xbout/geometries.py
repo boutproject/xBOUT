@@ -47,7 +47,8 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     UnregisteredGeometryError
     """
 
-    if geometry_name is None:
+    if geometry_name is None or geometry_name == "":
+        ds = _set_attrs_on_all_vars(ds, "geometry", "")
         updated_ds = ds
     else:
         ds = _set_attrs_on_all_vars(ds, "geometry", geometry_name)
@@ -209,12 +210,18 @@ def _set_default_toroidal_coordinates(coordinates, ds):
         coordinates = {}
 
     # Replace any values that have not been passed in with defaults
-    coordinates["t"] = coordinates.get("t", ds.metadata.get("bout_tdim", "t"))
-    coordinates["x"] = coordinates.get(
-        "x", ds.metadata.get("bout_xdim", "psi_poloidal")
+    coordinates["t"] = coordinates.get("t", ds.metadata["bout_tdim"])
+
+    default_x = (
+        ds.metadata["bout_xdim"] if ds.metadata["bout_xdim"] != "x" else "psi_poloidal"
     )
-    coordinates["y"] = coordinates.get("y", ds.metadata.get("bout_ydim", "theta"))
-    coordinates["z"] = coordinates.get("z", ds.metadata.get("bout_zdim", "zeta"))
+    coordinates["x"] = coordinates.get("x", default_x)
+
+    default_y = ds.metadata["bout_ydim"] if ds.metadata["bout_ydim"] != "y" else "theta"
+    coordinates["y"] = coordinates.get("y", default_y)
+
+    default_z = ds.metadata["bout_zdim"] if ds.metadata["bout_zdim"] != "z" else "zeta"
+    coordinates["z"] = coordinates.get("z", default_z)
 
     return coordinates
 
@@ -285,6 +292,9 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
         # Record which dimension 'z' was renamed to.
         ds.metadata["bout_zdim"] = coordinates["z"]
+
+    # Ensure metadata is the same on all variables
+    ds = _set_attrs_on_all_vars(ds, "metadata", ds.metadata)
 
     # Add 2D Cylindrical coordinates
     if ("R" not in ds) and ("Z" not in ds):

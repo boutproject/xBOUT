@@ -65,6 +65,13 @@ def _separate_metadata(ds):
     metadata_vals = [ds[var].values.item() for var in scalar_vars]
     metadata = dict(zip(scalar_vars, metadata_vals))
 
+    # Add default values for dimensions to metadata. These may be modified later by
+    # apply_geometry()
+    metadata["bout_tdim"] = "t"
+    metadata["bout_xdim"] = "x"
+    metadata["bout_ydim"] = "y"
+    metadata["bout_zdim"] = "z"
+
     return ds.drop_vars(scalar_vars), metadata
 
 

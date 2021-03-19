@@ -270,18 +270,28 @@ def _bout_xyt_example_files(
     write_to_disk=True).
     """
 
+    mxg = guards.get("x", 0)
+    myg = guards.get("y", 0)
+
     if squashed:
         # create a single data-file, but alter the 'nxpe' and 'nype' variables, as if the
         # file had been created by combining a set of BOUT.dmp.*.nc files
+        this_lengths = (
+            lengths[0],
+            lengths[1] * nxpe,
+            lengths[2] * nype,
+            lengths[3],
+        )
         ds_list, file_list = create_bout_ds_list(
             prefix=prefix,
-            lengths=lengths,
+            lengths=this_lengths,
             nxpe=1,
             nype=1,
             nt=nt,
             guards=guards,
             topology=topology,
             syn_data_type=syn_data_type,
+            squashed=True,
         )
         ds_list[0]["nxpe"] = nxpe
         ds_list[0]["nype"] = nype
@@ -347,6 +357,7 @@ def create_bout_ds_list(
     guards={},
     topology="core",
     syn_data_type="random",
+    squashed=False,
 ):
     """
     Mocks up a set of BOUT-like datasets.
@@ -382,6 +393,7 @@ def create_bout_ds_list(
                 yproc=j,
                 guards=guards,
                 topology=topology,
+                squashed=squashed,
             )
             ds_list.append(ds)
 
@@ -398,6 +410,7 @@ def create_bout_ds(
     yproc=0,
     guards={},
     topology="core",
+    squashed=False,
 ):
 
     # Set the shape of the data in this dataset
@@ -406,12 +419,16 @@ def create_bout_ds(
     myg = guards.get("y", 0)
     x_length += 2 * mxg
     y_length += 2 * myg
-    shape = (t_length, x_length, y_length, z_length)
 
     # calculate global nx, ny and nz
     nx = nxpe * lengths[1] + 2 * mxg
     ny = nype * lengths[2]
     nz = 1 * lengths[3]
+
+    if squashed and "double-null" in topology:
+        ny = ny + 2 * myg
+        y_length = y_length + 2 * myg
+    shape = (t_length, x_length, y_length, z_length)
 
     # Fill with some kind of synthetic data
     if syn_data_type == "random":
@@ -434,7 +451,7 @@ def create_bout_ds(
         )
         z_array = DataArray(np.arange(z_length, dtype=float), dims="z")
 
-        data[:, mxg : x_length - mxg, myg : y_length - myg, :] = (
+        data[:, mxg : x_length - mxg, myg : lengths[2] + myg, :] = (
             t_array + x_array + y_array + z_array
         )
     elif syn_data_type == "stepped":
@@ -471,11 +488,18 @@ def create_bout_ds(
     ds["ny"] = ny
     ds["nz"] = nz
     ds["MZ"] = 1 * lengths[3]
-    ds["MXSUB"] = lengths[1]
-    ds["MYSUB"] = lengths[2]
-    ds["MZSUB"] = lengths[3]
+    if squashed:
+        ds["MXSUB"] = lengths[1] // nxpe
+        ds["MYSUB"] = lengths[2] // nype
+        ds["MZSUB"] = lengths[3]
+    else:
+        ds["MXSUB"] = lengths[1]
+        ds["MYSUB"] = lengths[2]
+        ds["MZSUB"] = lengths[3]
 
     MYSUB = lengths[2]
+
+    extra_boundary_points = 0
 
     if topology == "core":
         ds["ixseps1"] = nx
@@ -502,7 +526,7 @@ def create_bout_ds(
         ds["jyseps2_2"] = ny - 1
         ds["ny_inner"] = ny // 2
     elif topology == "xpoint":
-        if nype < 4:
+        if nype < 4 and not squashed:
             raise ValueError(f"Not enough processors for xpoint topology: nype={nype}")
         ds["ixseps1"] = nx // 2
         ds["ixseps2"] = nx // 2
@@ -513,7 +537,7 @@ def create_bout_ds(
         ds["jyseps1_2"] = ny - MYSUB - 1
         ds["jyseps2_2"] = ny - MYSUB - 1
     elif topology == "single-null":
-        if nype < 3:
+        if nype < 3 and not squashed:
             raise ValueError(f"Not enough processors for xpoint topology: nype={nype}")
         ds["ixseps1"] = nx // 2
         ds["ixseps2"] = nx
@@ -523,7 +547,7 @@ def create_bout_ds(
         ds["jyseps2_2"] = ny - MYSUB - 1
         ds["ny_inner"] = ny // 2
     elif topology == "connected-double-null":
-        if nype < 6:
+        if nype < 6 and not squashed:
             raise ValueError(
                 "Not enough processors for connected-double-null topology: "
                 f"nype={nype}"
@@ -537,7 +561,7 @@ def create_bout_ds(
         ds["jyseps1_2"] = ny_inner + MYSUB - 1
         ds["jyseps2_2"] = ny - MYSUB - 1
     elif topology == "disconnected-double-null":
-        if nype < 6:
+        if nype < 6 and not squashed:
             raise ValueError(
                 "Not enough processors for disconnected-double-null "
                 f"topology: nype={nype}"
@@ -716,7 +740,7 @@ class TestOpen:
         )
         with pytest.warns(UserWarning):
             actual = open_boutdataset(datapath=path, keep_xboundaries=False)
-        expected = create_bout_ds()
+        expected = create_bout_ds(lengths=(6, 8, 12, 7))
         expected = expected.set_coords("t_array").rename(t_array="t")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
@@ -733,6 +757,75 @@ class TestOpen:
         with pytest.warns(UserWarning):
             fake = open_boutdataset(datapath=fake_ds_list, keep_xboundaries=False)
         xrt.assert_identical(actual, fake)
+
+    @pytest.mark.parametrize(
+        "keep_xboundaries", [False, pytest.param(True, marks=pytest.mark.long)]
+    )
+    @pytest.mark.parametrize(
+        "keep_yboundaries", [False, pytest.param(True, marks=pytest.mark.long)]
+    )
+    def test_squashed_doublenull(
+        self, tmpdir_factory, bout_xyt_example_files, keep_xboundaries, keep_yboundaries
+    ):
+        path = bout_xyt_example_files(
+            tmpdir_factory,
+            nxpe=4,
+            nype=6,
+            nt=1,
+            lengths=(6, 2, 4, 7),
+            guards={"x": 2, "y": 2},
+            squashed=True,
+            topology="disconnected-double-null",
+        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=path,
+                keep_xboundaries=keep_xboundaries,
+                keep_yboundaries=keep_yboundaries,
+            )
+
+        # bout_xyt_example_files when creating a 'squashed' file just makes it with
+        # y-size nype*lengths[2]+2*myg, which is 6*4+4=28, so with upper and lower
+        # boundaries removed, y-size should be 28-4*2=20.
+        assert ds.sizes["t"] == 6
+        assert ds.sizes["x"] == 12 if keep_xboundaries else 8
+        assert ds.sizes["y"] == 32 if keep_yboundaries else 24
+        assert ds.sizes["z"] == 7
+
+    @pytest.mark.parametrize(
+        "keep_xboundaries", [False, pytest.param(True, marks=pytest.mark.long)]
+    )
+    @pytest.mark.parametrize(
+        "keep_yboundaries", [False, pytest.param(True, marks=pytest.mark.long)]
+    )
+    def test_squashed_doublenull_file(
+        self, tmpdir_factory, bout_xyt_example_files, keep_xboundaries, keep_yboundaries
+    ):
+        path = bout_xyt_example_files(
+            tmpdir_factory,
+            nxpe=4,
+            nype=6,
+            nt=1,
+            lengths=(6, 4, 4, 7),
+            guards={"x": 2, "y": 2},
+            squashed=True,
+            write_to_disk=True,
+            topology="disconnected-double-null",
+        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=path,
+                keep_xboundaries=keep_xboundaries,
+                keep_yboundaries=keep_yboundaries,
+            )
+
+        # bout_xyt_example_files when creating a 'squashed' file just makes it with
+        # y-size nype*lengths[2]+2*myg, which is 6*4+4=28, so with upper and lower
+        # boundaries removed, y-size should be 28-4*2=20.
+        assert ds.sizes["t"] == 6
+        assert ds.sizes["x"] == 20 if keep_xboundaries else 16
+        assert ds.sizes["y"] == 32 if keep_yboundaries else 24
+        assert ds.sizes["z"] == 7
 
     def test_combine_along_x(self, tmpdir_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(
