@@ -519,7 +519,7 @@ def _auto_open_mfboutdataset(
 
         if is_squashed_doublenull:
             # Need to remove y-boundaries after loading when loading a squashed
-            # data-set, in which case we cannot easily remove the upper boundary cells      
+            # data-set, in which case we cannot easily remove the upper boundary cells
             # in _trim().
             remove_yboundaries = not keep_yboundaries
             keep_yboundaries = True
