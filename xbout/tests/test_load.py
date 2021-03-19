@@ -483,7 +483,7 @@ def create_bout_ds(
         ds["jyseps1_1"] = -1
         ds["jyseps2_1"] = ny // 2 - 1
         ds["jyseps1_2"] = ny // 2 - 1
-        ds["jyseps2_2"] = ny
+        ds["jyseps2_2"] = ny - 1
         ds["ny_inner"] = ny // 2
     elif topology == "sol":
         ds["ixseps1"] = 0
@@ -491,7 +491,7 @@ def create_bout_ds(
         ds["jyseps1_1"] = -1
         ds["jyseps2_1"] = ny // 2 - 1
         ds["jyseps1_2"] = ny // 2 - 1
-        ds["jyseps2_2"] = ny
+        ds["jyseps2_2"] = ny - 1
         ds["ny_inner"] = ny // 2
     elif topology == "limiter":
         ds["ixseps1"] = nx // 2
@@ -499,7 +499,7 @@ def create_bout_ds(
         ds["jyseps1_1"] = -1
         ds["jyseps2_1"] = ny // 2 - 1
         ds["jyseps1_2"] = ny // 2 - 1
-        ds["jyseps2_2"] = ny
+        ds["jyseps2_2"] = ny - 1
         ds["ny_inner"] = ny // 2
     elif topology == "xpoint":
         if nype < 4:
