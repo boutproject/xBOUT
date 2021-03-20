@@ -126,6 +126,9 @@ class TestBoutDataArrayMethods:
 
         n.attrs["direction_y"] = "Standard"
         n_al = n.bout.to_field_aligned()
+
+        assert n_al.direction_y == "Aligned"
+
         for t in range(ds.sizes["t"]):
             for z in range(nz):
                 npt.assert_allclose(
@@ -228,6 +231,9 @@ class TestBoutDataArrayMethods:
 
         n.attrs["direction_y"] = "Standard"
         n_al = n.bout.to_field_aligned()
+
+        assert n_al.direction_y == "Aligned"
+
         for t in range(ds.sizes["t"]):
             for z in range(nz):
                 npt.assert_allclose(
@@ -331,6 +337,9 @@ class TestBoutDataArrayMethods:
 
         n.attrs["direction_y"] = "Aligned"
         n_nal = n.bout.from_field_aligned()
+
+        assert n_nal.direction_y == "Standard"
+
         for t in range(ds.sizes["t"]):
             for z in range(nz):
                 npt.assert_allclose(
@@ -426,6 +435,8 @@ class TestBoutDataArrayMethods:
 
         n_al = n.bout.to_field_aligned().copy(deep=True)
 
+        assert n_al.direction_y == "Aligned"
+
         # make 'n' staggered
         ds["n"].attrs["cell_location"] = stag_location
 
@@ -478,6 +489,8 @@ class TestBoutDataArrayMethods:
 
         n_nal = n.bout.from_field_aligned().copy(deep=True)
 
+        assert n_nal.direction_y == "Standard"
+
         # make 'n' staggered
         ds["n"].attrs["cell_location"] = stag_location
 
@@ -494,9 +507,9 @@ class TestBoutDataArrayMethods:
                 # Check shifting non-staggered field fails without zShift
                 ds["T"].bout.from_field_aligned()
 
-        n_stag_al = ds["n"].bout.from_field_aligned()
+        n_stag_nal = ds["n"].bout.from_field_aligned()
 
-        npt.assert_equal(n_stag_al.values, n_nal.values)
+        npt.assert_equal(n_stag_nal.values, n_nal.values)
 
     @pytest.mark.long
     def test_interpolate_parallel_region_core(self, bout_xyt_example_files):

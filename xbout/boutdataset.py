@@ -92,6 +92,41 @@ class BoutDatasetAccessor:
                 self.data[aligned_name] = self.data[name].bout.to_field_aligned()
             return self.data[aligned_name]
 
+    def to_field_aligned(self):
+        """
+        Create a new Dataset with all 3d variables transformed to field-aligned
+        coordinates, which are shifted with respect to the base coordinates by an angle
+        zShift
+        """
+        result = self.data.copy()
+
+        for v in chain(result, result.coords):
+            da = result[v]
+            # Need to transform any z-dependent variables or coordinates
+            if (result.metadata["bout_zdim"] in da.dims) and (
+                da.attrs.get("direction_y", None) == "Standard"
+            ):
+                result[v] = da.bout.to_field_aligned()
+
+        return result
+
+    def from_field_aligned(self):
+        """
+        Create a new Dataset with all 3d variables transformed to non-field-aligned
+        coordinates
+        """
+        result = self.data.copy()
+
+        for v in chain(result, result.coords):
+            da = result[v]
+            # Need to transform any 3d variables or coordinates
+            if (result.metadata["bout_zdim"] in da.dims) and (
+                da.attrs.get("direction_y", None) == "Aligned"
+            ):
+                result[v] = da.bout.from_field_aligned()
+
+        return result
+
     def from_region(self, name, with_guards=None):
         """
         Get a logically-rectangular section of data from a certain region.
