@@ -308,7 +308,9 @@ class TestBoutDatasetMethods:
         # The above loop required the call to .load(), but that turned the data into a
         # numpy array. Now convert back to dask
         n = n.chunk({"t": 1})
+        ds = ds.chunk({"t": 1})
         assert isinstance(n.data, dask.array.Array)
+        assert isinstance(ds["n"].data, dask.array.Array)
 
         n.attrs["direction_y"] = "Standard"
         ds["n"] = n
