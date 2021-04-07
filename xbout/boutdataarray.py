@@ -144,7 +144,9 @@ class BoutDataArrayAccessor:
             raise ValueError(
                 f"{zShift_coord} missing, cannot shift "
                 f"{self.data.cell_location} field {self.data.name} to "
-                f"field-aligned coordinates"
+                f"field-aligned coordinates. Setting toroidal geometry is necessary to "
+                f'use to_field_aligned() - did you pass the `geometry="toroidal"` '
+                f"argument to open_boutdataset()?"
             )
 
         result = self._shift_z(self.data[zShift_coord])
@@ -174,7 +176,9 @@ class BoutDataArrayAccessor:
             raise ValueError(
                 f"{zShift_coord} missing, cannot shift "
                 f"{self.data.cell_location} field {self.data.name} from "
-                f"field-aligned coordinates"
+                f"field-aligned coordinates. Setting toroidal geometry is necessary to "
+                f'use from_field_aligned() - did you pass the `geometry="toroidal"` '
+                f"argument to open_boutdataset()?"
             )
 
         result = self._shift_z(-self.data[zShift_coord])
