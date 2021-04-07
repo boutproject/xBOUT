@@ -154,8 +154,18 @@ def _1d_coord_from_spacing(spacing, dim, ds=None, *, origin_at=None):
                 f"create coordinate"
             )
 
+        point_to_use = {
+            spacing.metadata["bout_xdim"]: spacing.metadata.get("MXG", 0)
+            if spacing.metadata["keep_xboundaries"]
+            else 0,
+            spacing.metadata["bout_ydim"]: spacing.metadata.get("MYG", 0)
+            if spacing.metadata["keep_yboundaries"]
+            else 0,
+            spacing.metadata["bout_zdim"]: spacing.metadata.get("MZG", 0),
+        }
+
         # make spacing 1d
-        spacing = spacing.isel({d: 0 for d in other_dims})
+        spacing = spacing.isel({d: point_to_use[d] for d in other_dims})
 
         # xarray stores coordinates as numpy (not dask) arrays anyway, so use .values
         # here to evaluate the task-graph (if there is one)
