@@ -111,6 +111,13 @@ class TestUtils:
     )
     def test__1d_coord_from_spacing_da(self, origin_at):
         da = xr.DataArray(0.2 * np.ones(10), dims="testdim")
+        da.attrs["metadata"] = {
+            "bout_xdim": "x",
+            "bout_ydim": "y",
+            "bout_zdim": "z",
+            "keep_xboundaries": True,
+            "keep_yboundaries": True,
+        }
 
         if origin_at == "expectfail":
             with pytest.raises(ValueError):
