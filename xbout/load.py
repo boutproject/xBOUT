@@ -175,7 +175,26 @@ def open_boutdataset(
         ds = _add_options(ds, inputfilepath)
 
         # If geometry was set, apply geometry again
-        if "geometry" in ds.attrs:
+        if geometry is not None:
+            if "geometry" != ds.attrs.get("geometry", None):
+                warn(
+                    f'open_boutdataset() called with geometry="{geometry}", but we are '
+                    f"reloading a Dataset that was saved after being loaded with "
+                    f'geometry="{ds.attrs.get("geometry", None)}". Applying '
+                    f'geometry="{geometry}" from the argument.'
+                )
+            if gridfilepath is not None:
+                grid = _open_grid(
+                    gridfilepath,
+                    chunks=chunks,
+                    keep_xboundaries=keep_xboundaries,
+                    keep_yboundaries=keep_yboundaries,
+                    mxg=ds.metadata["MXG"],
+                )
+            else:
+                grid = None
+            ds = geometries.apply_geometry(ds, geometry, grid=grid)
+        elif "geometry" in ds.attrs:
             ds = geometries.apply_geometry(ds, ds.attrs["geometry"])
         else:
             ds = geometries.apply_geometry(ds, None)

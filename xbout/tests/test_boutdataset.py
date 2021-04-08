@@ -1378,20 +1378,12 @@ class TestSave:
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_all(self, tmpdir_factory, bout_xyt_example_files, geometry):
-        if geometry is not None:
-            grid = "grid"
-        else:
-            grid = None
-
         # Create data
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=5, nt=1, grid=grid, write_to_disk=True
+            tmpdir_factory, nxpe=4, nype=5, nt=1, grid="grid", write_to_disk=True
         )
 
-        if grid is not None:
-            gridpath = str(Path(path).parent) + "/grid.nc"
-        else:
-            gridpath = None
+        gridpath = str(Path(path).parent) + "/grid.nc"
 
         # Load it as a boutdataset
         if geometry is None:
@@ -1400,14 +1392,14 @@ class TestSave:
                     datapath=path,
                     inputfilepath=None,
                     geometry=geometry,
-                    gridfilepath=gridpath,
+                    gridfilepath=None if geometry is None else gridpath,
                 )
         else:
             original = open_boutdataset(
                 datapath=path,
                 inputfilepath=None,
                 geometry=geometry,
-                gridfilepath=gridpath,
+                gridfilepath=None if geometry is None else gridpath,
             )
 
         # Save it to a netCDF file
@@ -1418,6 +1410,25 @@ class TestSave:
         recovered = open_boutdataset(savepath)
 
         xrt.assert_identical(original.load(), recovered.load())
+
+        # Check if we can load with a different geometry argument
+        for reload_geometry in [None, "toroidal"]:
+            if reload_geometry is None or geometry == reload_geometry:
+                recovered = open_boutdataset(
+                    savepath,
+                    geometry=reload_geometry,
+                    gridfilepath=None if reload_geometry is None else gridpath,
+                )
+                xrt.assert_identical(original.load(), recovered.load())
+            else:
+                # Expect a warning because we change the geometry
+                print("here", gridpath)
+                with pytest.warns(UserWarning):
+                    recovered = open_boutdataset(
+                        savepath, geometry=reload_geometry, gridfilepath=gridpath
+                    )
+                # Datasets won't be exactly the same because different geometry was
+                # applied
 
     @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
     @pytest.mark.parametrize(
