@@ -192,8 +192,8 @@ def open_boutdataset(
                 grid = _open_grid(
                     gridfilepath,
                     chunks=chunks,
-                    keep_xboundaries=keep_xboundaries,
-                    keep_yboundaries=keep_yboundaries,
+                    keep_xboundaries=ds.metadata["keep_xboundaries"],
+                    keep_yboundaries=ds.metadata["keep_yboundaries"],
                     mxg=ds.metadata["MXG"],
                 )
             else:
