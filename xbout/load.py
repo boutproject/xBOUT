@@ -73,6 +73,11 @@ def open_boutdataset(
     Load a dataset from a set of BOUT output files, including the input options
     file. Can also load from a grid file.
 
+    Note that when reloading a Dataset that was saved by xBOUT, the state of the saved
+    Dataset is restored, and the values of `keep_xboundaries`, `keep_yboundaries`, and
+    `run_name` are ignored. `geometry` is treated specially, and can be passed when
+    reloading a Dataset (along with `gridfilepath` if needed).
+
     Parameters
     ----------
     datapath : str or (list or tuple of xr.Dataset), optional
@@ -187,8 +192,8 @@ def open_boutdataset(
                 grid = _open_grid(
                     gridfilepath,
                     chunks=chunks,
-                    keep_xboundaries=keep_xboundaries,
-                    keep_yboundaries=keep_yboundaries,
+                    keep_xboundaries=ds.metadata["keep_xboundaries"],
+                    keep_yboundaries=ds.metadata["keep_yboundaries"],
                     mxg=ds.metadata["MXG"],
                 )
             else:
