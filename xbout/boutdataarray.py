@@ -454,6 +454,25 @@ class BoutDataArrayAccessor:
             # Extract the DataArray to return
             return result[self.data.name]
 
+    def ddz(self):
+        """
+        Special method for calculating a derivative in the "bout_zdim"
+        direction (toroidal, z-direction), needed because xarray's
+        differentiate method doesn't have an option to handle a periodic
+        dimension (as of xarray-0.17.0).
+
+        This method uses a second-order accurate central finite difference method to
+        calculate the derivative.
+        """
+        da = self.data
+        zcoord = da.metadata["bout_zdim"]
+        result = (
+            da.roll({zcoord: -1}, roll_coords=False)
+            - da.roll({zcoord: 1}, roll_coords=False)
+        ) / (2.0 * da.metadata["dz"])
+        result.name = f"d({da.name})/dz"
+        return result
+
     def get_bounding_surfaces(self, coords=("R", "Z")):
         """
         Get bounding surfaces.

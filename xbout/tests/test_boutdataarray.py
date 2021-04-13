@@ -900,3 +900,31 @@ class TestBoutDataArrayMethods:
         )
 
         xrt.assert_identical(n_highres_truncated, n_highres.isel(zeta=points_list))
+
+    def test_ddz(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 64),
+            nxpe=1,
+            nype=1,
+        )
+
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list,
+            )
+
+        n = ds["n"]
+
+        t = ds["t"].broadcast_like(n)
+        x = ds["x"].broadcast_like(n)
+        y = ds["y"].broadcast_like(n)
+        z = ds["z"].broadcast_like(n)
+
+        n.values[:] = (np.sin(z) * (1.0 + t + x + y)).values
+
+        expected = np.cos(z) * (1.0 + t + x + y)
+
+        npt.assert_allclose(
+            n.bout.ddz().values, expected.values, rtol=1.0e-2, atol=1.0e-13
+        )
