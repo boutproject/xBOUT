@@ -937,6 +937,40 @@ class TestBoutDataArrayMethods:
             atol=1.0e-13,
         )
 
+    def test_ddy(self, bout_xyt_example_files):
+
+        ny = 64
+
+        dataset_list, gridfilepath = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, ny, 4),
+            nxpe=1,
+            nype=1,
+            grid="grid",
+        )
+
+        ds = open_boutdataset(
+            datapath=dataset_list, geometry="toroidal", gridfilepath=gridfilepath
+        )
+
+        n = ds["n"]
+
+        t = ds["t"].broadcast_like(n)
+        x = ds["x"].broadcast_like(n)
+        y = ds["theta"].broadcast_like(n)
+        z = ds["zeta"].broadcast_like(n)
+
+        n.values[:] = (np.sin(3.0 * y / ny) * (1.0 + t + x + z)).values
+
+        expected = 3.0 / ny * np.cos(3.0 * y / ny) * (1.0 + t + x + z)
+
+        npt.assert_allclose(
+            n.bout.ddy().isel(theta=slice(1, -1)).values,
+            expected.isel(theta=slice(1, -1)).values,
+            rtol=1.0e-2,
+            atol=1.0e-13,
+        )
+
     def test_ddz(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(
             None,
