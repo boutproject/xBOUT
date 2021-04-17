@@ -455,6 +455,39 @@ class BoutDataArrayAccessor:
             # Extract the DataArray to return
             return result[self.data.name]
 
+    def ddx(self):
+        """
+        Special method for calculating a derivative in the "bout_xdim"
+        direction (radial, x-direction), needed because the 1d coordinate in this
+        direction is index number, not coordinate values (because psi can be different
+        in core and PFR regions).
+
+        This method uses a second-order accurate central finite difference method to
+        calculate the derivative.
+
+        Note values at the boundaries will be NaN - if Dataset was loaded with
+        keep_xboundaries=True, these should only ever be in boundary cells.
+        """
+        da = self.data
+        xcoord = da.metadata["bout_xdim"]
+
+        if da.cell_location == "CELL_CENTRE":
+            dx = da["dx"]
+        elif da.cell_location == "CELL_XLOW":
+            dx = da["dx_CELL_XLOW"]
+        elif da.cell_location == "CELL_YLOW":
+            dx = da["dx_CELL_YLOW"]
+        elif da.cell_location == "CELL_ZLOW":
+            dx = da["dx_CELL_ZLOW"]
+        else:
+            raise ValueError(f'Unrecognised cell location "{da.cell_location}"')
+
+        result = (da.shift({xcoord: -1}) - da.shift({xcoord: 1})) / (2.0 * dx)
+
+        result.name = f"d({da.name})/dx"
+
+        return result
+
     def ddz(self):
         """
         Special method for calculating a derivative in the "bout_zdim"
