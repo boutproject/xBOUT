@@ -303,6 +303,8 @@ class BoutDataArrayAccessor:
         ycoord = da.metadata["bout_ydim"]
         zcoord = da.metadata["bout_zdim"]
 
+        da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
+
         if zcoord in da.dims and da.direction_y != "Aligned":
             aligned_input = False
             da = da.bout.to_field_aligned()
@@ -312,7 +314,6 @@ class BoutDataArrayAccessor:
         if n is None:
             n = self.fine_interpolation_factor
 
-        da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
         da = da.chunk({ycoord: None})
 
         ny_fine = n * region.ny
