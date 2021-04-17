@@ -214,16 +214,6 @@ class BoutDatasetAccessor:
         if isinstance(variables, tuple):
             variables = list(variables)
 
-        if "dy" in variables:
-            # dy is treated specially, as it is converted to a coordinate, and then
-            # converted back again below, so must not call
-            # interpolate_parallel('dy').
-            variables.remove("dy")
-
-        # Add extra variables needed to make this a valid Dataset
-        if "dx" not in variables:
-            variables.append("dx")
-
         # Need to start with a Dataset with attrs as merge() drops the attrs of the
         # passed-in argument.
         # Make sure the first variable has all dimensions so we don't lose any
@@ -266,11 +256,6 @@ class BoutDatasetAccessor:
             elif ycoord not in da.dims:
                 ds[var] = da
             # Can't interpolate a variable that depends on y but not x, so just skip
-
-        # dy needs to be compatible with the new poloidal coordinate
-        # dy was created as a coordinate in BoutDataArray.interpolate_parallel, here just
-        # need to demote back to a regular variable.
-        ds = ds.reset_coords("dy")
 
         # Apply geometry
         ds = apply_geometry(ds, ds.geometry)
