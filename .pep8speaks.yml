@@ -7,4 +7,4 @@ pycodestyle:
     max-line-length: 88  # Default is 79 in PEP8
     ignore:
       - E203 # whitespace before ':' has inconsistency between pycodestyle and black, so ignore
-
+      - W503 # line break before binary operator has inconsistency between pycodestyle and black, so ignore

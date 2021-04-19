@@ -73,6 +73,11 @@ def open_boutdataset(
     Load a dataset from a set of BOUT output files, including the input options
     file. Can also load from a grid file.
 
+    Note that when reloading a Dataset that was saved by xBOUT, the state of the saved
+    Dataset is restored, and the values of `keep_xboundaries`, `keep_yboundaries`, and
+    `run_name` are ignored. `geometry` is treated specially, and can be passed when
+    reloading a Dataset (along with `gridfilepath` if needed).
+
     Parameters
     ----------
     datapath : str or (list or tuple of xr.Dataset), optional
@@ -175,7 +180,26 @@ def open_boutdataset(
         ds = _add_options(ds, inputfilepath)
 
         # If geometry was set, apply geometry again
-        if "geometry" in ds.attrs:
+        if geometry is not None:
+            if "geometry" != ds.attrs.get("geometry", None):
+                warn(
+                    f'open_boutdataset() called with geometry="{geometry}", but we are '
+                    f"reloading a Dataset that was saved after being loaded with "
+                    f'geometry="{ds.attrs.get("geometry", None)}". Applying '
+                    f'geometry="{geometry}" from the argument.'
+                )
+            if gridfilepath is not None:
+                grid = _open_grid(
+                    gridfilepath,
+                    chunks=chunks,
+                    keep_xboundaries=ds.metadata["keep_xboundaries"],
+                    keep_yboundaries=ds.metadata["keep_yboundaries"],
+                    mxg=ds.metadata["MXG"],
+                )
+            else:
+                grid = None
+            ds = geometries.apply_geometry(ds, geometry, grid=grid)
+        elif "geometry" in ds.attrs:
             ds = geometries.apply_geometry(ds, ds.attrs["geometry"])
         else:
             ds = geometries.apply_geometry(ds, None)
@@ -188,9 +212,10 @@ def open_boutdataset(
         return ds
 
     # Determine if file is a grid file or data dump files
+    remove_yboundaries = False
     if "dump" in input_type:
         # Gather pointers to all numerical data from BOUT++ output files
-        ds = _auto_open_mfboutdataset(
+        ds, remove_yboundaries = _auto_open_mfboutdataset(
             datapath=datapath,
             chunks=chunks,
             keep_xboundaries=keep_xboundaries,
@@ -214,6 +239,11 @@ def open_boutdataset(
     metadata["keep_xboundaries"] = int(keep_xboundaries)
     metadata["keep_yboundaries"] = int(keep_yboundaries)
     ds = _set_attrs_on_all_vars(ds, "metadata", metadata)
+
+    if remove_yboundaries:
+        # If remove_yboundaries is True, we need to keep y-boundaries when opening the
+        # grid file, as they will be removed from the full Dataset below
+        keep_yboundaries = True
 
     for var in _BOUT_TIME_DEPENDENT_META_VARS:
         if var in ds:
@@ -250,6 +280,9 @@ def open_boutdataset(
     # Update coordinates to match particular geometry of grid
     ds = geometries.apply_geometry(ds, geometry, grid=grid)
 
+    if remove_yboundaries:
+        ds = ds.bout.remove_yboundaries()
+
     # TODO read and store git commit hashes from output files
 
     if run_name:
@@ -270,7 +303,12 @@ def open_boutdataset(
 def _add_options(ds, inputfilepath):
     if inputfilepath:
         # Use Ben's options class to store all input file options
-        options = BoutOptionsFile(inputfilepath)
+        options = BoutOptionsFile(
+            inputfilepath,
+            nx=ds.metadata["nx"],
+            ny=ds.metadata["ny"],
+            nz=ds.metadata["nz"],
+        )
     else:
         options = None
     ds = _set_attrs_on_all_vars(ds, "options", options)
@@ -334,7 +372,7 @@ def collect(
 
     datapath = join(path, prefix + "*.nc")
 
-    ds = _auto_open_mfboutdataset(
+    ds, _ = _auto_open_mfboutdataset(
         datapath, keep_xboundaries=xguards, keep_yboundaries=yguards, info=info
     )
 
@@ -451,7 +489,20 @@ def _auto_open_mfboutdataset(
         filepaths, filetype = _expand_filepaths(datapath)
 
         # Open just one file to read processor splitting
-        nxpe, nype, mxg, myg, mxsub, mysub = _read_splitting(filepaths[0], info)
+        nxpe, nype, mxg, myg, mxsub, mysub, is_squashed_doublenull = _read_splitting(
+            filepaths[0], info
+        )
+
+        if is_squashed_doublenull:
+            # Need to remove y-boundaries after loading: (i) in case we are loading a
+            # squashed data-set, in which case we cannot easily remove the upper
+            # boundary cells in _trim(); (ii) because using the remove_yboundaries()
+            # method for non-squashed data-sets is simpler than replicating that logic
+            # in _trim().
+            remove_yboundaries = not keep_yboundaries
+            keep_yboundaries = True
+        else:
+            remove_yboundaries = False
 
         _preprocess = partial(
             _trim,
@@ -485,6 +536,19 @@ def _auto_open_mfboutdataset(
         myg = int(datapath[0]["MYG"])
         nxpe = int(datapath[0]["NXPE"])
         nype = int(datapath[0]["NYPE"])
+        is_squashed_doublenull = (
+            len(datapath) == 1
+            and (datapath[0]["jyseps2_1"] != datapath[0]["jyseps1_2"]).values
+        )
+
+        if is_squashed_doublenull:
+            # Need to remove y-boundaries after loading when loading a squashed
+            # data-set, in which case we cannot easily remove the upper boundary cells
+            # in _trim().
+            remove_yboundaries = not keep_yboundaries
+            keep_yboundaries = True
+        else:
+            remove_yboundaries = False
 
         _preprocess = partial(
             _trim,
@@ -507,7 +571,8 @@ def _auto_open_mfboutdataset(
 
     # Remove any duplicate time values from concatenation
     _, unique_indices = unique(ds["t_array"], return_index=True)
-    return ds.isel(t=unique_indices)
+
+    return ds.isel(t=unique_indices), remove_yboundaries
 
 
 def _expand_filepaths(datapath):
@@ -539,7 +604,7 @@ def _expand_wildcards(path):
     """Return list of filepaths matching wildcard"""
 
     # Find first parent directory which does not contain a wildcard
-    base_dir = Path(path.root)
+    base_dir = Path(path.anchor)
 
     # Find path relative to parent
     search_pattern = str(path.relative_to(base_dir))
@@ -593,6 +658,7 @@ def _read_splitting(filepath, info=True):
     ny = ds["ny"].values
     nx_file = ds.dims["x"]
     ny_file = ds.dims["y"]
+    is_squashed_doublenull = False
     if nxpe > 1 or nype > 1:
         # if nxpe = nype = 1, was only one process anyway, so no need to check for
         # squashing
@@ -615,11 +681,12 @@ def _read_splitting(filepath, info=True):
 
                 nxpe = 1
                 nype = 1
+                is_squashed_doublenull = (ds["jyseps2_1"] != ds["jyseps1_2"]).values
 
     # Avoid trying to open this file twice
     ds.close()
 
-    return nxpe, nype, mxg, myg, mxsub, mysub
+    return nxpe, nype, mxg, myg, mxsub, mysub, is_squashed_doublenull
 
 
 def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):

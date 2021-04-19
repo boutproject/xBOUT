@@ -1,7 +1,21 @@
-xarray >= 0.16.0
-dask[array] >= 2.10.0
-natsort >= 5.5.0
-matplotlib >= 3.1.1
-animatplot >= 0.4.1
-netcdf4 >= 1.4.0
-Pillow >= 6.1.0
+xarray>=0.16.0
+boutdata>=0.1.2
+dask[array]>=2.10.0
+natsort>=5.5.0
+matplotlib>=3.1.1,!=3.3.0,!=3.3.1,!=3.3.2
+animatplot>=0.4.2
+netcdf4>=1.4.0
+Pillow>=6.1.0
+
+# Not required for Python>=3.8, but included because conda does not support
+# conditional expressions in --file arguments.
+# This file should only be used by developers, so the odd extra package is not
+# a big issue. If it is not wanted, you can install these dependencies by hand.
+importlib-metadata
+
+# for version number in non-installed package:
+setuptools>=42
+setuptools_scm[toml]>=3.4
+
+# for tests
+pytest>=3.3.0

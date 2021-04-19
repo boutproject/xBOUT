@@ -65,6 +65,13 @@ def _separate_metadata(ds):
     metadata_vals = [ds[var].values.item() for var in scalar_vars]
     metadata = dict(zip(scalar_vars, metadata_vals))
 
+    # Add default values for dimensions to metadata. These may be modified later by
+    # apply_geometry()
+    metadata["bout_tdim"] = "t"
+    metadata["bout_xdim"] = "x"
+    metadata["bout_ydim"] = "y"
+    metadata["bout_zdim"] = "z"
+
     return ds.drop_vars(scalar_vars), metadata
 
 
@@ -147,8 +154,18 @@ def _1d_coord_from_spacing(spacing, dim, ds=None, *, origin_at=None):
                 f"create coordinate"
             )
 
+        point_to_use = {
+            spacing.metadata["bout_xdim"]: spacing.metadata.get("MXG", 0)
+            if spacing.metadata["keep_xboundaries"]
+            else 0,
+            spacing.metadata["bout_ydim"]: spacing.metadata.get("MYG", 0)
+            if spacing.metadata["keep_yboundaries"]
+            else 0,
+            spacing.metadata["bout_zdim"]: spacing.metadata.get("MZG", 0),
+        }
+
         # make spacing 1d
-        spacing = spacing.isel({d: 0 for d in other_dims})
+        spacing = spacing.isel({d: point_to_use[d] for d in other_dims})
 
         # xarray stores coordinates as numpy (not dask) arrays anyway, so use .values
         # here to evaluate the task-graph (if there is one)
@@ -250,7 +267,7 @@ def _pad_x_boundaries(ds):
             if xcoord in boundary_pad[v].dims:
                 boundary_pad[v].values[...] = np.nan
         ds = xr.concat(
-            [boundary_pad, ds.load, boundary_pad], dim=xcoord, data_vars="minimal"
+            [boundary_pad, ds.load(), boundary_pad], dim=xcoord, data_vars="minimal"
         )
 
     return ds
