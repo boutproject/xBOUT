@@ -314,9 +314,10 @@ class BoutDatasetAccessor:
         ----------
         variable : str or DataArray
             Name of the variable to integrate, or the variable itself as a DataArray.
-        dims : str or list of str
+        dims : str, list of str or ...
             Dimensions to integrate over. Can be any combination of of the dimensions of
-            the Dataset. Defaults to integration over all spatial dimensions.
+            the Dataset. Defaults to integration over all spatial dimensions. If `...`
+            is passed, integrate over all dimensions including time.
         """
         ds = self.data
 
@@ -327,6 +328,16 @@ class BoutDatasetAccessor:
 
         if dims is None:
             dims = []
+            if xcoord in ds.dims:
+                dims.append(xcoord)
+            if ycoord in ds.dims:
+                dims.append(ycoord)
+            if zcoord in ds.dims:
+                dims.append(zcoord)
+        elif dims is ...:
+            dims = []
+            if tcoord in ds.dims:
+                dims.append(tcoord)
             if xcoord in ds.dims:
                 dims.append(xcoord)
             if ycoord in ds.dims:

@@ -1369,6 +1369,13 @@ class TestBoutDatasetMethods:
             rtol=1.0e-5,
             atol=0.0,
         )
+        # Integrate in time using dims=...
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=...),
+            T_total * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
 
         # Area of torus with circular cross-section of major radius R and minor radius a
         # is 2*pi*R*2*pi*a
