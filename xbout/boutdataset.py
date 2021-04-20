@@ -376,6 +376,11 @@ class BoutDatasetAccessor:
             J = np.sqrt(ds["g_22"] * ds["g_33"] - ds["g_23"] ** 2)
             spatial_volume_element = J * dy * dz
         elif xcoord in dims:
+            if ds[variable].direction_y == "Aligned":
+                raise ValueError(
+                    "Variable is field-aligned, but radial integral along coordinate "
+                    "line in globally field-aligned coordinates not supported"
+                )
             # 1d radial integral, line element is sqrt(g_11)*dx
             spatial_volume_element = np.sqrt(ds["g_11"]) * dx
         elif ycoord in dims:
