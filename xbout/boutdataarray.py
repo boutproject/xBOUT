@@ -476,6 +476,12 @@ class BoutDataArrayAccessor:
         result = (da.shift({xcoord: -1}) - da.shift({xcoord: 1})) / (2.0 * dx)
 
         result.name = f"d({da.name})/dx"
+        if "standard_name" in result.attrs:
+            result.standard_name = f"d({result.standard_name})/dx"
+        if "long_name" in result.attrs:
+            result.long_name = f"x-derivative of {result.long_name}"
+        if "units" in result.attrs:
+            result.units = ""
 
         return result
 
@@ -553,7 +559,6 @@ class BoutDataArrayAccessor:
             raise ValueError(f'Unrecognised cell location "{da.cell_location}"')
 
         result = (da.shift({ycoord: -1}) - da.shift({ycoord: 1})) / (2.0 * dy)
-        result.name = f"d({da.name})/dy"
 
         # Remove any y-guard cells
         region_object = da.regions[region]
@@ -570,6 +575,14 @@ class BoutDataArrayAccessor:
         if not aligned_input:
             # Want output in non-aligned coordinates
             result = result.bout.from_field_aligned()
+
+        result.name = f"d({da.name})/dy"
+        if "standard_name" in result.attrs:
+            result.standard_name = f"d({result.standard_name})/dy"
+        if "long_name" in result.attrs:
+            result.long_name = f"y-derivative of {result.long_name}"
+        if "units" in result.attrs:
+            result.units = ""
 
         return result
 
@@ -589,7 +602,15 @@ class BoutDataArrayAccessor:
             da.roll({zcoord: -1}, roll_coords=False)
             - da.roll({zcoord: 1}, roll_coords=False)
         ) / (2.0 * da.metadata["dz"])
+
         result.name = f"d({da.name})/dz"
+        if "standard_name" in result.attrs:
+            result.standard_name = f"d({result.standard_name})/dz"
+        if "long_name" in result.attrs:
+            result.long_name = f"z-derivative of {result.long_name}"
+        if "units" in result.attrs:
+            result.units = ""
+
         return result
 
     def get_bounding_surfaces(self, coords=("R", "Z")):
