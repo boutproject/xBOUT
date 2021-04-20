@@ -30,6 +30,7 @@ class TestGeometryRegistration:
         original = Dataset()
         original["dy"] = DataArray(np.ones((3, 4)), dims=("x", "y"))
         metadata = {
+            "bout_tdim": "t",
             "bout_xdim": "x",
             "bout_ydim": "y",
             "bout_zdim": "z",
