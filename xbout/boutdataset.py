@@ -346,27 +346,34 @@ class BoutDatasetAccessor:
             spatial_volume_element = ds["J"] * dx * dy * dz
         elif xcoord in dims and ycoord in dims:
             # 2d integral on poloidal planes
-            # Need to work out Jacobian from metric coefficients
-            # J = 1/sqrt(det(g_2d))
-            # det(g_2d) = g11*g22 - 2*g12
-            g = ds["g11"] * ds["g22"] - 2.0 * ds["g12"]
-            J = 1.0 / np.sqrt(g)
+            if ds[variable].direction_y == "Standard":
+                # Need to use a metric constructed from basis vectors within the
+                # poloidal plane, so use 'reciprocal basis vectors' Grad(x^i)
+                # J = 1/sqrt(det(g_2d))
+                # det(g_2d) = g11*g22 - g12**2
+                g = ds["g11"] * ds["g22"] - ds["g12"] ** 2
+                J = 1.0 / np.sqrt(g)
+            elif ds[variable].direction_y == "Aligned":
+                # Need to work out area element from metric coefficients. See book by
+                # D'haeseleer, Hitchon, Callen and Shohet eq. (2.5.51).
+                # Need to use a metric constructed from basis vectors within the
+                # field-aligned x-y plane, so use 'tangent basis vectors' e_i
+                # J = sqrt(g_11*g_22 - g_12**2)
+                J = np.sqrt(ds["g_11"] * ds["g_22"] - ds["g_12"] ** 2)
             spatial_volume_element = J * dx * dy
         elif xcoord in dims and zcoord in dims:
             # 2d integral on toroidal planes
-            # Need to work out Jacobian from metric coefficients
-            # J = 1/sqrt(det(g_2d))
-            # det(g_2d) = g11*g33 - 2*g13
-            g = ds["g11"] * ds["g33"] - 2.0 * ds["g13"]
-            J = 1.0 / np.sqrt(g)
+            # Need to work out area element from metric coefficients. See book by
+            # D'haeseleer, Hitchon, Callen and Shohet eq. (2.5.51)
+            # J = sqrt(g_11*g_33 - g_13**2)
+            J = np.sqrt(ds["g_11"] * ds["g_33"] - ds["g_13"] ** 2)
             spatial_volume_element = J * dx * dz
         elif ycoord in dims and zcoord in dims:
             # 2d integral on flux-surfaces
-            # Need to work out Jacobian from metric coefficients
-            # J = 1/sqrt(det(g_2d))
-            # det(g_2d) = g22*g33 - 2*g23
-            g = ds["g22"] * ds["g33"] - 2.0 * ds["g23"]
-            J = 1.0 / np.sqrt(g)
+            # Need to work out area element from metric coefficients. See book by
+            # D'haeseleer, Hitchon, Callen and Shohet eq. (2.5.51)
+            # J = sqrt(g_22*g_33 - g_23**2)
+            J = np.sqrt(ds["g_22"] * ds["g_33"] - ds["g_23"] ** 2)
             spatial_volume_element = J * dy * dz
         elif xcoord in dims:
             # 1d radial integral, line element is sqrt(g_11)*dx
