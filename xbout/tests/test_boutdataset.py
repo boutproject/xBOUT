@@ -1354,6 +1354,7 @@ class TestBoutDatasetMethods:
             r = r - Lr / (2.0 * nx)
         q = options.evaluate_scalar("mesh:q")
         T_total = (ds.sizes["t"] - 1) * (ds["t"][1] - ds["t"][0]).values
+        T_cumulative = np.arange(ds.sizes["t"]) * (ds["t"][1] - ds["t"][0]).values
 
         # Volume of torus with circular cross-section of major radius R and minor radius
         # a is 2*pi*R*pi*a^2
@@ -1386,6 +1387,15 @@ class TestBoutDatasetMethods:
             rtol=1.0e-5,
             atol=0.0,
         )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints(
+                "n", dims=["t", "x", "theta", "zeta"], cumulative_t=True
+            ),
+            T_cumulative * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
 
         # Area of torus with circular cross-section of major radius R and minor radius a
         # is 2*pi*R*2*pi*a
@@ -1404,6 +1414,16 @@ class TestBoutDatasetMethods:
             rtol=1.0e-5,
             atol=0.0,
         )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints(
+                "n", dims=["t", "theta", "zeta"], cumulative_t=True
+            ),
+            T_cumulative[:, np.newaxis]
+            * (2.0 * np.pi * R * 2.0 * np.pi * r)[np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
 
         # Area of cross section in poloidal plane is difference of circle with radius
         # router and circle with radius rinner, pi*(router**2 - rinner**2)
@@ -1417,6 +1437,18 @@ class TestBoutDatasetMethods:
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["t", "x", "theta"]),
             T_total * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints(
+                "n", dims=["t", "x", "theta"], cumulative_t=True
+            ),
+            T_cumulative[:, np.newaxis]
+            * np.pi
+            * (router ** 2 - rinner ** 2)
+            * np.ones(ds.sizes["zeta"])[np.newaxis, :],
             rtol=1.0e-5,
             atol=0.0,
         )
@@ -1442,6 +1474,17 @@ class TestBoutDatasetMethods:
             rtol=1.0e-5,
             atol=0.0,
         )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints(
+                "n", dims=["t", "x", "zeta"], cumulative_t=True
+            ),
+            T_cumulative[:, np.newaxis]
+            * (np.pi * (Rinner + Router) * Lr)
+            * np.ones(ds.sizes["theta"])[np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
 
         # Radial lines have length Lr
         npt.assert_allclose(
@@ -1454,6 +1497,15 @@ class TestBoutDatasetMethods:
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["t", "x"]),
             T_total * Lr,
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x"], cumulative_t=True),
+            T_cumulative[:, np.newaxis, np.newaxis]
+            * Lr
+            * np.ones([ds.sizes["theta"], ds.sizes["zeta"]])[np.newaxis, :, :],
             rtol=1.0e-5,
             atol=0.0,
         )
@@ -1473,6 +1525,15 @@ class TestBoutDatasetMethods:
             T_total
             * (2.0 * np.pi * r)[:, np.newaxis]
             * np.ones(ds.sizes["zeta"])[np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "theta"], cumulative_t=True),
+            T_cumulative[:, np.newaxis, np.newaxis]
+            * (2.0 * np.pi * r)[np.newaxis, :, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, np.newaxis, :],
             rtol=1.0e-5,
             atol=0.0,
         )
@@ -1555,6 +1616,17 @@ class TestBoutDatasetMethods:
             rtol=1.0e-5,
             atol=0.0,
         )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints(
+                "n_aligned", dims=["t", "theta"], cumulative_t=True
+            ),
+            T_cumulative[:, np.newaxis, np.newaxis]
+            * integral[np.newaxis, :, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
 
         # Toroidal lines have length 2*pi*Rxy
         if location == "CELL_CENTRE":
@@ -1572,6 +1644,14 @@ class TestBoutDatasetMethods:
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["t", "zeta"]),
             T_total * (2.0 * np.pi * R_2d),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "zeta"], cumulative_t=True),
+            T_cumulative[:, np.newaxis, np.newaxis]
+            * (2.0 * np.pi * R_2d).values[np.newaxis, :, :],
             rtol=1.0e-5,
             atol=0.0,
         )
