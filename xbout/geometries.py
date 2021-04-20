@@ -5,7 +5,12 @@ import xarray as xr
 import numpy as np
 
 from .region import Region, _create_regions_toroidal
-from .utils import _add_attrs_to_var, _set_attrs_on_all_vars, _1d_coord_from_spacing
+from .utils import (
+    _add_attrs_to_var,
+    _set_attrs_on_all_vars,
+    _set_as_coord,
+    _1d_coord_from_spacing,
+)
 
 REGISTERED_GEOMETRIES = {}
 
@@ -167,6 +172,10 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
 
         _add_attrs_to_var(updated_ds, zcoord)
 
+    # Add dx and dy as coordinates, so that they are available with BoutDataArrays
+    updated_ds = _set_as_coord(updated_ds, "dx")
+    updated_ds = _set_as_coord(updated_ds, "dy")
+
     return updated_ds
 
 
@@ -304,22 +313,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         ds = ds.set_coords(("Rxy", "Zxy"))
 
     # Add zShift as a coordinate, so that it gets interpolated along with a variable
-    try:
-        ds = ds.set_coords("zShift")
-    except ValueError:
-        pass
-    try:
-        ds = ds.set_coords("zShift_CELL_XLOW")
-    except ValueError:
-        pass
-    try:
-        ds = ds.set_coords("zShift_CELL_YLOW")
-    except ValueError:
-        pass
-    try:
-        ds = ds.set_coords("zShift_CELL_ZLOW")
-    except ValueError:
-        pass
+    ds = _set_as_coord(ds, "zShift")
 
     ds = _create_regions_toroidal(ds)
 

@@ -765,3 +765,23 @@ def _get_bounding_surfaces(ds, coords):
     ]
 
     return result
+
+
+def _set_as_coord(ds, name):
+    try:
+        ds = ds.set_coords(name)
+    except ValueError:
+        pass
+    try:
+        ds = ds.set_coords(f"{name}_CELL_XLOW")
+    except ValueError:
+        pass
+    try:
+        ds = ds.set_coords(f"{name}_CELL_YLOW")
+    except ValueError:
+        pass
+    try:
+        ds = ds.set_coords(f"{name}_CELL_ZLOW")
+    except ValueError:
+        pass
+    return ds
