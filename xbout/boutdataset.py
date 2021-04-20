@@ -284,13 +284,19 @@ class BoutDatasetAccessor:
 
         The quantity being integrated is assumed to be a scalar variable.
 
-        When doing a 1d integral in the 'y' dimension, integral is calculated as a
+        When doing a 1d integral in the 'y' dimension, the integral is calculated as a
         poloidal integral if the variable is on the standard grid ('direction_y'
         attribute is "Standard"), or as a parallel-to-B integral if the variable is on
         the field-aligned grid ('direction_y' attribute is "Aligned").
 
-        Is a method of BoutDataset method rather than of BoutDataArray so we can use
-        other variables like `dx`, `dy`, `J` for the integration.
+        When doing a 2d integral over 'x' and 'y' dimensions, the integral will be over
+        poloidal cross-sections if the variable is not field-aligned (direction_y ==
+        "Standard") and over field-aligned surfaces if the variable is field-aligned
+        (direction_ == "Aligned"). The latter seems unlikely to be useful as the
+        surfaces depend on the arbitrary origin used for zShift.
+
+        Is a method of BoutDataset accessor rather than of BoutDataArray so we can use
+        other variables like `J`, `g11`, `g_22` for the integration.
 
         Note the xarray.DataArray.integrate() method uses the trapezium rule, which is
         not consistent with the way BOUT++ defines grid spacings as cell widths. Also,
