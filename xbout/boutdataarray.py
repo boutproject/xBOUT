@@ -490,7 +490,7 @@ class BoutDataArrayAccessor:
         Special method for calculating a derivative in the "bout_ydim"
         direction (parallel, y-direction), needed because we need to (a) do the
         calculation region-by-region to take account of the branch cuts in the
-        y-direction and (b)transform to a field-aligned grid to take parallel
+        y-direction and (b) transform to a field-aligned grid to take parallel
         derivatives.
 
         This method uses a second-order accurate central finite difference
