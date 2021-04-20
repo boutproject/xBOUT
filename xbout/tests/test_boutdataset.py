@@ -7,6 +7,7 @@ import xarray.testing as xrt
 import dask.array
 import numpy as np
 from pathlib import Path
+from scipy.integrate import quad_vec
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout.tests.test_region import (
@@ -17,7 +18,8 @@ from xbout.tests.test_region import (
 )
 from xbout import BoutDatasetAccessor, open_boutdataset
 from xbout.geometries import apply_geometry
-from xbout.utils import _set_attrs_on_all_vars
+from xbout.utils import _set_attrs_on_all_vars, _1d_coord_from_spacing
+from xbout.tests.utils_for_tests import set_geometry_from_input_file
 
 
 EXAMPLE_OPTIONS_FILE_PATH = "./xbout/tests/data/options/BOUT.inp"
@@ -1302,6 +1304,259 @@ class TestBoutDatasetMethods:
             ds.bout.integrate_midpoints("n", dims=["t", "x", "y", "z"]),
             (tintegral * xintegral * yintegral * zintegral),
             rtol=1.4e-4,
+        )
+
+    def test_integrate_midpoints_salpha(self, bout_xyt_example_files):
+        # Create data
+        dataset_list = bout_xyt_example_files(
+            None,
+            lengths=(4, 100, 110, 120),
+            nxpe=1,
+            nype=1,
+            nt=1,
+            syn_data_type=1,
+            guards={"x": 2, "y": 2},
+        )
+        ds = open_boutdataset(dataset_list)
+
+        ds, options = set_geometry_from_input_file(ds, "s-alpha.inp")
+
+        ds = apply_geometry(ds, "toroidal")
+
+        # Integrate 1 so we just get volume, areas and lengths
+        ds["n"].values[:] = 1.0
+
+        # Test geometry has major radius R and goes between minor radii a-Lr/2 and
+        # a+Lr/2
+        R = options.evaluate_scalar("mesh:R0")
+        a = options.evaluate_scalar("mesh:a")
+        Lr = options.evaluate_scalar("mesh:Lr")
+        rinner = a - Lr / 2.0
+        router = a + Lr / 2.0
+        q = options.evaluate_scalar("mesh:q")
+        T_total = (ds.sizes["t"] - 1) * (ds["t"][1] - ds["t"][0]).values
+
+        # remove boundary cells (don't want to integrate over those)
+        ds = ds.bout.remove_yboundaries()
+        if ds.metadata["keep_xboundaries"] and ds.metadata["MXG"] > 0:
+            mxg = ds.metadata["MXG"]
+            xslice = slice(mxg, -mxg)
+        else:
+            xslice = slice(None)
+        ds = ds.isel(x=xslice)
+
+        # Volume of torus with circular cross-section of major radius R and minor radius
+        # a is 2*pi*R*pi*a^2
+        # https://en.wikipedia.org/wiki/Torus
+        # Default is to integrate over all spatial dimensions
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n"),
+            2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Pass all spatial dims explicitly
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x", "theta", "zeta"]),
+            2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "theta", "zeta"]),
+            T_total * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Area of torus with circular cross-section of major radius R and minor radius a
+        # is 2*pi*R*2*pi*a
+        # https://en.wikipedia.org/wiki/Torus
+        mxg = options._keys.get("MXG", 2)
+        if mxg == 0:
+            xslice = slice(None)
+        else:
+            xslice = slice(mxg, -mxg)
+        r = options.evaluate("mesh:r").squeeze()[xslice]
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["theta", "zeta"]),
+            (2.0 * np.pi * R * 2.0 * np.pi * r)[np.newaxis, :]
+            * np.ones(ds.sizes["t"])[:, np.newaxis],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "theta", "zeta"]),
+            T_total * 2.0 * np.pi * R * 2.0 * np.pi * r,
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Area of cross section in poloidal plane is difference of circle with radius
+        # router and circle with radius rinner, pi*(router**2 - rinner**2)
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x", "theta"]),
+            np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "theta"]),
+            T_total * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # x-z planes are 'conical frustrums', with area pi*(Rinner + Router)*Lr
+        # https://en.wikipedia.org/wiki/Frustum
+        theta = _1d_coord_from_spacing(ds["dy"], "theta").values
+        Rinner = R + rinner * np.cos(theta)
+        Router = R + router * np.cos(theta)
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x", "zeta"]),
+            (np.pi * (Rinner + Router) * Lr)[np.newaxis, :]
+            * np.ones(ds.sizes["t"])[:, np.newaxis],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "zeta"]),
+            T_total * (np.pi * (Rinner + Router) * Lr),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Radial lines have length Lr
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x"]),
+            Lr,
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x"]),
+            T_total * Lr,
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Poloidal lines have length 2*pi*r
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["theta"]),
+            (2.0 * np.pi * r)[np.newaxis, :, np.newaxis]
+            * np.ones(ds.sizes["t"])[:, np.newaxis, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "theta"]),
+            T_total
+            * (2.0 * np.pi * r)[:, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Field line length
+        # -----------------
+        #
+        # Field lines, parameterised by poloidal angle theta, have (R, Z, zeta)
+        # coordinates
+        # X = (R + r*cos(theta),
+        #      -r*sin(theta),
+        #      -q*2*atan(sqrt((1-r/R0)/(1+r/R0))*tan(theta/2))
+        #     )
+        # using d(arctan(x))/dx = 1/(1 + x**2) and d(tan(x))/dx = 1/cos(x)**2
+        # dX/dtheta = (r*sin(theta),
+        #              + r*cos(theta),
+        #              - q * 2
+        #                * sqrt((1-r/R0)/(1+r/R0))/(2*cos(theta/2)**2)
+        #                / (1 + (1-r/R0)/(1+r/R0)*tan(theta/2)**2)
+        #             )
+        #           = (r*sin(theta),
+        #              + r*cos(theta),
+        #              - q
+        #                * sqrt((1-r/R0)/(1+r/R0))/cos(theta/2)**2
+        #                / (1 + (1-r/R0)/(1+r/R0)*tan(theta/2)**2)
+        #             )
+        #           = (r*sin(theta),
+        #              + r*cos(theta),
+        #              - q
+        #                * sqrt((1-r/R0)/(1+r/R0))
+        #                / (cos(theta/2)**2 + (1-r/R0)/(1+r/R0)*sin(theta/2)**2)
+        #             )
+        # Line element dl = |dR + dZ + R dzeta|
+        #                 = |dR + dZ + (R0 + r cos(theta)) dzeta|
+        #                 = |dX/dtheta|*dtheta
+        # |dX/dtheta| = |
+        #             = sqrt(
+        #                r**2*sin(theta)**2
+        #                + r**2*cos(theta)**2
+        #                + (R0 + r cos(theta))**2 * q**2
+        #                  * (1-r/R0)/(1+r/R0)
+        #                  / (cos(theta/2)**2 + (1-r/R0)/(1+r/R0)*sin(theta/2)**2)**2
+        #               )
+        #             = sqrt(
+        #                r**2
+        #                + (R0 + r cos(theta))**2 * q**2
+        #                  * (1-r/R0)/(1+r/R0)
+        #                  / (cos(theta/2)**2 + (1-r/R0)/(1+r/R0)*sin(theta/2)**2)**2
+        #               )
+        # field line length is int_{0}^{2 pi} dl
+        a = r ** 2
+        c = (1 - r / R) / (1 + r / R)
+        b = q ** 2 * c
+
+        def func(theta):
+            return np.sqrt(
+                a
+                + b
+                * (R + r * np.cos(theta)) ** 2
+                / (np.cos(theta / 2.0) ** 2 + c * np.sin(theta / 2.0) ** 2) ** 2
+            )
+
+        integral, _ = quad_vec(func, 0.0, 2.0 * np.pi)
+
+        ds["n_aligned"] = ds["n"].bout.to_field_aligned()
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n_aligned", dims=["theta"]),
+            integral[np.newaxis, :, np.newaxis]
+            * np.ones(ds.sizes["t"])[:, np.newaxis, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n_aligned", dims=["t", "theta"]),
+            T_total
+            * integral[:, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Toroidal lines have length 2*pi*Rxy
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["zeta"]),
+            (2.0 * np.pi * ds["R"]).values[np.newaxis, :, :]
+            * np.ones(ds.sizes["t"])[:, np.newaxis, np.newaxis],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "zeta"]),
+            T_total * (2.0 * np.pi * ds["R"]),
+            rtol=1.0e-5,
+            atol=0.0,
         )
 
     def test_interpolate_from_unstructured(self, bout_xyt_example_files):
