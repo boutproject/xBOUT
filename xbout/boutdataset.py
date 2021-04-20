@@ -385,10 +385,28 @@ class BoutDatasetAccessor:
             spatial_volume_element = np.sqrt(ds["g_11"]) * dx
         elif ycoord in dims:
             if ds[variable].direction_y == "Standard":
-                # Poloidal integral, line element is sqrt(g_22 - abs(g_23))
+                # Poloidal integral, line element is e_y projected onto a unit vector in
+                # the poloidal direction. e_z is in the toroidal direction and Grad(x)
+                # is orthogonal to flux surfaces, so their cross product is in the
+                # poloidal direction (within flux surfaces). e_z and Grad(x) are also
+                # always orthogonal, so the magnitude of their cross product is the
+                # product of their magnitudes. Therefore
+                #   e_y.hat{e}_pol = e_y.(e_z x Grad(x))/|Grad(x)||e_z|
+                #   e_y.hat{e}_pol = e_y.(e_z x Grad(x))/sqrt(g11*g_33)
+                # and using eqs. (2.3.12) and (2.5.22a) from D'haeseleer
+                #   e_y.hat{e}_pol = e_y.(e_z x (e_y x e_z / J))/sqrt(g11*g_33)
+                #   e_y.hat{e}_pol = e_y.(e_z x (e_y x e_z))/ (J*sqrt(g11*g_33))
+                # The double cross product identity is A x (B x C) = (A.C)B - (A.B)C.
+                #   e_y.hat{e}_pol = e_y.((e_z.e_z)*e_y - (e_z.e_y)*e_z)/(J*sqrt(g11*g_33))
+                #   e_y.hat{e}_pol = e_y.(g_33*e_y - g_23*e_z)/(J*sqrt(g11*g_33))
+                #   e_y.hat{e}_pol = (g_33*g_22 - g_23*g_23)/(J*sqrt(g11*g_33))
                 # For 'orthogonal' coordinates (radial and poloidal directions are
                 # orthogonal) this is equal to 1/sqrt(g22)
-                spatial_volume_element = np.sqrt(ds["g_22"] - np.abs(ds["g_23"])) * dy
+                spatial_volume_element = (
+                    (ds["g_22"] * ds["g_33"] - ds["g_23"] ** 2)
+                    / (ds["J"] * np.sqrt(ds["g11"] * ds["g_33"]))
+                    * dy
+                )
             elif ds[variable].direction_y == "Aligned":
                 # Parallel integral, line element is sqrt(g_22)*dy
                 spatial_volume_element = np.sqrt(ds["g_22"]) * dy
