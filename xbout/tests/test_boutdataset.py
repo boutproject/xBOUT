@@ -1155,8 +1155,6 @@ class TestBoutDatasetMethods:
                 "G3",
                 "J",
                 "Bxy",
-                "dx",
-                "dy",
             )
         )
 

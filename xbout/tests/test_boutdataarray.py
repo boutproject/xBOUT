@@ -12,6 +12,7 @@ from xarray.core.utils import dict_equiv
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout import open_boutdataset
 from xbout.geometries import apply_geometry
+from xbout.utils import _1d_coord_from_spacing
 
 
 class TestBoutDataArrayMethods:
@@ -900,3 +901,100 @@ class TestBoutDataArrayMethods:
         )
 
         xrt.assert_identical(n_highres_truncated, n_highres.isel(zeta=points_list))
+
+    def test_ddx(self, bout_xyt_example_files):
+
+        nx = 64
+
+        dataset_list = bout_xyt_example_files(
+            None,
+            lengths=(2, nx, 4, 3),
+            nxpe=1,
+            nype=1,
+        )
+
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list,
+            )
+
+        n = ds["n"]
+
+        t = ds["t"].broadcast_like(n)
+        ds["x_1d"] = _1d_coord_from_spacing(ds["dx"], "x")
+        x = ds["x_1d"].broadcast_like(n)
+        y = ds["y"].broadcast_like(n)
+        z = ds["z"].broadcast_like(n)
+
+        n.values[:] = (np.sin(12.0 * x / nx) * (1.0 + t + y + z)).values
+
+        expected = 12.0 / nx * np.cos(12.0 * x / nx) * (1.0 + t + y + z)
+
+        npt.assert_allclose(
+            n.bout.ddx().isel(x=slice(1, -1)).values,
+            expected.isel(x=slice(1, -1)).values,
+            rtol=1.0e-2,
+            atol=1.0e-13,
+        )
+
+    def test_ddy(self, bout_xyt_example_files):
+
+        ny = 64
+
+        dataset_list, gridfilepath = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, ny, 4),
+            nxpe=1,
+            nype=1,
+            grid="grid",
+        )
+
+        ds = open_boutdataset(
+            datapath=dataset_list, geometry="toroidal", gridfilepath=gridfilepath
+        )
+
+        n = ds["n"]
+
+        t = ds["t"].broadcast_like(n)
+        x = ds["x"].broadcast_like(n)
+        y = ds["theta"].broadcast_like(n)
+        z = ds["zeta"].broadcast_like(n)
+
+        n.values[:] = (np.sin(3.0 * y / ny) * (1.0 + t + x + z)).values
+
+        expected = 3.0 / ny * np.cos(3.0 * y / ny) * (1.0 + t + x + z)
+
+        npt.assert_allclose(
+            n.bout.ddy().isel(theta=slice(1, -1)).values,
+            expected.isel(theta=slice(1, -1)).values,
+            rtol=1.0e-2,
+            atol=1.0e-13,
+        )
+
+    def test_ddz(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 64),
+            nxpe=1,
+            nype=1,
+        )
+
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list,
+            )
+
+        n = ds["n"]
+
+        t = ds["t"].broadcast_like(n)
+        x = ds["x"].broadcast_like(n)
+        y = ds["y"].broadcast_like(n)
+        z = ds["z"].broadcast_like(n)
+
+        n.values[:] = (np.sin(z) * (1.0 + t + x + y)).values
+
+        expected = np.cos(z) * (1.0 + t + x + y)
+
+        npt.assert_allclose(
+            n.bout.ddz().values, expected.values, rtol=1.0e-2, atol=1.0e-13
+        )

@@ -303,6 +303,8 @@ class BoutDataArrayAccessor:
         ycoord = da.metadata["bout_ydim"]
         zcoord = da.metadata["bout_zdim"]
 
+        da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
+
         if zcoord in da.dims and da.direction_y != "Aligned":
             aligned_input = False
             da = da.bout.to_field_aligned()
@@ -312,7 +314,6 @@ class BoutDataArrayAccessor:
         if n is None:
             n = self.fine_interpolation_factor
 
-        da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
         da = da.chunk({ycoord: None})
 
         ny_fine = n * region.ny
@@ -351,20 +352,11 @@ class BoutDataArrayAccessor:
 
         da = _update_metadata_increased_resolution(da, n)
 
-        # Add dy to da as a coordinate. This will only be temporary, once we have
-        # combined the regions together, we will demote dy to a regular variable
+        # Modify dy to be consistent with the higher resolution grid
         dy_array = xr.DataArray(
             np.full([da.sizes[xcoord], da.sizes[ycoord]], dy), dims=[xcoord, ycoord]
         )
-        # need a view of da with only x- and y-dimensions, unfortunately no neat way to
-        # do this with isel
-        da_2d = da
-        if tcoord in da.sizes:
-            da_2d = da_2d.isel(**{tcoord: 0}, drop=True)
-        if zcoord in da.sizes:
-            da_2d = da_2d.isel(**{zcoord: 0}, drop=True)
-        dy_array = da_2d.copy(data=dy_array)
-        da = da.assign_coords(dy=dy_array)
+        da["dy"] = da["dy"].copy(data=dy_array)
 
         # Remove regions which have incorrect information for the high-resolution grid.
         # New regions will be generated when creating a new Dataset in
@@ -453,6 +445,173 @@ class BoutDataArrayAccessor:
         else:
             # Extract the DataArray to return
             return result[self.data.name]
+
+    def ddx(self):
+        """
+        Special method for calculating a derivative in the "bout_xdim"
+        direction (radial, x-direction), needed because the 1d coordinate in this
+        direction is index number, not coordinate values (because psi can be different
+        in core and PFR regions).
+
+        This method uses a second-order accurate central finite difference method to
+        calculate the derivative.
+
+        Note values at the boundaries will be NaN - if Dataset was loaded with
+        keep_xboundaries=True, these should only ever be in boundary cells.
+        """
+        da = self.data
+        xcoord = da.metadata["bout_xdim"]
+
+        if da.cell_location == "CELL_CENTRE":
+            dx = da["dx"]
+        elif da.cell_location == "CELL_XLOW":
+            dx = da["dx_CELL_XLOW"]
+        elif da.cell_location == "CELL_YLOW":
+            dx = da["dx_CELL_YLOW"]
+        elif da.cell_location == "CELL_ZLOW":
+            dx = da["dx_CELL_ZLOW"]
+        else:
+            raise ValueError(f'Unrecognised cell location "{da.cell_location}"')
+
+        result = (da.shift({xcoord: -1}) - da.shift({xcoord: 1})) / (2.0 * dx)
+
+        result.name = f"d({da.name})/dx"
+        if "standard_name" in result.attrs:
+            result.standard_name = f"d({result.standard_name})/dx"
+        if "long_name" in result.attrs:
+            result.long_name = f"x-derivative of {result.long_name}"
+        if "units" in result.attrs:
+            result.units = ""
+
+        return result
+
+    def ddy(self, region=None):
+        """
+        Special method for calculating a derivative in the "bout_ydim"
+        direction (parallel, y-direction), needed because we need to (a) do the
+        calculation region-by-region to take account of the branch cuts in the
+        y-direction and (b) transform to a field-aligned grid to take parallel
+        derivatives.
+
+        This method uses a second-order accurate central finite difference
+        method to calculate the derivative. It transforms to a globally field-aligned
+        grid to calculate the derivative - there is currently no option to use the same
+        method as the BOUT++ approach using 'yup' and 'ydown' fields.
+
+        Note values at the boundaries will be NaN - if Dataset was loaded with
+        keep_yboundaries=True, these should only ever be in boundary cells.
+
+        Warnings
+        --------
+        Depending on how parallel boundary conditions were applied in the BOUT++
+        PhysicsModel, the y-boundary cells may not contain valid data, in which case the
+        result may be incorrect in the grid cell closest to the boundary.
+
+        Parameters
+        ----------
+        region : str, optional
+            By default, return a result with the derivative calculated in all regions
+            separately and then combined. If an explicit region argument is passed, then
+            return the result from only that region.
+
+        Returns
+        -------
+        A new DataArray containing the y-derivative of the variable.
+        """
+        if region is None:
+            # Call the single-region version of this method for each region, and combine
+            # the results together
+            parts = [self.ddy(r).to_dataset() for r in self.data.regions]
+
+            # 'region' is not the same for all parts, and should not exist in the
+            # result, so delete before merging
+            for part in parts:
+                if "region" in part.attrs:
+                    del part.attrs["region"]
+
+            name = self.data.name
+            result = xr.combine_by_coords(parts)[f"d({name})/dy"]
+
+            return result
+
+        da = self.data
+        xcoord = da.metadata["bout_xdim"]
+        ycoord = da.metadata["bout_ydim"]
+        zcoord = da.metadata["bout_zdim"]
+
+        da = self.data.bout.from_region(region, with_guards={xcoord: 0, ycoord: 1})
+
+        if zcoord in da.dims and da.direction_y != "Aligned":
+            aligned_input = False
+            da = da.bout.to_field_aligned()
+        else:
+            aligned_input = True
+
+        if da.cell_location == "CELL_CENTRE":
+            dy = da["dy"]
+        elif da.cell_location == "CELL_XLOW":
+            dy = da["dy_CELL_XLOW"]
+        elif da.cell_location == "CELL_YLOW":
+            dy = da["dy_CELL_YLOW"]
+        elif da.cell_location == "CELL_ZLOW":
+            dy = da["dy_CELL_ZLOW"]
+        else:
+            raise ValueError(f'Unrecognised cell location "{da.cell_location}"')
+
+        result = (da.shift({ycoord: -1}) - da.shift({ycoord: 1})) / (2.0 * dy)
+
+        # Remove any y-guard cells
+        region_object = da.regions[region]
+        if region_object.connection_lower_y is None:
+            ylower = None
+        else:
+            ylower = 1
+        if region_object.connection_upper_y is None:
+            yupper = None
+        else:
+            yupper = -1
+        result = result.isel({ycoord: slice(ylower, yupper)})
+
+        if not aligned_input:
+            # Want output in non-aligned coordinates
+            result = result.bout.from_field_aligned()
+
+        result.name = f"d({da.name})/dy"
+        if "standard_name" in result.attrs:
+            result.standard_name = f"d({result.standard_name})/dy"
+        if "long_name" in result.attrs:
+            result.long_name = f"y-derivative of {result.long_name}"
+        if "units" in result.attrs:
+            result.units = ""
+
+        return result
+
+    def ddz(self):
+        """
+        Special method for calculating a derivative in the "bout_zdim"
+        direction (toroidal, z-direction), needed because xarray's
+        differentiate method doesn't have an option to handle a periodic
+        dimension (as of xarray-0.17.0).
+
+        This method uses a second-order accurate central finite difference method to
+        calculate the derivative.
+        """
+        da = self.data
+        zcoord = da.metadata["bout_zdim"]
+        result = (
+            da.roll({zcoord: -1}, roll_coords=False)
+            - da.roll({zcoord: 1}, roll_coords=False)
+        ) / (2.0 * da.metadata["dz"])
+
+        result.name = f"d({da.name})/dz"
+        if "standard_name" in result.attrs:
+            result.standard_name = f"d({result.standard_name})/dz"
+        if "long_name" in result.attrs:
+            result.long_name = f"z-derivative of {result.long_name}"
+        if "units" in result.attrs:
+            result.units = ""
+
+        return result
 
     def get_bounding_surfaces(self, coords=("R", "Z")):
         """

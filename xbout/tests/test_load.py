@@ -609,6 +609,7 @@ def create_bout_ds(
 
     ds["dx"] = 0.5 * one
     ds["dy"] = 2.0 * one
+    ds = ds.set_coords(["dx", "dy"])
     ds["dz"] = 2.0 * np.pi / nz
 
     ds["iteration"] = t_length
