@@ -83,6 +83,37 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
 
     del ds
 
+    # Set dimension names if they were not set by add_geometry_coords(). Dimensions
+    # should not have been renamed without having set their names already.
+    if "bout_tdim" not in updated_ds.metadata:
+        if "t" in updated_ds.dims:
+            updated_ds.metadata["bout_tdim"] = "t"
+        else:
+            raise ValueError(
+                '"t" dimension was renamed, but metadata["bout_tdim"] was not set'
+            )
+    if "bout_xdim" not in updated_ds.metadata:
+        if "x" in updated_ds.dims:
+            updated_ds.metadata["bout_xdim"] = "x"
+        else:
+            raise ValueError(
+                '"x" dimension was renamed, but metadata["bout_xdim"] was not set'
+            )
+    if "bout_ydim" not in updated_ds.metadata:
+        if "y" in updated_ds.dims:
+            updated_ds.metadata["bout_ydim"] = "y"
+        else:
+            raise ValueError(
+                '"y" dimension was renamed, but metadata["bout_ydim"] was not set'
+            )
+    if "bout_zdim" not in updated_ds.metadata:
+        if "z" in updated_ds.dims:
+            updated_ds.metadata["bout_zdim"] = "z"
+        else:
+            raise ValueError(
+                '"z" dimension was renamed, but metadata["bout_zdim"] was not set'
+            )
+
     # Add global 1D coordinates
     # ######################
     # Note the global coordinates used here are defined so that they are zero at
@@ -91,10 +122,10 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     # long as these bounds are consistent with the global coordinates defined in
     # Region.__init__() (we will only use these coordinates for interpolation) and it is
     # simplest to calculate them with cumsum().
-    tcoord = updated_ds.metadata.get("bout_tdim", "t")
-    xcoord = updated_ds.metadata.get("bout_xdim", "x")
-    ycoord = updated_ds.metadata.get("bout_ydim", "y")
-    zcoord = updated_ds.metadata.get("bout_zdim", "z")
+    tcoord = updated_ds.metadata["bout_tdim"]
+    xcoord = updated_ds.metadata["bout_xdim"]
+    ycoord = updated_ds.metadata["bout_ydim"]
+    zcoord = updated_ds.metadata["bout_zdim"]
 
     if (tcoord not in updated_ds.coords) and (tcoord in updated_ds.dims):
         # Create the time coordinate from t_array

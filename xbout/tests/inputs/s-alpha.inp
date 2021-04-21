@@ -1,0 +1,80 @@
+mxg = 2
+
+[mesh]
+
+paralleltransform = shifted
+
+# Settings to create an s-alpha geometry
+########################################
+
+# Parameters for s-alpha geometry
+a = 0.59 # minor radius in m (location of LCFS)
+Lr = 0.24 # size (in m) of the radial domain
+R0 = 0.85 # Major radius of magnetic axis in m
+B0 = 0.5 # Toroidal magnetic field on axis in T
+# Unsheared geometry:
+q = 6.213 # Safety factor (avoid low-order rational numbers to avoid instabilities). Could have a profile q(r)
+s = 0 # Highest power of r in q (?)
+psi = -R0^2*e2*B0/q + R0^2*B0/q
+psiminus = -R0^2*e2minus*B0/q + R0^2*B0/q # psi at (r-dr/2)
+psiplus = -R0^2*e2plus*B0/q + R0^2*B0/q # psi at (r+dr/2)
+# # quadratic q-profile with shear:
+# q = 1 + (6.2 - 1) * (r/a)^2
+# s = 2 # Highest power of r in q (?)
+# psi = not finished - need to calculate integral of psiprime for this case
+
+# minor radius coordinate (note 0<=x<=1 in the simulation domain)
+r = a + Lr * (x - 0.5)
+dr = Lr / (nx - 2*mxg)
+rminus = r - dr/2
+rplus = r + dr/2
+
+# Set separatrix location - in centre of radial domain for now
+ixseps1 = nx / 2
+# ixseps2, jyseps* and ny_inner can be left as defaults (no X-points or second separatrix)
+
+# Grid spacings
+dy = 2*pi/ny + 0*x + 0*y # y is poloidal angle
+
+# Create magnetic field quantities
+e2 = sqrt(1 - (r/R0)^2)
+e2minus = sqrt(1 - (rminus/R0)^2) # e2 at (r-dr/2)
+e2plus = sqrt(1 - (rplus/R0)^2) # e2 at (r+dr/2)
+qbar = q*e2                               # In Jolliet 2014
+dqbardr = qbar*s/r - qbar*r/(R0^2 - r^2)  # d(qbar)/dr
+psiprime = B0*r/qbar                      # Psi' in Jolliet
+Rxy = R0 + r*cos(y)
+Zxy = -r*sin(y)
+psixy = psi + 0*y
+Bpxy = B0*r/(qbar*Rxy)
+Btxy = -B0*R0/Rxy
+Bxy = sqrt(Bpxy^2 + Btxy^2)
+hthe = r + 0*y
+ts = 2*atan(sqrt((1-r/R0)/(1+r/R0))*tan(y/2))
+zShift = -q*ts
+dBdy = Bxy/Rxy*r*sin(y)
+dRdx = cos(y)/psiprime
+dBdx = -Bxy*dRdx/Rxy + Bxy*r/R0/psiprime/(qbar^2 + (r/R0)^2)/R0*(1/(1-(r/R0)^2) - s)
+dhthe_Bpoldx = qbar*dRdx/B0 + Rxy/psiprime/B0*dqbardr # d(h_theta/Bp)/dx
+bxcvx = B0*R0*Bpxy/r/Bxy^2*dBdy
+bxcvy = -B0*R0*Bpxy/r/Bxy^2*dBdx
+bxcvz = Bpxy^3/(2*Bxy*hthe)*dhthe_Bpoldx
+ShiftAngle = -2*pi*q
+
+# grid is uniformly spaced in r. x is poloidal flux function. Get dx from psi(r+dr/2)-psi(r-dr/2)
+dx = psiplus - psiminus + 0*y
+
+# metric components
+g11 = (Rxy*Bpxy)^2
+g22 = 1/hthe^2
+g33 = Bxy^2/(Rxy*Bpxy)^2
+g12 = 0*x + 0*y
+g13 = 0*x + 0*y
+g23 = -Bpxy/abs(Bpxy)*Btxy/(Bpxy*Rxy*hthe)
+g_11 = 1/g11
+g_22 = (Bxy*hthe/Bpxy)^2
+g_33 = Rxy^2
+g_12 = 0*x + 0*y
+g_13 = 0*x + 0*y
+g_23 = -Bpxy/abs(Bpxy)*Btxy*hthe*Rxy/Bpxy
+J = hthe/Bpxy
