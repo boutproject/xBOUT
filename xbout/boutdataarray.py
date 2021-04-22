@@ -532,6 +532,9 @@ class BoutDataArrayAccessor:
             name = self.data.name
             result = xr.combine_by_coords(parts)[f"d({name})/dy"]
 
+            # regions get mixed up during the split and combine_by_coords, so reset them
+            result.attrs["regions"] = self.data.regions
+
             return result
 
         da = self.data
