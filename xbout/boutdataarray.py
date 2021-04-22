@@ -477,11 +477,13 @@ class BoutDataArrayAccessor:
 
         result.name = f"d({da.name})/dx"
         if "standard_name" in result.attrs:
-            result.standard_name = f"d({result.standard_name})/dx"
+            #result.attrs["standard_name"] = "test" #f"d({result.attrs['standard_name']})/dx"
+            result.attrs["standard_name"] = f"d({result.attrs['standard_name']})/dx"
+            #ds['n'].attrs["standard_name"]= f"d({ds['n'].attrs['standard_name']})/dx"
         if "long_name" in result.attrs:
-            result.long_name = f"x-derivative of {result.long_name}"
+            result.attrs["long_name"] = f"x-derivative of {result.attrs['long_name']}"
         if "units" in result.attrs:
-            result.units = ""
+            result.attrs["units"] = ""
 
         return result
 
@@ -578,11 +580,11 @@ class BoutDataArrayAccessor:
 
         result.name = f"d({da.name})/dy"
         if "standard_name" in result.attrs:
-            result.standard_name = f"d({result.standard_name})/dy"
+            result.attrs["standard_name"] = f"d({result.attrs['standard_name']})/dy"
         if "long_name" in result.attrs:
-            result.long_name = f"y-derivative of {result.long_name}"
+            result.attrs["long_name"] = f"y-derivative of {result.attrs['long_name']}"
         if "units" in result.attrs:
-            result.units = ""
+            result.attrs["units"] = ""
 
         return result
 
@@ -605,11 +607,11 @@ class BoutDataArrayAccessor:
 
         result.name = f"d({da.name})/dz"
         if "standard_name" in result.attrs:
-            result.standard_name = f"d({result.standard_name})/dz"
+            result.attrs["standard_name"] = f"d({result.attrs['standard_name']})/dz"
         if "long_name" in result.attrs:
-            result.long_name = f"z-derivative of {result.long_name}"
+            result.attrs["long_name"] = f"z-derivative of {result.attrs['long_name']}"
         if "units" in result.attrs:
-            result.units = ""
+            result.attrs["units"] = ""
 
         return result
 
