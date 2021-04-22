@@ -477,9 +477,7 @@ class BoutDataArrayAccessor:
 
         result.name = f"d({da.name})/dx"
         if "standard_name" in result.attrs:
-            #result.attrs["standard_name"] = "test" #f"d({result.attrs['standard_name']})/dx"
             result.attrs["standard_name"] = f"d({result.attrs['standard_name']})/dx"
-            #ds['n'].attrs["standard_name"]= f"d({ds['n'].attrs['standard_name']})/dx"
         if "long_name" in result.attrs:
             result.attrs["long_name"] = f"x-derivative of {result.attrs['long_name']}"
         if "units" in result.attrs:
