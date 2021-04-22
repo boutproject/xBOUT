@@ -10,6 +10,7 @@ from scipy.interpolate import griddata as scipy_griddata
 import xarray as xr
 from xarray import register_dataarray_accessor
 
+from .geometries import apply_geometry
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 from .plotting.utils import _create_norm
@@ -293,6 +294,7 @@ class BoutDataArrayAccessor:
                 return result
             else:
                 # Extract the DataArray to return
+                result = apply_geometry(result, self.data.geometry)
                 return result[self.data.name]
 
         # Select a particular 'region' and interpolate to higher parallel resolution
@@ -531,6 +533,9 @@ class BoutDataArrayAccessor:
 
             name = self.data.name
             result = xr.combine_by_coords(parts)[f"d({name})/dy"]
+
+            # regions get mixed up during the split and combine_by_coords, so reset them
+            result.attrs["regions"] = self.data.regions
 
             return result
 
