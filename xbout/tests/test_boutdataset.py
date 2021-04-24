@@ -1304,11 +1304,17 @@ class TestBoutDatasetMethods:
             rtol=1.4e-4,
         )
 
-    def test_integrate_midpoints_salpha(self, bout_xyt_example_files):
+    @pytest.mark.parametrize(
+        "location", ["CELL_CENTRE", "CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"]
+    )
+    def test_integrate_midpoints_salpha(self, bout_xyt_example_files, location):
         # Create data
+        nx = 100
+        ny = 110
+        nz = 120
         dataset_list = bout_xyt_example_files(
             None,
-            lengths=(4, 100, 110, 120),
+            lengths=(4, nx, ny, nz),
             nxpe=1,
             nype=1,
             nt=1,
@@ -1323,16 +1329,7 @@ class TestBoutDatasetMethods:
 
         # Integrate 1 so we just get volume, areas and lengths
         ds["n"].values[:] = 1.0
-
-        # Test geometry has major radius R and goes between minor radii a-Lr/2 and
-        # a+Lr/2
-        R = options.evaluate_scalar("mesh:R0")
-        a = options.evaluate_scalar("mesh:a")
-        Lr = options.evaluate_scalar("mesh:Lr")
-        rinner = a - Lr / 2.0
-        router = a + Lr / 2.0
-        q = options.evaluate_scalar("mesh:q")
-        T_total = (ds.sizes["t"] - 1) * (ds["t"][1] - ds["t"][0]).values
+        ds["n"].attrs["cell_location"] = location
 
         # remove boundary cells (don't want to integrate over those)
         ds = ds.bout.remove_yboundaries()
@@ -1342,6 +1339,21 @@ class TestBoutDatasetMethods:
         else:
             xslice = slice(None)
         ds = ds.isel(x=xslice)
+
+        # Test geometry has major radius R and goes between minor radii a-Lr/2 and
+        # a+Lr/2
+        R = options.evaluate_scalar("mesh:R0")
+        a = options.evaluate_scalar("mesh:a")
+        Lr = options.evaluate_scalar("mesh:Lr")
+        rinner = a - Lr / 2.0
+        router = a + Lr / 2.0
+        r = options.evaluate("mesh:r").squeeze()[xslice]
+        if location == "CELL_XLOW":
+            rinner = rinner - Lr / (2.0 * nx)
+            router = router - Lr / (2.0 * nx)
+            r = r - Lr / (2.0 * nx)
+        q = options.evaluate_scalar("mesh:q")
+        T_total = (ds.sizes["t"] - 1) * (ds["t"][1] - ds["t"][0]).values
 
         # Volume of torus with circular cross-section of major radius R and minor radius
         # a is 2*pi*R*pi*a^2
@@ -1383,7 +1395,6 @@ class TestBoutDatasetMethods:
             xslice = slice(None)
         else:
             xslice = slice(mxg, -mxg)
-        r = options.evaluate("mesh:r").squeeze()[xslice]
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["theta", "zeta"]),
             (2.0 * np.pi * R * 2.0 * np.pi * r)[np.newaxis, :]
@@ -1418,6 +1429,8 @@ class TestBoutDatasetMethods:
         # x-z planes are 'conical frustrums', with area pi*(Rinner + Router)*Lr
         # https://en.wikipedia.org/wiki/Frustum
         theta = _1d_coord_from_spacing(ds["dy"], "theta").values
+        if location == "CELL_YLOW":
+            theta = theta - 2.0 * np.pi / (2.0 * ny)
         Rinner = R + rinner * np.cos(theta)
         Router = R + router * np.cos(theta)
         npt.assert_allclose(
@@ -1549,9 +1562,13 @@ class TestBoutDatasetMethods:
         )
 
         # Toroidal lines have length 2*pi*Rxy
+        if location == "CELL_CENTRE":
+            R_2d = ds["R"]
+        else:
+            R_2d = ds[f"Rxy_{location}"]
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["zeta"]),
-            (2.0 * np.pi * ds["R"]).values[np.newaxis, :, :]
+            (2.0 * np.pi * R_2d).values[np.newaxis, :, :]
             * np.ones(ds.sizes["t"])[:, np.newaxis, np.newaxis],
             rtol=1.0e-5,
             atol=0.0,
@@ -1559,7 +1576,7 @@ class TestBoutDatasetMethods:
         # Integrate in time too
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["t", "zeta"]),
-            T_total * (2.0 * np.pi * ds["R"]),
+            T_total * (2.0 * np.pi * R_2d),
             rtol=1.0e-5,
             atol=0.0,
         )
