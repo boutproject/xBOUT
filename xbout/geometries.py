@@ -144,18 +144,21 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         # match how BOUT++ generates fields from input file expressions.
         nz = updated_ds.dims[zcoord]
         z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
-        z1 = z0 + nz * updated_ds.metadata["dz"]
-        if not np.isclose(
-            z1, 2.0 * np.pi * updated_ds.metadata["ZMAX"], rtol=1.0e-15, atol=0.0
-        ):
-            warn(
-                f"Size of toroidal domain as calculated from nz*dz ({str(z1 - z0)}"
-                f" is not the same as 2pi*(ZMAX - ZMIN) ("
-                f"{2.*np.pi*updated_ds.metadata['ZMAX'] - z0}): using value from dz"
+        if "dz" in updated_ds.metadata:
+            z1 = z0 + nz * updated_ds.metadata["dz"]
+            if not np.isclose(
+                z1, 2.0 * np.pi * updated_ds.metadata["ZMAX"], rtol=1.0e-15, atol=0.0
+            ):
+                warn(
+                    f"Size of toroidal domain as calculated from nz*dz ({str(z1 - z0)}"
+                    f" is not the same as 2pi*(ZMAX - ZMIN) ("
+                    f"{2.*np.pi*updated_ds.metadata['ZMAX'] - z0}): using value from dz"
+                )
+            z = xr.DataArray(
+                np.linspace(start=z0, stop=z1, num=nz, endpoint=False), dims=zcoord
             )
-        z = xr.DataArray(
-            np.linspace(start=z0, stop=z1, num=nz, endpoint=False), dims=zcoord
-        )
+        else:
+            z = _1d_coord_from_spacing(updated_ds["dz"], zcoord)
 
         # can't use commented out version, uncommented one works around xarray bug
         # removing attrs
