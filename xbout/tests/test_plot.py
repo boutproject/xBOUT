@@ -25,6 +25,9 @@ class TestPlot:
             pytest.param(2, marks=pytest.mark.long),
         ],
     )
+    @pytest.mark.parametrize(
+        "dnd_type", ["lower-disconnected-double-null", "upper-disconnected-double-null"]
+    )
     def test_region_disconnecteddoublenull(
         self,
         bout_xyt_example_files,
@@ -32,6 +35,7 @@ class TestPlot:
         keep_xboundaries,
         keep_yboundaries,
         with_guards,
+        dnd_type,
     ):
         # Note using more than MXG x-direction points and MYG y-direction points per
         # output file ensures tests for whether boundary cells are present do not fail
@@ -44,7 +48,7 @@ class TestPlot:
             nt=1,
             guards=guards,
             grid="grid",
-            topology="disconnected-double-null",
+            topology=dnd_type,
         )
 
         ds = open_boutdataset(
