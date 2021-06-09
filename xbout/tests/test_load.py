@@ -560,14 +560,33 @@ def create_bout_ds(
         ds["jyseps2_1"] = ny_inner - MYSUB - 1
         ds["jyseps1_2"] = ny_inner + MYSUB - 1
         ds["jyseps2_2"] = ny - MYSUB - 1
-    elif topology == "disconnected-double-null":
+    elif topology == "lower-disconnected-double-null":
         if nype < 6 and not squashed:
             raise ValueError(
-                "Not enough processors for disconnected-double-null "
+                "Not enough processors for lower-disconnected-double-null "
                 f"topology: nype={nype}"
             )
         ds["ixseps1"] = nx // 2
         ds["ixseps2"] = nx // 2 + 4
+        if ds["ixseps2"] >= nx:
+            raise ValueError(
+                "Not enough points in the x-direction. ixseps2="
+                f'{ds["ixseps2"]} > nx={nx}'
+            )
+        ds["jyseps1_1"] = MYSUB - 1
+        ny_inner = 3 * MYSUB
+        ds["ny_inner"] = ny_inner
+        ds["jyseps2_1"] = ny_inner - MYSUB - 1
+        ds["jyseps1_2"] = ny_inner + MYSUB - 1
+        ds["jyseps2_2"] = ny - MYSUB - 1
+    elif topology == "upper-disconnected-double-null":
+        if nype < 6 and not squashed:
+            raise ValueError(
+                "Not enough processors for upper-disconnected-double-null "
+                f"topology: nype={nype}"
+            )
+        ds["ixseps2"] = nx // 2
+        ds["ixseps1"] = nx // 2 + 4
         if ds["ixseps2"] >= nx:
             raise ValueError(
                 "Not enough points in the x-direction. ixseps2="
@@ -776,7 +795,7 @@ class TestOpen:
             lengths=(6, 2, 4, 7),
             guards={"x": 2, "y": 2},
             squashed=True,
-            topology="disconnected-double-null",
+            topology="lower-disconnected-double-null",
         )
         with pytest.warns(UserWarning):
             ds = open_boutdataset(
@@ -811,7 +830,7 @@ class TestOpen:
             guards={"x": 2, "y": 2},
             squashed=True,
             write_to_disk=True,
-            topology="disconnected-double-null",
+            topology="upper-disconnected-double-null",
         )
         with pytest.warns(UserWarning):
             ds = open_boutdataset(
