@@ -567,6 +567,7 @@ def _auto_open_mfboutdataset(
             concat_dim=concat_dims,
             data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
             join="exact",
+            combine_attrs="no_conflicts",
         )
 
     # Remove any duplicate time values from concatenation
