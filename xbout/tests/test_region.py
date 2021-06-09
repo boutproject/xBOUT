@@ -1756,7 +1756,7 @@ class TestRegion:
                     n_upper_inner_intersep.isel(theta=slice(yguards)).values,
                 )
             else:
-                # Connects to intersep in upper outer divertor leg
+                # Connects to intersep in inner SOL
                 npt.assert_equal(
                     n_noregions.isel(
                         x=slice(ixs_inner - xguards, ixs_outer + xguards),
