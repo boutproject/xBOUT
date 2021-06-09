@@ -288,7 +288,7 @@ class BoutDataArrayAccessor:
                 if "region" in part[self.data.name].attrs:
                     del part[self.data.name].attrs["region"]
 
-            result = xr.combine_by_coords(parts)
+            result = xr.combine_by_coords(parts, combine_attrs="drop_conflicts")
 
             if return_dataset:
                 return result
