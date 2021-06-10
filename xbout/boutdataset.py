@@ -25,7 +25,6 @@ from .plotting.animate import (
     _normalise_time_coord,
     _parse_coord_option,
 )
-from .plotting.utils import _create_norm
 from .region import _from_region
 from .utils import _get_bounding_surfaces, _split_into_restarts
 
@@ -1056,15 +1055,6 @@ class BoutDatasetAccessor:
                     # set 'v' to use for the timeline below
                     v = v[0]
             elif ndims == 3:
-                if this_vmin is None:
-                    this_vmin = data.min().values
-                if this_vmax is None:
-                    this_vmax = data.max().values
-
-                norm = _create_norm(
-                    this_logscale, kwargs.get("norm", None), this_vmin, this_vmax
-                )
-
                 if this_poloidal_plot:
                     var_blocks = animate_poloidal(
                         data,
@@ -1075,7 +1065,7 @@ class BoutDatasetAccessor:
                         axis_coords=this_axis_coords,
                         vmin=this_vmin,
                         vmax=this_vmax,
-                        norm=norm,
+                        logscale=this_logscale,
                         aspect=this_aspect,
                         extend=this_extend,
                         **kwargs,
@@ -1093,7 +1083,7 @@ class BoutDatasetAccessor:
                             axis_coords=this_axis_coords,
                             vmin=this_vmin,
                             vmax=this_vmax,
-                            norm=norm,
+                            logscale=this_logscale,
                             aspect=this_aspect,
                             extend=this_extend,
                             **kwargs,

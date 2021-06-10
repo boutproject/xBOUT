@@ -5,7 +5,13 @@ import warnings
 
 import animatplot as amp
 
-from .utils import _decompose_regions, _is_core_only, plot_separatrices, plot_targets
+from .utils import (
+    _create_norm,
+    _decompose_regions,
+    _is_core_only,
+    plot_separatrices,
+    plot_targets,
+)
 from matplotlib.animation import PillowWriter
 
 
@@ -80,6 +86,7 @@ def animate_poloidal(
     axis_coords=None,
     vmin=None,
     vmax=None,
+    logscale=False,
     animate=True,
     save_as=None,
     fps=10,
@@ -125,6 +132,12 @@ def animate_poloidal(
         Minimum value for the color scale
     vmax : float, optional
         Maximum value for the color scale
+    logscale : bool or float, optional
+        If True, default to a logarithmic color scale instead of a linear one.
+        If a non-bool type is passed it is treated as a float used to set the linear
+        threshold of a symmetric logarithmic scale as
+        linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
+        passed.
     animate : bool, optional
         If set to false, do not create the animation, just return the blocks
     save_as : True or str, optional
@@ -188,11 +201,7 @@ def animate_poloidal(
         extend = "neither"
 
     # create colorbar
-    norm = (
-        kwargs["norm"]
-        if "norm" in kwargs
-        else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-    )
+    norm = _create_norm(logscale, kwargs.get("norm", None), vmin, vmax)
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
     cmap = sm.get_cmap()
@@ -279,6 +288,7 @@ def animate_pcolormesh(
     vmin=None,
     vmax=None,
     vsymmetric=False,
+    logscale=False,
     fps=10,
     save_as=None,
     ax=None,
@@ -325,6 +335,12 @@ def animate_pcolormesh(
         data across whole timeseries.
     vsymmetric : bool, optional
         If set to true, make the color-scale symmetric
+    logscale : bool or float, optional
+        If True, default to a logarithmic color scale instead of a linear one.
+        If a non-bool type is passed it is treated as a float used to set the linear
+        threshold of a symmetric logarithmic scale as
+        linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
+        passed.
     fps : int, optional
         Frames per second of resulting gif
     save_as : True or str, optional
@@ -399,17 +415,15 @@ def animate_pcolormesh(
     # well with dask arrays!
     image_data = data.values
 
-    if "norm" not in kwargs:
-        # If not specified, determine max and min values across entire data series
-        if vmax is None:
-            vmax = np.max(image_data)
-        if vmin is None:
-            vmin = np.min(image_data)
-        if vsymmetric:
-            vmax = max(np.abs(vmin), np.abs(vmax))
-            vmin = -vmax
-        kwargs["vmin"] = vmin
-        kwargs["vmax"] = vmax
+    # If not specified, determine max and min values across entire data series
+    if vmax is None:
+        vmax = np.max(image_data)
+    if vmin is None:
+        vmin = np.min(image_data)
+    if vsymmetric:
+        vmax = max(np.abs(vmin), np.abs(vmax))
+        vmin = -vmax
+    kwargs["norm"] = _create_norm(logscale, kwargs.get("norm", None), vmin, vmax)
 
     if not ax:
         fig, ax = plt.subplots()

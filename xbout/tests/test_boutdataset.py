@@ -665,7 +665,7 @@ class TestBoutDatasetMethods:
             nt=1,
             guards=guards,
             grid="grid",
-            topology="disconnected-double-null",
+            topology="lower-disconnected-double-null",
         )
 
         ds = open_boutdataset(
@@ -1589,7 +1589,7 @@ class TestBoutDatasetMethods:
             nype=6,
             nt=1,
             grid="grid",
-            topology="disconnected-double-null",
+            topology="upper-disconnected-double-null",
         )
 
         ds = open_boutdataset(
@@ -1640,7 +1640,7 @@ class TestBoutDatasetMethods:
             nype=6,
             nt=1,
             grid="grid",
-            topology="disconnected-double-null",
+            topology="lower-disconnected-double-null",
         )
 
         ds = open_boutdataset(
@@ -2100,7 +2100,7 @@ class TestSaveRestart:
             nt=1,
             guards={"x": 2, "y": 2},
             lengths=(6, 5, 4, 7),
-            topology="disconnected-double-null",
+            topology="upper-disconnected-double-null",
             write_to_disk=True,
         )
 
@@ -2165,7 +2165,7 @@ class TestSaveRestart:
             nt=1,
             guards={"x": 2, "y": 2},
             lengths=(6, 5, 4, 7),
-            topology="disconnected-double-null",
+            topology="lower-disconnected-double-null",
             write_to_disk=True,
         )
 

@@ -331,8 +331,11 @@ def _get_topology(ds):
             return "connected-double-null"
         else:
             raise ValueError("Currently unsupported topology")
-
-    return "disconnected-double-null"
+    elif ixs1 < ixs2:
+        return "lower-disconnected-double-null"
+    else:
+        # ixs1 > ixs2
+        return "upper-disconnected-double-null"
 
 
 def _check_connections(regions):
@@ -374,7 +377,7 @@ def _check_connections(regions):
 topologies = {}
 
 
-def topology_disconnected_double_null(
+def topology_lower_disconnected_double_null(
     *, ds, ixs1, ixs2, nx, jys11, jys21, ny_inner, jys12, jys22, ny, ybndry
 ):
     regions = {}
@@ -573,7 +576,209 @@ def topology_disconnected_double_null(
     return regions
 
 
-topologies["disconnected-double-null"] = topology_disconnected_double_null
+topologies["lower-disconnected-double-null"] = topology_lower_disconnected_double_null
+
+
+def topology_upper_disconnected_double_null(
+    *, ds, ixs1, ixs2, nx, jys11, jys21, ny_inner, jys12, jys22, ny, ybndry
+):
+    regions = {}
+    regions["lower_inner_PFR"] = Region(
+        name="lower_inner_PFR",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=0,
+        yupper_ind=jys11 + 1,
+        connection_outer_x="lower_inner_intersep",
+        connection_upper_y="lower_outer_PFR",
+    )
+    regions["lower_inner_intersep"] = Region(
+        name="lower_inner_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=0,
+        yupper_ind=jys11 + 1,
+        connection_inner_x="lower_inner_PFR",
+        connection_outer_x="lower_inner_SOL",
+        connection_upper_y="lower_outer_intersep",
+    )
+    regions["lower_inner_SOL"] = Region(
+        name="lower_inner_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=0,
+        yupper_ind=jys11 + 1,
+        connection_inner_x="lower_inner_intersep",
+        connection_upper_y="inner_SOL",
+    )
+    regions["inner_core"] = Region(
+        name="inner_core",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=jys11 + 1,
+        yupper_ind=jys21 + 1,
+        connection_outer_x="inner_intersep",
+        connection_lower_y="outer_core",
+        connection_upper_y="outer_core",
+    )
+    regions["inner_intersep"] = Region(
+        name="inner_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=jys11 + 1,
+        yupper_ind=jys21 + 1,
+        connection_inner_x="inner_core",
+        connection_outer_x="inner_SOL",
+        connection_lower_y="outer_intersep",
+        connection_upper_y="upper_inner_intersep",
+    )
+    regions["inner_SOL"] = Region(
+        name="inner_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=jys11 + 1,
+        yupper_ind=jys21 + 1,
+        connection_inner_x="inner_intersep",
+        connection_lower_y="lower_inner_SOL",
+        connection_upper_y="upper_inner_SOL",
+    )
+    regions["upper_inner_PFR"] = Region(
+        name="upper_inner_PFR",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=jys21 + 1,
+        yupper_ind=ny_inner,
+        connection_outer_x="upper_inner_intersep",
+        connection_lower_y="upper_outer_PFR",
+    )
+    regions["upper_inner_intersep"] = Region(
+        name="upper_inner_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=jys21 + 1,
+        yupper_ind=ny_inner,
+        connection_inner_x="upper_inner_PFR",
+        connection_outer_x="upper_inner_SOL",
+        connection_lower_y="inner_intersep",
+    )
+    regions["upper_inner_SOL"] = Region(
+        name="upper_inner_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=jys21 + 1,
+        yupper_ind=ny_inner,
+        connection_inner_x="upper_inner_intersep",
+        connection_lower_y="inner_SOL",
+    )
+    regions["upper_outer_PFR"] = Region(
+        name="upper_outer_PFR",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=ny_inner,
+        yupper_ind=jys12 + 1,
+        connection_outer_x="upper_outer_intersep",
+        connection_upper_y="upper_inner_PFR",
+    )
+    regions["upper_outer_intersep"] = Region(
+        name="upper_outer_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=ny_inner,
+        yupper_ind=jys12 + 1,
+        connection_inner_x="upper_outer_PFR",
+        connection_outer_x="upper_outer_SOL",
+        connection_upper_y="outer_intersep",
+    )
+    regions["upper_outer_SOL"] = Region(
+        name="upper_outer_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=ny_inner,
+        yupper_ind=jys12 + 1,
+        connection_inner_x="upper_outer_intersep",
+        connection_upper_y="outer_SOL",
+    )
+    regions["outer_core"] = Region(
+        name="outer_core",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=jys12 + 1,
+        yupper_ind=jys22 + 1,
+        connection_outer_x="outer_intersep",
+        connection_lower_y="inner_core",
+        connection_upper_y="inner_core",
+    )
+    regions["outer_intersep"] = Region(
+        name="outer_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=jys12 + 1,
+        yupper_ind=jys22 + 1,
+        connection_inner_x="outer_core",
+        connection_outer_x="outer_SOL",
+        connection_lower_y="upper_outer_intersep",
+        connection_upper_y="inner_intersep",
+    )
+    regions["outer_SOL"] = Region(
+        name="outer_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=jys12 + 1,
+        yupper_ind=jys22 + 1,
+        connection_inner_x="outer_intersep",
+        connection_lower_y="upper_outer_SOL",
+        connection_upper_y="lower_outer_SOL",
+    )
+    regions["lower_outer_PFR"] = Region(
+        name="lower_outer_PFR",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=jys22 + 1,
+        yupper_ind=ny,
+        connection_outer_x="lower_outer_intersep",
+        connection_lower_y="lower_inner_PFR",
+    )
+    regions["lower_outer_intersep"] = Region(
+        name="lower_outer_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=jys22 + 1,
+        yupper_ind=ny,
+        connection_inner_x="lower_outer_PFR",
+        connection_outer_x="lower_outer_SOL",
+        connection_lower_y="lower_inner_intersep",
+    )
+    regions["lower_outer_SOL"] = Region(
+        name="lower_outer_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=jys22 + 1,
+        yupper_ind=ny,
+        connection_inner_x="lower_outer_intersep",
+        connection_lower_y="outer_SOL",
+    )
+    return regions
+
+
+topologies["upper-disconnected-double-null"] = topology_upper_disconnected_double_null
 
 
 def topology_connected_double_null(
@@ -962,7 +1167,6 @@ def _create_regions_toroidal(ds):
     # Make sure all sizes are sensible
     ixs1 = _in_range(ixs1, 0, nx)
     ixs2 = _in_range(ixs2, 0, nx)
-    ixs1, ixs2 = _order_vars(ixs1, ixs2)
     jys11 = _in_range(jys11, 0, ny - 1)
     jys21 = _in_range(jys21, 0, ny - 1)
     jys12 = _in_range(jys12, 0, ny - 1)
