@@ -1390,11 +1390,6 @@ class TestBoutDatasetMethods:
         # Area of torus with circular cross-section of major radius R and minor radius a
         # is 2*pi*R*2*pi*a
         # https://en.wikipedia.org/wiki/Torus
-        mxg = options._keys.get("MXG", 2)
-        if mxg == 0:
-            xslice = slice(None)
-        else:
-            xslice = slice(mxg, -mxg)
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["theta", "zeta"]),
             (2.0 * np.pi * R * 2.0 * np.pi * r)[np.newaxis, :]
