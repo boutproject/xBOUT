@@ -305,6 +305,12 @@ class BoutDatasetAccessor:
         """
         ds = self.data
 
+        if isinstance(variable, str):
+            variable = ds[variable]
+
+        location = variable.cell_location
+        suffix = "" if location == "CELL_CENTRE" else f"_{location}"
+
         tcoord = ds.metadata["bout_tdim"]
         xcoord = ds.metadata["bout_xdim"]
         ycoord = ds.metadata["bout_ydim"]
@@ -331,55 +337,61 @@ class BoutDatasetAccessor:
         elif isinstance(dims, str):
             dims = [dims]
 
-        dx = ds["dx"]
-        dy = ds["dy"]
+        dx = ds[f"dx{suffix}"]
+        dy = ds[f"dy{suffix}"]
         dz = ds.metadata["dz"]
 
         # Work out the spatial volume element
         if xcoord in dims and ycoord in dims and zcoord in dims:
             # Volume integral, use the 3d Jacobian "J"
-            spatial_volume_element = ds["J"] * dx * dy * dz
+            spatial_volume_element = ds[f"J{suffix}"] * dx * dy * dz
         elif xcoord in dims and ycoord in dims:
             # 2d integral on poloidal planes
-            if ds[variable].direction_y == "Standard":
+            if variable.direction_y == "Standard":
                 # Need to use a metric constructed from basis vectors within the
                 # poloidal plane, so use 'reciprocal basis vectors' Grad(x^i)
                 # J = 1/sqrt(det(g_2d))
                 # det(g_2d) = g11*g22 - g12**2
-                g = ds["g11"] * ds["g22"] - ds["g12"] ** 2
+                g = ds[f"g11{suffix}"] * ds[f"g22{suffix}"] - ds[f"g12{suffix}"] ** 2
                 J = 1.0 / np.sqrt(g)
-            elif ds[variable].direction_y == "Aligned":
+            elif variable.direction_y == "Aligned":
                 # Need to work out area element from metric coefficients. See book by
                 # D'haeseleer, Hitchon, Callen and Shohet eq. (2.5.51).
                 # Need to use a metric constructed from basis vectors within the
                 # field-aligned x-y plane, so use 'tangent basis vectors' e_i
                 # J = sqrt(g_11*g_22 - g_12**2)
-                J = np.sqrt(ds["g_11"] * ds["g_22"] - ds["g_12"] ** 2)
+                J = np.sqrt(
+                    ds[f"g_11{suffix}"] * ds[f"g_22{suffix}"] - ds[f"g_12{suffix}"] ** 2
+                )
             spatial_volume_element = J * dx * dy
         elif xcoord in dims and zcoord in dims:
             # 2d integral on toroidal planes
             # Need to work out area element from metric coefficients. See book by
             # D'haeseleer, Hitchon, Callen and Shohet eq. (2.5.51)
             # J = sqrt(g_11*g_33 - g_13**2)
-            J = np.sqrt(ds["g_11"] * ds["g_33"] - ds["g_13"] ** 2)
+            J = np.sqrt(
+                ds[f"g_11{suffix}"] * ds[f"g_33{suffix}"] - ds[f"g_13{suffix}"] ** 2
+            )
             spatial_volume_element = J * dx * dz
         elif ycoord in dims and zcoord in dims:
             # 2d integral on flux-surfaces
             # Need to work out area element from metric coefficients. See book by
             # D'haeseleer, Hitchon, Callen and Shohet eq. (2.5.51)
             # J = sqrt(g_22*g_33 - g_23**2)
-            J = np.sqrt(ds["g_22"] * ds["g_33"] - ds["g_23"] ** 2)
+            J = np.sqrt(
+                ds[f"g_22{suffix}"] * ds[f"g_33{suffix}"] - ds[f"g_23{suffix}"] ** 2
+            )
             spatial_volume_element = J * dy * dz
         elif xcoord in dims:
-            if ds[variable].direction_y == "Aligned":
+            if variable.direction_y == "Aligned":
                 raise ValueError(
                     "Variable is field-aligned, but radial integral along coordinate "
                     "line in globally field-aligned coordinates not supported"
                 )
             # 1d radial integral, line element is sqrt(g_11)*dx
-            spatial_volume_element = np.sqrt(ds["g_11"]) * dx
+            spatial_volume_element = np.sqrt(ds[f"g_11{suffix}"]) * dx
         elif ycoord in dims:
-            if ds[variable].direction_y == "Standard":
+            if variable.direction_y == "Standard":
                 # Poloidal integral, line element is e_y projected onto a unit vector in
                 # the poloidal direction. e_z is in the toroidal direction and Grad(x)
                 # is orthogonal to flux surfaces, so their cross product is in the
@@ -398,24 +410,25 @@ class BoutDatasetAccessor:
                 # For 'orthogonal' coordinates (radial and poloidal directions are
                 # orthogonal) this is equal to 1/sqrt(g22)
                 spatial_volume_element = (
-                    (ds["g_22"] * ds["g_33"] - ds["g_23"] ** 2)
-                    / (ds["J"] * np.sqrt(ds["g11"] * ds["g_33"]))
+                    (
+                        ds[f"g_22{suffix}"] * ds[f"g_33{suffix}"]
+                        - ds[f"g_23{suffix}"] ** 2
+                    )
+                    / (
+                        ds[f"J{suffix}"]
+                        * np.sqrt(ds[f"g11{suffix}"] * ds[f"g_33{suffix}"])
+                    )
                     * dy
                 )
-            elif ds[variable].direction_y == "Aligned":
+            elif variable.direction_y == "Aligned":
                 # Parallel integral, line element is sqrt(g_22)*dy
-                spatial_volume_element = np.sqrt(ds["g_22"]) * dy
+                spatial_volume_element = np.sqrt(ds[f"g_22{suffix}"]) * dy
         elif zcoord in dims:
             # Toroidal integral, line element is sqrt(g_33)*dz
-            spatial_volume_element = np.sqrt(ds["g_33"]) * dz
+            spatial_volume_element = np.sqrt(ds[f"g_33{suffix}"]) * dz
         else:
             # No spatial integral
             spatial_volume_element = 1.0
-
-        if isinstance(variable, xr.DataArray):
-            integrand = variable
-        else:
-            integrand = ds[variable]
 
         spatial_dims = set(dims) - set([tcoord])
 
@@ -423,9 +436,9 @@ class BoutDatasetAccessor:
         # have a z-dimension to sum over. Other variables are OK because metric
         # coefficients, dx and dy all have both x- and y-dimensions so variable would be
         # broadcast to include them if necessary
-        missing_z_sum = zcoord in dims and zcoord not in integrand.dims
+        missing_z_sum = zcoord in dims and zcoord not in variable.dims
 
-        integrand = integrand * spatial_volume_element
+        integrand = variable * spatial_volume_element
 
         integral = integrand.sum(dim=spatial_dims)
 

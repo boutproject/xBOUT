@@ -68,14 +68,19 @@ def set_geometry_from_input_file(ds, name):
         "dx",
         "dy",
     ]:
-        # Need all arrays returned from options.evaluate() to be the right shape.
-        # Recommend adding '0*x' or '0*y' in the input file expressions if the
-        # expression would be 1d otherwise.
-        ds[v] = ds[v].copy(
-            data=np.broadcast_to(
-                options.evaluate(f"mesh:{v}").squeeze(axis=2)[slices], shape_2d
+        for location in ["CELL_CENTRE", "CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"]:
+            suffix = "" if location == "CELL_CENTRE" else f"_{location}"
+            # Need all arrays returned from options.evaluate() to be the right shape.
+            # Recommend adding '0*x' or '0*y' in the input file expressions if the
+            # expression would be 1d otherwise.
+            ds[v + suffix] = ds[v].copy(
+                data=np.broadcast_to(
+                    options.evaluate(f"mesh:{v}", location=location).squeeze(axis=2)[
+                        slices
+                    ],
+                    shape_2d,
+                )
             )
-        )
 
     # Set dz as it would be calculated by BOUT++ (but don't support zmin, zmax or
     # zperiod here)
@@ -86,14 +91,19 @@ def set_geometry_from_input_file(ds, name):
 
     # Add extra fields needed by "toroidal" geometry
     for v in ["Rxy", "Zxy", "psixy"]:
-        # Need all arrays returned from options.evaluate() to be the right shape.
-        # Recommend adding '0*x' or '0*y' in the input file expressions if the
-        # expression would be 1d otherwise.
-        ds[v] = ds["g11"].copy(
-            data=np.broadcast_to(
-                options.evaluate(f"mesh:{v}").squeeze(axis=2)[slices], shape_2d
+        for location in ["CELL_CENTRE", "CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"]:
+            suffix = "" if location == "CELL_CENTRE" else f"_{location}"
+            # Need all arrays returned from options.evaluate() to be the right shape.
+            # Recommend adding '0*x' or '0*y' in the input file expressions if the
+            # expression would be 1d otherwise.
+            ds[v + suffix] = ds["g11"].copy(
+                data=np.broadcast_to(
+                    options.evaluate(f"mesh:{v}", location=location).squeeze(axis=2)[
+                        slices
+                    ],
+                    shape_2d,
+                )
             )
-        )
 
     # Set fields that don't have to be in input files to NaN
     for v in ["G1", "G2", "G3"]:
