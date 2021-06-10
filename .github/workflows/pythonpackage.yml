@@ -49,7 +49,7 @@ jobs:
     if: always()
     strategy:
       matrix:
-        python-version: []
+        python-version: [3.7, 3.8]
         include:
           python-version: 3.7
           pip-packages:
