@@ -261,7 +261,7 @@ class BoutDatasetAccessor:
 
         return ds
 
-    def integrate_midpoints(self, variable, *, dims=None):
+    def integrate_midpoints(self, variable, *, dims=None, cumulative_t=False):
         """
         Integrate using the midpoint rule for spatial dimensions, and trapezium rule for
         time.
@@ -302,6 +302,10 @@ class BoutDatasetAccessor:
             Dimensions to integrate over. Can be any combination of of the dimensions of
             the Dataset. Defaults to integration over all spatial dimensions. If `...`
             is passed, integrate over all dimensions including time.
+        cumulative_t : bool, default False
+            If integrating in time, return the cumulative integral (integral from the
+            beginning up to each point in the time dimension) instead of the definite
+            integral.
         """
         ds = self.data
 
@@ -447,7 +451,10 @@ class BoutDatasetAccessor:
             integral = integral * ds.sizes[zcoord]
 
         if tcoord in dims:
-            integral = integral.integrate(dim=tcoord)
+            if cumulative_t:
+                integral = integral.cumulative_integrate(coord=tcoord)
+            else:
+                integral = integral.integrate(dim=tcoord)
 
         return integral
 
