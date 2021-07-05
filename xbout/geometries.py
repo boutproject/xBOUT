@@ -294,9 +294,9 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         if v not in ds:
             if grid is None:
                 raise ValueError(
-                    "Grid file is required to provide %s. Pass the grid "
-                    "file name as the 'gridfilepath' argument to "
-                    "open_boutdataset()."
+                    f"Grid file is required to provide {v}. Pass the grid "
+                    f"file name as the 'gridfilepath' argument to "
+                    f"open_boutdataset()."
                 )
             # ds[v] = grid[v]
             # Work around issue where xarray drops attributes on coordinates when a new
