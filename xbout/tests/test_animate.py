@@ -71,6 +71,41 @@ class TestAnimate:
 
         plt.close()
 
+    @pytest.mark.parametrize(
+        "controls",
+        [
+            ("both", False),
+            ("timeline", False),
+            ("toggle", False),
+            ("", False),
+            (None, False),
+            ("foo", True),
+        ],
+    )
+    def test_animate2D_controls_arg(self, create_test_file, controls):
+        controls, expect_error = controls
+
+        save_dir, ds = create_test_file
+
+        if expect_error:
+            with pytest.raises(ValueError, match="Unrecognised value for controls"):
+                animation = ds["n"].isel(x=1).bout.animate2D(controls=controls)
+        else:
+            animation = ds["n"].isel(x=1).bout.animate2D(controls=controls)
+
+            assert len(animation.blocks) == 1
+            assert isinstance(animation.blocks[0], Pcolormesh)
+            if controls in ["both", "timeline"]:
+                assert hasattr(animation, "slider")
+            else:
+                assert not hasattr(animation, "slider")
+            if controls in ["both", "toggle"]:
+                assert hasattr(animation, "button")
+            else:
+                assert not hasattr(animation, "button")
+
+            plt.close()
+
     def test_animate1D(self, create_test_file):
 
         save_dir, ds = create_test_file
@@ -80,6 +115,41 @@ class TestAnimate:
         assert isinstance(animation.blocks[0], Line)
 
         plt.close()
+
+    @pytest.mark.parametrize(
+        "controls",
+        [
+            ("both", False),
+            ("timeline", False),
+            ("toggle", False),
+            ("", False),
+            (None, False),
+            ("foo", True),
+        ],
+    )
+    def test_animate1D_controls_arg(self, create_test_file, controls):
+        controls, expect_error = controls
+
+        save_dir, ds = create_test_file
+
+        if expect_error:
+            with pytest.raises(ValueError, match="Unrecognised value for controls"):
+                animation = ds["n"].isel(y=2, z=0).bout.animate1D(controls=controls)
+        else:
+            animation = ds["n"].isel(y=2, z=0).bout.animate1D(controls=controls)
+
+            assert len(animation.blocks) == 1
+            assert isinstance(animation.blocks[0], Line)
+            if controls in ["both", "timeline"]:
+                assert hasattr(animation, "slider")
+            else:
+                assert not hasattr(animation, "slider")
+            if controls in ["both", "toggle"]:
+                assert hasattr(animation, "button")
+            else:
+                assert not hasattr(animation, "button")
+
+            plt.close()
 
     def test_animate_list(self, create_test_file):
 
@@ -409,3 +479,44 @@ class TestAnimate:
         assert animation.blocks[2].ax.title.get_text() == "b"
 
         plt.close()
+
+    @pytest.mark.parametrize(
+        "controls",
+        [
+            ("both", False),
+            ("timeline", False),
+            ("toggle", False),
+            ("", False),
+            (None, False),
+            ("foo", True),
+        ],
+    )
+    def test_animate_list_controls_arg(self, create_test_file, controls):
+        controls, expect_error = controls
+
+        save_dir, ds = create_test_file
+
+        if expect_error:
+            with pytest.raises(ValueError, match="Unrecognised value for controls"):
+                animation = ds.isel(z=3).bout.animate_list(
+                    ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], controls=controls
+                )
+        else:
+            animation = ds.isel(z=3).bout.animate_list(
+                ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], controls=controls
+            )
+
+            assert len(animation.blocks) == 3
+            assert isinstance(animation.blocks[0], Pcolormesh)
+            assert isinstance(animation.blocks[1], Pcolormesh)
+            assert isinstance(animation.blocks[2], Line)
+            if controls in ["both", "timeline"]:
+                assert hasattr(animation, "slider")
+            else:
+                assert not hasattr(animation, "slider")
+            if controls in ["both", "toggle"]:
+                assert hasattr(animation, "button")
+            else:
+                assert not hasattr(animation, "button")
+
+            plt.close()

@@ -25,6 +25,23 @@ if (
     matplotlib.rcParams["pcolor.shading"] = "auto"
 
 
+def _add_controls(anim, controls, t_label):
+    if controls == "both":
+        # Add both time slider and play/pause toggle
+        anim.controls(timeline_slider_args={"text": t_label})
+    elif controls == "timeline":
+        # Add time slider
+        anim.timeline_slider(text=t_label)
+    elif controls == "toggle":
+        # Add play/pause toggle
+        anim.toggle()
+    elif controls is None or controls == "":
+        # Add no controls
+        pass
+    else:
+        raise ValueError(f"Unrecognised value for controls={controls}")
+
+
 def _parse_coord_option(coord, axis_coords, da):
     if isinstance(axis_coords, dict):
         option_value = axis_coords.get(coord, None)
@@ -90,7 +107,7 @@ def animate_poloidal(
     animate=True,
     save_as=None,
     fps=10,
-    controls=True,
+    controls="both",
     aspect=None,
     extend=None,
     **kwargs,
@@ -146,8 +163,10 @@ def animate_poloidal(
         '<variable name>_over_<animate_over>.gif'
     fps : float, optional
         Frame rate for the animation
-    controls : bool, optional
-        If False, do not add the timeline and pause button to the animation
+    controls : string or None, default "both"
+        By default, add both the timeline and play/pause toggle to the animation. If
+        "timeline" is passed add only the timeline, if "toggle" is passed add only the
+        play/pause toggle. If None or an empty string is passed, add neither.
     aspect : str or None, optional
         Argument to set_aspect(), defaults to "equal"
     extend : str or None, optional
@@ -268,8 +287,7 @@ def animate_poloidal(
         timeline = amp.Timeline(t_values, fps=fps, units=t_suffix)
         anim = amp.Animation(blocks, timeline)
 
-        if controls:
-            anim.controls(timeline_slider_args={"text": t_label})
+        _add_controls(anim, controls, t_label)
 
         if save_as is not None:
             if save_as is True:
@@ -298,7 +316,7 @@ def animate_pcolormesh(
     cax=None,
     aspect=None,
     extend=None,
-    controls=True,
+    controls="both",
     **kwargs,
 ):
     """
@@ -360,8 +378,10 @@ def animate_pcolormesh(
         Argument to set_aspect(), defaults to "auto"
     extend : str or None, optional
         Passed to fig.colorbar()
-    controls : bool, optional
-        If False, do not add the timeline and pause button to the animation
+    controls : string or None, default "both"
+        By default, add both the timeline and play/pause toggle to the animation. If
+        "timeline" is passed add only the timeline, if "toggle" is passed add only the
+        play/pause toggle. If None or an empty string is passed, add neither.
     kwargs : dict, optional
         Additional keyword arguments are passed on to the animation function
         animatplot.blocks.Pcolormesh
@@ -480,8 +500,7 @@ def animate_pcolormesh(
     ax.set_ylabel(y_label)
 
     if animate:
-        if controls:
-            anim.controls(timeline_slider_args={"text": t_label})
+        _add_controls(anim, controls, t_label)
 
         if save_as is not None:
             if save_as is True:
@@ -505,7 +524,7 @@ def animate_line(
     sep_pos=None,
     ax=None,
     aspect=None,
-    controls=True,
+    controls="both",
     **kwargs,
 ):
     """
@@ -548,8 +567,10 @@ def animate_line(
         figure and axes, and plot to that
     aspect : str or None, optional
         Argument to set_aspect(), defaults to "auto"
-    controls : bool, optional
-        If False, do not add the timeline and pause button to the animation
+    controls : string or None, default "both"
+        By default, add both the timeline and play/pause toggle to the animation. If
+        "timeline" is passed add only the timeline, if "toggle" is passed add only the
+        play/pause toggle. If None or an empty string is passed, add neither.
     kwargs : dict, optional
         Additional keyword arguments are passed on to the plotting function
         animatplot.blocks.Line
@@ -623,8 +644,7 @@ def animate_line(
         ax.plot_vline(sep_pos, "--")
 
     if animate:
-        if controls:
-            anim.controls(timeline_slider_args={"text": t_label})
+        _add_controls(anim, controls, t_label)
 
         if save_as is not None:
             if save_as is True:
