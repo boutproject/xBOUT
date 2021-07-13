@@ -916,6 +916,11 @@ class BoutDatasetAccessor:
             tight_layout()
         **kwargs : dict, optional
             Additional keyword arguments are passed on to each animation function
+
+        Returns
+        -------
+        animation
+            An animatplot.Animation object.
         """
 
         if animate_over is None:

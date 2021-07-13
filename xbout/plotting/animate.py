@@ -158,8 +158,9 @@ def animate_poloidal(
 
     Returns
     -------
-    blocks
-        List of animatplot.blocks.Pcolormesh instances
+    animation or blocks
+        If animate==True, returns an animatplot.Animation object, otherwise
+        returns a list of animatplot.blocks.Pcolormesh instances.
     """
 
     if animate_over is None:
@@ -275,6 +276,8 @@ def animate_poloidal(
                 save_as = "{}_over_{}".format(da.name, animate_over)
             anim.save(save_as + ".gif", writer=PillowWriter(fps=fps))
 
+        return anim
+
     return blocks
 
 
@@ -362,6 +365,12 @@ def animate_pcolormesh(
     kwargs : dict, optional
         Additional keyword arguments are passed on to the animation function
         animatplot.blocks.Pcolormesh
+
+    Returns
+    -------
+    animation or block
+        If animate==True, returns an animatplot.Animation object, otherwise
+        returns an animatplot.blocks.Pcolormesh instance.
     """
 
     if animate_over is None:
@@ -479,6 +488,8 @@ def animate_pcolormesh(
                 save_as = "{}_over_{}".format(variable, animate_over)
             anim.save(save_as + ".gif", writer=PillowWriter(fps=fps))
 
+        return anim
+
     return pcolormesh_block
 
 
@@ -542,6 +553,12 @@ def animate_line(
     kwargs : dict, optional
         Additional keyword arguments are passed on to the plotting function
         animatplot.blocks.Line
+
+    Returns
+    -------
+    animation or block
+        If animate==True, returns an animatplot.Animation object, otherwise
+        returns an animatplot.blocks.Line instance.
     """
 
     if animate_over is None:
@@ -613,5 +630,7 @@ def animate_line(
             if save_as is True:
                 save_as = "{}_over_{}".format(variable, animate_over)
             anim.save(save_as + ".gif", writer=PillowWriter(fps=fps))
+
+        return anim
 
     return line_block
