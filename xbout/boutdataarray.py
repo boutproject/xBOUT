@@ -706,6 +706,12 @@ class BoutDataArrayAccessor:
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (animatplot.blocks.Pcolormesh).
+
+        Returns
+        -------
+        animation or blocks
+            If animate==True, returns an animatplot.Animation object, otherwise
+            returns a list of animatplot.blocks.Pcolormesh instances.
         """
 
         data = self.data
@@ -809,6 +815,12 @@ class BoutDataArrayAccessor:
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (animatplot.blocks.Line).
+
+        Returns
+        -------
+        animation or block
+            If animate==True, returns an animatplot.Animation object, otherwise
+            returns an animatplot.blocks.Line instance.
         """
 
         data = self.data

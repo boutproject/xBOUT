@@ -42,37 +42,114 @@ class TestAnimate:
 
         animation = ds["n"].isel(x=1).bout.animate2D(save_as="%s/testyz" % save_dir)
 
-        assert isinstance(animation, Pcolormesh)
+        assert len(animation.blocks) == 1
+        block = animation.blocks[0]
+        assert isinstance(block, Pcolormesh)
 
-        assert animation.ax.get_xlabel() == "y"
-        assert animation.ax.get_ylabel() == "z"
+        assert block.ax.get_xlabel() == "y"
+        assert block.ax.get_ylabel() == "z"
 
         plt.close()
 
         animation = ds["n"].isel(y=2).bout.animate2D(save_as="%s/testxz" % save_dir)
 
-        assert isinstance(animation, Pcolormesh)
-        assert animation.ax.get_xlabel() == "x"
-        assert animation.ax.get_ylabel() == "z"
+        assert len(animation.blocks) == 1
+        block = animation.blocks[0]
+        assert isinstance(block, Pcolormesh)
+        assert block.ax.get_xlabel() == "x"
+        assert block.ax.get_ylabel() == "z"
 
         plt.close()
 
         animation = ds["n"].isel(z=3).bout.animate2D(save_as="%s/testxy" % save_dir)
 
-        assert isinstance(animation, Pcolormesh)
-        assert animation.ax.get_xlabel() == "x"
-        assert animation.ax.get_ylabel() == "y"
+        assert len(animation.blocks) == 1
+        block = animation.blocks[0]
+        assert isinstance(block, Pcolormesh)
+        assert block.ax.get_xlabel() == "x"
+        assert block.ax.get_ylabel() == "y"
 
         plt.close()
+
+    @pytest.mark.parametrize(
+        "controls",
+        [
+            ("both", False),
+            ("timeline", False),
+            ("toggle", False),
+            ("", False),
+            (None, False),
+            ("foo", True),
+        ],
+    )
+    def test_animate2D_controls_arg(self, create_test_file, controls):
+        controls, expect_error = controls
+
+        save_dir, ds = create_test_file
+
+        if expect_error:
+            with pytest.raises(ValueError, match="Unrecognised value for controls"):
+                animation = ds["n"].isel(x=1).bout.animate2D(controls=controls)
+        else:
+            animation = ds["n"].isel(x=1).bout.animate2D(controls=controls)
+
+            assert len(animation.blocks) == 1
+            assert isinstance(animation.blocks[0], Pcolormesh)
+            if controls in ["both", "timeline"]:
+                assert hasattr(animation, "slider")
+            else:
+                assert not hasattr(animation, "slider")
+            if controls in ["both", "toggle"]:
+                assert hasattr(animation, "button")
+            else:
+                assert not hasattr(animation, "button")
+
+            plt.close()
 
     def test_animate1D(self, create_test_file):
 
         save_dir, ds = create_test_file
         animation = ds["n"].isel(y=2, z=0).bout.animate1D(save_as="%s/test" % save_dir)
 
-        assert isinstance(animation, Line)
+        assert len(animation.blocks) == 1
+        assert isinstance(animation.blocks[0], Line)
 
         plt.close()
+
+    @pytest.mark.parametrize(
+        "controls",
+        [
+            ("both", False),
+            ("timeline", False),
+            ("toggle", False),
+            ("", False),
+            (None, False),
+            ("foo", True),
+        ],
+    )
+    def test_animate1D_controls_arg(self, create_test_file, controls):
+        controls, expect_error = controls
+
+        save_dir, ds = create_test_file
+
+        if expect_error:
+            with pytest.raises(ValueError, match="Unrecognised value for controls"):
+                animation = ds["n"].isel(y=2, z=0).bout.animate1D(controls=controls)
+        else:
+            animation = ds["n"].isel(y=2, z=0).bout.animate1D(controls=controls)
+
+            assert len(animation.blocks) == 1
+            assert isinstance(animation.blocks[0], Line)
+            if controls in ["both", "timeline"]:
+                assert hasattr(animation, "slider")
+            else:
+                assert not hasattr(animation, "slider")
+            if controls in ["both", "toggle"]:
+                assert hasattr(animation, "button")
+            else:
+                assert not hasattr(animation, "button")
+
+            plt.close()
 
     def test_animate_list(self, create_test_file):
 
@@ -82,6 +159,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)]
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -96,6 +174,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)]
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Line)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -110,6 +189,7 @@ class TestAnimate:
             [["n", "T"], ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)]
         )
 
+        assert len(animation.blocks) == 4
         assert isinstance(animation.blocks[0], Line)
         assert isinstance(animation.blocks[1], Line)
         assert isinstance(animation.blocks[2], Pcolormesh)
@@ -137,6 +217,7 @@ class TestAnimate:
             ["n", ds["T"].isel(t=2), ds["n"].isel(y=1, z=2)], animate_over="x"
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -152,6 +233,7 @@ class TestAnimate:
             save_as="%s/test" % save_dir,
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -166,6 +248,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], fps=42
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -181,6 +264,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], nrows=2
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -195,6 +279,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], ncols=3
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -247,6 +332,7 @@ class TestAnimate:
             poloidal_plot=True,
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -263,6 +349,7 @@ class TestAnimate:
                 subplots_adjust={"hspace": 4, "wspace": 5},
             )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -277,6 +364,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], vmin=-0.1
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -291,6 +379,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], vmin=[0.0, 0.1, 0.2]
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -305,6 +394,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], vmax=1.1
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -319,6 +409,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], vmax=[1.0, 1.1, 1.2]
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -333,6 +424,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], logscale=True
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -347,6 +439,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], logscale=1.0e-2
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -362,6 +455,7 @@ class TestAnimate:
             logscale=[True, 1.0e-2, False],
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert isinstance(animation.blocks[1], Pcolormesh)
         assert isinstance(animation.blocks[2], Line)
@@ -376,6 +470,7 @@ class TestAnimate:
             ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], titles=["a", None, "b"]
         )
 
+        assert len(animation.blocks) == 3
         assert isinstance(animation.blocks[0], Pcolormesh)
         assert animation.blocks[0].ax.title.get_text() == "a"
         assert isinstance(animation.blocks[1], Pcolormesh)
@@ -384,3 +479,44 @@ class TestAnimate:
         assert animation.blocks[2].ax.title.get_text() == "b"
 
         plt.close()
+
+    @pytest.mark.parametrize(
+        "controls",
+        [
+            ("both", False),
+            ("timeline", False),
+            ("toggle", False),
+            ("", False),
+            (None, False),
+            ("foo", True),
+        ],
+    )
+    def test_animate_list_controls_arg(self, create_test_file, controls):
+        controls, expect_error = controls
+
+        save_dir, ds = create_test_file
+
+        if expect_error:
+            with pytest.raises(ValueError, match="Unrecognised value for controls"):
+                animation = ds.isel(z=3).bout.animate_list(
+                    ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], controls=controls
+                )
+        else:
+            animation = ds.isel(z=3).bout.animate_list(
+                ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], controls=controls
+            )
+
+            assert len(animation.blocks) == 3
+            assert isinstance(animation.blocks[0], Pcolormesh)
+            assert isinstance(animation.blocks[1], Pcolormesh)
+            assert isinstance(animation.blocks[2], Line)
+            if controls in ["both", "timeline"]:
+                assert hasattr(animation, "slider")
+            else:
+                assert not hasattr(animation, "slider")
+            if controls in ["both", "toggle"]:
+                assert hasattr(animation, "button")
+            else:
+                assert not hasattr(animation, "button")
+
+            plt.close()
