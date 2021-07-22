@@ -22,6 +22,7 @@ from .plotting.animate import (
     animate_poloidal,
     animate_pcolormesh,
     animate_line,
+    _add_controls,
     _normalise_time_coord,
     _parse_coord_option,
 )
@@ -845,7 +846,7 @@ class BoutDatasetAccessor:
         titles=None,
         aspect=None,
         extend=None,
-        controls=True,
+        controls="both",
         tight_layout=True,
         **kwargs,
     ):
@@ -908,14 +909,21 @@ class BoutDatasetAccessor:
             plots and "auto" for others.
         extend : str or None, optional
             Passed to fig.colorbar()
-        controls : bool, optional
-            If set to False, do not show the time-slider or pause button
+        controls : string or None, default "both"
+            By default, add both the timeline and play/pause toggle to the animation. If
+            "timeline" is passed add only the timeline, if "toggle" is passed add only
+            the play/pause toggle. If None or an empty string is passed, add neither.
         tight_layout : bool or dict, optional
             If set to False, don't call tight_layout() on the figure.
             If a dict is passed, the dict entries are passed as arguments to
             tight_layout()
         **kwargs : dict, optional
             Additional keyword arguments are passed on to each animation function
+
+        Returns
+        -------
+        animation
+            An animatplot.Animation object.
         """
 
         if animate_over is None:
@@ -1143,8 +1151,7 @@ class BoutDatasetAccessor:
                 tight_layout = {}
             fig.tight_layout(**tight_layout)
 
-        if controls:
-            anim.controls(timeline_slider_args={"text": time_label})
+        _add_controls(anim, controls, time_label)
 
         if save_as is not None:
             anim.save(save_as + ".gif", writer=PillowWriter(fps=fps))
