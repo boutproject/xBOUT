@@ -464,10 +464,16 @@ def create_bout_ds(
 
     T = DataArray(data, dims=["t", "x", "y", "z"])
     n = DataArray(data, dims=["t", "x", "y", "z"])
+    S = DataArray(data[:, :, :, 0], dims=["t", "x", "y"])
     for v in [n, T]:
         v.attrs["direction_y"] = "Standard"
         v.attrs["cell_location"] = "CELL_CENTRE"
-    ds = Dataset({"n": n, "T": T})
+        v.attrs["direction_z"] = "Standard"
+    for v in [S]:
+        v.attrs["direction_y"] = "Standard"
+        v.attrs["cell_location"] = "CELL_CENTRE"
+        v.attrs["direction_z"] = "Average"
+    ds = Dataset({"n": n, "T": T, "S": S})
 
     # BOUT_VERSION needed so that we know that number of points in z is MZ, not MZ-1 (as
     # it was in BOUT++ before v4.0
