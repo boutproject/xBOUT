@@ -1138,6 +1138,7 @@ class TestBoutDatasetMethods:
             (
                 "n",
                 "T",
+                "S",
                 "g11",
                 "g22",
                 "g33",
