@@ -260,6 +260,7 @@ def _bout_xyt_example_files(
     squashed=False,
     topology="core",
     write_to_disk=False,
+    bout_v5=False,
 ):
     """
     Mocks up a set of BOUT-like Datasets
@@ -292,6 +293,7 @@ def _bout_xyt_example_files(
             topology=topology,
             syn_data_type=syn_data_type,
             squashed=True,
+            bout_v5=bout_v5,
         )
         ds_list[0]["nxpe"] = nxpe
         ds_list[0]["nype"] = nype
@@ -305,6 +307,7 @@ def _bout_xyt_example_files(
             guards=guards,
             topology=topology,
             syn_data_type=syn_data_type,
+            bout_v5=bout_v5,
         )
 
     if grid is not None:
@@ -358,6 +361,7 @@ def create_bout_ds_list(
     topology="core",
     syn_data_type="random",
     squashed=False,
+    bout_v5=False,
 ):
     """
     Mocks up a set of BOUT-like datasets.
@@ -394,6 +398,7 @@ def create_bout_ds_list(
                 guards=guards,
                 topology=topology,
                 squashed=squashed,
+                bout_v5=bout_v5,
             )
             ds_list.append(ds)
 
@@ -411,6 +416,7 @@ def create_bout_ds(
     guards=None,
     topology="core",
     squashed=False,
+    bout_v5=False,
 ):
 
     if guards is None:
@@ -474,7 +480,7 @@ def create_bout_ds(
 
     # BOUT_VERSION needed so that we know that number of points in z is MZ, not MZ-1 (as
     # it was in BOUT++ before v4.0
-    ds["BOUT_VERSION"] = 4.3
+    ds["BOUT_VERSION"] = 5.0 if bout_v5 else 4.3
 
     # Include grid data
     ds["NXPE"] = nxpe
@@ -631,8 +637,12 @@ def create_bout_ds(
 
     ds["dx"] = 0.5 * one
     ds["dy"] = 2.0 * one
-    ds = ds.set_coords(["dx", "dy"])
-    ds["dz"] = 2.0 * np.pi / nz
+    if bout_v5:
+        ds["dz"] = 2.0 * one * np.pi / nz
+        ds = ds.set_coords(["dx", "dy", "dz"])
+    else:
+        ds["dz"] = 2.0 * np.pi / nz
+        ds = ds.set_coords(["dx", "dy"])
 
     ds["iteration"] = t_length
     ds["t_array"] = DataArray(np.arange(t_length, dtype=float) * 10.0, dims="t")
@@ -920,7 +930,8 @@ class TestOpen:
     def test_combine_along_t(self):
         ...
 
-    def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files):
+    @pytest.mark.parametrize("bout_v5", [False, True])
+    def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files, bout_v5):
         path = bout_xyt_example_files(
             tmpdir_factory,
             nxpe=4,
@@ -928,11 +939,14 @@ class TestOpen:
             nt=1,
             syn_data_type="stepped",
             write_to_disk=True,
+            bout_v5=bout_v5,
         )
         with pytest.warns(UserWarning):
             actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
-        bout_ds = create_bout_ds
+        def bout_ds(syn_data_type):
+            return create_bout_ds(syn_data_type, bout_v5=bout_v5)
+
         line1 = concat(
             [bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)],
             dim="x",
@@ -950,16 +964,17 @@ class TestOpen:
         )
         expected = concat([line1, line2, line3], dim="y", data_vars="minimal")
         expected = expected.set_coords("t_array").rename(t_array="t")
+        vars_to_drop = METADATA_VARS + _BOUT_PER_PROC_VARIABLES
+        if bout_v5:
+            vars_to_drop.remove("dz")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
-            expected.drop_vars(
-                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
-            ),
+            expected.drop_vars(vars_to_drop, errors="ignore"),
         )
 
         # check creation without writing to disk gives identical result
         fake_ds_list = bout_xyt_example_files(
-            None, nxpe=4, nype=3, nt=1, syn_data_type="stepped"
+            None, nxpe=4, nype=3, nt=1, syn_data_type="stepped", bout_v5=bout_v5
         )
         with pytest.warns(UserWarning):
             fake = open_boutdataset(datapath=fake_ds_list, keep_xboundaries=False)
