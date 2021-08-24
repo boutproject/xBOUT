@@ -180,9 +180,23 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         # Generates a coordinate whose value is 0 on the first grid point, not dz/2, to
         # match how BOUT++ generates fields from input file expressions.
         nz = updated_ds.dims[zcoord]
-        z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
-        if "dz" in updated_ds.metadata:
-            z1 = z0 + nz * updated_ds.metadata["dz"]
+
+        # In BOUT++ v5, dz is either a Field2D or Field3D.
+        # We can use it as a 1D coordinate if it's a Field3D, _or_ if nz == 1
+        bout_v5 = updated_ds.metadata["BOUT_VERSION"] >= 5.0
+        use_metric_3d = updated_ds.metadata.get("use_metric_3d", False)
+        can_use_1d_z_coord = (nz == 1) or use_metric_3d
+
+        if can_use_1d_z_coord:
+            z = _1d_coord_from_spacing(updated_ds["dz"], zcoord)
+        else:
+            if bout_v5:
+                dz = updated_ds["dz"][0, 0]
+            else:
+                dz = updated_ds.metadata["dz"]
+
+            z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
+            z1 = z0 + nz * dz
             if not np.isclose(
                 z1, 2.0 * np.pi * updated_ds.metadata["ZMAX"], rtol=1.0e-15, atol=0.0
             ):
@@ -194,8 +208,6 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
             z = xr.DataArray(
                 np.linspace(start=z0, stop=z1, num=nz, endpoint=False), dims=zcoord
             )
-        else:
-            z = _1d_coord_from_spacing(updated_ds["dz"], zcoord)
 
         # can't use commented out version, uncommented one works around xarray bug
         # removing attrs
