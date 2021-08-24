@@ -455,7 +455,7 @@ class BoutDatasetAccessor:
             if cumulative_t:
                 integral = integral.cumulative_integrate(coord=tcoord)
             else:
-                integral = integral.integrate(dim=tcoord)
+                integral = integral.integrate(coord=tcoord)
 
         return integral
 
