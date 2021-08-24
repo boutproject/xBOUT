@@ -10,6 +10,7 @@ from scipy.interpolate import griddata as scipy_griddata
 import xarray as xr
 from xarray import register_dataarray_accessor
 
+from .geometries import apply_geometry
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 from .plotting.utils import _create_norm
@@ -144,7 +145,9 @@ class BoutDataArrayAccessor:
             raise ValueError(
                 f"{zShift_coord} missing, cannot shift "
                 f"{self.data.cell_location} field {self.data.name} to "
-                f"field-aligned coordinates"
+                f"field-aligned coordinates. Setting toroidal geometry is necessary to "
+                f'use to_field_aligned() - did you pass the `geometry="toroidal"` '
+                f"argument to open_boutdataset()?"
             )
 
         result = self._shift_z(self.data[zShift_coord])
@@ -174,7 +177,9 @@ class BoutDataArrayAccessor:
             raise ValueError(
                 f"{zShift_coord} missing, cannot shift "
                 f"{self.data.cell_location} field {self.data.name} from "
-                f"field-aligned coordinates"
+                f"field-aligned coordinates. Setting toroidal geometry is necessary to "
+                f'use from_field_aligned() - did you pass the `geometry="toroidal"` '
+                f"argument to open_boutdataset()?"
             )
 
         result = self._shift_z(-self.data[zShift_coord])
@@ -283,12 +288,13 @@ class BoutDataArrayAccessor:
                 if "region" in part[self.data.name].attrs:
                     del part[self.data.name].attrs["region"]
 
-            result = xr.combine_by_coords(parts)
+            result = xr.combine_by_coords(parts, combine_attrs="drop_conflicts")
 
             if return_dataset:
                 return result
             else:
                 # Extract the DataArray to return
+                result = apply_geometry(result, self.data.geometry)
                 return result[self.data.name]
 
         # Select a particular 'region' and interpolate to higher parallel resolution
@@ -299,6 +305,8 @@ class BoutDataArrayAccessor:
         ycoord = da.metadata["bout_ydim"]
         zcoord = da.metadata["bout_zdim"]
 
+        da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
+
         if zcoord in da.dims and da.direction_y != "Aligned":
             aligned_input = False
             da = da.bout.to_field_aligned()
@@ -308,7 +316,6 @@ class BoutDataArrayAccessor:
         if n is None:
             n = self.fine_interpolation_factor
 
-        da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
         da = da.chunk({ycoord: None})
 
         ny_fine = n * region.ny
@@ -347,20 +354,11 @@ class BoutDataArrayAccessor:
 
         da = _update_metadata_increased_resolution(da, n)
 
-        # Add dy to da as a coordinate. This will only be temporary, once we have
-        # combined the regions together, we will demote dy to a regular variable
+        # Modify dy to be consistent with the higher resolution grid
         dy_array = xr.DataArray(
             np.full([da.sizes[xcoord], da.sizes[ycoord]], dy), dims=[xcoord, ycoord]
         )
-        # need a view of da with only x- and y-dimensions, unfortunately no neat way to
-        # do this with isel
-        da_2d = da
-        if tcoord in da.sizes:
-            da_2d = da_2d.isel(**{tcoord: 0}, drop=True)
-        if zcoord in da.sizes:
-            da_2d = da_2d.isel(**{zcoord: 0}, drop=True)
-        dy_array = da_2d.copy(data=dy_array)
-        da = da.assign_coords(dy=dy_array)
+        da["dy"] = da["dy"].copy(data=dy_array)
 
         # Remove regions which have incorrect information for the high-resolution grid.
         # New regions will be generated when creating a new Dataset in
@@ -450,6 +448,176 @@ class BoutDataArrayAccessor:
             # Extract the DataArray to return
             return result[self.data.name]
 
+    def ddx(self):
+        """
+        Special method for calculating a derivative in the "bout_xdim"
+        direction (radial, x-direction), needed because the 1d coordinate in this
+        direction is index number, not coordinate values (because psi can be different
+        in core and PFR regions).
+
+        This method uses a second-order accurate central finite difference method to
+        calculate the derivative.
+
+        Note values at the boundaries will be NaN - if Dataset was loaded with
+        keep_xboundaries=True, these should only ever be in boundary cells.
+        """
+        da = self.data
+        xcoord = da.metadata["bout_xdim"]
+
+        if da.cell_location == "CELL_CENTRE":
+            dx = da["dx"]
+        elif da.cell_location == "CELL_XLOW":
+            dx = da["dx_CELL_XLOW"]
+        elif da.cell_location == "CELL_YLOW":
+            dx = da["dx_CELL_YLOW"]
+        elif da.cell_location == "CELL_ZLOW":
+            dx = da["dx_CELL_ZLOW"]
+        else:
+            raise ValueError(f'Unrecognised cell location "{da.cell_location}"')
+
+        result = (da.shift({xcoord: -1}) - da.shift({xcoord: 1})) / (2.0 * dx)
+
+        result.name = f"d({da.name})/dx"
+        if "standard_name" in result.attrs:
+            result.attrs["standard_name"] = f"d({result.attrs['standard_name']})/dx"
+        if "long_name" in result.attrs:
+            result.attrs["long_name"] = f"x-derivative of {result.attrs['long_name']}"
+        if "units" in result.attrs:
+            result.attrs["units"] = ""
+
+        return result
+
+    def ddy(self, region=None):
+        """
+        Special method for calculating a derivative in the "bout_ydim"
+        direction (parallel, y-direction), needed because we need to (a) do the
+        calculation region-by-region to take account of the branch cuts in the
+        y-direction and (b) transform to a field-aligned grid to take parallel
+        derivatives.
+
+        This method uses a second-order accurate central finite difference
+        method to calculate the derivative. It transforms to a globally field-aligned
+        grid to calculate the derivative - there is currently no option to use the same
+        method as the BOUT++ approach using 'yup' and 'ydown' fields.
+
+        Note values at the boundaries will be NaN - if Dataset was loaded with
+        keep_yboundaries=True, these should only ever be in boundary cells.
+
+        Warnings
+        --------
+        Depending on how parallel boundary conditions were applied in the BOUT++
+        PhysicsModel, the y-boundary cells may not contain valid data, in which case the
+        result may be incorrect in the grid cell closest to the boundary.
+
+        Parameters
+        ----------
+        region : str, optional
+            By default, return a result with the derivative calculated in all regions
+            separately and then combined. If an explicit region argument is passed, then
+            return the result from only that region.
+
+        Returns
+        -------
+        A new DataArray containing the y-derivative of the variable.
+        """
+        if region is None:
+            # Call the single-region version of this method for each region, and combine
+            # the results together
+            parts = [self.ddy(r).to_dataset() for r in self.data.regions]
+
+            # 'region' is not the same for all parts, and should not exist in the
+            # result, so delete before merging
+            for part in parts:
+                if "region" in part.attrs:
+                    del part.attrs["region"]
+
+            name = self.data.name
+            result = xr.combine_by_coords(parts)[f"d({name})/dy"]
+
+            # regions get mixed up during the split and combine_by_coords, so reset them
+            result.attrs["regions"] = self.data.regions
+
+            return result
+
+        da = self.data
+        xcoord = da.metadata["bout_xdim"]
+        ycoord = da.metadata["bout_ydim"]
+        zcoord = da.metadata["bout_zdim"]
+
+        da = self.data.bout.from_region(region, with_guards={xcoord: 0, ycoord: 1})
+
+        if zcoord in da.dims and da.direction_y != "Aligned":
+            aligned_input = False
+            da = da.bout.to_field_aligned()
+        else:
+            aligned_input = True
+
+        if da.cell_location == "CELL_CENTRE":
+            dy = da["dy"]
+        elif da.cell_location == "CELL_XLOW":
+            dy = da["dy_CELL_XLOW"]
+        elif da.cell_location == "CELL_YLOW":
+            dy = da["dy_CELL_YLOW"]
+        elif da.cell_location == "CELL_ZLOW":
+            dy = da["dy_CELL_ZLOW"]
+        else:
+            raise ValueError(f'Unrecognised cell location "{da.cell_location}"')
+
+        result = (da.shift({ycoord: -1}) - da.shift({ycoord: 1})) / (2.0 * dy)
+
+        # Remove any y-guard cells
+        region_object = da.regions[region]
+        if region_object.connection_lower_y is None:
+            ylower = None
+        else:
+            ylower = 1
+        if region_object.connection_upper_y is None:
+            yupper = None
+        else:
+            yupper = -1
+        result = result.isel({ycoord: slice(ylower, yupper)})
+
+        if not aligned_input:
+            # Want output in non-aligned coordinates
+            result = result.bout.from_field_aligned()
+
+        result.name = f"d({da.name})/dy"
+        if "standard_name" in result.attrs:
+            result.attrs["standard_name"] = f"d({result.attrs['standard_name']})/dy"
+        if "long_name" in result.attrs:
+            result.attrs["long_name"] = f"y-derivative of {result.attrs['long_name']}"
+        if "units" in result.attrs:
+            result.attrs["units"] = ""
+
+        return result
+
+    def ddz(self):
+        """
+        Special method for calculating a derivative in the "bout_zdim"
+        direction (toroidal, z-direction), needed because xarray's
+        differentiate method doesn't have an option to handle a periodic
+        dimension (as of xarray-0.17.0).
+
+        This method uses a second-order accurate central finite difference method to
+        calculate the derivative.
+        """
+        da = self.data
+        zcoord = da.metadata["bout_zdim"]
+        result = (
+            da.roll({zcoord: -1}, roll_coords=False)
+            - da.roll({zcoord: 1}, roll_coords=False)
+        ) / (2.0 * da.metadata["dz"])
+
+        result.name = f"d({da.name})/dz"
+        if "standard_name" in result.attrs:
+            result.attrs["standard_name"] = f"d({result.attrs['standard_name']})/dz"
+        if "long_name" in result.attrs:
+            result.attrs["long_name"] = f"z-derivative of {result.attrs['long_name']}"
+        if "units" in result.attrs:
+            result.attrs["units"] = ""
+
+        return result
+
     def get_bounding_surfaces(self, coords=("R", "Z")):
         """
         Get bounding surfaces.
@@ -474,10 +642,11 @@ class BoutDataArrayAccessor:
 
     def animate2D(
         self,
-        animate_over="t",
+        animate_over=None,
         x=None,
         y=None,
         animate=True,
+        axis_coords=None,
         fps=10,
         save_as=None,
         ax=None,
@@ -495,7 +664,7 @@ class BoutDataArrayAccessor:
         Parameters
         ----------
         animate_over : str, optional
-            Dimension over which to animate
+            Dimension over which to animate, defaults to the time dimension
         x : str, optional
             Dimension to use on the x axis, default is None - then use the first spatial
             dimension of the data
@@ -504,6 +673,16 @@ class BoutDataArrayAccessor:
             dimension of the data
         animate : bool, optional
             If set to false, do not create the animation, just return the block or blocks
+        axis_coords : None, str, dict
+            Coordinates to use for axis labelling.
+            - None: Use the dimension coordinate for each axis, if it exists.
+            - "index": Use the integer index values.
+            - dict: keys are dimension names, values set axis_coords for each axis
+              separately. Values can be: None, "index", the name of a 1d variable or
+              coordinate (which must have the dimension given by 'key'), or a 1d
+              numpy array, dask array or DataArray whose length matches the length of
+              the dimension given by 'key'.
+            Only affects time coordinate for plots with poloidal_plot=True.
         fps : int, optional
             Frames per second of resulting gif
         save_as : True or str, optional
@@ -521,9 +700,18 @@ class BoutDataArrayAccessor:
             threshold of a symmetric logarithmic scale as
             linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
             passed.
+        aspect : str or None, optional
+            Argument to set_aspect(). Defaults to "equal" for poloidal plots and "auto"
+            for others.
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (animatplot.blocks.Pcolormesh).
+
+        Returns
+        -------
+        animation or blocks
+            If animate==True, returns an animatplot.Animation object, otherwise
+            returns a list of animatplot.blocks.Pcolormesh instances.
         """
 
         data = self.data
@@ -550,6 +738,7 @@ class BoutDataArrayAccessor:
                     data,
                     animate_over=animate_over,
                     animate=animate,
+                    axis_coords=axis_coords,
                     fps=fps,
                     save_as=save_as,
                     ax=ax,
@@ -567,6 +756,7 @@ class BoutDataArrayAccessor:
                     x=x,
                     y=y,
                     animate=animate,
+                    axis_coords=axis_coords,
                     fps=fps,
                     save_as=save_as,
                     ax=ax,
@@ -581,8 +771,9 @@ class BoutDataArrayAccessor:
 
     def animate1D(
         self,
-        animate_over="t",
+        animate_over=None,
         animate=True,
+        axis_coords=None,
         fps=10,
         save_as=None,
         sep_pos=None,
@@ -598,7 +789,16 @@ class BoutDataArrayAccessor:
         Parameters
         ----------
         animate_over : str, optional
-            Dimension over which to animate
+            Dimension over which to animate, defaults to the time dimension
+        axis_coords : None, str, dict
+            Coordinates to use for axis labelling.
+            - None: Use the dimension coordinate for each axis, if it exists.
+            - "index": Use the integer index values.
+            - dict: keys are dimension names, values set axis_coords for each axis
+              separately. Values can be: None, "index", the name of a 1d variable or
+              coordinate (which must have the dimension given by 'key'), or a 1d
+              numpy array, dask array or DataArray whose length matches the length of
+              the dimension given by 'key'.
         fps : int, optional
             Frames per second of resulting gif
         save_as : True or str, optional
@@ -610,9 +810,17 @@ class BoutDataArrayAccessor:
         ax : Axes, optional
             A matplotlib axes instance to plot to. If None, create a new
             figure and axes, and plot to that
+        aspect : str or None, optional
+            Argument to set_aspect(), defaults to "auto"
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (animatplot.blocks.Line).
+
+        Returns
+        -------
+        animation or block
+            If animate==True, returns an animatplot.Animation object, otherwise
+            returns an animatplot.blocks.Line instance.
         """
 
         data = self.data
@@ -627,6 +835,7 @@ class BoutDataArrayAccessor:
             line_block = animate_line(
                 data=data,
                 animate_over=animate_over,
+                axis_coords=axis_coords,
                 sep_pos=sep_pos,
                 animate=animate,
                 fps=fps,

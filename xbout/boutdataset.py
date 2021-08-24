@@ -18,8 +18,14 @@ import numpy as np
 from dask.diagnostics import ProgressBar
 
 from .geometries import apply_geometry
-from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
-from .plotting.utils import _create_norm
+from .plotting.animate import (
+    animate_poloidal,
+    animate_pcolormesh,
+    animate_line,
+    _add_controls,
+    _normalise_time_coord,
+    _parse_coord_option,
+)
 from .region import _from_region
 from .utils import _get_bounding_surfaces, _split_into_restarts
 
@@ -53,7 +59,7 @@ class BoutDatasetAccessor:
             + "Metadata:\n{}\n".format(styled(self.metadata))
         )
         if self.options:
-            text += "Options:\n{}".format(styled(self.options))
+            text += "Options:\n{}".format(self.options)
         return text
 
     # def __repr__(self):
@@ -85,6 +91,41 @@ class BoutDatasetAccessor:
             if caching:
                 self.data[aligned_name] = self.data[name].bout.to_field_aligned()
             return self.data[aligned_name]
+
+    def to_field_aligned(self):
+        """
+        Create a new Dataset with all 3d variables transformed to field-aligned
+        coordinates, which are shifted with respect to the base coordinates by an angle
+        zShift
+        """
+        result = self.data.copy()
+
+        for v in chain(result, result.coords):
+            da = result[v]
+            # Need to transform any z-dependent variables or coordinates
+            if (result.metadata["bout_zdim"] in da.dims) and (
+                da.attrs.get("direction_y", None) == "Standard"
+            ):
+                result[v] = da.bout.to_field_aligned()
+
+        return result
+
+    def from_field_aligned(self):
+        """
+        Create a new Dataset with all 3d variables transformed to non-field-aligned
+        coordinates
+        """
+        result = self.data.copy()
+
+        for v in chain(result, result.coords):
+            da = result[v]
+            # Need to transform any 3d variables or coordinates
+            if (result.metadata["bout_zdim"] in da.dims) and (
+                da.attrs.get("direction_y", None) == "Aligned"
+            ):
+                result[v] = da.bout.from_field_aligned()
+
+        return result
 
     def from_region(self, name, with_guards=None):
         """
@@ -173,16 +214,6 @@ class BoutDatasetAccessor:
         if isinstance(variables, tuple):
             variables = list(variables)
 
-        if "dy" in variables:
-            # dy is treated specially, as it is converted to a coordinate, and then
-            # converted back again below, so must not call
-            # interpolate_parallel('dy').
-            variables.remove("dy")
-
-        # Add extra variables needed to make this a valid Dataset
-        if "dx" not in variables:
-            variables.append("dx")
-
         # Need to start with a Dataset with attrs as merge() drops the attrs of the
         # passed-in argument.
         # Make sure the first variable has all dimensions so we don't lose any
@@ -226,18 +257,207 @@ class BoutDatasetAccessor:
                 ds[var] = da
             # Can't interpolate a variable that depends on y but not x, so just skip
 
-        # dy needs to be compatible with the new poloidal coordinate
-        # dy was created as a coordinate in BoutDataArray.interpolate_parallel, here just
-        # need to demote back to a regular variable.
-        ds = ds.reset_coords("dy")
-
         # Apply geometry
-        if hasattr(ds, "geometry"):
-            ds = apply_geometry(ds, ds.geometry)
-        # if no geometry was originally applied, then ds has no geometry attribute and we
-        # can continue without applying geometry here
+        ds = apply_geometry(ds, ds.geometry)
 
         return ds
+
+    def integrate_midpoints(self, variable, *, dims=None, cumulative_t=False):
+        """
+        Integrate using the midpoint rule for spatial dimensions, and trapezium rule for
+        time.
+
+        The quantity being integrated is assumed to be a scalar variable.
+
+        When doing a 1d integral in the 'y' dimension, the integral is calculated as a
+        poloidal integral if the variable is on the standard grid ('direction_y'
+        attribute is "Standard"), or as a parallel-to-B integral if the variable is on
+        the field-aligned grid ('direction_y' attribute is "Aligned").
+
+        When doing a 2d integral over 'x' and 'y' dimensions, the integral will be over
+        poloidal cross-sections if the variable is not field-aligned (direction_y ==
+        "Standard") and over field-aligned surfaces if the variable is field-aligned
+        (direction_ == "Aligned"). The latter seems unlikely to be useful as the
+        surfaces depend on the arbitrary origin used for zShift.
+
+        Is a method of BoutDataset accessor rather than of BoutDataArray so we can use
+        other variables like `J`, `g11`, `g_22` for the integration.
+
+        Note the xarray.DataArray.integrate() method uses the trapezium rule, which is
+        not consistent with the way BOUT++ defines grid spacings as cell widths. Also,
+        this way for example::
+
+            inner = da.isel(x=slice(i)).bout.integrate_midpoints()
+            outer = da.isel(x=slice(i, None).bout.integrate_midpoints()
+            total = da.bout.integrate_midpoints()
+            inner + outer == total
+
+        while with the trapezium rule you would have to select ``radial=slice(i+1)`` for
+        inner to get a similar relation to be true.
+
+        Parameters
+        ----------
+        variable : str or DataArray
+            Name of the variable to integrate, or the variable itself as a DataArray.
+        dims : str, list of str or ...
+            Dimensions to integrate over. Can be any combination of of the dimensions of
+            the Dataset. Defaults to integration over all spatial dimensions. If `...`
+            is passed, integrate over all dimensions including time.
+        cumulative_t : bool, default False
+            If integrating in time, return the cumulative integral (integral from the
+            beginning up to each point in the time dimension) instead of the definite
+            integral.
+        """
+        ds = self.data
+
+        if isinstance(variable, str):
+            variable = ds[variable]
+
+        location = variable.cell_location
+        suffix = "" if location == "CELL_CENTRE" else f"_{location}"
+
+        tcoord = ds.metadata["bout_tdim"]
+        xcoord = ds.metadata["bout_xdim"]
+        ycoord = ds.metadata["bout_ydim"]
+        zcoord = ds.metadata["bout_zdim"]
+
+        if dims is None:
+            dims = []
+            if xcoord in ds.dims:
+                dims.append(xcoord)
+            if ycoord in ds.dims:
+                dims.append(ycoord)
+            if zcoord in ds.dims:
+                dims.append(zcoord)
+        elif dims is ...:
+            dims = []
+            if tcoord in ds.dims:
+                dims.append(tcoord)
+            if xcoord in ds.dims:
+                dims.append(xcoord)
+            if ycoord in ds.dims:
+                dims.append(ycoord)
+            if zcoord in ds.dims:
+                dims.append(zcoord)
+        elif isinstance(dims, str):
+            dims = [dims]
+
+        dx = ds[f"dx{suffix}"]
+        dy = ds[f"dy{suffix}"]
+        dz = ds.metadata["dz"]
+
+        # Work out the spatial volume element
+        if xcoord in dims and ycoord in dims and zcoord in dims:
+            # Volume integral, use the 3d Jacobian "J"
+            spatial_volume_element = ds[f"J{suffix}"] * dx * dy * dz
+        elif xcoord in dims and ycoord in dims:
+            # 2d integral on poloidal planes
+            if variable.direction_y == "Standard":
+                # Need to use a metric constructed from basis vectors within the
+                # poloidal plane, so use 'reciprocal basis vectors' Grad(x^i)
+                # J = 1/sqrt(det(g_2d))
+                # det(g_2d) = g11*g22 - g12**2
+                g = ds[f"g11{suffix}"] * ds[f"g22{suffix}"] - ds[f"g12{suffix}"] ** 2
+                J = 1.0 / np.sqrt(g)
+            elif variable.direction_y == "Aligned":
+                # Need to work out area element from metric coefficients. See book by
+                # D'haeseleer, Hitchon, Callen and Shohet eq. (2.5.51).
+                # Need to use a metric constructed from basis vectors within the
+                # field-aligned x-y plane, so use 'tangent basis vectors' e_i
+                # J = sqrt(g_11*g_22 - g_12**2)
+                J = np.sqrt(
+                    ds[f"g_11{suffix}"] * ds[f"g_22{suffix}"] - ds[f"g_12{suffix}"] ** 2
+                )
+            spatial_volume_element = J * dx * dy
+        elif xcoord in dims and zcoord in dims:
+            # 2d integral on toroidal planes
+            # Need to work out area element from metric coefficients. See book by
+            # D'haeseleer, Hitchon, Callen and Shohet eq. (2.5.51)
+            # J = sqrt(g_11*g_33 - g_13**2)
+            J = np.sqrt(
+                ds[f"g_11{suffix}"] * ds[f"g_33{suffix}"] - ds[f"g_13{suffix}"] ** 2
+            )
+            spatial_volume_element = J * dx * dz
+        elif ycoord in dims and zcoord in dims:
+            # 2d integral on flux-surfaces
+            # Need to work out area element from metric coefficients. See book by
+            # D'haeseleer, Hitchon, Callen and Shohet eq. (2.5.51)
+            # J = sqrt(g_22*g_33 - g_23**2)
+            J = np.sqrt(
+                ds[f"g_22{suffix}"] * ds[f"g_33{suffix}"] - ds[f"g_23{suffix}"] ** 2
+            )
+            spatial_volume_element = J * dy * dz
+        elif xcoord in dims:
+            if variable.direction_y == "Aligned":
+                raise ValueError(
+                    "Variable is field-aligned, but radial integral along coordinate "
+                    "line in globally field-aligned coordinates not supported"
+                )
+            # 1d radial integral, line element is sqrt(g_11)*dx
+            spatial_volume_element = np.sqrt(ds[f"g_11{suffix}"]) * dx
+        elif ycoord in dims:
+            if variable.direction_y == "Standard":
+                # Poloidal integral, line element is e_y projected onto a unit vector in
+                # the poloidal direction. e_z is in the toroidal direction and Grad(x)
+                # is orthogonal to flux surfaces, so their cross product is in the
+                # poloidal direction (within flux surfaces). e_z and Grad(x) are also
+                # always orthogonal, so the magnitude of their cross product is the
+                # product of their magnitudes. Therefore
+                #   e_y.hat{e}_pol = e_y.(e_z x Grad(x))/|Grad(x)||e_z|
+                #   e_y.hat{e}_pol = e_y.(e_z x Grad(x))/sqrt(g11*g_33)
+                # and using eqs. (2.3.12) and (2.5.22a) from D'haeseleer
+                #   e_y.hat{e}_pol = e_y.(e_z x (e_y x e_z / J))/sqrt(g11*g_33)
+                #   e_y.hat{e}_pol = e_y.(e_z x (e_y x e_z))/ (J*sqrt(g11*g_33))
+                # The double cross product identity is A x (B x C) = (A.C)B - (A.B)C.
+                #   e_y.hat{e}_pol = e_y.((e_z.e_z)*e_y - (e_z.e_y)*e_z)/(J*sqrt(g11*g_33))
+                #   e_y.hat{e}_pol = e_y.(g_33*e_y - g_23*e_z)/(J*sqrt(g11*g_33))
+                #   e_y.hat{e}_pol = (g_33*g_22 - g_23*g_23)/(J*sqrt(g11*g_33))
+                # For 'orthogonal' coordinates (radial and poloidal directions are
+                # orthogonal) this is equal to 1/sqrt(g22)
+                spatial_volume_element = (
+                    (
+                        ds[f"g_22{suffix}"] * ds[f"g_33{suffix}"]
+                        - ds[f"g_23{suffix}"] ** 2
+                    )
+                    / (
+                        ds[f"J{suffix}"]
+                        * np.sqrt(ds[f"g11{suffix}"] * ds[f"g_33{suffix}"])
+                    )
+                    * dy
+                )
+            elif variable.direction_y == "Aligned":
+                # Parallel integral, line element is sqrt(g_22)*dy
+                spatial_volume_element = np.sqrt(ds[f"g_22{suffix}"]) * dy
+        elif zcoord in dims:
+            # Toroidal integral, line element is sqrt(g_33)*dz
+            spatial_volume_element = np.sqrt(ds[f"g_33{suffix}"]) * dz
+        else:
+            # No spatial integral
+            spatial_volume_element = 1.0
+
+        spatial_dims = set(dims) - set([tcoord])
+
+        # Need to check if the variable being integrated is a Field2D, which does not
+        # have a z-dimension to sum over. Other variables are OK because metric
+        # coefficients, dx and dy all have both x- and y-dimensions so variable would be
+        # broadcast to include them if necessary
+        missing_z_sum = zcoord in dims and zcoord not in variable.dims
+
+        integrand = variable * spatial_volume_element
+
+        integral = integrand.sum(dim=spatial_dims)
+
+        # If integrand is a Field2D, need to multiply by nz if integrating over z
+        if missing_z_sum:
+            integral = integral * ds.sizes[zcoord]
+
+        if tcoord in dims:
+            if cumulative_t:
+                integral = integral.cumulative_integrate(coord=tcoord)
+            else:
+                integral = integral.integrate(coord=tcoord)
+
+        return integral
 
     def interpolate_from_unstructured(
         self,
@@ -611,21 +831,22 @@ class BoutDatasetAccessor:
     def animate_list(
         self,
         variables,
-        animate_over="t",
+        animate_over=None,
         save_as=None,
         show=False,
         fps=10,
         nrows=None,
         ncols=None,
         poloidal_plot=False,
+        axis_coords=None,
         subplots_adjust=None,
         vmin=None,
         vmax=None,
         logscale=None,
         titles=None,
-        aspect="equal",
+        aspect=None,
         extend=None,
-        controls=True,
+        controls="both",
         tight_layout=True,
         **kwargs,
     ):
@@ -639,7 +860,7 @@ class BoutDatasetAccessor:
             allow more flexible plots, e.g. with different variables being
             plotted against different axes.
         animate_over : str, optional
-            Dimension over which to animate
+            Dimension over which to animate, defaults to the time dimension
         save_as : str, optional
             If passed, a gif is created with this filename
         show : bool, optional
@@ -653,6 +874,20 @@ class BoutDatasetAccessor:
         poloidal_plot : bool or sequence of bool, optional
             If set to True, make all 2D animations in the poloidal plane instead of using
             grid coordinates, per variable if sequence is given
+        axis_coords : None, str, dict or list of None, str or dict
+            Coordinates to use for axis labelling.
+            - None: Use the dimension coordinate for each axis, if it exists.
+            - "index": Use the integer index values.
+            - dict: keys are dimension names, values set axis_coords for each axis
+              separately. Values can be: None, "index", the name of a 1d variable or
+              coordinate (which must have the dimension given by 'key'), or a 1d
+              numpy array, dask array or DataArray whose length matches the length of
+              the dimension given by 'key'.
+            Only affects time coordinate for plots with poloidal_plot=True.
+            If a list is passed, it must have the same length as 'variables' and gives
+            the axis_coords setting for each plot individually.
+            The setting to use for the 'animate_over' coordinate can be passed in one or
+            more dict values, but must be the same in all dicts if given more than once.
         subplots_adjust : dict, optional
             Arguments passed to fig.subplots_adjust()()
         vmin : float or sequence of floats
@@ -670,18 +905,29 @@ class BoutDatasetAccessor:
             Custom titles for each plot. Pass None in the sequence to use the default for
             a certain variable
         aspect : str or None, or sequence of str or None, optional
-            Argument to set_aspect() for each plot
+            Argument to set_aspect() for each plot. Defaults to "equal" for poloidal
+            plots and "auto" for others.
         extend : str or None, optional
             Passed to fig.colorbar()
-        controls : bool, optional
-            If set to False, do not show the time-slider or pause button
+        controls : string or None, default "both"
+            By default, add both the timeline and play/pause toggle to the animation. If
+            "timeline" is passed add only the timeline, if "toggle" is passed add only
+            the play/pause toggle. If None or an empty string is passed, add neither.
         tight_layout : bool or dict, optional
             If set to False, don't call tight_layout() on the figure.
             If a dict is passed, the dict entries are passed as arguments to
             tight_layout()
         **kwargs : dict, optional
             Additional keyword arguments are passed on to each animation function
+
+        Returns
+        -------
+        animation
+            An animatplot.Animation object.
         """
+
+        if animate_over is None:
+            animate_over = self.metadata.get("bout_tdim", "t")
 
         nvars = len(variables)
 
@@ -726,6 +972,7 @@ class BoutDatasetAccessor:
         titles = _expand_list_arg(titles, "titles")
         aspect = _expand_list_arg(aspect, "aspect")
         extend = _expand_list_arg(extend, "extend")
+        axis_coords = _expand_list_arg(axis_coords, "axis_coords")
 
         blocks = []
 
@@ -737,13 +984,23 @@ class BoutDatasetAccessor:
             )
 
         for subplot_args in zip(
-            variables, axes, poloidal_plot, vmin, vmax, logscale, titles, aspect, extend
+            variables,
+            axes,
+            poloidal_plot,
+            axis_coords,
+            vmin,
+            vmax,
+            logscale,
+            titles,
+            aspect,
+            extend,
         ):
 
             (
                 v,
                 ax,
                 this_poloidal_plot,
+                this_axis_coords,
                 this_vmin,
                 this_vmax,
                 this_logscale,
@@ -754,8 +1011,6 @@ class BoutDatasetAccessor:
 
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.1)
-
-            ax.set_aspect(this_aspect)
 
             if is_list(v):
                 for i in range(len(v)):
@@ -791,6 +1046,8 @@ class BoutDatasetAccessor:
                             ax=ax,
                             animate_over=animate_over,
                             animate=False,
+                            axis_coords=this_axis_coords,
+                            aspect=this_aspect,
                             **kwargs,
                         )
                     )
@@ -802,6 +1059,8 @@ class BoutDatasetAccessor:
                                 ax=ax,
                                 animate_over=animate_over,
                                 animate=False,
+                                axis_coords=this_axis_coords,
+                                aspect=this_aspect,
                                 label=w.name,
                                 **kwargs,
                             )
@@ -811,15 +1070,6 @@ class BoutDatasetAccessor:
                     # set 'v' to use for the timeline below
                     v = v[0]
             elif ndims == 3:
-                if this_vmin is None:
-                    this_vmin = data.min().values
-                if this_vmax is None:
-                    this_vmax = data.max().values
-
-                norm = _create_norm(
-                    this_logscale, kwargs.get("norm", None), this_vmin, this_vmax
-                )
-
                 if this_poloidal_plot:
                     var_blocks = animate_poloidal(
                         data,
@@ -827,9 +1077,10 @@ class BoutDatasetAccessor:
                         cax=cax,
                         animate_over=animate_over,
                         animate=False,
+                        axis_coords=this_axis_coords,
                         vmin=this_vmin,
                         vmax=this_vmax,
-                        norm=norm,
+                        logscale=this_logscale,
                         aspect=this_aspect,
                         extend=this_extend,
                         **kwargs,
@@ -844,9 +1095,11 @@ class BoutDatasetAccessor:
                             cax=cax,
                             animate_over=animate_over,
                             animate=False,
+                            axis_coords=this_axis_coords,
                             vmin=this_vmin,
                             vmax=this_vmax,
-                            norm=norm,
+                            logscale=this_logscale,
+                            aspect=this_aspect,
                             extend=this_extend,
                             **kwargs,
                         )
@@ -863,7 +1116,28 @@ class BoutDatasetAccessor:
                 # Replace default title with user-specified one
                 ax.set_title(this_title)
 
-        timeline = amp.Timeline(np.arange(v.sizes[animate_over]), fps=fps)
+        if np.all([a == "index" for a in axis_coords]):
+            time_opt = "index"
+        elif np.any([isinstance(a, dict) and animate_over in a for a in axis_coords]):
+            given_values = [
+                a[animate_over]
+                for a in axis_coords
+                if isinstance(a, dict) and animate_over in a
+            ]
+            time_opt = given_values[0]
+            if len(given_values) > 1 and not np.all(
+                [v == time_opt for v in given_values[1:]]
+            ):
+                raise ValueError(
+                    f"Inconsistent axis_coords values given for animate_over "
+                    f"coordinate ({animate_over}). Got {given_values}."
+                )
+        else:
+            time_opt = None
+        time_values, time_label = _parse_coord_option(animate_over, time_opt, self.data)
+        time_values, time_suffix = _normalise_time_coord(time_values)
+
+        timeline = amp.Timeline(time_values, fps=fps, units=time_suffix)
         anim = amp.Animation(blocks, timeline)
 
         if tight_layout:
@@ -877,8 +1151,7 @@ class BoutDatasetAccessor:
                 tight_layout = {}
             fig.tight_layout(**tight_layout)
 
-        if controls:
-            anim.controls(timeline_slider_args={"text": animate_over})
+        _add_controls(anim, controls, time_label)
 
         if save_as is not None:
             anim.save(save_as + ".gif", writer=PillowWriter(fps=fps))

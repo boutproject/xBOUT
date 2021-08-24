@@ -24,62 +24,32 @@ suggestions.
    extending_xbout
    xbout
 
-Requirements
-------------
-
-- :py:mod:`xbout` requires Python 3
-
-- The following modules are also needed:
-  - ``xarray >= v0.13.0``
-  - ``dask[array] >= 1.0.0``
-  - ``natsort >= 5.5.0``
-  - ``matplotlib >= 2.2``
-  - ``animatplot >= 0.4.0``
-  - ``netcdf4 >= 1.4.0``
-- All dependencies can be installed by running:
-
-.. code-block:: bash
-
-  pip3 install --user -r requirements.txt
-
-
 Installation
 ------------
 
-- :py:mod:`xbout` is not currently on pip or conda. Therefore to install xbout on
-  your system you must first clone the repository using:
+With `pip`:
 
 .. code-block:: bash
 
-  git clone git@github.com:boutproject/xBOUT.git
+  pip install --user xbout
 
-or
-
-.. code-block:: bash
-
-  git clone https://github.com/boutproject/xBOUT.git
-
-
-Once cloned navigate to the `xBOUT` directory and run the following command:
+or `conda`:
 
 .. code-block:: bash
 
-  pip3 install --user ./
+  conda install -c conda-forge xbout
 
-or
-
-.. code-block:: bash
-
-  python3 setup.py install
-
-
-You can run the tests by navigating to the `/xBOUT/` directory and
-entering `pytest`. You can also test your installation of `xBOUT` by
-running `pytest --pyargs xbout`.
+You can run the tests by running `pytest --pyargs xbout`.
 
 xBOUT will install the required python packages when you run one of
 the above install commands if they are not already installed on your
 system.
+
+Examples
+--------
+
+You can find some example notebooks demonstrating various features of
+:py:mod:`xbout` here: https://github.com/boutproject/xBOUT-examples
 
 Indices and tables
 ==================

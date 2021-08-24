@@ -5,7 +5,12 @@ import xarray as xr
 import numpy as np
 
 from .region import Region, _create_regions_toroidal
-from .utils import _add_attrs_to_var, _set_attrs_on_all_vars, _1d_coord_from_spacing
+from .utils import (
+    _add_attrs_to_var,
+    _set_attrs_on_all_vars,
+    _set_as_coord,
+    _1d_coord_from_spacing,
+)
 
 REGISTERED_GEOMETRIES = {}
 
@@ -47,7 +52,8 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     UnregisteredGeometryError
     """
 
-    if geometry_name is None:
+    if geometry_name is None or geometry_name == "":
+        ds = _set_attrs_on_all_vars(ds, "geometry", "")
         updated_ds = ds
     else:
         ds = _set_attrs_on_all_vars(ds, "geometry", geometry_name)
@@ -77,6 +83,37 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
 
     del ds
 
+    # Set dimension names if they were not set by add_geometry_coords(). Dimensions
+    # should not have been renamed without having set their names already.
+    if "bout_tdim" not in updated_ds.metadata:
+        if "t" in updated_ds.dims:
+            updated_ds.metadata["bout_tdim"] = "t"
+        else:
+            raise ValueError(
+                '"t" dimension was renamed, but metadata["bout_tdim"] was not set'
+            )
+    if "bout_xdim" not in updated_ds.metadata:
+        if "x" in updated_ds.dims:
+            updated_ds.metadata["bout_xdim"] = "x"
+        else:
+            raise ValueError(
+                '"x" dimension was renamed, but metadata["bout_xdim"] was not set'
+            )
+    if "bout_ydim" not in updated_ds.metadata:
+        if "y" in updated_ds.dims:
+            updated_ds.metadata["bout_ydim"] = "y"
+        else:
+            raise ValueError(
+                '"y" dimension was renamed, but metadata["bout_ydim"] was not set'
+            )
+    if "bout_zdim" not in updated_ds.metadata:
+        if "z" in updated_ds.dims:
+            updated_ds.metadata["bout_zdim"] = "z"
+        else:
+            raise ValueError(
+                '"z" dimension was renamed, but metadata["bout_zdim"] was not set'
+            )
+
     # Add global 1D coordinates
     # ######################
     # Note the global coordinates used here are defined so that they are zero at
@@ -85,10 +122,10 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     # long as these bounds are consistent with the global coordinates defined in
     # Region.__init__() (we will only use these coordinates for interpolation) and it is
     # simplest to calculate them with cumsum().
-    tcoord = updated_ds.metadata.get("bout_tdim", "t")
-    xcoord = updated_ds.metadata.get("bout_xdim", "x")
-    ycoord = updated_ds.metadata.get("bout_ydim", "y")
-    zcoord = updated_ds.metadata.get("bout_zdim", "z")
+    tcoord = updated_ds.metadata["bout_tdim"]
+    xcoord = updated_ds.metadata["bout_xdim"]
+    ycoord = updated_ds.metadata["bout_ydim"]
+    zcoord = updated_ds.metadata["bout_zdim"]
 
     if (tcoord not in updated_ds.coords) and (tcoord in updated_ds.dims):
         # Create the time coordinate from t_array
@@ -169,6 +206,10 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
 
         _add_attrs_to_var(updated_ds, zcoord)
 
+    # Add dx and dy as coordinates, so that they are available with BoutDataArrays
+    updated_ds = _set_as_coord(updated_ds, "dx")
+    updated_ds = _set_as_coord(updated_ds, "dy")
+
     return updated_ds
 
 
@@ -212,12 +253,18 @@ def _set_default_toroidal_coordinates(coordinates, ds):
         coordinates = {}
 
     # Replace any values that have not been passed in with defaults
-    coordinates["t"] = coordinates.get("t", ds.metadata.get("bout_tdim", "t"))
-    coordinates["x"] = coordinates.get(
-        "x", ds.metadata.get("bout_xdim", "psi_poloidal")
+    coordinates["t"] = coordinates.get("t", ds.metadata["bout_tdim"])
+
+    default_x = (
+        ds.metadata["bout_xdim"] if ds.metadata["bout_xdim"] != "x" else "psi_poloidal"
     )
-    coordinates["y"] = coordinates.get("y", ds.metadata.get("bout_ydim", "theta"))
-    coordinates["z"] = coordinates.get("z", ds.metadata.get("bout_zdim", "zeta"))
+    coordinates["x"] = coordinates.get("x", default_x)
+
+    default_y = ds.metadata["bout_ydim"] if ds.metadata["bout_ydim"] != "y" else "theta"
+    coordinates["y"] = coordinates.get("y", default_y)
+
+    default_z = ds.metadata["bout_zdim"] if ds.metadata["bout_zdim"] != "z" else "zeta"
+    coordinates["z"] = coordinates.get("z", default_z)
 
     return coordinates
 
@@ -250,9 +297,9 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         if v not in ds:
             if grid is None:
                 raise ValueError(
-                    "Grid file is required to provide %s. Pass the grid "
-                    "file name as the 'gridfilepath' argument to "
-                    "open_boutdataset()."
+                    f"Grid file is required to provide {v}. Pass the grid "
+                    f"file name as the 'gridfilepath' argument to "
+                    f"open_boutdataset()."
                 )
             # ds[v] = grid[v]
             # Work around issue where xarray drops attributes on coordinates when a new
@@ -264,8 +311,9 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
             _add_attrs_to_var(ds, v)
 
-    # Rename 't' if user requested it
-    ds = ds.rename(t=coordinates["t"])
+    if "t" in ds.dims:
+        # Rename 't' if user requested it
+        ds = ds.rename(t=coordinates["t"])
 
     # Change names of dimensions to Orthogonal Toroidal ones
     ds = ds.rename(y=coordinates["y"])
@@ -288,6 +336,9 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         # Record which dimension 'z' was renamed to.
         ds.metadata["bout_zdim"] = coordinates["z"]
 
+    # Ensure metadata is the same on all variables
+    ds = _set_attrs_on_all_vars(ds, "metadata", ds.metadata)
+
     # Add 2D Cylindrical coordinates
     if ("R" not in ds) and ("Z" not in ds):
         ds = ds.rename(Rxy="R", Zxy="Z")
@@ -296,22 +347,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         ds = ds.set_coords(("Rxy", "Zxy"))
 
     # Add zShift as a coordinate, so that it gets interpolated along with a variable
-    try:
-        ds = ds.set_coords("zShift")
-    except ValueError:
-        pass
-    try:
-        ds = ds.set_coords("zShift_CELL_XLOW")
-    except ValueError:
-        pass
-    try:
-        ds = ds.set_coords("zShift_CELL_YLOW")
-    except ValueError:
-        pass
-    try:
-        ds = ds.set_coords("zShift_CELL_ZLOW")
-    except ValueError:
-        pass
+    ds = _set_as_coord(ds, "zShift")
 
     ds = _create_regions_toroidal(ds)
 

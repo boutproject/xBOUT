@@ -1,0 +1,117 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+#
+# This workflow should be an exact duplicate of 'Python package' in
+# pythonpackage.yml, except that it only runs on pushes to master. This is done
+# so that we can refer to this workflow specifically in the status badge in
+# README.md
+
+name: master
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  pytest:
+
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8, 3.9]
+        pip-packages:
+          - "setuptools pip pytest pytest-cov coverage codecov boutdata xarray numpy>=1.16.0"
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        sudo apt-get install libhdf5-dev libnetcdf-dev
+        python -m pip install --upgrade pip
+        pip install --upgrade ${{ matrix.pip-packages }}
+        pip install -e .
+    - name: Test with pytest
+      run: |
+        pip install pytest
+        pytest -v --long --cov
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        fail_ci_if_error: true
+
+
+  pytest-min-versions:
+
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8]
+        pip-packages:
+          - "setuptools pip pytest pytest-cov coverage codecov boutdata==0.1.4 xarray==0.18.0 dask==2.10.0 numpy==1.18.0 natsort==5.5.0 matplotlib==3.1.1 animatplot==0.4.2 netcdf4==1.4.2 Pillow==6.1.0" # test with oldest supported version of packages. Note, using numpy==1.18.0 as a workaround because numpy==1.17.0 is not supported on Python-3.7, even though we should currently support numpy==1.17.0.
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        sudo apt-get install libhdf5-dev libnetcdf-dev
+        python -m pip install --upgrade pip
+        pip install --upgrade ${{ matrix.pip-packages }}
+        pip install -e .
+    - name: Test with pytest
+      run: |
+        pip install pytest
+        pytest -v --long --cov
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        fail_ci_if_error: true
+
+
+  # Need to tidy up the things that flake8 finds before we activate this
+  #flake8:
+
+  #  runs-on: ubuntu-latest
+  #  if: always()
+
+  #  steps:
+  #  - uses: actions/checkout@v2
+  #  - name: Set up Python
+  #    uses: actions/setup-python@v1
+  #  - name: Install dependencies
+  #    run: |
+  #      python -m pip install --upgrade pip
+  #  - name: Lint with flake8
+  #    run: |
+  #      pip install flake8
+  #      flake8
+
+
+  black:
+
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+    - name: Check formatting with black
+      run: |
+        pip install black
+        black --check .
