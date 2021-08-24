@@ -408,10 +408,13 @@ def create_bout_ds(
     nype=1,
     xproc=0,
     yproc=0,
-    guards={},
+    guards=None,
     topology="core",
     squashed=False,
 ):
+
+    if guards is None:
+        guards = {}
 
     # Set the shape of the data in this dataset
     t_length, x_length, y_length, z_length = lengths
