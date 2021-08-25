@@ -478,8 +478,12 @@ def create_bout_ds(
         v.attrs["cell_location"] = "CELL_CENTRE"
     ds = Dataset({"n": n, "T": T})
 
-    # BOUT_VERSION needed so that we know that number of points in z is MZ, not MZ-1 (as
-    # it was in BOUT++ before v4.0
+    # BOUT_VERSION needed to deal with backwards incompatible changes:
+    #
+    # - v3 and earlier: number of points in z is MZ-1
+    # - v4 and later: number of points in z is MZ
+    # - v5 and later: metric components can be either 2D or 3D
+    # - v5 and later: dz changed to be a Field2D/3D
     ds["BOUT_VERSION"] = 5.0 if bout_v5 else 4.3
 
     # Include grid data
