@@ -494,7 +494,7 @@ def create_bout_ds(
     # - v5 and later: metric components can be either 2D or 3D
     # - v5 and later: dz changed to be a Field2D/3D
     ds["BOUT_VERSION"] = 5.0 if bout_v5 else 4.3
-    ds["use_metric_3d"] = metric_3D
+    ds["use_metric_3d"] = int(metric_3D)
 
     # Include grid data
     ds["NXPE"] = nxpe
