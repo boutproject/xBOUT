@@ -261,6 +261,7 @@ def _bout_xyt_example_files(
     topology="core",
     write_to_disk=False,
     bout_v5=False,
+    metric_3D=False,
 ):
     """
     Mocks up a set of BOUT-like Datasets
@@ -294,6 +295,7 @@ def _bout_xyt_example_files(
             syn_data_type=syn_data_type,
             squashed=True,
             bout_v5=bout_v5,
+            metric_3D=metric_3D,
         )
         ds_list[0]["nxpe"] = nxpe
         ds_list[0]["nype"] = nype
@@ -308,6 +310,7 @@ def _bout_xyt_example_files(
             topology=topology,
             syn_data_type=syn_data_type,
             bout_v5=bout_v5,
+            metric_3D=metric_3D,
         )
 
     if grid is not None:
@@ -362,6 +365,7 @@ def create_bout_ds_list(
     syn_data_type="random",
     squashed=False,
     bout_v5=False,
+    metric_3D=False,
 ):
     """
     Mocks up a set of BOUT-like datasets.
@@ -399,6 +403,7 @@ def create_bout_ds_list(
                 topology=topology,
                 squashed=squashed,
                 bout_v5=bout_v5,
+                metric_3D=metric_3D,
             )
             ds_list.append(ds)
 
@@ -417,7 +422,11 @@ def create_bout_ds(
     topology="core",
     squashed=False,
     bout_v5=False,
+    metric_3D=False,
 ):
+
+    if metric_3D and not bout_v5:
+        raise ValueError("3D metric requires BOUT++ v5")
 
     if guards is None:
         guards = {}
@@ -485,6 +494,7 @@ def create_bout_ds(
     # - v5 and later: metric components can be either 2D or 3D
     # - v5 and later: dz changed to be a Field2D/3D
     ds["BOUT_VERSION"] = 5.0 if bout_v5 else 4.3
+    ds["use_metric_3d"] = metric_3D
 
     # Include grid data
     ds["NXPE"] = nxpe
@@ -614,8 +624,12 @@ def create_bout_ds(
     else:
         raise ValueError(f"Unrecognised topology={topology}")
 
-    one = DataArray(np.ones((x_length, y_length)), dims=["x", "y"])
-    zero = DataArray(np.zeros((x_length, y_length)), dims=["x", "y"])
+    if metric_3D:
+        one = DataArray(np.ones((x_length, y_length, z_length)), dims=["x", "y", "z"])
+        zero = DataArray(np.zeros((x_length, y_length, z_length)), dims=["x", "y", "z"])
+    else:
+        one = DataArray(np.ones((x_length, y_length)), dims=["x", "y"])
+        zero = DataArray(np.zeros((x_length, y_length)), dims=["x", "y"])
 
     ds["zperiod"] = 1
     ds["ZMIN"] = 0.0
@@ -727,6 +741,7 @@ METADATA_VARS = [
     "ZMIN",
     "ZMAX",
     "dz",
+    "use_metric_3d",
 ]
 
 
@@ -934,8 +949,12 @@ class TestOpen:
     def test_combine_along_t(self):
         ...
 
-    @pytest.mark.parametrize("bout_v5", [False, True])
-    def test_combine_along_xy(self, tmpdir_factory, bout_xyt_example_files, bout_v5):
+    @pytest.mark.parametrize(
+        "bout_v5,metric_3D", [(False, False), (True, False), (True, True)]
+    )
+    def test_combine_along_xy(
+        self, tmpdir_factory, bout_xyt_example_files, bout_v5, metric_3D
+    ):
         path = bout_xyt_example_files(
             tmpdir_factory,
             nxpe=4,
@@ -944,12 +963,13 @@ class TestOpen:
             syn_data_type="stepped",
             write_to_disk=True,
             bout_v5=bout_v5,
+            metric_3D=metric_3D,
         )
         with pytest.warns(UserWarning):
             actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         def bout_ds(syn_data_type):
-            return create_bout_ds(syn_data_type, bout_v5=bout_v5)
+            return create_bout_ds(syn_data_type, bout_v5=bout_v5, metric_3D=metric_3D)
 
         line1 = concat(
             [bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)],
@@ -978,7 +998,13 @@ class TestOpen:
 
         # check creation without writing to disk gives identical result
         fake_ds_list = bout_xyt_example_files(
-            None, nxpe=4, nype=3, nt=1, syn_data_type="stepped", bout_v5=bout_v5
+            None,
+            nxpe=4,
+            nype=3,
+            nt=1,
+            syn_data_type="stepped",
+            bout_v5=bout_v5,
+            metric_3D=metric_3D,
         )
         with pytest.warns(UserWarning):
             fake = open_boutdataset(datapath=fake_ds_list, keep_xboundaries=False)
