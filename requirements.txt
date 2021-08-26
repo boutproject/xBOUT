@@ -1,4 +1,4 @@
-xarray>=0.16.0
+xarray>=0.18.0
 boutdata>=0.1.4
 dask[array]>=2.10.0
 natsort>=5.5.0
