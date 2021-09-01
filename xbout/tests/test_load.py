@@ -952,14 +952,16 @@ class TestOpen:
     @pytest.mark.parametrize(
         "bout_v5,metric_3D", [(False, False), (True, False), (True, True)]
     )
+    @pytest.mark.parametrize("lengths", [(6, 2, 4, 7), (6, 2, 4, 1)])
     def test_combine_along_xy(
-        self, tmpdir_factory, bout_xyt_example_files, bout_v5, metric_3D
+        self, tmpdir_factory, bout_xyt_example_files, bout_v5, metric_3D, lengths
     ):
         path = bout_xyt_example_files(
             tmpdir_factory,
             nxpe=4,
             nype=3,
             nt=1,
+            lengths=lengths,
             syn_data_type="stepped",
             write_to_disk=True,
             bout_v5=bout_v5,
@@ -969,7 +971,9 @@ class TestOpen:
             actual = open_boutdataset(datapath=path, keep_xboundaries=False)
 
         def bout_ds(syn_data_type):
-            return create_bout_ds(syn_data_type, bout_v5=bout_v5, metric_3D=metric_3D)
+            return create_bout_ds(
+                syn_data_type, bout_v5=bout_v5, metric_3D=metric_3D, lengths=lengths
+            )
 
         line1 = concat(
             [bout_ds(0), bout_ds(1), bout_ds(2), bout_ds(3)],
@@ -1002,6 +1006,7 @@ class TestOpen:
             nxpe=4,
             nype=3,
             nt=1,
+            lengths=lengths,
             syn_data_type="stepped",
             bout_v5=bout_v5,
             metric_3D=metric_3D,
