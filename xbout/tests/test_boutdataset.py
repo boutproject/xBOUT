@@ -1218,7 +1218,7 @@ class TestBoutDatasetMethods:
         ds["t"].data[...] = t.squeeze()
         ds["dx"].data[...] = 0.1
         ds["dy"].data[...] = 0.2
-        ds.metadata["dz"] = 0.3
+        ds["dz"] = 0.3
         tfunc = 1.5 * t
         xfunc = x ** 2
         yfunc = 10.0 * y - y ** 2

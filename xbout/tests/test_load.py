@@ -740,7 +740,6 @@ METADATA_VARS = [
     "zperiod",
     "ZMIN",
     "ZMAX",
-    "dz",
     "use_metric_3d",
 ]
 
@@ -993,8 +992,6 @@ class TestOpen:
         expected = concat([line1, line2, line3], dim="y", data_vars="minimal")
         expected = expected.set_coords("t_array").rename(t_array="t")
         vars_to_drop = METADATA_VARS + _BOUT_PER_PROC_VARIABLES
-        if bout_v5:
-            vars_to_drop.remove("dz")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(vars_to_drop, errors="ignore"),

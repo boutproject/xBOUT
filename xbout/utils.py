@@ -55,10 +55,16 @@ def _separate_metadata(ds):
 
     # Find only the scalar variables
     variables = list(ds.variables)
+
+    # Remove dz from metadata if it's present. Allows treating dz more consistently
+    # whether it is scalar or 2d/3d array.
+    exclude = ["dz"]
+
     scalar_vars = [
         var
         for var in variables
         if not any(dim in ["t", "x", "y", "z"] for dim in ds[var].dims)
+        and not var in exclude
     ]
 
     # Save metadata as a dictionary
@@ -357,7 +363,6 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
         "ny_inner",
         "ZMAX",
         "ZMIN",
-        "dz",
         "BOUT_VERSION",
     ]
 
@@ -369,6 +374,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
     for v in [
         "dx",
         "dy",
+        "dz",
         "g11",
         "g22",
         "g33",

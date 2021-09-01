@@ -188,17 +188,12 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         can_use_1d_z_coord = (nz == 1) or use_metric_3d
 
         if can_use_1d_z_coord:
-            if bout_v5:
-                z = _1d_coord_from_spacing(updated_ds["dz"], zcoord)
-            else:
-                z = _1d_coord_from_spacing(
-                    updated_ds.metadata["dz"], zcoord, updated_ds
-                )
+            z = _1d_coord_from_spacing(updated_ds["dz"], zcoord, updated_ds)
         else:
             if bout_v5:
                 dz = updated_ds["dz"][0, 0]
             else:
-                dz = updated_ds.metadata["dz"]
+                dz = updated_ds["dz"]
 
             z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
             z1 = z0 + nz * dz
@@ -223,9 +218,10 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
 
         _add_attrs_to_var(updated_ds, zcoord)
 
-    # Add dx and dy as coordinates, so that they are available with BoutDataArrays
+    # Add dx, dy and dz as coordinates, so that they are available with BoutDataArrays
     updated_ds = _set_as_coord(updated_ds, "dx")
     updated_ds = _set_as_coord(updated_ds, "dy")
+    updated_ds = _set_as_coord(updated_ds, "dz")
 
     return updated_ds
 
