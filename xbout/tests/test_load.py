@@ -657,10 +657,8 @@ def create_bout_ds(
     ds["dy"] = 2.0 * one
     if bout_v5:
         ds["dz"] = 2.0 * one * np.pi / nz
-        ds = ds.set_coords(["dx", "dy", "dz"])
     else:
         ds["dz"] = 2.0 * np.pi / nz
-        ds = ds.set_coords(["dx", "dy"])
 
     ds["iteration"] = t_length
     ds["t_array"] = DataArray(np.arange(t_length, dtype=float) * 10.0, dims="t")
@@ -768,7 +766,9 @@ class TestOpen:
         with pytest.warns(UserWarning):
             actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds()
-        expected = expected.set_coords("t_array").rename(t_array="t")
+        expected = expected.set_coords(["t_array", "dx", "dy", "dz"]).rename(
+            t_array="t"
+        )
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
@@ -792,7 +792,9 @@ class TestOpen:
         with pytest.warns(UserWarning):
             actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds(lengths=(6, 8, 12, 7))
-        expected = expected.set_coords("t_array").rename(t_array="t")
+        expected = expected.set_coords(["t_array", "dx", "dy", "dz"]).rename(
+            t_array="t"
+        )
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
@@ -896,7 +898,9 @@ class TestOpen:
             dim="x",
             data_vars="minimal",
         )
-        expected = expected.set_coords("t_array").rename(t_array="t")
+        expected = expected.set_coords(["t_array", "dx", "dy", "dz"]).rename(
+            t_array="t"
+        )
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
@@ -928,7 +932,9 @@ class TestOpen:
         expected = concat(
             [bout_ds(0), bout_ds(1), bout_ds(2)], dim="y", data_vars="minimal"
         )
-        expected = expected.set_coords("t_array").rename(t_array="t")
+        expected = expected.set_coords(["t_array", "dx", "dy", "dz"]).rename(
+            t_array="t"
+        )
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
@@ -990,7 +996,9 @@ class TestOpen:
             data_vars="minimal",
         )
         expected = concat([line1, line2, line3], dim="y", data_vars="minimal")
-        expected = expected.set_coords("t_array").rename(t_array="t")
+        expected = expected.set_coords(["t_array", "dx", "dy", "dz"]).rename(
+            t_array="t"
+        )
         vars_to_drop = METADATA_VARS + _BOUT_PER_PROC_VARIABLES
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),

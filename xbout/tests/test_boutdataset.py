@@ -2086,6 +2086,9 @@ class TestSaveRestart:
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2144,6 +2147,9 @@ class TestSaveRestart:
                 ).load()
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
+
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
 
                 for v in restart_ds:
                     if v in check_ds:
@@ -2209,6 +2215,9 @@ class TestSaveRestart:
                 ).load()
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
+
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
 
                 for v in restart_ds:
                     if v in check_ds:
