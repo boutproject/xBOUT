@@ -188,7 +188,12 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         can_use_1d_z_coord = (nz == 1) or use_metric_3d
 
         if can_use_1d_z_coord:
-            z = _1d_coord_from_spacing(updated_ds["dz"], zcoord)
+            if bout_v5:
+                z = _1d_coord_from_spacing(updated_ds["dz"], zcoord)
+            else:
+                z = _1d_coord_from_spacing(
+                    updated_ds.metadata["dz"], zcoord, updated_ds
+                )
         else:
             if bout_v5:
                 dz = updated_ds["dz"][0, 0]
