@@ -1218,7 +1218,7 @@ class TestBoutDatasetMethods:
         ds["t"].data[...] = t.squeeze()
         ds["dx"].data[...] = 0.1
         ds["dy"].data[...] = 0.2
-        ds.metadata["dz"] = 0.3
+        ds["dz"] = 0.3
         tfunc = 1.5 * t
         xfunc = x ** 2
         yfunc = 10.0 * y - y ** 2
@@ -2086,6 +2086,9 @@ class TestSaveRestart:
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2144,6 +2147,9 @@ class TestSaveRestart:
                 ).load()
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
+
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
 
                 for v in restart_ds:
                     if v in check_ds:
@@ -2209,6 +2215,9 @@ class TestSaveRestart:
                 ).load()
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
+
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
 
                 for v in restart_ds:
                     if v in check_ds:

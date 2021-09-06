@@ -90,7 +90,9 @@ class BoutDataArrayAccessor:
             fft = np.fft
 
         nz = self.data.metadata["nz"]
-        zlength = nz * self.data.metadata["dz"]
+        # Assume dz is constant here - using FFTs doesn't make much sense if z isn't a
+        # toroidal angle coordinate.
+        zlength = nz * self.data["dz"].values.flatten()[0]
         nmodes = nz // 2 + 1
 
         # Get axis position of dimension to transform
@@ -606,7 +608,7 @@ class BoutDataArrayAccessor:
         result = (
             da.roll({zcoord: -1}, roll_coords=False)
             - da.roll({zcoord: 1}, roll_coords=False)
-        ) / (2.0 * da.metadata["dz"])
+        ) / (2.0 * da["dz"])
 
         result.name = f"d({da.name})/dz"
         if "standard_name" in result.attrs:
