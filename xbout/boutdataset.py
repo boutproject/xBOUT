@@ -344,7 +344,10 @@ class BoutDatasetAccessor:
 
         dx = ds[f"dx{suffix}"]
         dy = ds[f"dy{suffix}"]
-        dz = ds.metadata["dz"]
+        if ds.metadata["BOUT_VERSION"] >= 5.0:
+            dz = ds[f"dz{suffix}"]
+        else:
+            dz = ds["dz"]
 
         # Work out the spatial volume element
         if xcoord in dims and ycoord in dims and zcoord in dims:

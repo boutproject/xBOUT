@@ -180,19 +180,38 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         # Generates a coordinate whose value is 0 on the first grid point, not dz/2, to
         # match how BOUT++ generates fields from input file expressions.
         nz = updated_ds.dims[zcoord]
-        z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
-        z1 = z0 + nz * updated_ds.metadata["dz"]
-        if not np.isclose(
-            z1, 2.0 * np.pi * updated_ds.metadata["ZMAX"], rtol=1.0e-15, atol=0.0
-        ):
-            warn(
-                f"Size of toroidal domain as calculated from nz*dz ({str(z1 - z0)}"
-                f" is not the same as 2pi*(ZMAX - ZMIN) ("
-                f"{2.*np.pi*updated_ds.metadata['ZMAX'] - z0}): using value from dz"
+
+        # In BOUT++ v5, dz is either a Field2D or Field3D.
+        # We can use it as a 1D coordinate if it's a Field3D, _or_ if nz == 1
+        bout_v5 = updated_ds.metadata["BOUT_VERSION"] >= 5.0
+        use_metric_3d = updated_ds.metadata.get("use_metric_3d", False)
+        can_use_1d_z_coord = (nz == 1) or use_metric_3d
+
+        if can_use_1d_z_coord:
+            z = _1d_coord_from_spacing(updated_ds["dz"], zcoord, updated_ds)
+        else:
+            if bout_v5:
+                if not np.all(updated_ds["dz"].min() == updated_ds["dz"].max()):
+                    raise ValueError(
+                        f"Spacing is not constant. Cannot create z coordinate"
+                    )
+                dz = updated_ds["dz"][0, 0]
+            else:
+                dz = updated_ds["dz"]
+
+            z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
+            z1 = z0 + nz * dz
+            if not np.isclose(
+                z1, 2.0 * np.pi * updated_ds.metadata["ZMAX"], rtol=1.0e-15, atol=0.0
+            ):
+                warn(
+                    f"Size of toroidal domain as calculated from nz*dz ({str(z1 - z0)}"
+                    f" is not the same as 2pi*(ZMAX - ZMIN) ("
+                    f"{2.*np.pi*updated_ds.metadata['ZMAX'] - z0}): using value from dz"
+                )
+            z = xr.DataArray(
+                np.linspace(start=z0, stop=z1, num=nz, endpoint=False), dims=zcoord
             )
-        z = xr.DataArray(
-            np.linspace(start=z0, stop=z1, num=nz, endpoint=False), dims=zcoord
-        )
 
         # can't use commented out version, uncommented one works around xarray bug
         # removing attrs
@@ -203,9 +222,10 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
 
         _add_attrs_to_var(updated_ds, zcoord)
 
-    # Add dx and dy as coordinates, so that they are available with BoutDataArrays
+    # Add dx, dy and dz as coordinates, so that they are available with BoutDataArrays
     updated_ds = _set_as_coord(updated_ds, "dx")
     updated_ds = _set_as_coord(updated_ds, "dy")
+    updated_ds = _set_as_coord(updated_ds, "dz")
 
     return updated_ds
 

@@ -85,9 +85,9 @@ def set_geometry_from_input_file(ds, name):
     # Set dz as it would be calculated by BOUT++ (but don't support zmin, zmax or
     # zperiod here)
     if "dz" in options["mesh"]:
-        ds.metadata["dz"] = options.evaluate_scalar("mesh:dz")
+        ds["dz"] = options.evaluate_scalar("mesh:dz")
     else:
-        ds.metadata["dz"] = 2.0 * np.pi / ds.metadata["nz"]
+        ds["dz"] = 2.0 * np.pi / ds.metadata["nz"]
 
     # Add extra fields needed by "toroidal" geometry
     for v in ["Rxy", "Zxy", "psixy"]:
