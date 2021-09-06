@@ -921,7 +921,8 @@ class BoutDatasetAccessor:
             If a dict is passed, the dict entries are passed as arguments to
             tight_layout()
         **kwargs : dict, optional
-            Additional keyword arguments are passed on to each animation function
+            Additional keyword arguments are passed on to each animation function, per
+            variable if a sequence is given.
 
         Returns
         -------
@@ -976,6 +977,8 @@ class BoutDatasetAccessor:
         aspect = _expand_list_arg(aspect, "aspect")
         extend = _expand_list_arg(extend, "extend")
         axis_coords = _expand_list_arg(axis_coords, "axis_coords")
+        for k in kwargs:
+            kwargs[k] = _expand_list_arg(kwargs[k], k)
 
         blocks = []
 
@@ -986,17 +989,19 @@ class BoutDatasetAccessor:
                 or isinstance(variable, set)
             )
 
-        for subplot_args in zip(
-            variables,
-            axes,
-            poloidal_plot,
-            axis_coords,
-            vmin,
-            vmax,
-            logscale,
-            titles,
-            aspect,
-            extend,
+        for i, subplot_args in enumerate(
+            zip(
+                variables,
+                axes,
+                poloidal_plot,
+                axis_coords,
+                vmin,
+                vmax,
+                logscale,
+                titles,
+                aspect,
+                extend,
+            )
         ):
 
             (
@@ -1011,6 +1016,8 @@ class BoutDatasetAccessor:
                 this_aspect,
                 this_extend,
             ) = subplot_args
+
+            this_kwargs = {k: v[i] for k, v in kwargs.items()}
 
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.1)
@@ -1051,7 +1058,7 @@ class BoutDatasetAccessor:
                             animate=False,
                             axis_coords=this_axis_coords,
                             aspect=this_aspect,
-                            **kwargs,
+                            **this_kwargs,
                         )
                     )
                 else:
@@ -1065,7 +1072,7 @@ class BoutDatasetAccessor:
                                 axis_coords=this_axis_coords,
                                 aspect=this_aspect,
                                 label=w.name,
-                                **kwargs,
+                                **this_kwargs,
                             )
                         )
                     legend = ax.legend()
@@ -1086,7 +1093,7 @@ class BoutDatasetAccessor:
                         logscale=this_logscale,
                         aspect=this_aspect,
                         extend=this_extend,
-                        **kwargs,
+                        **this_kwargs,
                     )
                     for block in var_blocks:
                         blocks.append(block)
@@ -1104,7 +1111,7 @@ class BoutDatasetAccessor:
                             logscale=this_logscale,
                             aspect=this_aspect,
                             extend=this_extend,
-                            **kwargs,
+                            **this_kwargs,
                         )
                     )
             else:
