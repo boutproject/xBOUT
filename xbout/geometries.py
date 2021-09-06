@@ -191,6 +191,10 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
             z = _1d_coord_from_spacing(updated_ds["dz"], zcoord, updated_ds)
         else:
             if bout_v5:
+                if not np.all(updated_ds["dz"].min() == updated_ds["dz"].max()):
+                    raise ValueError(
+                        f"Spacing is not constant. Cannot create z coordinate"
+                    )
                 dz = updated_ds["dz"][0, 0]
             else:
                 dz = updated_ds["dz"]
