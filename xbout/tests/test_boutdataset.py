@@ -56,23 +56,6 @@ class TestBoutDatasetIsXarrayDataset:
 
 
 class TestBoutDatasetMethods:
-    @pytest.mark.skip
-    def test_test_method(self, bout_xyt_example_files):
-        dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
-        ds = open_boutdataset(datapath=dataset_list, inputfilepath=None)
-        # ds = collect(path=path)
-        # bd = BoutAccessor(ds)
-        print(ds)
-        # ds.bout.test_method()
-        # print(ds.bout.options)
-        # print(ds.bout.metadata)
-        print(ds.isel(t=-1))
-
-        # ds.bout.set_extra_data('stored')
-        ds.bout.extra_data = "stored"
-
-        print(ds.bout.extra_data)
-
     def test_get_field_aligned(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(None, nxpe=3, nype=4, nt=1)
         with pytest.warns(UserWarning):
