@@ -1789,7 +1789,8 @@ class TestSave:
             original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
-        savepath = path.parent.joinpath("temp_boutdata.nc")
+        savedir = tmp_path_factory.mktemp("test_save_all")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath)
 
         # Load it again using bare xarray
@@ -1825,7 +1826,8 @@ class TestSave:
             )
 
         # Save it to a netCDF file
-        savepath = path.parent.joinpath("temp_boutdata.nc")
+        savedir = tmp_path_factory.mktemp("test_reload_all")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath)
 
         # Load it again
@@ -1870,7 +1872,8 @@ class TestSave:
             original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
-        savepath = path.parent.joinpath("temp_boutdata.nc")
+        savedir = tmp_path_factory.mktemp("test_save_dtype")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(
             savepath=savepath, save_dtype=save_dtype, separate_vars=separate_vars
         )
@@ -1878,7 +1881,7 @@ class TestSave:
         # Load it again using bare xarray
         if separate_vars:
             for v in ["n", "T"]:
-                savepath = path.parent.joinpath(f"temp_boutdata_{v}.nc")
+                savepath = savedir.joinpath(f"temp_boutdata_{v}.nc")
                 recovered = open_dataset(savepath)
                 assert recovered[v].values.dtype == np.dtype(save_dtype)
         else:
@@ -1897,19 +1900,20 @@ class TestSave:
             original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
-        savepath = path.parent.joinpath("temp_boutdata.nc")
+        savedir = tmp_path_factory.mktemp("test_save_separate_variables")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath, separate_vars=True)
 
         for var in ["n", "T"]:
             # Load it again using bare xarray
-            savepath = path.parent.joinpath("temp_boutdata_" + var + ".nc")
+            savepath = savedir.joinpath(f"temp_boutdata_{var}.nc")
             recovered = open_dataset(savepath)
 
             # Compare equal (not identical because attributes are changed when saving)
             xrt.assert_equal(recovered[var], original[var])
 
         # test open_boutdataset() on dataset saved with separate_vars=True
-        savepath = path.parent.joinpath("temp_boutdata_*.nc")
+        savepath = savedir.joinpath("temp_boutdata_*.nc")
         recovered = open_boutdataset(savepath)
         xrt.assert_identical(original, recovered)
 
@@ -1949,11 +1953,12 @@ class TestSave:
             )
 
         # Save it to a netCDF file
-        savepath = path.parent.joinpath("temp_boutdata.nc")
+        savedir = tmp_path_factory.mktemp("test_reload_separate_variables")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath, separate_vars=True)
 
         # Load it again
-        savepath = path.parent.joinpath("temp_boutdata_*.nc")
+        savepath = savedir.joinpath("temp_boutdata_*.nc")
         recovered = open_boutdataset(savepath)
 
         # Compare
@@ -1996,17 +2001,18 @@ class TestSave:
 
         # Save it to a netCDF file
         tcoord = original.metadata.get("bout_tdim", "t")
-        savepath = path.parent.joinpath("temp_boutdata_1.nc")
+        savedir = tmp_path_factory.mktemp("test_reload_separate_variables_time_split")
+        savepath = savedir.joinpath("temp_boutdata_1.nc")
         original.isel({tcoord: slice(3)}).bout.save(
             savepath=savepath, separate_vars=True
         )
-        savepath = path.parent.joinpath("temp_boutdata_2.nc")
+        savepath = savedir.joinpath("temp_boutdata_2.nc")
         original.isel({tcoord: slice(3, None)}).bout.save(
             savepath=savepath, separate_vars=True
         )
 
         # Load it again
-        savepath = path.parent.joinpath("temp_boutdata_*.nc")
+        savepath = savedir.joinpath("temp_boutdata_*.nc")
         recovered = open_boutdataset(savepath)
 
         # Compare
@@ -2037,7 +2043,7 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = path.parent
+        savepath = tmp_path_factory.mktemp("test_to_restart")
         if tind is None:
             ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
         else:
@@ -2107,7 +2113,7 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = path.parent
+        savepath = tmp_path_factory.mktemp("test_to_restart_change_npe")
         ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
 
         mxsub = (nx - 4) // nxpe
@@ -2175,7 +2181,7 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = path.parent
+        savepath = tmp_path_factory.mktemp("test_to_restart_change_npe_doublenull")
         ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
 
         mxsub = (nx - 4) // nxpe
@@ -2243,6 +2249,8 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = path.parent
+        savepath = tmp_path_factory.mktemp(
+            "test_to_restart_change_npe_doublenull_expect_fail"
+        )
         with pytest.raises(ValueError):
             ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)

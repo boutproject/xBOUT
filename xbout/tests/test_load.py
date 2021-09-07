@@ -1,3 +1,6 @@
+from collections import namedtuple
+from copy import deepcopy
+import inspect
 from pathlib import Path
 import re
 
@@ -23,6 +26,7 @@ from xbout.load import (
     _BOUT_TIME_DEPENDENT_META_VARS,
 )
 from xbout.utils import _separate_metadata
+from xbout.tests.utils_for_tests import _get_kwargs
 
 
 def test_check_extensions(tmp_path):
@@ -249,9 +253,12 @@ class TestArrange:
         assert actual_concat_dims == ["t", "y", "x"]
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def bout_xyt_example_files(tmp_path_factory):
     return _bout_xyt_example_files
+
+
+_bout_xyt_example_files_cache = {}
 
 
 def _bout_xyt_example_files(
@@ -261,7 +268,7 @@ def _bout_xyt_example_files(
     nxpe=4,
     nype=2,
     nt=1,
-    guards={},
+    guards=None,
     syn_data_type="random",
     grid=None,
     squashed=False,
@@ -278,6 +285,16 @@ def _bout_xyt_example_files(
     containing them, deleting the temporary directory once that test is done (if
     write_to_disk=True).
     """
+    call_args = _get_kwargs(ignore="tmp_path_factory")
+
+    try:
+        # Has been called with the same signature before, just return the cached result
+        return deepcopy(_bout_xyt_example_files_cache[call_args])
+    except KeyError:
+        pass
+
+    if guards is None:
+        guards = {}
 
     mxg = guards.get("x", 0)
     myg = guards.get("y", 0)
@@ -333,10 +350,11 @@ def _bout_xyt_example_files(
 
     if not write_to_disk:
         if grid is None:
-            return ds_list
+            _bout_xyt_example_files_cache[call_args] = ds_list
+            return deepcopy(ds_list)
         else:
-            return ds_list, grid_ds
-    elif tmp_path_factory is None:
+            _bout_xyt_example_files_cache[call_args] = ds_list, grid_ds
+            return deepcopy((ds_list, grid_ds))
         raise ValueError("tmp_path_factory required when write_to_disk=True")
 
     save_dir = tmp_path_factory.mktemp("data")
@@ -357,8 +375,9 @@ def _bout_xyt_example_files(
     # We have to reverse the path before limiting the number of numbers replaced so that the
     # tests don't get confused by pytest's persistent temporary directories (which are also designated
     # by different numbers)
-    glob_pattern = (re.sub(r"\d+", "*", path[::-1], count=count))[::-1]
-    return Path(glob_pattern)
+    glob_pattern = Path((re.sub(r"\d+", "*", path[::-1], count=count))[::-1])
+    _bout_xyt_example_files_cache[call_args] = glob_pattern
+    return glob_pattern
 
 
 def create_bout_ds_list(
