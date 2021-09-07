@@ -436,6 +436,9 @@ def create_bout_ds_list(
     return ds_list, file_list
 
 
+_create_bout_ds_cache = {}
+
+
 def create_bout_ds(
     syn_data_type="random",
     lengths=(6, 2, 4, 7),
@@ -450,6 +453,13 @@ def create_bout_ds(
     bout_v5=False,
     metric_3D=False,
 ):
+    call_args = _get_kwargs()
+
+    try:
+        # Has been called with the same signature before, just return the cached result
+        return deepcopy(_create_bout_ds_cache[call_args])
+    except KeyError:
+        pass
 
     if metric_3D and not bout_v5:
         raise ValueError("3D metric requires BOUT++ v5")
@@ -693,10 +703,21 @@ def create_bout_ds(
     # get the file number
     ds.encoding["source"] = f"BOUT.dmp.{num}.nc"
 
-    return ds
+    _create_bout_ds_cache[call_args] = ds
+    return deepcopy(ds)
+
+
+_create_bout_grid_ds_cache = {}
 
 
 def create_bout_grid_ds(xsize=2, ysize=4, guards={}, topology="core", ny_inner=0):
+    call_args = _get_kwargs()
+
+    try:
+        # Has been called with the same signature before, just return the cached result
+        return deepcopy(_create_bout_grid_ds_cache[call_args])
+    except KeyError:
+        pass
 
     # Set the shape of the data in this dataset
     mxg = guards.get("x", 0)
@@ -734,7 +755,8 @@ def create_bout_grid_ds(xsize=2, ysize=4, guards={}, topology="core", ny_inner=0
         }
     )
 
-    return ds
+    _create_bout_grid_ds_cache[call_args] = ds
+    return deepcopy(ds)
 
 
 # Note, MYPE, PE_XIND and PE_YIND not included, since they are different for each
