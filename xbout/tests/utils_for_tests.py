@@ -1,5 +1,5 @@
 from boutdata.data import BoutOptionsFile
-from frozendict import frozendict
+from gelidum import freeze
 import inspect
 import numpy as np
 from pathlib import Path
@@ -136,10 +136,6 @@ def _get_kwargs(ignore=None):
     for key in keys:
         if key not in keys_to_ignore:
             value = values[key]
-            if isinstance(value, dict):
-                value = frozendict(value)
-            if isinstance(value, list):
-                value = tuple(value)
             kwargs[key] = value
 
-    return frozendict(kwargs)
+    return freeze(kwargs)
