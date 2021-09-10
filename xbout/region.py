@@ -1221,11 +1221,11 @@ def _concat_inner_guards(da, da_global, mxg):
     if mxg <= 0:
         return da
 
-    if len(da.regions) > 1:
+    if len(da.bout._regions) > 1:
         raise ValueError("da passed should have only one region")
-    region = list(da.regions.values())[0]
+    region = list(da.bout._regions.values())[0]
 
-    if region.connection_inner_x not in da_global.regions:
+    if region.connection_inner_x not in da_global.bout._regions:
         # No connection, or plotting restricted set of regions not including this
         # connection
         return da
@@ -1236,9 +1236,9 @@ def _concat_inner_guards(da, da_global, mxg):
     ycoord = da_global.metadata["bout_ydim"]
 
     da_inner = da_global.bout.from_region(region.connection_inner_x, with_guards=0)
-    if len(da_inner.regions) > 1:
+    if len(da_inner.bout._regions) > 1:
         raise ValueError("da_inner should have only one region")
-    region_inner = list(da_inner.regions.values())[0]
+    region_inner = list(da_inner.bout._regions.values())[0]
 
     if (
         myg_da > 0
@@ -1276,7 +1276,7 @@ def _concat_inner_guards(da, da_global, mxg):
         da_inner_lower = da_inner_lower.isel(
             **{xcoord: slice(-mxg, None), ycoord: slice(-myg_da, None)}
         )
-        save_regions = da_inner.regions
+        save_regions = da_inner.bout._regions
         da_inner = xr.concat((da_inner_lower, da_inner), ycoord, join="exact")
         # xr.concat takes attributes from the first variable, but we need da_inner's
         # regions
@@ -1314,7 +1314,7 @@ def _concat_inner_guards(da, da_global, mxg):
         da_inner[xcoord].data[...] = new_xcoord.data
         da_inner[ycoord].data[...] = new_ycoord.data
 
-    save_regions = da.regions
+    save_regions = da.bout._regions
     da = xr.concat((da_inner, da), xcoord, join="exact")
     # xr.concat takes attributes from the first variable (for xarray>=0.15.0, keeps attrs
     # that are the same in all objects for xarray<0.15.0)
@@ -1332,11 +1332,11 @@ def _concat_outer_guards(da, da_global, mxg):
     if mxg <= 0:
         return da
 
-    if len(da.regions) > 1:
+    if len(da.bout._regions) > 1:
         raise ValueError("da passed should have only one region")
-    region = list(da.regions.values())[0]
+    region = list(da.bout._regions.values())[0]
 
-    if region.connection_outer_x not in da_global.regions:
+    if region.connection_outer_x not in da_global.bout._regions:
         # No connection, or plotting restricted set of regions not including this
         # connection
         return da
@@ -1347,9 +1347,9 @@ def _concat_outer_guards(da, da_global, mxg):
     ycoord = da_global.metadata["bout_ydim"]
 
     da_outer = da_global.bout.from_region(region.connection_outer_x, with_guards=0)
-    if len(da_outer.regions) > 1:
+    if len(da_outer.bout._regions) > 1:
         raise ValueError("da_outer should have only one region")
-    region_outer = list(da_outer.regions.values())[0]
+    region_outer = list(da_outer.bout._regions.values())[0]
 
     if (
         myg_da > 0
@@ -1387,7 +1387,7 @@ def _concat_outer_guards(da, da_global, mxg):
         da_outer_lower = da_outer_lower.isel(
             **{xcoord: slice(-mxg, None), ycoord: slice(-myg_da, None)}
         )
-        save_regions = da_outer.regions
+        save_regions = da_outer.bout._regions
         da_outer = xr.concat((da_outer_lower, da_outer), ycoord, join="exact")
         # xr.concat takes attributes from the first variable, but we need da_outer's
         # regions
@@ -1425,7 +1425,7 @@ def _concat_outer_guards(da, da_global, mxg):
         da_outer[xcoord].data[...] = new_xcoord.data
         da_outer[ycoord].data[...] = new_ycoord.data
 
-    save_regions = da.regions
+    save_regions = da.bout._regions
     da = xr.concat((da, da_outer), xcoord, join="exact")
     # xarray<0.15.0 only keeps attrs that are the same on all variables passed to concat
     da.attrs["regions"] = save_regions
@@ -1442,11 +1442,11 @@ def _concat_lower_guards(da, da_global, mxg, myg):
     if myg <= 0:
         return da
 
-    if len(da.regions) > 1:
+    if len(da.bout._regions) > 1:
         raise ValueError("da passed should have only one region")
-    region = list(da.regions.values())[0]
+    region = list(da.bout._regions.values())[0]
 
-    if region.connection_lower_y not in da_global.regions:
+    if region.connection_lower_y not in da_global.bout._regions:
         # No connection, or plotting restricted set of regions not including this
         # connection
         return da
@@ -1525,7 +1525,7 @@ def _concat_lower_guards(da, da_global, mxg, myg):
         da_lower[xcoord].data[...] = new_xcoord.data
         da_lower[ycoord].data[...] = new_ycoord.data
 
-    save_regions = da.regions
+    save_regions = da.bout._regions
     da = xr.concat((da_lower, da), ycoord, join="exact")
     # xr.concat takes attributes from the first variable (for xarray>=0.15.0, keeps attrs
     # that are the same in all objects for xarray<0.15.0)
@@ -1543,11 +1543,11 @@ def _concat_upper_guards(da, da_global, mxg, myg):
     if myg <= 0:
         return da
 
-    if len(da.regions) > 1:
+    if len(da.bout._regions) > 1:
         raise ValueError("da passed should have only one region")
-    region = list(da.regions.values())[0]
+    region = list(da.bout._regions.values())[0]
 
-    if region.connection_upper_y not in da_global.regions:
+    if region.connection_upper_y not in da_global.bout._regions:
         # No connection, or plotting restricted set of regions not including this
         # connection
         return da
@@ -1625,7 +1625,7 @@ def _concat_upper_guards(da, da_global, mxg, myg):
         da_upper[xcoord].data[...] = new_xcoord.data
         da_upper[ycoord].data[...] = new_ycoord.data
 
-    save_regions = da.regions
+    save_regions = da.bout._regions
     da = xr.concat((da, da_upper), ycoord, join="exact")
     # xarray<0.15.0 only keeps attrs that are the same on all variables passed to concat
     da.attrs["regions"] = save_regions
@@ -1637,7 +1637,7 @@ def _from_region(ds_or_da, name, with_guards):
     # ensure we do not modify the input
     ds_or_da = ds_or_da.copy(deep=True)
 
-    region = ds_or_da.regions[name]
+    region = ds_or_da.bout._regions[name]
     xcoord = ds_or_da.metadata["bout_xdim"]
     ycoord = ds_or_da.metadata["bout_ydim"]
 
@@ -1669,7 +1669,7 @@ def _from_region(ds_or_da, name, with_guards):
 
     # If the result (which only has a single region) is passed to from_region a
     # second time, don't want to slice anything.
-    single_region = list(result.regions.values())[0]
+    single_region = list(result.bout._regions.values())[0]
     single_region.xinner_ind = None
     single_region.xouter_ind = None
     single_region.ylower_ind = None

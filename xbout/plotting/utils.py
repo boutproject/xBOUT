@@ -64,7 +64,10 @@ def plot_separatrix(da, sep_pos, ax, radial_coord="x"):
 
 def _decompose_regions(da):
 
-    return {region: da.bout.from_region(region, with_guards=1) for region in da.regions}
+    return {
+        region: da.bout.from_region(region, with_guards=1)
+        for region in da.bout._regions
+    }
 
 
 def _is_core_only(da):
@@ -90,7 +93,7 @@ def plot_separatrices(da, ax, *, x="R", y="Z"):
     ycoord = da0.metadata["bout_ydim"]
 
     for da_region in da_regions.values():
-        inner = list(da_region.regions.values())[0].connection_inner_x
+        inner = list(da_region.bout._regions.values())[0].connection_inner_x
         if inner in da_regions:
             da_inner = da_regions[inner]
 
@@ -136,14 +139,14 @@ def plot_targets(da, ax, *, x="R", y="Z", hatching=True):
         y_boundary_guards = 0
 
     for da_region in da_regions.values():
-        if list(da_region.regions.values())[0].connection_lower_y is None:
+        if list(da_region.bout._regions.values())[0].connection_lower_y is None:
             # lower target exists
             x_target = da_region.coords[x].isel(**{ycoord: y_boundary_guards})
             y_target = da_region.coords[y].isel(**{ycoord: y_boundary_guards})
             [line] = ax.plot(x_target, y_target, "k-", linewidth=2)
             if hatching:
                 _add_hatching(line, ax)
-        if list(da_region.regions.values())[0].connection_upper_y is None:
+        if list(da_region.bout._regions.values())[0].connection_upper_y is None:
             # upper target exists
             x_target = da_region.coords[x].isel(**{ycoord: -y_boundary_guards - 1})
             y_target = da_region.coords[y].isel(**{ycoord: -y_boundary_guards - 1})

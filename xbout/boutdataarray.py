@@ -189,7 +189,7 @@ class BoutDataArrayAccessor:
         return result
 
     @property
-    def regions(self):
+    def _regions(self):
         if "regions" not in self.data.attrs:
             raise ValueError(
                 "Called a method requiring regions, but these have not been created. "
@@ -279,7 +279,7 @@ class BoutDataArrayAccessor:
                 self.interpolate_parallel(
                     region, n=n, toroidal_points=toroidal_points, method=method
                 ).bout.to_dataset()
-                for region in self.data.regions
+                for region in self._regions
             ]
 
             # 'region' is not the same for all parts, and should not exist in the result,
@@ -301,7 +301,7 @@ class BoutDataArrayAccessor:
 
         # Select a particular 'region' and interpolate to higher parallel resolution
         da = self.data
-        region = da.regions[region]
+        region = da.bout._regions[region]
         tcoord = da.metadata["bout_tdim"]
         xcoord = da.metadata["bout_xdim"]
         ycoord = da.metadata["bout_ydim"]
@@ -409,9 +409,9 @@ class BoutDataArrayAccessor:
 
         ycoord = self.data.metadata["bout_ydim"]
         parts = []
-        for region in self.data.regions:
+        for region in self._regions:
             part = self.data.bout.from_region(region, with_guards=0)
-            part_region = list(part.regions.values())[0]
+            part_region = list(part.bout._regions.values())[0]
             if part_region.connection_lower_y is None:
                 part = part.isel({ycoord: slice(myg, None)})
             if part_region.connection_upper_y is None:
@@ -525,7 +525,7 @@ class BoutDataArrayAccessor:
         if region is None:
             # Call the single-region version of this method for each region, and combine
             # the results together
-            parts = [self.ddy(r).to_dataset() for r in self.data.regions]
+            parts = [self.ddy(r).to_dataset() for r in self._regions]
 
             # 'region' is not the same for all parts, and should not exist in the
             # result, so delete before merging
@@ -537,7 +537,7 @@ class BoutDataArrayAccessor:
             result = xr.combine_by_coords(parts)[f"d({name})/dy"]
 
             # regions get mixed up during the split and combine_by_coords, so reset them
-            result.attrs["regions"] = self.data.regions
+            result.attrs["regions"] = self._regions
 
             return result
 
@@ -568,7 +568,7 @@ class BoutDataArrayAccessor:
         result = (da.shift({ycoord: -1}) - da.shift({ycoord: 1})) / (2.0 * dy)
 
         # Remove any y-guard cells
-        region_object = da.regions[region]
+        region_object = da.bout._regions[region]
         if region_object.connection_lower_y is None:
             ylower = None
         else:
@@ -1000,13 +1000,26 @@ class BoutDataArrayAccessor:
 
     # BOUT-specific plotting functionality: methods that plot on a poloidal (R-Z) plane
     def contour(self, ax=None, **kwargs):
+        """
+        Contour-plot a radial-poloidal slice on the R-Z plane
+        """
         return plotfuncs.plot2d_wrapper(self.data, xr.plot.contour, ax=ax, **kwargs)
 
     def contourf(self, ax=None, **kwargs):
+        """
+        Filled-contour-plot a radial-poloidal slice on the R-Z plane
+        """
         return plotfuncs.plot2d_wrapper(self.data, xr.plot.contourf, ax=ax, **kwargs)
 
     def pcolormesh(self, ax=None, **kwargs):
+        """
+        Colour-plot a radial-poloidal slice on the R-Z plane
+        """
         return plotfuncs.plot2d_wrapper(self.data, xr.plot.pcolormesh, ax=ax, **kwargs)
 
-    def regions(self, ax=None, **kwargs):
-        return plotfuncs.regions(self.data, ax=ax, **kwargs)
+    def plot_regions(self, ax=None, **kwargs):
+        """
+        Plot the regions into which xBOUT splits radial-poloidal arrays to handle
+        tokamak topology.
+        """
+        return plotfuncs.plot_regions(self.data, ax=ax, **kwargs)

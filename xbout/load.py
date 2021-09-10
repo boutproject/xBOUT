@@ -78,6 +78,21 @@ def open_boutdataset(
     `run_name` are ignored. `geometry` is treated specially, and can be passed when
     reloading a Dataset (along with `gridfilepath` if needed).
 
+    Troubleshooting
+    ---------------
+    Variable conflicts: sometimes, for example when loading data from multiple restarts,
+    some variables may have conflicts (e.g. a source term was changed between some of
+    the restarts, but the source term is saved as time-independent, without a
+    t-dimension). In this case one workaround is to pass a list of variable names to the
+    keyword argument `drop_vars` to ignore the variables with conflicts, e.g. if `"S1"`
+    and `"S2"` have conflicts
+    ```
+    ds = open_boutdataset("data*/boutdata.nc", drop_vars=["S1", "S2"])
+    ```
+    will open a Dataset which is missing `"S1"` and `"S2"`.\
+    [`drop_vars` is an argument of `xarray.open_dataset()` that is passed down through
+    `kwargs`.]
+
     Parameters
     ----------
     datapath : str or (list or tuple of xr.Dataset), optional
@@ -124,7 +139,7 @@ def open_boutdataset(
     info : bool or "terse", optional
     kwargs : optional
         Keyword arguments are passed down to `xarray.open_mfdataset`, which in
-        turn extra kwargs down to `xarray.open_dataset`.
+        turn passes extra kwargs down to `xarray.open_dataset`.
 
     Returns
     -------
@@ -331,9 +346,6 @@ def collect(
     info=True,
     prefix="BOUT.dmp",
 ):
-
-    from os.path import join
-
     """
 
     Extract the data pertaining to a specified variable in a BOUT++ data set
@@ -373,6 +385,7 @@ def collect(
     ds : numpy.ndarray
 
     """
+    from os.path import join
 
     datapath = join(path, prefix + "*.nc")
 
