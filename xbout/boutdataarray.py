@@ -1000,13 +1000,26 @@ class BoutDataArrayAccessor:
 
     # BOUT-specific plotting functionality: methods that plot on a poloidal (R-Z) plane
     def contour(self, ax=None, **kwargs):
+        """
+        Contour-plot a radial-poloidal slice on the R-Z plane
+        """
         return plotfuncs.plot2d_wrapper(self.data, xr.plot.contour, ax=ax, **kwargs)
 
     def contourf(self, ax=None, **kwargs):
+        """
+        Filled-contour-plot a radial-poloidal slice on the R-Z plane
+        """
         return plotfuncs.plot2d_wrapper(self.data, xr.plot.contourf, ax=ax, **kwargs)
 
     def pcolormesh(self, ax=None, **kwargs):
+        """
+        Colour-plot a radial-poloidal slice on the R-Z plane
+        """
         return plotfuncs.plot2d_wrapper(self.data, xr.plot.pcolormesh, ax=ax, **kwargs)
 
     def regions(self, ax=None, **kwargs):
+        """
+        Plot the regions into which xBOUT splits radial-poloidal arrays to handle
+        tokamak topology.
+        """
         return plotfuncs.regions(self.data, ax=ax, **kwargs)
