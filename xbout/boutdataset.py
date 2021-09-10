@@ -143,7 +143,7 @@ class BoutDatasetAccessor:
         return _from_region(self.data, name, with_guards)
 
     @property
-    def regions(self):
+    def _regions(self):
         if "regions" not in self.data.attrs:
             raise ValueError(
                 "Called a method requiring regions, but these have not been created. "

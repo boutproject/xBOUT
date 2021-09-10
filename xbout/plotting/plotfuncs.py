@@ -24,7 +24,7 @@ if (
     matplotlib.rcParams["pcolor.shading"] = "auto"
 
 
-def regions(da, ax=None, **kwargs):
+def plot_regions(da, ax=None, **kwargs):
     """
     Plots each logical plotting region as a different color for debugging.
 
