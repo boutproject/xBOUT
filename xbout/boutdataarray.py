@@ -1017,9 +1017,9 @@ class BoutDataArrayAccessor:
         """
         return plotfuncs.plot2d_wrapper(self.data, xr.plot.pcolormesh, ax=ax, **kwargs)
 
-    def regions(self, ax=None, **kwargs):
+    def plot_regions(self, ax=None, **kwargs):
         """
         Plot the regions into which xBOUT splits radial-poloidal arrays to handle
         tokamak topology.
         """
-        return plotfuncs.regions(self.data, ax=ax, **kwargs)
+        return plotfuncs.plot_regions(self.data, ax=ax, **kwargs)
