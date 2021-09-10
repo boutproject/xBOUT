@@ -342,9 +342,6 @@ def collect(
     info=True,
     prefix="BOUT.dmp",
 ):
-
-    from os.path import join
-
     """
 
     Extract the data pertaining to a specified variable in a BOUT++ data set
@@ -384,6 +381,7 @@ def collect(
     ds : numpy.ndarray
 
     """
+    from os.path import join
 
     datapath = join(path, prefix + "*.nc")
 
