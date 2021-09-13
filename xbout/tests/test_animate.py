@@ -12,20 +12,20 @@ from animatplot.blocks import Pcolormesh, Line
 
 
 @pytest.fixture
-def create_test_file(tmpdir_factory):
+def create_test_file(tmp_path_factory):
 
     # Create temp dir for output of animate1D/2D
-    save_dir = tmpdir_factory.mktemp("test_data")
+    save_dir = tmp_path_factory.mktemp("test_data")
 
     # Generate some test data
     ds_list, file_list = create_bout_ds_list(
         "BOUT.dmp", nxpe=3, nype=3, syn_data_type="linear"
     )
     for ds, file_name in zip(ds_list, file_list):
-        ds.to_netcdf(str(save_dir.join(str(file_name))))
+        ds.to_netcdf(save_dir.joinpath(file_name))
 
     with pytest.warns(UserWarning):
-        ds = open_boutdataset(save_dir.join("BOUT.dmp.*.nc"))  # Open test data
+        ds = open_boutdataset(save_dir.joinpath("BOUT.dmp.*.nc"))  # Open test data
 
     return save_dir, ds
 

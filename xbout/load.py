@@ -153,6 +153,10 @@ def open_boutdataset(
 
     if "reload" in input_type:
         if input_type == "reload":
+            if isinstance(datapath, Path):
+                # xr.open_mfdataset only accepts glob patterns as strings, not Path
+                # objects
+                datapath = str(datapath)
             ds = xr.open_mfdataset(
                 datapath,
                 chunks=chunks,
