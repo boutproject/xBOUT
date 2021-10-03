@@ -315,6 +315,16 @@ def _pad_y_boundaries(ds):
 
 
 def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, overwrite):
+    # Rename dimension coordinates to BOUT++ standard names
+    ds = ds.copy()
+    ds = ds.rename(
+        {
+            ds.metadata["bout_tdim"]: "t",
+            ds.metadata["bout_xdim"]: "x",
+            ds.metadata["bout_ydim"]: "y",
+            ds.metadata["bout_zdim"]: "z",
+        }
+    )
 
     _check_new_nxpe(ds, nxpe)
     _check_new_nype(ds, nype)
@@ -337,10 +347,6 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
     myg = ds.metadata["MYG"]
 
     ny_inner = ds.metadata["ny_inner"]
-
-    tcoord = ds.metadata.get("bout_tdim", "t")
-    xcoord = ds.metadata.get("bout_xdim", "x")
-    ycoord = ds.metadata.get("bout_ydim", "y")
 
     # These variables need to be saved to restart files in addition to evolving ones
     restart_metadata_vars = [
@@ -368,7 +374,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
 
     if variables is None:
         # If variables to be saved were not specified, add all time-evolving variables
-        variables = [v for v in ds if tcoord in ds[v].dims]
+        variables = [v for v in ds if "t" in ds[v].dims]
 
     # Add extra variables always needed
     for v in [
@@ -400,7 +406,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
     # hist_hi represents the number of iterations before the restart. Attempt to
     # reconstruct here
     iteration = ds.metadata.get("iteration", -1)
-    nt = ds.sizes[tcoord]
+    nt = ds.sizes["t"]
     hist_hi = iteration - (nt - tind)
     if hist_hi < 0:
         hist_hi = -1
@@ -408,7 +414,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
     has_second_divertor = ds.metadata["jyseps2_1"] != ds.metadata["jyseps1_2"]
 
     # select desired time-index for the restart files
-    ds = ds.isel({tcoord: tind}).persist()
+    ds = ds.isel({"t": tind}).persist()
 
     ds = _pad_x_boundaries(ds)
     ds = _pad_y_boundaries(ds)
@@ -423,7 +429,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
             else:
                 yslice = slice(yproc * mysub, (yproc + 1) * mysub + 2 * myg)
 
-            ds_slice = ds.isel({xcoord: xslice, ycoord: yslice})
+            ds_slice = ds.isel({"x": xslice, "y": yslice})
 
             restart_ds = xr.Dataset()
             for v in variables:
@@ -442,7 +448,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
             restart_ds["hist_hi"] = hist_hi
 
             # tt is the simulation time where the restart happens
-            restart_ds["tt"] = ds[tcoord].values.flatten()[0]
+            restart_ds["tt"] = ds["t"].values.flatten()[0]
 
             restart_datasets.append(restart_ds)
 
