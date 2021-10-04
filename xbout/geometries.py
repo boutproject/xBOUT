@@ -183,7 +183,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
 
         # In BOUT++ v5, dz is either a Field2D or Field3D.
         # We can use it as a 1D coordinate if it's a Field3D, _or_ if nz == 1
-        bout_v5 = updated_ds.metadata["BOUT_VERSION"] > 5.0 or (
+        bout_v5 = updated_ds.metadata.get("BOUT_VERSION", 4.3) > 5.0 or (
             updated_ds.metadata["BOUT_VERSION"] == 5.0 and updated_ds["dz"].ndim == 2
         )
         use_metric_3d = updated_ds.metadata.get("use_metric_3d", False)
