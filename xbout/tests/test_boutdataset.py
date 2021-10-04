@@ -6,6 +6,7 @@ import xarray.testing as xrt
 
 import dask.array
 import numpy as np
+from pathlib import Path
 from scipy.integrate import quad_vec
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
@@ -2254,3 +2255,11 @@ class TestSaveRestart:
         )
         with pytest.raises(ValueError):
             ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
+
+    def test_from_restart_to_restart(self, tmp_path):
+        datapath = Path(__file__).parent.joinpath(
+            "data", "restart", "BOUT.restart.*.nc"
+        )
+        ds = open_boutdataset(datapath, keep_xboundaries=True, keep_yboundaries=True)
+
+        ds.bout.to_restart(savepath=tmp_path, nxpe=1, nype=4)

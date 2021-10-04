@@ -1161,6 +1161,14 @@ class TestOpen:
     def test_combine_along_tx(self):
         ...
 
+    def test_restarts(self):
+        datapath = Path(__file__).parent.joinpath(
+            "data", "restart", "BOUT.restart.*.nc"
+        )
+        ds = open_boutdataset(datapath, keep_xboundaries=True, keep_yboundaries=True)
+
+        assert "T" in ds
+
 
 _test_processor_layouts_list = [
     # No parallelization
