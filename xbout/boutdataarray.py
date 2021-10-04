@@ -245,6 +245,10 @@ class BoutDataArrayAccessor:
         Interpolate in the parallel direction to get a higher resolution version of the
         variable.
 
+        .. warning::
+            Handles `CELL_YLOW` variables (y-staggered grids), but assumes that `dy` is
+            constant to do so.
+
         Parameters
         ----------
         region : str, optional
@@ -292,6 +296,15 @@ class BoutDataArrayAccessor:
 
             result = xr.combine_by_coords(parts, combine_attrs="drop_conflicts")
 
+            if self.data.cell_location == "CELL_YLOW":
+                # Drop y-coordinate because it will be inconsistent with unstaggered
+                # variables.
+                # Drop all other coordinate variables because they should be
+                # interpolated as cell-centre variables, so may not be correct here.
+                result = result.drop_vars(
+                    [self.data.metadata["bout_ydim"]] + [c for c in result.coords]
+                )
+
             if return_dataset:
                 return result
             else:
@@ -333,11 +346,33 @@ class BoutDataArrayAccessor:
         else:
             ybndry_upper = 0
 
-        y_fine = np.linspace(
-            region.ylower - (ybndry_lower - 0.5) * dy,
-            region.yupper + (ybndry_upper - 0.5) * dy,
-            ny_fine + ybndry_lower + ybndry_upper,
-        )
+        if da.cell_location == "CELL_YLOW":
+            # Need to adjust y-coordinate to be consistent with staggered grid.  Assume
+            # dy is constant (this is true for hypnotoad grids at least).
+            if da.metadata["keep_xboundaries"] and region.connection_inner_x is None:
+                xbndry_inner = da.metadata["MXG"]
+            else:
+                xbndry_inner = 0
+            # Take a value, assuming dy is constant, and using xbndry_inner and
+            # ybndry_lower indices to avoid corner cells
+            constant_lowres_dy = (
+                da["dy"].isel({xcoord: xbndry_inner, ycoord: ybndry_lower}).values
+            )
+            da[ycoord] = da[ycoord] - 0.5 * constant_lowres_dy
+
+            # Define at CELL_YLOW locations
+            y_fine = np.linspace(
+                region.ylower - ybndry_lower * dy,
+                region.yupper + ybndry_upper * dy,
+                ny_fine + ybndry_lower + ybndry_upper,
+            )
+        else:
+            # Define at cell-centre (in the y-direction) locations
+            y_fine = np.linspace(
+                region.ylower - (ybndry_lower - 0.5) * dy,
+                region.yupper + (ybndry_upper - 0.5) * dy,
+                ny_fine + ybndry_lower + ybndry_upper,
+            )
 
         # This prevents da.interp() from being very slow.
         # Apparently large attrs (i.e. regions) on a coordinate which is passed as an

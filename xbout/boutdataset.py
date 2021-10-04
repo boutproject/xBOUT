@@ -218,23 +218,31 @@ class BoutDatasetAccessor:
         # passed-in argument.
         # Make sure the first variable has all dimensions so we don't lose any
         # coordinates
-        def find_with_dims(first_var, dims):
+        def find_with_dims(first_var, dims, staggered=False):
             if first_var is None:
                 dims = set(dims)
                 for v in variables:
                     if set(self.data[v].dims) == dims:
+                        if not staggered and self.data[v].cell_location == "CELL_YLOW":
+                            continue
                         first_var = v
                         break
             return first_var
 
         tcoord = self.data.metadata.get("bout_tdim", "t")
         zcoord = self.data.metadata.get("bout_zdim", "z")
-        first_var = find_with_dims(None, self.data.dims)
-        first_var = find_with_dims(first_var, set(self.data.dims) - set(tcoord))
-        first_var = find_with_dims(first_var, set(self.data.dims) - set(zcoord))
-        first_var = find_with_dims(
-            first_var, set(self.data.dims) - set([tcoord, zcoord])
-        )
+        # Try to find a non-staggered first variable first
+        for staggered in (False, True):
+            first_var = find_with_dims(None, self.data.dims, staggered)
+            first_var = find_with_dims(
+                first_var, set(self.data.dims) - set(tcoord), staggered
+            )
+            first_var = find_with_dims(
+                first_var, set(self.data.dims) - set(zcoord), staggered
+            )
+            first_var = find_with_dims(
+                first_var, set(self.data.dims) - set([tcoord, zcoord]), staggered
+            )
         if first_var is None:
             raise ValueError(
                 f"Could not find variable to interpolate with both "

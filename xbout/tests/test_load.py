@@ -699,6 +699,12 @@ def create_bout_ds(
     ds["iteration"] = t_length
     ds["t_array"] = DataArray(np.arange(t_length, dtype=float) * 10.0, dims="t")
 
+    # Set standard attributes
+    for v in ds:
+        attrs = ds[v].attrs
+        attrs["direction_y"] = attrs.get("direction_y", "Standard")
+        attrs["cell_location"] = attrs.get("cell_location", "CELL_CENTRE")
+
     # xarray adds this encoding when opening a file. Emulate here as it may be used to
     # get the file number
     ds.encoding["source"] = f"BOUT.dmp.{num}.nc"
