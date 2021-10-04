@@ -270,7 +270,10 @@ def _set_default_toroidal_coordinates(coordinates, ds):
         coordinates = {}
 
     # Replace any values that have not been passed in with defaults
-    coordinates["t"] = coordinates.get("t", ds.metadata["bout_tdim"])
+    if ds.metadata["is_restart"] == 0:
+        # Don't need "t" coordinate for restart files which have no time dimension, and
+        # adding it breaks the check for reloading in open_boutdataset
+        coordinates["t"] = coordinates.get("t", ds.metadata["bout_tdim"])
 
     default_x = (
         ds.metadata["bout_xdim"] if ds.metadata["bout_xdim"] != "x" else "psi_poloidal"
@@ -341,7 +344,8 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     ds[coordinates["x"]].attrs["units"] = "Wb"
 
     # Record which dimensions 't', 'x', and 'y' were renamed to.
-    ds.metadata["bout_tdim"] = coordinates["t"]
+    if ds.metadata["is_restart"] == 0:
+        ds.metadata["bout_tdim"] = coordinates["t"]
     # x dimension not renamed, so this is still 'x'
     ds.metadata["bout_xdim"] = "x"
     ds.metadata["bout_ydim"] = coordinates["y"]
