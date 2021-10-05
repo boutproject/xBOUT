@@ -43,7 +43,7 @@ def open_fastoutput(datapath="BOUT.fast.*.nc"):
 
                 # We saved the position, so don't care what number the variable was
                 # Only need it's name (i.e. n, T, etc.)
-                regex = re.compile("(\D+)([0-9]+)")
+                regex = re.compile(r"(\D+)([0-9]+)")
                 match = regex.match(name)
                 if match is None:
                     raise ValueError(
@@ -61,4 +61,3 @@ def open_fastoutput(datapath="BOUT.fast.*.nc"):
     full_fo = xr.combine_by_coords(fo_data, combine_attrs='drop_conflicts')
 
     return full_fo
-
