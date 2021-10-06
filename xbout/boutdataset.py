@@ -199,6 +199,10 @@ class BoutDatasetAccessor:
             The interpolation method to use. Options from xarray.DataArray.interp(),
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
             'cubic'.
+        ignore_extra_upper : bool, default False
+            Set this to True for simulations where the y-index next to upper yboundaries is
+            not evolved. Then the grid with ny_local-1 points is interpolated onto a new
+            grid with n*ny_local-1 points.
 
         Returns
         -------

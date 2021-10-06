@@ -239,6 +239,7 @@ class BoutDataArrayAccessor:
         n=None,
         toroidal_points=None,
         method="cubic",
+        ignore_extra_upper=False,
         return_dataset=False,
     ):
         """
@@ -266,6 +267,10 @@ class BoutDataArrayAccessor:
             The interpolation method to use. Options from xarray.DataArray.interp(),
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
             'cubic'.
+        ignore_extra_upper : bool, default False
+            Set this to True for simulations where the y-index next to upper yboundaries is
+            not evolved. Then the grid with ny_local-1 points is interpolated onto a new
+            grid with n*ny_local-1 points.
         return_dataset : bool, optional
             If this is set to True, return a Dataset containing this variable as a member
             (by default returns a DataArray). Only used when region=None.
@@ -281,7 +286,11 @@ class BoutDataArrayAccessor:
             # the results together
             parts = [
                 self.interpolate_parallel(
-                    region, n=n, toroidal_points=toroidal_points, method=method
+                    region,
+                    n=n,
+                    toroidal_points=toroidal_points,
+                    method=method,
+                    ignore_extra_upper=ignore_extra_upper,
                 ).bout.to_dataset()
                 for region in self._regions
             ]
@@ -346,31 +355,45 @@ class BoutDataArrayAccessor:
         else:
             ybndry_upper = 0
 
+        if da.metadata["keep_xboundaries"] and region.connection_inner_x is None:
+            xbndry_inner = da.metadata["MXG"]
+        else:
+            xbndry_inner = 0
+        # Take a value, assuming dy is constant, and using xbndry_inner and
+        # ybndry_lower indices to avoid corner cells
+        constant_lowres_dy = (
+            da["dy"].isel({xcoord: xbndry_inner, ycoord: ybndry_lower}).values
+        )
         if da.cell_location == "CELL_YLOW":
             # Need to adjust y-coordinate to be consistent with staggered grid.  Assume
             # dy is constant (this is true for hypnotoad grids at least).
-            if da.metadata["keep_xboundaries"] and region.connection_inner_x is None:
-                xbndry_inner = da.metadata["MXG"]
-            else:
-                xbndry_inner = 0
-            # Take a value, assuming dy is constant, and using xbndry_inner and
-            # ybndry_lower indices to avoid corner cells
-            constant_lowres_dy = (
-                da["dy"].isel({xcoord: xbndry_inner, ycoord: ybndry_lower}).values
-            )
             da[ycoord] = da[ycoord] - 0.5 * constant_lowres_dy
 
             # Define at CELL_YLOW locations
+            y_fine_lower = region.ylower - ybndry_lower * dy
+            if ignore_extra_upper and region.connection_upper_y is None:
+                y_fine_upper = region.yupper - constant_lowres_dy + ybndry_upper * dy
+            else:
+                y_fine_upper = region.yupper + (ybndry_upper - 1) * dy
             y_fine = np.linspace(
-                region.ylower - ybndry_lower * dy,
-                region.yupper + ybndry_upper * dy,
+                y_fine_lower,
+                y_fine_upper,
                 ny_fine + ybndry_lower + ybndry_upper,
             )
         else:
             # Define at cell-centre (in the y-direction) locations
+            y_fine_lower = region.ylower - (ybndry_lower - 0.5) * dy
+            if ignore_extra_upper and region.connection_upper_y is None:
+                # Take a value, assuming dy is constant, and using xbndry_inner and
+                # ybndry_lower indices to avoid corner cells
+                y_fine_upper = (
+                    region.yupper - constant_lowres_dy + (ybndry_upper + 1 - 0.5) * dy
+                )
+            else:
+                y_fine_upper = region.yupper + (ybndry_upper - 0.5) * dy
             y_fine = np.linspace(
-                region.ylower - (ybndry_lower - 0.5) * dy,
-                region.yupper + (ybndry_upper - 0.5) * dy,
+                y_fine_lower,
+                y_fine_upper,
                 ny_fine + ybndry_lower + ybndry_upper,
             )
 
