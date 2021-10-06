@@ -264,6 +264,12 @@ def open_boutdataset(
     else:
         raise ValueError(f"internal error: unexpected input_type={input_type}")
 
+    if remove_yboundaries:
+        # If remove_yboundaries is True, Dataset currently has y-boundary cells, and we
+        # need to keep y-boundaries when opening the grid file. The y-boundary cells
+        # will be removed (and keep_yboundaries set to False) below.
+        keep_yboundaries = True
+
     ds, metadata = _separate_metadata(ds)
     # Store as ints because netCDF doesn't support bools, so we can't save
     # bool attributes
@@ -271,11 +277,6 @@ def open_boutdataset(
     metadata["keep_yboundaries"] = int(keep_yboundaries)
     metadata["is_restart"] = int(is_restart)
     ds = _set_attrs_on_all_vars(ds, "metadata", metadata)
-
-    if remove_yboundaries:
-        # If remove_yboundaries is True, we need to keep y-boundaries when opening the
-        # grid file, as they will be removed from the full Dataset below
-        keep_yboundaries = True
 
     if not is_restart:
         for var in _BOUT_TIME_DEPENDENT_META_VARS:
