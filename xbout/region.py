@@ -116,13 +116,25 @@ class Region:
             # particular regions, so do not need to be consistent between different
             # regions (e.g. core and PFR), so we are not forced to use just the index
             # value here.
-            dx = ds["dx"].isel({self.ycoord: ylower_ind})
+            # Define ref_yind so that we avoid using values from the corner cells, which
+            # might be NaN.
+            if self.connection_lower_y is None and ds.metadata["keep_yboundaries"] == 1:
+                ref_yind = ylower_ind + ds.metadata["MYG"]
+            else:
+                ref_yind = ylower_ind
+            dx = ds["dx"].isel({self.ycoord: ref_yind})
             dx_cumsum = dx.cumsum()
             self.xinner = dx_cumsum[xinner_ind] - dx[xinner_ind]
             self.xouter = dx_cumsum[xouter_ind - 1] + dx[xouter_ind - 1]
 
             # dy is constant in the x-direction, so convert to a 1d array
-            dy = ds["dy"].isel(**{self.xcoord: self.xinner_ind})
+            # Define ref_xind so that we avoid using values from the corner cells, which
+            # might be NaN.
+            if self.connection_inner_x is None and ds.metadata["keep_xboundaries"] == 1:
+                ref_xind = xinner_ind + ds.metadata["MXG"]
+            else:
+                ref_xind = xinner_ind
+            dy = ds["dy"].isel(**{self.xcoord: ref_xind})
             dy_cumsum = dy.cumsum()
             self.ylower = dy_cumsum[ylower_ind] - dy[ylower_ind]
             self.yupper = dy_cumsum[yupper_ind - 1]
