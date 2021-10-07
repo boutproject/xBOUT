@@ -46,8 +46,7 @@ def open_fastoutput(datapath="BOUT.fast.*.nc"):
                 regex = re.compile(r"(\D+)([0-9]+)")
                 match = regex.match(name)
                 if match is None:
-                    raise ValueError(
-                        f"Regex could not parse the variable named {name}")
+                    raise ValueError(f"Regex could not parse the variable named {name}")
                 var, num = match.groups()
                 da.name = var
 
@@ -58,6 +57,6 @@ def open_fastoutput(datapath="BOUT.fast.*.nc"):
         fo.close()
 
     # This will merge different variables, and arrange by physical position
-    full_fo = xr.combine_by_coords(fo_data, combine_attrs='drop_conflicts')
+    full_fo = xr.combine_by_coords(fo_data, combine_attrs="drop_conflicts")
 
     return full_fo
