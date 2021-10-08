@@ -50,7 +50,8 @@ def open_fastoutput(datapath="BOUT.fast.*.nc"):
                 var, num = match.groups()
                 da.name = var
 
-                # Must promote DataArrays to Datasets until xarray GH #3248 is fixed
+                # Must promote DataArrays to Datasets until we require xarray-0.19.0
+                # where xarray GH #3248 is fixed
                 ds = xr.Dataset({var: da})
                 fo_data.append(ds)
 
