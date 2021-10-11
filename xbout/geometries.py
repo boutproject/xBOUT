@@ -288,6 +288,28 @@ def _set_default_toroidal_coordinates(coordinates, ds):
     return coordinates
 
 
+def _add_vars_from_grid(ds, grid, variables):
+    # Get extra geometry information from grid file if it's not in the dump files
+    for v in variables:
+        if v not in ds:
+            if grid is None:
+                raise ValueError(
+                    f"Grid file is required to provide {v}. Pass the grid "
+                    f"file name as the 'gridfilepath' argument to "
+                    f"open_boutdataset()."
+                )
+            # ds[v] = grid[v]
+            # Work around issue where xarray drops attributes on coordinates when a new
+            # DataArray is assigned to the Dataset, see
+            # https://github.com/pydata/xarray/issues/4415
+            # https://github.com/pydata/xarray/issues/4393
+            # This way adds as a 'Variable' instead of as a 'DataArray'
+            ds[v] = (grid[v].dims, grid[v].values)
+
+            _add_attrs_to_var(ds, v)
+    return ds
+
+
 @register_geometry("toroidal")
 def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
@@ -311,24 +333,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         )
 
     # Get extra geometry information from grid file if it's not in the dump files
-    needed_variables = ["psixy", "Rxy", "Zxy"]
-    for v in needed_variables:
-        if v not in ds:
-            if grid is None:
-                raise ValueError(
-                    f"Grid file is required to provide {v}. Pass the grid "
-                    f"file name as the 'gridfilepath' argument to "
-                    f"open_boutdataset()."
-                )
-            # ds[v] = grid[v]
-            # Work around issue where xarray drops attributes on coordinates when a new
-            # DataArray is assigned to the Dataset, see
-            # https://github.com/pydata/xarray/issues/4415
-            # https://github.com/pydata/xarray/issues/4393
-            # This way adds as a 'Variable' instead of as a 'DataArray'
-            ds[v] = (grid[v].dims, grid[v].values)
-
-            _add_attrs_to_var(ds, v)
+    ds = _add_vars_from_grid(ds, grid, ["psixy", "Rxy", "Zxy"])
 
     if "t" in ds.dims:
         # Rename 't' if user requested it
@@ -417,4 +422,12 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
         # remove hthe because it does not have correct metadata
         del ds["hthe"]
 
+    return ds
+
+
+@register_geometry("fci")
+def add_fci_geometry_coords(ds, *, coordinates=None, grid=None):
+    assert coordinates is None, "Not implemented"
+    ds = _add_vars_from_grid(ds, grid, ["R", "Z"])
+    ds = ds.set_coords(("R", "Z"))
     return ds
