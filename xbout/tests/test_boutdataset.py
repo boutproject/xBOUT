@@ -3,8 +3,10 @@ import pytest
 import numpy.testing as npt
 from xarray import Dataset, DataArray, concat, open_dataset, open_mfdataset
 import xarray.testing as xrt
+
+import dask.array
 import numpy as np
-from pathlib import Path
+from scipy.integrate import quad_vec
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout.tests.test_region import (
@@ -15,7 +17,8 @@ from xbout.tests.test_region import (
 )
 from xbout import BoutDatasetAccessor, open_boutdataset
 from xbout.geometries import apply_geometry
-from xbout.utils import _set_attrs_on_all_vars
+from xbout.utils import _set_attrs_on_all_vars, _1d_coord_from_spacing
+from xbout.tests.utils_for_tests import set_geometry_from_input_file
 
 
 EXAMPLE_OPTIONS_FILE_PATH = "./xbout/tests/data/options/BOUT.inp"
@@ -53,23 +56,6 @@ class TestBoutDatasetIsXarrayDataset:
 
 
 class TestBoutDatasetMethods:
-    @pytest.mark.skip
-    def test_test_method(self, bout_xyt_example_files):
-        dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
-        ds = open_boutdataset(datapath=dataset_list, inputfilepath=None)
-        # ds = collect(path=path)
-        # bd = BoutAccessor(ds)
-        print(ds)
-        # ds.bout.test_method()
-        # print(ds.bout.options)
-        # print(ds.bout.metadata)
-        print(ds.isel(t=-1))
-
-        # ds.bout.set_extra_data('stored')
-        ds.bout.extra_data = "stored"
-
-        print(ds.bout.extra_data)
-
     def test_get_field_aligned(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(None, nxpe=3, nype=4, nt=1)
         with pytest.warns(UserWarning):
@@ -160,6 +146,463 @@ class TestBoutDatasetMethods:
 
         xrt.assert_equal(ds, ds_no_yboundaries)
 
+    @pytest.mark.parametrize(
+        "nz",
+        [
+            pytest.param(6, marks=pytest.mark.long),
+            7,
+            pytest.param(8, marks=pytest.mark.long),
+            pytest.param(9, marks=pytest.mark.long),
+        ],
+    )
+    def test_to_field_aligned(self, bout_xyt_example_files, nz):
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(3, 3, 4, nz), nxpe=1, nype=1, nt=1
+        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
+
+        ds["psixy"] = ds["x"]
+        ds["Rxy"] = ds["x"]
+        ds["Zxy"] = ds["y"]
+
+        ds = apply_geometry(ds, "toroidal")
+
+        # set up test variable
+        n = ds["n"].load()
+        zShift = ds["zShift"].load()
+        for t in range(ds.sizes["t"]):
+            for x in range(ds.sizes["x"]):
+                for y in range(ds.sizes["theta"]):
+                    zShift[x, y] = (
+                        (x * ds.sizes["theta"] + y) * 2.0 * np.pi / ds.sizes["zeta"]
+                    )
+                    for z in range(nz):
+                        n[t, x, y, z] = 1000.0 * t + 100.0 * x + 10.0 * y + z
+
+        n.attrs["direction_y"] = "Standard"
+        ds["n"] = n
+
+        assert ds["n"].direction_y == "Standard"
+
+        # Create field-aligned Dataset
+        ds_al = ds.bout.to_field_aligned()
+
+        n_al = ds_al["n"]
+
+        assert n_al.direction_y == "Aligned"
+
+        for t in range(ds.sizes["t"]):
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 0, 0, z].values,
+                    1000.0 * t + z % nz,
+                    rtol=1.0e-15,
+                    atol=5.0e-16,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 0, 1, z].values,
+                    1000.0 * t + 10.0 * 1.0 + (z + 1) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 0, 2, z].values,
+                    1000.0 * t + 10.0 * 2.0 + (z + 2) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 0, 3, z].values,
+                    1000.0 * t + 10.0 * 3.0 + (z + 3) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 1, 0, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 0.0 + (z + 4) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 1, 1, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 1.0 + (z + 5) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 1, 2, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 2.0 + (z + 6) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 1, 3, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 3.0 + (z + 7) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+    def test_to_field_aligned_dask(self, bout_xyt_example_files):
+
+        nz = 6
+
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(3, 3, 4, nz), nxpe=1, nype=1, nt=1
+        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
+
+        ds["psixy"] = ds["x"]
+        ds["Rxy"] = ds["x"]
+        ds["Zxy"] = ds["y"]
+
+        ds = apply_geometry(ds, "toroidal")
+
+        # set up test variable
+        n = ds["n"].load()
+        zShift = ds["zShift"].load()
+        for t in range(ds.sizes["t"]):
+            for x in range(ds.sizes["x"]):
+                for y in range(ds.sizes["theta"]):
+                    zShift[x, y] = (
+                        (x * ds.sizes["theta"] + y) * 2.0 * np.pi / ds.sizes["zeta"]
+                    )
+                    for z in range(nz):
+                        n[t, x, y, z] = 1000.0 * t + 100.0 * x + 10.0 * y + z
+
+        # The above loop required the call to .load(), but that turned the data into a
+        # numpy array. Now convert back to dask
+        n = n.chunk({"t": 1})
+        ds = ds.chunk({"t": 1})
+        assert isinstance(n.data, dask.array.Array)
+        assert isinstance(ds["n"].data, dask.array.Array)
+
+        n.attrs["direction_y"] = "Standard"
+        ds["n"] = n
+
+        assert ds["n"].direction_y == "Standard"
+
+        # Create field-aligned Dataset
+        ds_al = ds.bout.to_field_aligned()
+
+        n_al = ds_al["n"]
+
+        assert n_al.direction_y == "Aligned"
+
+        for t in range(ds.sizes["t"]):
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 0, 0, z].values,
+                    1000.0 * t + z % nz,
+                    rtol=1.0e-15,
+                    atol=5.0e-16,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 0, 1, z].values,
+                    1000.0 * t + 10.0 * 1.0 + (z + 1) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 0, 2, z].values,
+                    1000.0 * t + 10.0 * 2.0 + (z + 2) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 0, 3, z].values,
+                    1000.0 * t + 10.0 * 3.0 + (z + 3) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 1, 0, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 0.0 + (z + 4) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 1, 1, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 1.0 + (z + 5) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 1, 2, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 2.0 + (z + 6) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_al[t, 1, 3, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 3.0 + (z + 7) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+    @pytest.mark.parametrize(
+        "nz",
+        [
+            pytest.param(6, marks=pytest.mark.long),
+            7,
+            pytest.param(8, marks=pytest.mark.long),
+            pytest.param(9, marks=pytest.mark.long),
+        ],
+    )
+    def test_from_field_aligned(self, bout_xyt_example_files, nz):
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(3, 3, 4, nz), nxpe=1, nype=1, nt=1
+        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
+
+        ds["psixy"] = ds["x"]
+        ds["Rxy"] = ds["x"]
+        ds["Zxy"] = ds["y"]
+
+        ds = apply_geometry(ds, "toroidal")
+
+        # set up test variable
+        n = ds["n"].load()
+        zShift = ds["zShift"].load()
+        for t in range(ds.sizes["t"]):
+            for x in range(ds.sizes["x"]):
+                for y in range(ds.sizes["theta"]):
+                    zShift[x, y] = (
+                        (x * ds.sizes["theta"] + y) * 2.0 * np.pi / ds.sizes["zeta"]
+                    )
+                    for z in range(ds.sizes["zeta"]):
+                        n[t, x, y, z] = 1000.0 * t + 100.0 * x + 10.0 * y + z
+
+        n.attrs["direction_y"] = "Aligned"
+        ds["n"] = n
+
+        assert ds["n"].direction_y == "Aligned"
+
+        # Create non-field-aligned Dataset
+        ds_nal = ds.bout.from_field_aligned()
+
+        n_nal = ds_nal["n"]
+
+        assert n_nal.direction_y == "Standard"
+
+        for t in range(ds.sizes["t"]):
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_nal[t, 0, 0, z].values,
+                    1000.0 * t + z % nz,
+                    rtol=1.0e-15,
+                    atol=5.0e-16,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_nal[t, 0, 1, z].values,
+                    1000.0 * t + 10.0 * 1.0 + (z - 1) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_nal[t, 0, 2, z].values,
+                    1000.0 * t + 10.0 * 2.0 + (z - 2) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_nal[t, 0, 3, z].values,
+                    1000.0 * t + 10.0 * 3.0 + (z - 3) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_nal[t, 1, 0, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 0.0 + (z - 4) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_nal[t, 1, 1, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 1.0 + (z - 5) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_nal[t, 1, 2, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 2.0 + (z - 6) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+            for z in range(nz):
+                npt.assert_allclose(
+                    n_nal[t, 1, 3, z].values,
+                    1000.0 * t + 100.0 * 1 + 10.0 * 3.0 + (z - 7) % nz,
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )  # noqa: E501
+
+    @pytest.mark.parametrize("stag_location", ["CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"])
+    def test_to_field_aligned_staggered(self, bout_xyt_example_files, stag_location):
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(3, 3, 4, 8), nxpe=1, nype=1, nt=1
+        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
+
+        ds["psixy"] = ds["x"]
+        ds["Rxy"] = ds["x"]
+        ds["Zxy"] = ds["y"]
+
+        ds = apply_geometry(ds, "toroidal")
+
+        # set up test variable
+        n = ds["n"].load()
+        zShift = ds["zShift"].load()
+        for t in range(ds.sizes["t"]):
+            for x in range(ds.sizes["x"]):
+                for y in range(ds.sizes["theta"]):
+                    zShift[x, y] = (
+                        (x * ds.sizes["theta"] + y) * 2.0 * np.pi / ds.sizes["zeta"]
+                    )
+                    for z in range(ds.sizes["zeta"]):
+                        n[t, x, y, z] = 1000.0 * t + 100.0 * x + 10.0 * y + z
+
+        ds["n"] = n
+
+        assert ds["n"].direction_y == "Standard"
+
+        # Create field-aligned Dataset
+        ds_al = ds.bout.to_field_aligned()
+
+        n_al = ds_al["n"].copy(deep=True)
+
+        assert n_al.direction_y == "Aligned"
+
+        # make 'n' staggered
+        ds["n"].attrs["cell_location"] = stag_location
+
+        if stag_location != "CELL_ZLOW":
+            with pytest.raises(ValueError):
+                # Check exception raised when needed zShift_CELL_*LOW is not present
+                ds.bout.to_field_aligned()
+            ds["zShift_" + stag_location] = zShift
+            ds["zShift_" + stag_location].attrs["cell_location"] = stag_location
+            ds = ds.set_coords("zShift_" + stag_location)
+
+        # New field-aligned Dataset
+        ds_al = ds.bout.to_field_aligned()
+
+        n_stag_al = ds_al["n"]
+
+        assert n_stag_al.direction_y == "Aligned"
+
+        npt.assert_equal(n_stag_al.values, n_al.values)
+
+    @pytest.mark.parametrize("stag_location", ["CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"])
+    def test_from_field_aligned_staggered(self, bout_xyt_example_files, stag_location):
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(3, 3, 4, 8), nxpe=1, nype=1, nt=1
+        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
+
+        ds["psixy"] = ds["x"]
+        ds["Rxy"] = ds["x"]
+        ds["Zxy"] = ds["y"]
+
+        ds = apply_geometry(ds, "toroidal")
+
+        # set up test variable
+        n = ds["n"].load()
+        zShift = ds["zShift"].load()
+        for t in range(ds.sizes["t"]):
+            for x in range(ds.sizes["x"]):
+                for y in range(ds.sizes["theta"]):
+                    zShift[x, y] = (
+                        (x * ds.sizes["theta"] + y) * 2.0 * np.pi / ds.sizes["zeta"]
+                    )
+                    for z in range(ds.sizes["zeta"]):
+                        n[t, x, y, z] = 1000.0 * t + 100.0 * x + 10.0 * y + z
+        n.attrs["direction_y"] = "Aligned"
+        ds["n"] = n
+        ds["T"].attrs["direction_y"] = "Aligned"
+
+        # Make non-field-aligned Dataset
+        ds_nal = ds.bout.from_field_aligned()
+
+        n_nal = ds_nal["n"].copy(deep=True)
+
+        assert n_nal.direction_y == "Standard"
+
+        # make 'n' staggered
+        ds["n"].attrs["cell_location"] = stag_location
+
+        if stag_location != "CELL_ZLOW":
+            with pytest.raises(ValueError):
+                # Check exception raised when needed zShift_CELL_*LOW is not present
+                ds["n"].bout.from_field_aligned()
+            ds["zShift_" + stag_location] = zShift
+            ds["zShift_" + stag_location].attrs["cell_location"] = stag_location
+            ds = ds.set_coords("zShift_" + stag_location)
+
+        # New non-field-aligned Dataset
+        ds_nal = ds.bout.from_field_aligned()
+
+        n_stag_nal = ds_nal["n"]
+
+        assert n_stag_nal.direction_y == "Standard"
+
+        npt.assert_equal(n_stag_nal.values, n_nal.values)
+
     def test_set_parallel_interpolation_factor(self):
         ds = Dataset()
         ds["a"] = DataArray()
@@ -204,7 +647,7 @@ class TestBoutDatasetMethods:
             nt=1,
             guards=guards,
             grid="grid",
-            topology="disconnected-double-null",
+            topology="lower-disconnected-double-null",
         )
 
         ds = open_boutdataset(
@@ -694,9 +1137,505 @@ class TestBoutDatasetMethods:
                 "G3",
                 "J",
                 "Bxy",
-                "dx",
-                "dy",
             )
+        )
+
+    def test_interpolate_parallel_limiter(
+        self,
+        bout_xyt_example_files,
+    ):
+        # This test checks that the regions created in the new high-resolution Dataset by
+        # interpolate_parallel are correct.
+        # This test does not test the accuracy of the parallel interpolation (there are
+        # other tests for that).
+        # Note using more than MXG x-direction points and MYG y-direction points per
+        # output file ensures tests for whether boundary cells are present do not fail
+        # when using minimal numbers of processors
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=3,
+            nype=6,
+            nt=1,
+            guards={"x": 2, "y": 2},
+            grid="grid",
+            topology="limiter",
+        )
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry="toroidal",
+            keep_xboundaries=True,
+            keep_yboundaries=False,
+        )
+        # Get high parallel resolution version of ds, and check that
+        ds = ds.bout.interpolate_parallel(["n", "T"])
+        mxg = 2
+        myg = 2
+        ixs1 = ds.metadata["ixseps1"]
+        for var in ["n", "T"]:
+            v = ds[var]
+            v_noregions = v.copy(deep=True)
+            # Remove attributes that are expected to be different
+            del v_noregions.attrs["regions"]
+            v_core = v.bout.from_region("core", with_guards={"theta": 0})
+            # Remove attributes that are expected to be different
+            del v_core.attrs["regions"]
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 + mxg)), v_core)
+            v_sol = v.bout.from_region("SOL")
+            # Remove attributes that are expected to be different
+            del v_sol.attrs["regions"]
+            xrt.assert_identical(v_noregions.isel(x=slice(ixs1 - mxg, None)), v_sol)
+
+    def test_integrate_midpoints_slab(self, bout_xyt_example_files):
+        # Create data
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(4, 100, 110, 120), nxpe=1, nype=1, nt=1, syn_data_type=1
+        )
+        ds = open_boutdataset(dataset_list)
+        t = np.linspace(0.0, 8.0, 4)[:, np.newaxis, np.newaxis, np.newaxis]
+        x = np.linspace(0.05, 9.95, 100)[np.newaxis, :, np.newaxis, np.newaxis]
+        y = np.linspace(0.1, 21.9, 110)[np.newaxis, np.newaxis, :, np.newaxis]
+        z = np.linspace(0.15, 35.85, 120)[np.newaxis, np.newaxis, np.newaxis, :]
+        ds["t"].data[...] = t.squeeze()
+        ds["dx"].data[...] = 0.1
+        ds["dy"].data[...] = 0.2
+        ds["dz"] = 0.3
+        tfunc = 1.5 * t
+        xfunc = x ** 2
+        yfunc = 10.0 * y - y ** 2
+        zfunc = 2.0 * z ** 2 - 30.0 * z
+        ds["n"].data[...] = tfunc * xfunc * yfunc * zfunc
+        tintegral = 48.0
+        xintegral = 1000.0 / 3.0
+        yintegral = 5.0 * 22.0 ** 2 - 22.0 ** 3 / 3.0
+        zintegral = 2.0 * 36.0 ** 3 / 3.0 - 15.0 * 36.0 ** 2
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims="t"),
+            (tintegral * xfunc * yfunc * zfunc).squeeze(),
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims="x"),
+            (tfunc * xintegral * yfunc * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims="y"),
+            (tfunc * xfunc * yintegral * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims="z"),
+            (tfunc * xfunc * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x"]),
+            (tintegral * xintegral * yfunc * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "y"]),
+            (tintegral * xfunc * yintegral * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "z"]),
+            (tintegral * xfunc * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x", "y"]),
+            (tfunc * xintegral * yintegral * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x", "z"]),
+            (tfunc * xintegral * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["y", "z"]),
+            (tfunc * xfunc * yintegral * zintegral).squeeze(),
+            rtol=1.2e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "y"]),
+            (tintegral * xintegral * yintegral * zfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "z"]),
+            (tintegral * xintegral * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "y", "z"]),
+            (tintegral * xfunc * yintegral * zintegral).squeeze(),
+            rtol=1.2e-4,
+        )
+        # default dims
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n"),
+            (tfunc * xintegral * yintegral * zintegral).squeeze(),
+            rtol=1.4e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "y", "z"]),
+            (tintegral * xintegral * yintegral * zintegral),
+            rtol=1.4e-4,
+        )
+
+    @pytest.mark.parametrize(
+        "location", ["CELL_CENTRE", "CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"]
+    )
+    def test_integrate_midpoints_salpha(self, bout_xyt_example_files, location):
+        # Create data
+        nx = 100
+        ny = 110
+        nz = 120
+        dataset_list = bout_xyt_example_files(
+            None,
+            lengths=(4, nx, ny, nz),
+            nxpe=1,
+            nype=1,
+            nt=1,
+            syn_data_type=1,
+            guards={"x": 2, "y": 2},
+        )
+        ds = open_boutdataset(dataset_list)
+
+        ds, options = set_geometry_from_input_file(ds, "s-alpha.inp")
+
+        ds = apply_geometry(ds, "toroidal")
+
+        # Integrate 1 so we just get volume, areas and lengths
+        ds["n"].values[:] = 1.0
+        ds["n"].attrs["cell_location"] = location
+
+        # remove boundary cells (don't want to integrate over those)
+        ds = ds.bout.remove_yboundaries()
+        if ds.metadata["keep_xboundaries"] and ds.metadata["MXG"] > 0:
+            mxg = ds.metadata["MXG"]
+            xslice = slice(mxg, -mxg)
+        else:
+            xslice = slice(None)
+        ds = ds.isel(x=xslice)
+
+        # Test geometry has major radius R and goes between minor radii a-Lr/2 and
+        # a+Lr/2
+        R = options.evaluate_scalar("mesh:R0")
+        a = options.evaluate_scalar("mesh:a")
+        Lr = options.evaluate_scalar("mesh:Lr")
+        rinner = a - Lr / 2.0
+        router = a + Lr / 2.0
+        r = options.evaluate("mesh:r").squeeze()[xslice]
+        if location == "CELL_XLOW":
+            rinner = rinner - Lr / (2.0 * nx)
+            router = router - Lr / (2.0 * nx)
+            r = r - Lr / (2.0 * nx)
+        q = options.evaluate_scalar("mesh:q")
+        T_total = (ds.sizes["t"] - 1) * (ds["t"][1] - ds["t"][0]).values
+        T_cumulative = np.arange(ds.sizes["t"]) * (ds["t"][1] - ds["t"][0]).values
+
+        # Volume of torus with circular cross-section of major radius R and minor radius
+        # a is 2*pi*R*pi*a^2
+        # https://en.wikipedia.org/wiki/Torus
+        # Default is to integrate over all spatial dimensions
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n"),
+            2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Pass all spatial dims explicitly
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x", "theta", "zeta"]),
+            2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "theta", "zeta"]),
+            T_total * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time using dims=...
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=...),
+            T_total * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints(
+                "n", dims=["t", "x", "theta", "zeta"], cumulative_t=True
+            ),
+            T_cumulative * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Area of torus with circular cross-section of major radius R and minor radius a
+        # is 2*pi*R*2*pi*a
+        # https://en.wikipedia.org/wiki/Torus
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["theta", "zeta"]),
+            (2.0 * np.pi * R * 2.0 * np.pi * r)[np.newaxis, :]
+            * np.ones(ds.sizes["t"])[:, np.newaxis],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "theta", "zeta"]),
+            T_total * 2.0 * np.pi * R * 2.0 * np.pi * r,
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints(
+                "n", dims=["t", "theta", "zeta"], cumulative_t=True
+            ),
+            T_cumulative[:, np.newaxis]
+            * (2.0 * np.pi * R * 2.0 * np.pi * r)[np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Area of cross section in poloidal plane is difference of circle with radius
+        # router and circle with radius rinner, pi*(router**2 - rinner**2)
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x", "theta"]),
+            np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "theta"]),
+            T_total * np.pi * (router ** 2 - rinner ** 2),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints(
+                "n", dims=["t", "x", "theta"], cumulative_t=True
+            ),
+            T_cumulative[:, np.newaxis]
+            * np.pi
+            * (router ** 2 - rinner ** 2)
+            * np.ones(ds.sizes["zeta"])[np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # x-z planes are 'conical frustrums', with area pi*(Rinner + Router)*Lr
+        # https://en.wikipedia.org/wiki/Frustum
+        theta = _1d_coord_from_spacing(ds["dy"], "theta").values
+        if location == "CELL_YLOW":
+            theta = theta - 2.0 * np.pi / (2.0 * ny)
+        Rinner = R + rinner * np.cos(theta)
+        Router = R + router * np.cos(theta)
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x", "zeta"]),
+            (np.pi * (Rinner + Router) * Lr)[np.newaxis, :]
+            * np.ones(ds.sizes["t"])[:, np.newaxis],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x", "zeta"]),
+            T_total * (np.pi * (Rinner + Router) * Lr),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints(
+                "n", dims=["t", "x", "zeta"], cumulative_t=True
+            ),
+            T_cumulative[:, np.newaxis]
+            * (np.pi * (Rinner + Router) * Lr)
+            * np.ones(ds.sizes["theta"])[np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Radial lines have length Lr
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["x"]),
+            Lr,
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x"]),
+            T_total * Lr,
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "x"], cumulative_t=True),
+            T_cumulative[:, np.newaxis, np.newaxis]
+            * Lr
+            * np.ones([ds.sizes["theta"], ds.sizes["zeta"]])[np.newaxis, :, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Poloidal lines have length 2*pi*r
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["theta"]),
+            (2.0 * np.pi * r)[np.newaxis, :, np.newaxis]
+            * np.ones(ds.sizes["t"])[:, np.newaxis, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "theta"]),
+            T_total
+            * (2.0 * np.pi * r)[:, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "theta"], cumulative_t=True),
+            T_cumulative[:, np.newaxis, np.newaxis]
+            * (2.0 * np.pi * r)[np.newaxis, :, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Field line length
+        # -----------------
+        #
+        # Field lines, parameterised by poloidal angle theta, have (R, Z, zeta)
+        # coordinates
+        # X = (R + r*cos(theta),
+        #      -r*sin(theta),
+        #      -q*2*atan(sqrt((1-r/R0)/(1+r/R0))*tan(theta/2))
+        #     )
+        # using d(arctan(x))/dx = 1/(1 + x**2) and d(tan(x))/dx = 1/cos(x)**2
+        # dX/dtheta = (r*sin(theta),
+        #              + r*cos(theta),
+        #              - q * 2
+        #                * sqrt((1-r/R0)/(1+r/R0))/(2*cos(theta/2)**2)
+        #                / (1 + (1-r/R0)/(1+r/R0)*tan(theta/2)**2)
+        #             )
+        #           = (r*sin(theta),
+        #              + r*cos(theta),
+        #              - q
+        #                * sqrt((1-r/R0)/(1+r/R0))/cos(theta/2)**2
+        #                / (1 + (1-r/R0)/(1+r/R0)*tan(theta/2)**2)
+        #             )
+        #           = (r*sin(theta),
+        #              + r*cos(theta),
+        #              - q
+        #                * sqrt((1-r/R0)/(1+r/R0))
+        #                / (cos(theta/2)**2 + (1-r/R0)/(1+r/R0)*sin(theta/2)**2)
+        #             )
+        # Line element dl = |dR + dZ + R dzeta|
+        #                 = |dR + dZ + (R0 + r cos(theta)) dzeta|
+        #                 = |dX/dtheta|*dtheta
+        # |dX/dtheta| = |
+        #             = sqrt(
+        #                r**2*sin(theta)**2
+        #                + r**2*cos(theta)**2
+        #                + (R0 + r cos(theta))**2 * q**2
+        #                  * (1-r/R0)/(1+r/R0)
+        #                  / (cos(theta/2)**2 + (1-r/R0)/(1+r/R0)*sin(theta/2)**2)**2
+        #               )
+        #             = sqrt(
+        #                r**2
+        #                + (R0 + r cos(theta))**2 * q**2
+        #                  * (1-r/R0)/(1+r/R0)
+        #                  / (cos(theta/2)**2 + (1-r/R0)/(1+r/R0)*sin(theta/2)**2)**2
+        #               )
+        # field line length is int_{0}^{2 pi} dl
+        a = r ** 2
+        c = (1 - r / R) / (1 + r / R)
+        b = q ** 2 * c
+
+        def func(theta):
+            return np.sqrt(
+                a
+                + b
+                * (R + r * np.cos(theta)) ** 2
+                / (np.cos(theta / 2.0) ** 2 + c * np.sin(theta / 2.0) ** 2) ** 2
+            )
+
+        integral, _ = quad_vec(func, 0.0, 2.0 * np.pi)
+
+        ds["n_aligned"] = ds["n"].bout.to_field_aligned()
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n_aligned", dims=["theta"]),
+            integral[np.newaxis, :, np.newaxis]
+            * np.ones(ds.sizes["t"])[:, np.newaxis, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n_aligned", dims=["t", "theta"]),
+            T_total
+            * integral[:, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints(
+                "n_aligned", dims=["t", "theta"], cumulative_t=True
+            ),
+            T_cumulative[:, np.newaxis, np.newaxis]
+            * integral[np.newaxis, :, np.newaxis]
+            * np.ones(ds.sizes["zeta"])[np.newaxis, np.newaxis, :],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+
+        # Toroidal lines have length 2*pi*Rxy
+        if location == "CELL_CENTRE":
+            R_2d = ds["R"]
+        else:
+            R_2d = ds[f"Rxy_{location}"]
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["zeta"]),
+            (2.0 * np.pi * R_2d).values[np.newaxis, :, :]
+            * np.ones(ds.sizes["t"])[:, np.newaxis, np.newaxis],
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Integrate in time too
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "zeta"]),
+            T_total * (2.0 * np.pi * R_2d),
+            rtol=1.0e-5,
+            atol=0.0,
+        )
+        # Cumulative integral in time
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("n", dims=["t", "zeta"], cumulative_t=True),
+            T_cumulative[:, np.newaxis, np.newaxis]
+            * (2.0 * np.pi * R_2d).values[np.newaxis, :, :],
+            rtol=1.0e-5,
+            atol=0.0,
         )
 
     def test_interpolate_from_unstructured(self, bout_xyt_example_files):
@@ -707,7 +1646,7 @@ class TestBoutDatasetMethods:
             nype=6,
             nt=1,
             grid="grid",
-            topology="disconnected-double-null",
+            topology="upper-disconnected-double-null",
         )
 
         ds = open_boutdataset(
@@ -758,7 +1697,7 @@ class TestBoutDatasetMethods:
             nype=6,
             nt=1,
             grid="grid",
-            topology="disconnected-double-null",
+            topology="lower-disconnected-double-null",
         )
 
         ds = open_boutdataset(
@@ -839,10 +1778,10 @@ class TestLoadLogFile:
 
 
 class TestSave:
-    def test_save_all(self, tmpdir_factory, bout_xyt_example_files):
+    def test_save_all(self, tmp_path_factory, bout_xyt_example_files):
         # Create data
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=5, nt=1, write_to_disk=True
+            tmp_path_factory, nxpe=4, nype=5, nt=1, write_to_disk=True
         )
 
         # Load it as a boutdataset
@@ -850,7 +1789,8 @@ class TestSave:
             original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + "temp_boutdata.nc"
+        savedir = tmp_path_factory.mktemp("test_save_all")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath)
 
         # Load it again using bare xarray
@@ -860,21 +1800,13 @@ class TestSave:
         xrt.assert_equal(original, recovered)
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
-    def test_reload_all(self, tmpdir_factory, bout_xyt_example_files, geometry):
-        if geometry is not None:
-            grid = "grid"
-        else:
-            grid = None
-
+    def test_reload_all(self, tmp_path_factory, bout_xyt_example_files, geometry):
         # Create data
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=5, nt=1, grid=grid, write_to_disk=True
+            tmp_path_factory, nxpe=4, nype=5, nt=1, grid="grid", write_to_disk=True
         )
 
-        if grid is not None:
-            gridpath = str(Path(path).parent) + "/grid.nc"
-        else:
-            gridpath = None
+        gridpath = path.parent.joinpath("grid.nc")
 
         # Load it as a boutdataset
         if geometry is None:
@@ -883,18 +1815,19 @@ class TestSave:
                     datapath=path,
                     inputfilepath=None,
                     geometry=geometry,
-                    gridfilepath=gridpath,
+                    gridfilepath=None if geometry is None else gridpath,
                 )
         else:
             original = open_boutdataset(
                 datapath=path,
                 inputfilepath=None,
                 geometry=geometry,
-                gridfilepath=gridpath,
+                gridfilepath=None if geometry is None else gridpath,
             )
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + "/temp_boutdata.nc"
+        savedir = tmp_path_factory.mktemp("test_reload_all")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath)
 
         # Load it again
@@ -902,17 +1835,36 @@ class TestSave:
 
         xrt.assert_identical(original.load(), recovered.load())
 
+        # Check if we can load with a different geometry argument
+        for reload_geometry in [None, "toroidal"]:
+            if reload_geometry is None or geometry == reload_geometry:
+                recovered = open_boutdataset(
+                    savepath,
+                    geometry=reload_geometry,
+                    gridfilepath=None if reload_geometry is None else gridpath,
+                )
+                xrt.assert_identical(original.load(), recovered.load())
+            else:
+                # Expect a warning because we change the geometry
+                print("here", gridpath)
+                with pytest.warns(UserWarning):
+                    recovered = open_boutdataset(
+                        savepath, geometry=reload_geometry, gridfilepath=gridpath
+                    )
+                # Datasets won't be exactly the same because different geometry was
+                # applied
+
     @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
     @pytest.mark.parametrize(
         "separate_vars", [False, pytest.param(True, marks=pytest.mark.long)]
     )
     def test_save_dtype(
-        self, tmpdir_factory, bout_xyt_example_files, save_dtype, separate_vars
+        self, tmp_path_factory, bout_xyt_example_files, save_dtype, separate_vars
     ):
 
         # Create data
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=1, nype=1, nt=1, write_to_disk=True
+            tmp_path_factory, nxpe=1, nype=1, nt=1, write_to_disk=True
         )
 
         # Load it as a boutdataset
@@ -920,7 +1872,8 @@ class TestSave:
             original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + "/temp_boutdata.nc"
+        savedir = tmp_path_factory.mktemp("test_save_dtype")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(
             savepath=savepath, save_dtype=save_dtype, separate_vars=separate_vars
         )
@@ -928,7 +1881,7 @@ class TestSave:
         # Load it again using bare xarray
         if separate_vars:
             for v in ["n", "T"]:
-                savepath = str(Path(path).parent) + f"/temp_boutdata_{v}.nc"
+                savepath = savedir.joinpath(f"temp_boutdata_{v}.nc")
                 recovered = open_dataset(savepath)
                 assert recovered[v].values.dtype == np.dtype(save_dtype)
         else:
@@ -937,9 +1890,9 @@ class TestSave:
             for v in original:
                 assert recovered[v].values.dtype == np.dtype(save_dtype)
 
-    def test_save_separate_variables(self, tmpdir_factory, bout_xyt_example_files):
+    def test_save_separate_variables(self, tmp_path_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=1, nt=1, write_to_disk=True
+            tmp_path_factory, nxpe=4, nype=1, nt=1, write_to_disk=True
         )
 
         # Load it as a boutdataset
@@ -947,25 +1900,26 @@ class TestSave:
             original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + "/temp_boutdata.nc"
+        savedir = tmp_path_factory.mktemp("test_save_separate_variables")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath, separate_vars=True)
 
         for var in ["n", "T"]:
             # Load it again using bare xarray
-            savepath = str(Path(path).parent) + "/temp_boutdata_" + var + ".nc"
+            savepath = savedir.joinpath(f"temp_boutdata_{var}.nc")
             recovered = open_dataset(savepath)
 
             # Compare equal (not identical because attributes are changed when saving)
             xrt.assert_equal(recovered[var], original[var])
 
         # test open_boutdataset() on dataset saved with separate_vars=True
-        savepath = str(Path(path).parent) + "/temp_boutdata_*.nc"
+        savepath = savedir.joinpath("temp_boutdata_*.nc")
         recovered = open_boutdataset(savepath)
         xrt.assert_identical(original, recovered)
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables(
-        self, tmpdir_factory, bout_xyt_example_files, geometry
+        self, tmp_path_factory, bout_xyt_example_files, geometry
     ):
         if geometry is not None:
             grid = "grid"
@@ -973,11 +1927,11 @@ class TestSave:
             grid = None
 
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=1, nt=1, grid=grid, write_to_disk=True
+            tmp_path_factory, nxpe=4, nype=1, nt=1, grid=grid, write_to_disk=True
         )
 
         if grid is not None:
-            gridpath = str(Path(path).parent) + "/grid.nc"
+            gridpath = path.parent.joinpath("grid.nc")
         else:
             gridpath = None
 
@@ -999,11 +1953,12 @@ class TestSave:
             )
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + "/temp_boutdata.nc"
+        savedir = tmp_path_factory.mktemp("test_reload_separate_variables")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath, separate_vars=True)
 
         # Load it again
-        savepath = str(Path(path).parent) + "/temp_boutdata_*.nc"
+        savepath = savedir.joinpath("temp_boutdata_*.nc")
         recovered = open_boutdataset(savepath)
 
         # Compare
@@ -1011,7 +1966,7 @@ class TestSave:
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables_time_split(
-        self, tmpdir_factory, bout_xyt_example_files, geometry
+        self, tmp_path_factory, bout_xyt_example_files, geometry
     ):
         if geometry is not None:
             grid = "grid"
@@ -1019,11 +1974,11 @@ class TestSave:
             grid = None
 
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=1, nt=1, grid=grid, write_to_disk=True
+            tmp_path_factory, nxpe=4, nype=1, nt=1, grid=grid, write_to_disk=True
         )
 
         if grid is not None:
-            gridpath = str(Path(path).parent) + "/grid.nc"
+            gridpath = path.parent.joinpath("grid.nc")
         else:
             gridpath = None
 
@@ -1046,17 +2001,18 @@ class TestSave:
 
         # Save it to a netCDF file
         tcoord = original.metadata.get("bout_tdim", "t")
-        savepath = str(Path(path).parent) + "/temp_boutdata_1.nc"
+        savedir = tmp_path_factory.mktemp("test_reload_separate_variables_time_split")
+        savepath = savedir.joinpath("temp_boutdata_1.nc")
         original.isel({tcoord: slice(3)}).bout.save(
             savepath=savepath, separate_vars=True
         )
-        savepath = str(Path(path).parent) + "/temp_boutdata_2.nc"
+        savepath = savedir.joinpath("temp_boutdata_2.nc")
         original.isel({tcoord: slice(3, None)}).bout.save(
             savepath=savepath, separate_vars=True
         )
 
         # Load it again
-        savepath = str(Path(path).parent) + "/temp_boutdata_*.nc"
+        savepath = savedir.joinpath("temp_boutdata_*.nc")
         recovered = open_boutdataset(savepath)
 
         # Compare
@@ -1065,12 +2021,12 @@ class TestSave:
 
 class TestSaveRestart:
     @pytest.mark.parametrize("tind", [None, pytest.param(1, marks=pytest.mark.long)])
-    def test_to_restart(self, tmpdir_factory, bout_xyt_example_files, tind):
+    def test_to_restart(self, tmp_path_factory, bout_xyt_example_files, tind):
         nxpe = 3
         nype = 2
 
         path = bout_xyt_example_files(
-            tmpdir_factory,
+            tmp_path_factory,
             nxpe=nxpe,
             nype=nype,
             nt=1,
@@ -1087,7 +2043,7 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = Path(path).parent
+        savepath = tmp_path_factory.mktemp("test_to_restart")
         if tind is None:
             ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
         else:
@@ -1118,6 +2074,9 @@ class TestSaveRestart:
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -1129,7 +2088,7 @@ class TestSaveRestart:
                         else:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
-    def test_to_restart_change_npe(self, tmpdir_factory, bout_xyt_example_files):
+    def test_to_restart_change_npe(self, tmp_path_factory, bout_xyt_example_files):
         nxpe_in = 3
         nype_in = 2
 
@@ -1137,7 +2096,7 @@ class TestSaveRestart:
         nype = 4
 
         path = bout_xyt_example_files(
-            tmpdir_factory,
+            tmp_path_factory,
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
@@ -1154,7 +2113,7 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = Path(path).parent
+        savepath = tmp_path_factory.mktemp("test_to_restart_change_npe")
         ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
 
         mxsub = (nx - 4) // nxpe
@@ -1176,6 +2135,9 @@ class TestSaveRestart:
                 ).load()
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
+
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
 
                 for v in restart_ds:
                     if v in check_ds:
@@ -1192,7 +2154,7 @@ class TestSaveRestart:
 
     @pytest.mark.long
     def test_to_restart_change_npe_doublenull(
-        self, tmpdir_factory, bout_xyt_example_files
+        self, tmp_path_factory, bout_xyt_example_files
     ):
         nxpe_in = 3
         nype_in = 6
@@ -1201,13 +2163,13 @@ class TestSaveRestart:
         nype = 12
 
         path = bout_xyt_example_files(
-            tmpdir_factory,
+            tmp_path_factory,
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
             guards={"x": 2, "y": 2},
             lengths=(6, 5, 4, 7),
-            topology="disconnected-double-null",
+            topology="upper-disconnected-double-null",
             write_to_disk=True,
         )
 
@@ -1219,7 +2181,7 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = Path(path).parent
+        savepath = tmp_path_factory.mktemp("test_to_restart_change_npe_doublenull")
         ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
 
         mxsub = (nx - 4) // nxpe
@@ -1241,6 +2203,9 @@ class TestSaveRestart:
                 ).load()
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
+
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
 
                 for v in restart_ds:
                     if v in check_ds:
@@ -1258,7 +2223,7 @@ class TestSaveRestart:
     @pytest.mark.long
     @pytest.mark.parametrize("npes", [(2, 6), (3, 4)])
     def test_to_restart_change_npe_doublenull_expect_fail(
-        self, tmpdir_factory, bout_xyt_example_files, npes
+        self, tmp_path_factory, bout_xyt_example_files, npes
     ):
         nxpe_in = 3
         nype_in = 6
@@ -1266,13 +2231,13 @@ class TestSaveRestart:
         nxpe, nype = npes
 
         path = bout_xyt_example_files(
-            tmpdir_factory,
+            tmp_path_factory,
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
             guards={"x": 2, "y": 2},
             lengths=(6, 5, 4, 7),
-            topology="disconnected-double-null",
+            topology="lower-disconnected-double-null",
             write_to_disk=True,
         )
 
@@ -1284,6 +2249,8 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = Path(path).parent
+        savepath = tmp_path_factory.mktemp(
+            "test_to_restart_change_npe_doublenull_expect_fail"
+        )
         with pytest.raises(ValueError):
             ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
