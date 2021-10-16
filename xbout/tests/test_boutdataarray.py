@@ -98,7 +98,10 @@ class TestBoutDataArrayMethods:
             pytest.param(9, marks=pytest.mark.long),
         ],
     )
-    def test_to_field_aligned(self, bout_xyt_example_files, nz):
+    @pytest.mark.parametrize(
+        "permute_dims", [False, pytest.param(True, marks=pytest.mark.long)]
+    )
+    def test_to_field_aligned(self, bout_xyt_example_files, nz, permute_dims):
         dataset_list = bout_xyt_example_files(
             None, lengths=(3, 3, 4, nz), nxpe=1, nype=1, nt=1
         )
@@ -126,7 +129,14 @@ class TestBoutDataArrayMethods:
                         n[t, x, y, z] = 1000.0 * t + 100.0 * x + 10.0 * y + z
 
         n.attrs["direction_y"] = "Standard"
+
+        if permute_dims:
+            n = n.transpose("t", "zeta", "x", "theta").compute()
+
         n_al = n.bout.to_field_aligned()
+
+        if permute_dims:
+            n_al = n_al.transpose("t", "x", "theta", "zeta").compute()
 
         assert n_al.direction_y == "Aligned"
 
@@ -195,7 +205,10 @@ class TestBoutDataArrayMethods:
                     atol=0.0,
                 )  # noqa: E501
 
-    def test_to_field_aligned_dask(self, bout_xyt_example_files):
+    @pytest.mark.parametrize(
+        "permute_dims", [False, pytest.param(True, marks=pytest.mark.long)]
+    )
+    def test_to_field_aligned_dask(self, bout_xyt_example_files, permute_dims):
 
         nz = 6
 
@@ -231,7 +244,14 @@ class TestBoutDataArrayMethods:
         assert isinstance(n.data, dask.array.Array)
 
         n.attrs["direction_y"] = "Standard"
+
+        if permute_dims:
+            n = n.transpose("t", "zeta", "x", "theta").compute()
+
         n_al = n.bout.to_field_aligned()
+
+        if permute_dims:
+            n_al = n_al.transpose("t", "x", "theta", "zeta").compute()
 
         assert n_al.direction_y == "Aligned"
 
@@ -309,7 +329,10 @@ class TestBoutDataArrayMethods:
             pytest.param(9, marks=pytest.mark.long),
         ],
     )
-    def test_from_field_aligned(self, bout_xyt_example_files, nz):
+    @pytest.mark.parametrize(
+        "permute_dims", [False, pytest.param(True, marks=pytest.mark.long)]
+    )
+    def test_from_field_aligned(self, bout_xyt_example_files, nz, permute_dims):
         dataset_list = bout_xyt_example_files(
             None, lengths=(3, 3, 4, nz), nxpe=1, nype=1, nt=1
         )
@@ -337,7 +360,14 @@ class TestBoutDataArrayMethods:
                         n[t, x, y, z] = 1000.0 * t + 100.0 * x + 10.0 * y + z
 
         n.attrs["direction_y"] = "Aligned"
+
+        if permute_dims:
+            n = n.transpose("t", "zeta", "x", "theta").compute()
+
         n_nal = n.bout.from_field_aligned()
+
+        if permute_dims:
+            n_nal = n_nal.transpose("t", "x", "theta", "zeta").compute()
 
         assert n_nal.direction_y == "Standard"
 
@@ -407,7 +437,12 @@ class TestBoutDataArrayMethods:
                 )  # noqa: E501
 
     @pytest.mark.parametrize("stag_location", ["CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"])
-    def test_to_field_aligned_staggered(self, bout_xyt_example_files, stag_location):
+    @pytest.mark.parametrize(
+        "permute_dims", [False, pytest.param(True, marks=pytest.mark.long)]
+    )
+    def test_to_field_aligned_staggered(
+        self, bout_xyt_example_files, stag_location, permute_dims
+    ):
         dataset_list = bout_xyt_example_files(
             None, lengths=(3, 3, 4, 8), nxpe=1, nype=1, nt=1
         )
@@ -434,7 +469,13 @@ class TestBoutDataArrayMethods:
                     for z in range(ds.sizes["zeta"]):
                         n[t, x, y, z] = 1000.0 * t + 100.0 * x + 10.0 * y + z
 
+        if permute_dims:
+            n = n.transpose("t", "zeta", "x", "theta").compute()
+
         n_al = n.bout.to_field_aligned().copy(deep=True)
+
+        if permute_dims:
+            n_al = n_al.transpose("t", "x", "theta", "zeta").compute()
 
         assert n_al.direction_y == "Aligned"
 
@@ -459,7 +500,12 @@ class TestBoutDataArrayMethods:
         npt.assert_equal(n_stag_al.values, n_al.values)
 
     @pytest.mark.parametrize("stag_location", ["CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"])
-    def test_from_field_aligned_staggered(self, bout_xyt_example_files, stag_location):
+    @pytest.mark.parametrize(
+        "permute_dims", [False, pytest.param(True, marks=pytest.mark.long)]
+    )
+    def test_from_field_aligned_staggered(
+        self, bout_xyt_example_files, stag_location, permute_dims
+    ):
         dataset_list = bout_xyt_example_files(
             None, lengths=(3, 3, 4, 8), nxpe=1, nype=1, nt=1
         )
@@ -488,7 +534,13 @@ class TestBoutDataArrayMethods:
         n.attrs["direction_y"] = "Aligned"
         ds["T"].attrs["direction_y"] = "Aligned"
 
+        if permute_dims:
+            n = n.transpose("t", "zeta", "x", "theta").compute()
+
         n_nal = n.bout.from_field_aligned().copy(deep=True)
+
+        if permute_dims:
+            n_nal = n_nal.transpose("t", "x", "theta", "zeta").compute()
 
         assert n_nal.direction_y == "Standard"
 
