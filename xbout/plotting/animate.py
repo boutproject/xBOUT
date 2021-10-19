@@ -221,7 +221,7 @@ def animate_poloidal(
         extend = "neither"
 
     # create colorbar
-    norm = _create_norm(logscale, kwargs.get("norm", None), vmin, vmax)
+    norm = _create_norm(logscale, kwargs.pop("norm", None), vmin, vmax)
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
     cmap = sm.get_cmap()
@@ -262,6 +262,7 @@ def animate_poloidal(
                     da_region.values,
                     ax=ax,
                     cmap=cmap,
+                    norm=norm,
                     **kwargs,
                 )
             )
