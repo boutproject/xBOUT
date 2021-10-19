@@ -14,7 +14,17 @@ from .utils import (
 )
 
 
-def regions(da, ax=None, **kwargs):
+if (
+    "pcolor.shading" in matplotlib.rcParams
+    and matplotlib.rcParams["pcolor.shading"] == "flat"
+):
+    # "flat" was the old matplotlib default which discarded the last row and column if
+    # X, Y and Z were all equal in size. The new "auto" should be better. Need to set
+    # this explicitly because "flat" is the default during a deprecation cycle.
+    matplotlib.rcParams["pcolor.shading"] = "auto"
+
+
+def plot_regions(da, ax=None, **kwargs):
     """
     Plots each logical plotting region as a different color for debugging.
 

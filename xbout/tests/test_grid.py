@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from xarray import Dataset, DataArray, open_dataset, merge
 from xarray.testing import assert_equal
 import pytest
@@ -10,7 +8,7 @@ from xbout.geometries import register_geometry, REGISTERED_GEOMETRIES
 
 
 @pytest.fixture
-def create_example_grid_file(tmpdir_factory):
+def create_example_grid_file(tmp_path_factory):
     """
     Mocks up a set of BOUT-like netCDF files, and return the temporary test
     directory containing them.
@@ -22,15 +20,16 @@ def create_example_grid_file(tmpdir_factory):
     arr = np.arange(6).reshape(2, 3)
     grid = DataArray(data=arr, name="arr", dims=["x", "y"]).to_dataset()
     grid["dy"] = DataArray(np.ones((2, 3)), dims=["x", "y"])
+    grid = grid.set_coords(["dy"])
 
     # Create temporary directory
-    save_dir = tmpdir_factory.mktemp("griddata")
+    save_dir = tmp_path_factory.mktemp("griddata")
 
     # Save
-    filepath = str(save_dir.join("grid.nc"))
+    filepath = save_dir.joinpath("grid.nc")
     grid.to_netcdf(filepath, engine="netcdf4")
 
-    return Path(filepath)
+    return filepath
 
 
 class TestOpenGrid:
@@ -42,13 +41,13 @@ class TestOpenGrid:
         assert_equal(result, open_dataset(example_grid))
         result.close()
 
-    def test_open_grid_extra_dims(self, create_example_grid_file, tmpdir_factory):
+    def test_open_grid_extra_dims(self, create_example_grid_file, tmp_path_factory):
         example_grid = open_dataset(create_example_grid_file)
 
         new_var = DataArray(name="new", data=[[1, 2], [8, 9]], dims=["x", "w"])
 
-        dodgy_grid_directory = tmpdir_factory.mktemp("dodgy_grid")
-        dodgy_grid_path = str(dodgy_grid_directory.join("dodgy_grid.nc"))
+        dodgy_grid_directory = tmp_path_factory.mktemp("dodgy_grid")
+        dodgy_grid_path = dodgy_grid_directory.joinpath("dodgy_grid.nc")
         merge([example_grid, new_var]).to_netcdf(dodgy_grid_path, engine="netcdf4")
 
         with pytest.warns(

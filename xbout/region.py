@@ -1,4 +1,5 @@
 from copy import copy, deepcopy
+import numpy as np
 import xarray as xr
 from .utils import _set_attrs_on_all_vars
 
@@ -62,6 +63,8 @@ class Region:
         self.connection_outer_x = connection_outer_x
         self.connection_lower_y = connection_lower_y
         self.connection_upper_y = connection_upper_y
+        self.global_nx = ds.sizes[ds.metadata["bout_xdim"]]
+        self.global_ny = ds.sizes[ds.metadata["bout_ydim"]]
 
         if ds is not None:
             # self.nx, self.ny should not include boundary points.
@@ -113,13 +116,25 @@ class Region:
             # particular regions, so do not need to be consistent between different
             # regions (e.g. core and PFR), so we are not forced to use just the index
             # value here.
-            dx = ds["dx"].isel({self.ycoord: ylower_ind})
+            # Define ref_yind so that we avoid using values from the corner cells, which
+            # might be NaN.
+            if self.connection_lower_y is None and ds.metadata["keep_yboundaries"] == 1:
+                ref_yind = ylower_ind + ds.metadata["MYG"]
+            else:
+                ref_yind = ylower_ind
+            dx = ds["dx"].isel({self.ycoord: ref_yind})
             dx_cumsum = dx.cumsum()
             self.xinner = dx_cumsum[xinner_ind] - dx[xinner_ind]
             self.xouter = dx_cumsum[xouter_ind - 1] + dx[xouter_ind - 1]
 
             # dy is constant in the x-direction, so convert to a 1d array
-            dy = ds["dy"].isel(**{self.xcoord: self.xinner_ind})
+            # Define ref_xind so that we avoid using values from the corner cells, which
+            # might be NaN.
+            if self.connection_inner_x is None and ds.metadata["keep_xboundaries"] == 1:
+                ref_xind = xinner_ind + ds.metadata["MXG"]
+            else:
+                ref_xind = xinner_ind
+            dy = ds["dy"].isel(**{self.xcoord: ref_xind})
             dy_cumsum = dy.cumsum()
             self.ylower = dy_cumsum[ylower_ind] - dy[ylower_ind]
             self.yupper = dy_cumsum[yupper_ind - 1]
@@ -224,9 +239,21 @@ class Region:
         xouter = self.xouter_ind
         if self.connection_outer_x is not None:
             xouter += mxg
+
+        ystart = self.ylower_ind - myg
+        ystop = self.ylower_ind
+        if ystart < 0:
+            # Make sure negative indices wrap around correctly
+            if ystop == 0:
+                ystop = None
+            elif ystop > 0:
+                raise ValueError(
+                    f"'start={ystart}' of lower guards slice is negative, but "
+                    f"'stop={ystop}' is positive. Should not be possible."
+                )
         return {
             self.xcoord: slice(xinner, xouter),
-            self.ycoord: slice(self.ylower_ind - myg, self.ylower_ind),
+            self.ycoord: slice(ystart, ystop),
         }
 
     def get_upper_guards_slices(self, *, myg, mxg=0):
@@ -247,9 +274,17 @@ class Region:
         xouter = self.xouter_ind
         if self.connection_outer_x is not None:
             xouter += mxg
+
+        # wrap around to the beginning of the grid if necessary
+        ystart = self.yupper_ind
+        ystop = self.yupper_ind + myg
+        if ystart >= self.global_ny:
+            # wrap around to beginning of global array
+            ystart = ystart - self.global_ny
+            ystop = ystop - self.global_ny
         return {
             self.xcoord: slice(xinner, xouter),
-            self.ycoord: slice(self.yupper_ind, self.yupper_ind + myg),
+            self.ycoord: slice(ystart, ystop),
         }
 
     def __eq__(self, other):
@@ -308,8 +343,11 @@ def _get_topology(ds):
             return "connected-double-null"
         else:
             raise ValueError("Currently unsupported topology")
-
-    return "disconnected-double-null"
+    elif ixs1 < ixs2:
+        return "lower-disconnected-double-null"
+    else:
+        # ixs1 > ixs2
+        return "upper-disconnected-double-null"
 
 
 def _check_connections(regions):
@@ -351,7 +389,7 @@ def _check_connections(regions):
 topologies = {}
 
 
-def topology_disconnected_double_null(
+def topology_lower_disconnected_double_null(
     *, ds, ixs1, ixs2, nx, jys11, jys21, ny_inner, jys12, jys22, ny, ybndry
 ):
     regions = {}
@@ -550,7 +588,209 @@ def topology_disconnected_double_null(
     return regions
 
 
-topologies["disconnected-double-null"] = topology_disconnected_double_null
+topologies["lower-disconnected-double-null"] = topology_lower_disconnected_double_null
+
+
+def topology_upper_disconnected_double_null(
+    *, ds, ixs1, ixs2, nx, jys11, jys21, ny_inner, jys12, jys22, ny, ybndry
+):
+    regions = {}
+    regions["lower_inner_PFR"] = Region(
+        name="lower_inner_PFR",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=0,
+        yupper_ind=jys11 + 1,
+        connection_outer_x="lower_inner_intersep",
+        connection_upper_y="lower_outer_PFR",
+    )
+    regions["lower_inner_intersep"] = Region(
+        name="lower_inner_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=0,
+        yupper_ind=jys11 + 1,
+        connection_inner_x="lower_inner_PFR",
+        connection_outer_x="lower_inner_SOL",
+        connection_upper_y="lower_outer_intersep",
+    )
+    regions["lower_inner_SOL"] = Region(
+        name="lower_inner_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=0,
+        yupper_ind=jys11 + 1,
+        connection_inner_x="lower_inner_intersep",
+        connection_upper_y="inner_SOL",
+    )
+    regions["inner_core"] = Region(
+        name="inner_core",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=jys11 + 1,
+        yupper_ind=jys21 + 1,
+        connection_outer_x="inner_intersep",
+        connection_lower_y="outer_core",
+        connection_upper_y="outer_core",
+    )
+    regions["inner_intersep"] = Region(
+        name="inner_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=jys11 + 1,
+        yupper_ind=jys21 + 1,
+        connection_inner_x="inner_core",
+        connection_outer_x="inner_SOL",
+        connection_lower_y="outer_intersep",
+        connection_upper_y="upper_inner_intersep",
+    )
+    regions["inner_SOL"] = Region(
+        name="inner_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=jys11 + 1,
+        yupper_ind=jys21 + 1,
+        connection_inner_x="inner_intersep",
+        connection_lower_y="lower_inner_SOL",
+        connection_upper_y="upper_inner_SOL",
+    )
+    regions["upper_inner_PFR"] = Region(
+        name="upper_inner_PFR",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=jys21 + 1,
+        yupper_ind=ny_inner,
+        connection_outer_x="upper_inner_intersep",
+        connection_lower_y="upper_outer_PFR",
+    )
+    regions["upper_inner_intersep"] = Region(
+        name="upper_inner_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=jys21 + 1,
+        yupper_ind=ny_inner,
+        connection_inner_x="upper_inner_PFR",
+        connection_outer_x="upper_inner_SOL",
+        connection_lower_y="inner_intersep",
+    )
+    regions["upper_inner_SOL"] = Region(
+        name="upper_inner_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=jys21 + 1,
+        yupper_ind=ny_inner,
+        connection_inner_x="upper_inner_intersep",
+        connection_lower_y="inner_SOL",
+    )
+    regions["upper_outer_PFR"] = Region(
+        name="upper_outer_PFR",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=ny_inner,
+        yupper_ind=jys12 + 1,
+        connection_outer_x="upper_outer_intersep",
+        connection_upper_y="upper_inner_PFR",
+    )
+    regions["upper_outer_intersep"] = Region(
+        name="upper_outer_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=ny_inner,
+        yupper_ind=jys12 + 1,
+        connection_inner_x="upper_outer_PFR",
+        connection_outer_x="upper_outer_SOL",
+        connection_upper_y="outer_intersep",
+    )
+    regions["upper_outer_SOL"] = Region(
+        name="upper_outer_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=ny_inner,
+        yupper_ind=jys12 + 1,
+        connection_inner_x="upper_outer_intersep",
+        connection_upper_y="outer_SOL",
+    )
+    regions["outer_core"] = Region(
+        name="outer_core",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=jys12 + 1,
+        yupper_ind=jys22 + 1,
+        connection_outer_x="outer_intersep",
+        connection_lower_y="inner_core",
+        connection_upper_y="inner_core",
+    )
+    regions["outer_intersep"] = Region(
+        name="outer_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=jys12 + 1,
+        yupper_ind=jys22 + 1,
+        connection_inner_x="outer_core",
+        connection_outer_x="outer_SOL",
+        connection_lower_y="upper_outer_intersep",
+        connection_upper_y="inner_intersep",
+    )
+    regions["outer_SOL"] = Region(
+        name="outer_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=jys12 + 1,
+        yupper_ind=jys22 + 1,
+        connection_inner_x="outer_intersep",
+        connection_lower_y="upper_outer_SOL",
+        connection_upper_y="lower_outer_SOL",
+    )
+    regions["lower_outer_PFR"] = Region(
+        name="lower_outer_PFR",
+        ds=ds,
+        xinner_ind=0,
+        xouter_ind=ixs2,
+        ylower_ind=jys22 + 1,
+        yupper_ind=ny,
+        connection_outer_x="lower_outer_intersep",
+        connection_lower_y="lower_inner_PFR",
+    )
+    regions["lower_outer_intersep"] = Region(
+        name="lower_outer_intersep",
+        ds=ds,
+        xinner_ind=ixs2,
+        xouter_ind=ixs1,
+        ylower_ind=jys22 + 1,
+        yupper_ind=ny,
+        connection_inner_x="lower_outer_PFR",
+        connection_outer_x="lower_outer_SOL",
+        connection_lower_y="lower_inner_intersep",
+    )
+    regions["lower_outer_SOL"] = Region(
+        name="lower_outer_SOL",
+        ds=ds,
+        xinner_ind=ixs1,
+        xouter_ind=nx,
+        ylower_ind=jys22 + 1,
+        yupper_ind=ny,
+        connection_inner_x="lower_outer_intersep",
+        connection_lower_y="outer_SOL",
+    )
+    return regions
+
+
+topologies["upper-disconnected-double-null"] = topology_upper_disconnected_double_null
 
 
 def topology_connected_double_null(
@@ -939,7 +1179,6 @@ def _create_regions_toroidal(ds):
     # Make sure all sizes are sensible
     ixs1 = _in_range(ixs1, 0, nx)
     ixs2 = _in_range(ixs2, 0, nx)
-    ixs1, ixs2 = _order_vars(ixs1, ixs2)
     jys11 = _in_range(jys11, 0, ny - 1)
     jys21 = _in_range(jys21, 0, ny - 1)
     jys12 = _in_range(jys12, 0, ny - 1)
@@ -1025,11 +1264,11 @@ def _concat_inner_guards(da, da_global, mxg):
     if mxg <= 0:
         return da
 
-    if len(da.regions) > 1:
+    if len(da.bout._regions) > 1:
         raise ValueError("da passed should have only one region")
-    region = list(da.regions.values())[0]
+    region = list(da.bout._regions.values())[0]
 
-    if region.connection_inner_x not in da_global.regions:
+    if region.connection_inner_x not in da_global.bout._regions:
         # No connection, or plotting restricted set of regions not including this
         # connection
         return da
@@ -1040,9 +1279,9 @@ def _concat_inner_guards(da, da_global, mxg):
     ycoord = da_global.metadata["bout_ydim"]
 
     da_inner = da_global.bout.from_region(region.connection_inner_x, with_guards=0)
-    if len(da_inner.regions) > 1:
+    if len(da_inner.bout._regions) > 1:
         raise ValueError("da_inner should have only one region")
-    region_inner = list(da_inner.regions.values())[0]
+    region_inner = list(da_inner.bout._regions.values())[0]
 
     if (
         myg_da > 0
@@ -1080,7 +1319,7 @@ def _concat_inner_guards(da, da_global, mxg):
         da_inner_lower = da_inner_lower.isel(
             **{xcoord: slice(-mxg, None), ycoord: slice(-myg_da, None)}
         )
-        save_regions = da_inner.regions
+        save_regions = da_inner.bout._regions
         da_inner = xr.concat((da_inner_lower, da_inner), ycoord, join="exact")
         # xr.concat takes attributes from the first variable, but we need da_inner's
         # regions
@@ -1118,7 +1357,7 @@ def _concat_inner_guards(da, da_global, mxg):
         da_inner[xcoord].data[...] = new_xcoord.data
         da_inner[ycoord].data[...] = new_ycoord.data
 
-    save_regions = da.regions
+    save_regions = da.bout._regions
     da = xr.concat((da_inner, da), xcoord, join="exact")
     # xr.concat takes attributes from the first variable (for xarray>=0.15.0, keeps attrs
     # that are the same in all objects for xarray<0.15.0)
@@ -1136,11 +1375,11 @@ def _concat_outer_guards(da, da_global, mxg):
     if mxg <= 0:
         return da
 
-    if len(da.regions) > 1:
+    if len(da.bout._regions) > 1:
         raise ValueError("da passed should have only one region")
-    region = list(da.regions.values())[0]
+    region = list(da.bout._regions.values())[0]
 
-    if region.connection_outer_x not in da_global.regions:
+    if region.connection_outer_x not in da_global.bout._regions:
         # No connection, or plotting restricted set of regions not including this
         # connection
         return da
@@ -1151,9 +1390,9 @@ def _concat_outer_guards(da, da_global, mxg):
     ycoord = da_global.metadata["bout_ydim"]
 
     da_outer = da_global.bout.from_region(region.connection_outer_x, with_guards=0)
-    if len(da_outer.regions) > 1:
+    if len(da_outer.bout._regions) > 1:
         raise ValueError("da_outer should have only one region")
-    region_outer = list(da_outer.regions.values())[0]
+    region_outer = list(da_outer.bout._regions.values())[0]
 
     if (
         myg_da > 0
@@ -1191,7 +1430,7 @@ def _concat_outer_guards(da, da_global, mxg):
         da_outer_lower = da_outer_lower.isel(
             **{xcoord: slice(-mxg, None), ycoord: slice(-myg_da, None)}
         )
-        save_regions = da_outer.regions
+        save_regions = da_outer.bout._regions
         da_outer = xr.concat((da_outer_lower, da_outer), ycoord, join="exact")
         # xr.concat takes attributes from the first variable, but we need da_outer's
         # regions
@@ -1229,7 +1468,7 @@ def _concat_outer_guards(da, da_global, mxg):
         da_outer[xcoord].data[...] = new_xcoord.data
         da_outer[ycoord].data[...] = new_ycoord.data
 
-    save_regions = da.regions
+    save_regions = da.bout._regions
     da = xr.concat((da, da_outer), xcoord, join="exact")
     # xarray<0.15.0 only keeps attrs that are the same on all variables passed to concat
     da.attrs["regions"] = save_regions
@@ -1246,11 +1485,11 @@ def _concat_lower_guards(da, da_global, mxg, myg):
     if myg <= 0:
         return da
 
-    if len(da.regions) > 1:
+    if len(da.bout._regions) > 1:
         raise ValueError("da passed should have only one region")
-    region = list(da.regions.values())[0]
+    region = list(da.bout._regions.values())[0]
 
-    if region.connection_lower_y not in da_global.regions:
+    if region.connection_lower_y not in da_global.bout._regions:
         # No connection, or plotting restricted set of regions not including this
         # connection
         return da
@@ -1271,17 +1510,55 @@ def _concat_lower_guards(da, da_global, mxg, myg):
         # continuous so that interpolation works correctly near the boundaries.
         slices = region.get_lower_guards_slices(mxg=mxg, myg=myg)
 
-        if slices[ycoord].start < 0:
-            # For core-only or limiter topologies, the lower-y slice may be out of the
-            # global array bounds
-            raise ValueError(
-                "Trying to fill a slice which is not present in the global array, "
-                "so do not have coordinate values for it. Try setting "
-                "keep_yboundaries=True when calling open_boutdataset."
-            )
-
         new_xcoord = da_global[xcoord].isel(**{xcoord: slices[xcoord]})
         new_ycoord = da_global[ycoord].isel(**{ycoord: slices[ycoord]})
+
+        # new_ycoord might not join smoothly onto da[ycoord] for limiter or core-only
+        # geometries where the guard cells have to come from the opposite side of a
+        # branch cut. Need to work around this, or it breaks parallel interpolation.
+        ycoord_increasing = np.any(
+            da[ycoord].isel(**{ycoord: 1}) > da[ycoord].isel(**{ycoord: 0})
+        )
+
+        if ycoord_increasing and np.any(
+            new_ycoord.isel(**{ycoord: -1}) > da[ycoord].isel(**{ycoord: 0})
+        ):
+            if not np.all(
+                new_ycoord.isel(**{ycoord: -1}) > da[ycoord].isel(**{ycoord: 0})
+            ):
+                raise ValueError(
+                    f"Inconsistent {ycoord} - should be either increasing everywhere "
+                    f"or decreasing everywhere"
+                )
+            # Estimate what coordinate values should be by extrapolating linearly from
+            # interior of region. This is exact if the grid spacing is constant, which
+            # it usually is in 'y'
+            offset = (
+                2.0 * da[ycoord].isel(**{ycoord: 0})
+                - da[ycoord].isel(**{ycoord: 1})
+                - new_ycoord.isel(**{ycoord: -1})
+            )
+            new_ycoord = new_ycoord + offset
+
+        elif (not ycoord_increasing) and np.any(
+            new_ycoord.isel(**{ycoord: -1}) < da[ycoord].isel(**{ycoord: 0})
+        ):
+            if not np.all(
+                new_ycoord.isel(**{ycoord: -1}) < da[ycoord].isel(**{ycoord: 0})
+            ):
+                raise ValueError(
+                    f"Inconsistent {ycoord} - should be either increasing everywhere "
+                    f"or decreasing everywhere"
+                )
+            # Estimate what coordinate values should be by extrapolating linearly from
+            # interior of region. This is exact if the grid spacing is constant, which
+            # it usually is in 'y'
+            offset = (
+                2.0 * da[ycoord].isel(**{ycoord: 0})
+                - da[ycoord].isel(**{ycoord: 1})
+                - new_ycoord.isel(**{ycoord: -1})
+            )
+            new_ycoord = new_ycoord + offset
 
         # can't use commented out version, uncommented one works around xarray bug
         # removing attrs
@@ -1291,7 +1568,7 @@ def _concat_lower_guards(da, da_global, mxg, myg):
         da_lower[xcoord].data[...] = new_xcoord.data
         da_lower[ycoord].data[...] = new_ycoord.data
 
-    save_regions = da.regions
+    save_regions = da.bout._regions
     da = xr.concat((da_lower, da), ycoord, join="exact")
     # xr.concat takes attributes from the first variable (for xarray>=0.15.0, keeps attrs
     # that are the same in all objects for xarray<0.15.0)
@@ -1309,11 +1586,11 @@ def _concat_upper_guards(da, da_global, mxg, myg):
     if myg <= 0:
         return da
 
-    if len(da.regions) > 1:
+    if len(da.bout._regions) > 1:
         raise ValueError("da passed should have only one region")
-    region = list(da.regions.values())[0]
+    region = list(da.bout._regions.values())[0]
 
-    if region.connection_upper_y not in da_global.regions:
+    if region.connection_upper_y not in da_global.bout._regions:
         # No connection, or plotting restricted set of regions not including this
         # connection
         return da
@@ -1333,17 +1610,55 @@ def _concat_upper_guards(da, da_global, mxg, myg):
         # continuous so that interpolation works correctly near the boundaries.
         slices = region.get_upper_guards_slices(mxg=mxg, myg=myg)
 
-        if slices[ycoord].stop > da_global.sizes[ycoord]:
-            # For core-only or limiter topologies, the upper-y slice may be out of the
-            # global array bounds
-            raise ValueError(
-                "Trying to fill a slice which is not present in the global array, "
-                "so do not have coordinate values for it. Try setting "
-                "keep_yboundaries=True when calling open_boutdataset."
-            )
-
         new_xcoord = da_global[xcoord].isel(**{xcoord: slices[xcoord]})
         new_ycoord = da_global[ycoord].isel(**{ycoord: slices[ycoord]})
+
+        # new_ycoord might not join smoothly onto da[ycoord] for limiter or core-only
+        # geometries where the guard cells have to come from the opposite side of a
+        # branch cut. Need to work around this, or it breaks parallel interpolation.
+        ycoord_increasing = np.any(
+            da[ycoord].isel(**{ycoord: -1}) > da[ycoord].isel(**{ycoord: -2})
+        )
+
+        if ycoord_increasing and np.any(
+            new_ycoord.isel(**{ycoord: 0}) < da[ycoord].isel(**{ycoord: -1})
+        ):
+            if not np.all(
+                new_ycoord.isel(**{ycoord: 0}) < da[ycoord].isel(**{ycoord: -1})
+            ):
+                raise ValueError(
+                    f"Inconsistent {ycoord} - should be either increasing everywhere "
+                    f"or decreasing everywhere"
+                )
+            # Estimate what coordinate values should be by extrapolating linearly from
+            # interior of region. This is exact if the grid spacing is constant, which
+            # it usually is in 'y'
+            offset = (
+                2.0 * da[ycoord].isel(**{ycoord: -1})
+                - da[ycoord].isel(**{ycoord: -2})
+                - new_ycoord.isel(**{ycoord: 0})
+            )
+            new_ycoord = new_ycoord + offset
+
+        elif (not ycoord_increasing) and np.any(
+            new_ycoord.isel(**{ycoord: 0}) > da[ycoord].isel(**{ycoord: -1})
+        ):
+            if not np.all(
+                new_ycoord.isel(**{ycoord: 0}) > da[ycoord].isel(**{ycoord: -1})
+            ):
+                raise ValueError(
+                    f"Inconsistent {ycoord} - should be either increasing everywhere "
+                    f"or decreasing everywhere"
+                )
+            # Estimate what coordinate values should be by extrapolating linearly from
+            # interior of region. This is exact if the grid spacing is constant, which
+            # it usually is in 'y'
+            offset = (
+                2.0 * da[ycoord].isel(**{ycoord: -1})
+                - da[ycoord].isel(**{ycoord: -2})
+                - new_ycoord.isel(**{ycoord: 0})
+            )
+            new_ycoord = new_ycoord + offset
 
         # can't use commented out version, uncommented one works around xarray bug
         # removing attrs
@@ -1353,7 +1668,7 @@ def _concat_upper_guards(da, da_global, mxg, myg):
         da_upper[xcoord].data[...] = new_xcoord.data
         da_upper[ycoord].data[...] = new_ycoord.data
 
-    save_regions = da.regions
+    save_regions = da.bout._regions
     da = xr.concat((da, da_upper), ycoord, join="exact")
     # xarray<0.15.0 only keeps attrs that are the same on all variables passed to concat
     da.attrs["regions"] = save_regions
@@ -1365,7 +1680,7 @@ def _from_region(ds_or_da, name, with_guards):
     # ensure we do not modify the input
     ds_or_da = ds_or_da.copy(deep=True)
 
-    region = ds_or_da.regions[name]
+    region = ds_or_da.bout._regions[name]
     xcoord = ds_or_da.metadata["bout_xdim"]
     ycoord = ds_or_da.metadata["bout_ydim"]
 
@@ -1397,7 +1712,7 @@ def _from_region(ds_or_da, name, with_guards):
 
     # If the result (which only has a single region) is passed to from_region a
     # second time, don't want to slice anything.
-    single_region = list(result.regions.values())[0]
+    single_region = list(result.bout._regions.values())[0]
     single_region.xinner_ind = None
     single_region.xouter_ind = None
     single_region.ylower_ind = None

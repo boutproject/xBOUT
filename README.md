@@ -5,6 +5,8 @@
 
 Documentation: https://xbout.readthedocs.io
 
+Examples: https://github.com/boutproject/xBOUT-examples
+
 xBOUT provides an interface for collecting the output data from a
 [BOUT++](https://boutproject.github.io/) simulation into an
 [xarray](https://xarray.pydata.org/en/stable/index.html)
