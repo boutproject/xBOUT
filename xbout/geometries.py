@@ -430,4 +430,5 @@ def add_fci_geometry_coords(ds, *, coordinates=None, grid=None):
     assert coordinates is None, "Not implemented"
     ds = _add_vars_from_grid(ds, grid, ["R", "Z"])
     ds = ds.set_coords(("R", "Z"))
+    ds = _create_single_region(ds, periodic_y=True)
     return ds
