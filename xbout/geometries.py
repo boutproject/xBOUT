@@ -56,8 +56,6 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         ds = _set_attrs_on_all_vars(ds, "geometry", "")
         updated_ds = ds
     else:
-        ds = _set_attrs_on_all_vars(ds, "geometry", geometry_name)
-
         try:
             add_geometry_coords = REGISTERED_GEOMETRIES[geometry_name]
         except KeyError:
@@ -80,6 +78,11 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
             updated_ds = add_geometry_coords(ds, grid=grid)
         else:
             updated_ds = add_geometry_coords(ds)
+
+        # Set "geometry" attribute after adding coordinates, so that functions in
+        # `REGISTERED_GEOMETRIES` can check if ds.attrs["geometry"] is already defined
+        # to see if they are being applied for the first time or re-applied.
+        updated_ds = _set_attrs_on_all_vars(updated_ds, "geometry", geometry_name)
 
     del ds
 
@@ -332,7 +335,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates, ds)
 
-    if set(coordinates.values()).issubset(set(ds.coords).union(ds.dims)):
+    if ds.attrs.get("geometry", None) == "toroidal":
         # Loading a Dataset which already had the coordinates created for it
         ds = _create_regions_toroidal(ds)
         return ds
