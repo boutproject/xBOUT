@@ -1239,8 +1239,8 @@ def _create_single_region(ds, periodic_y=True):
         "all": Region(
             name="all",
             ds=ds,
-            xouter_ind=0,
-            xinner_ind=nx,
+            xouter_ind=nx,
+            xinner_ind=0,
             ylower_ind=0,
             yupper_ind=ny,
             connection_lower_y=connection,
