@@ -50,6 +50,15 @@ def test_check_extensions(tmp_path):
         filetype = _check_filetype(example_invalid_file)
 
 
+def test_set_fci_coords(create_example_grid_file_fci, create_example_files_fci):
+    grid = create_example_grid_file_fci
+    data = create_example_files_fci
+
+    ds = open_boutdataset(data, gridfilepath=grid, geometry="fci")
+    assert "R" in ds
+    assert "Z" in ds
+
+
 class TestPathHandling:
     def test_glob_expansion_single(self, tmp_path):
         files_dir = tmp_path.joinpath("data")
@@ -1435,3 +1444,49 @@ class TestTrim:
 
         expected = create_test_data(0)
         xrt.assert_equal(ds, expected)
+
+
+@pytest.fixture
+def create_example_grid_file_fci(tmp_path_factory):
+    """
+    Mocks up a FCI-like netCDF file, and return the temporary test
+    directory containing them.
+
+    Deletes the temporary directory once that test is done.
+    """
+
+    # Create grid dataset
+    arr = np.arange(2 * 3 * 4).reshape(2, 3, 4)
+    grid = DataArray(data=arr, name="R", dims=["x", "y", "z"]).to_dataset()
+    grid["Z"] = DataArray(np.random.random((2, 3, 4)), dims=["x", "y", "z"])
+    grid["dy"] = DataArray(np.ones((2, 3, 4)), dims=["x", "y", "z"])
+    grid = grid.set_coords(["dy"])
+
+    # Create temporary directory
+    save_dir = tmp_path_factory.mktemp("griddata")
+
+    # Save
+    filepath = save_dir.joinpath("fci.nc")
+    grid.to_netcdf(filepath, engine="netcdf4")
+
+    return filepath
+
+
+@pytest.fixture
+def create_example_files_fci(tmp_path_factory):
+
+    return _bout_xyt_example_files(
+        tmp_path_factory,
+        lengths=(2, 2, 3, 4),
+        nxpe=1,
+        nype=1,
+        # nt=1,
+        # guards=None,
+        syn_data_type="random",
+        grid=None,
+        squashed=False,
+        # topology="core",
+        write_to_disk=False,
+        bout_v5=True,
+        metric_3D=True,
+    )
