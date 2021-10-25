@@ -3,6 +3,8 @@ from copy import deepcopy
 import inspect
 from pathlib import Path
 import re
+from functools import reduce
+import operator
 
 import pytest
 
@@ -1446,6 +1448,10 @@ class TestTrim:
         xrt.assert_equal(ds, expected)
 
 
+fci_shape = (2, 2, 3, 4)
+fci_guards = (2, 2, 0)
+
+
 @pytest.fixture
 def create_example_grid_file_fci(tmp_path_factory):
     """
@@ -1456,10 +1462,11 @@ def create_example_grid_file_fci(tmp_path_factory):
     """
 
     # Create grid dataset
-    arr = np.arange(2 * 3 * 4).reshape(2, 3, 4)
+    shape = (fci_shape[1] + 2 * fci_guards[0], *fci_shape[2:])
+    arr = np.arange(reduce(operator.mul, shape, 1)).reshape(shape)
     grid = DataArray(data=arr, name="R", dims=["x", "y", "z"]).to_dataset()
-    grid["Z"] = DataArray(np.random.random((2, 3, 4)), dims=["x", "y", "z"])
-    grid["dy"] = DataArray(np.ones((2, 3, 4)), dims=["x", "y", "z"])
+    grid["Z"] = DataArray(np.random.random(shape), dims=["x", "y", "z"])
+    grid["dy"] = DataArray(np.ones(shape), dims=["x", "y", "z"])
     grid = grid.set_coords(["dy"])
 
     # Create temporary directory
@@ -1477,11 +1484,11 @@ def create_example_files_fci(tmp_path_factory):
 
     return _bout_xyt_example_files(
         tmp_path_factory,
-        lengths=(2, 2, 3, 4),
+        lengths=fci_shape,
         nxpe=1,
         nype=1,
         # nt=1,
-        # guards=None,
+        guards={a: b for a, b in zip("xyz", fci_guards)},
         syn_data_type="random",
         grid=None,
         squashed=False,
