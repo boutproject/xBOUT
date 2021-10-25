@@ -4,7 +4,7 @@ from textwrap import dedent
 import xarray as xr
 import numpy as np
 
-from .region import Region, _create_regions_toroidal
+from .region import Region, _create_regions_toroidal, _create_single_region
 from .utils import (
     _add_attrs_to_var,
     _set_attrs_on_all_vars,
