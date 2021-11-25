@@ -3,6 +3,8 @@ from copy import deepcopy
 import inspect
 from pathlib import Path
 import re
+from functools import reduce
+import operator
 
 import pytest
 
@@ -48,6 +50,15 @@ def test_check_extensions(tmp_path):
     example_hdf5_file.write_text("content_txt")
     with pytest.raises(IOError):
         filetype = _check_filetype(example_invalid_file)
+
+
+def test_set_fci_coords(create_example_grid_file_fci, create_example_files_fci):
+    grid = create_example_grid_file_fci
+    data = create_example_files_fci
+
+    ds = open_boutdataset(data, gridfilepath=grid, geometry="fci")
+    assert "R" in ds
+    assert "Z" in ds
 
 
 class TestPathHandling:
@@ -1435,3 +1446,54 @@ class TestTrim:
 
         expected = create_test_data(0)
         xrt.assert_equal(ds, expected)
+
+
+fci_shape = (2, 2, 3, 4)
+fci_guards = (2, 2, 0)
+
+
+@pytest.fixture
+def create_example_grid_file_fci(tmp_path_factory):
+    """
+    Mocks up a FCI-like netCDF file, and return the temporary test
+    directory containing them.
+
+    Deletes the temporary directory once that test is done.
+    """
+
+    # Create grid dataset
+    shape = (fci_shape[1] + 2 * fci_guards[0], *fci_shape[2:])
+    arr = np.arange(reduce(operator.mul, shape, 1)).reshape(shape)
+    grid = DataArray(data=arr, name="R", dims=["x", "y", "z"]).to_dataset()
+    grid["Z"] = DataArray(np.random.random(shape), dims=["x", "y", "z"])
+    grid["dy"] = DataArray(np.ones(shape), dims=["x", "y", "z"])
+    grid = grid.set_coords(["dy"])
+
+    # Create temporary directory
+    save_dir = tmp_path_factory.mktemp("griddata")
+
+    # Save
+    filepath = save_dir.joinpath("fci.nc")
+    grid.to_netcdf(filepath, engine="netcdf4")
+
+    return filepath
+
+
+@pytest.fixture
+def create_example_files_fci(tmp_path_factory):
+
+    return _bout_xyt_example_files(
+        tmp_path_factory,
+        lengths=fci_shape,
+        nxpe=1,
+        nype=1,
+        # nt=1,
+        guards={a: b for a, b in zip("xyz", fci_guards)},
+        syn_data_type="random",
+        grid=None,
+        squashed=False,
+        # topology="core",
+        write_to_disk=False,
+        bout_v5=True,
+        metric_3D=True,
+    )

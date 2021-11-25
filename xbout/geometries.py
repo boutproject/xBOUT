@@ -4,7 +4,7 @@ from textwrap import dedent
 import xarray as xr
 import numpy as np
 
-from .region import Region, _create_regions_toroidal
+from .region import Region, _create_regions_toroidal, _create_single_region
 from .utils import (
     _add_attrs_to_var,
     _set_attrs_on_all_vars,
@@ -184,7 +184,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         # In BOUT++ v5, dz is either a Field2D or Field3D.
         # We can use it as a 1D coordinate if it's a Field3D, _or_ if nz == 1
         bout_v5 = updated_ds.metadata["BOUT_VERSION"] > 5.0 or (
-            updated_ds.metadata["BOUT_VERSION"] == 5.0 and updated_ds["dz"].ndim == 2
+            updated_ds.metadata["BOUT_VERSION"] == 5.0 and updated_ds["dz"].ndim >= 2
         )
         use_metric_3d = updated_ds.metadata.get("use_metric_3d", False)
         can_use_1d_z_coord = (nz == 1) or use_metric_3d
@@ -197,14 +197,20 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
                     raise ValueError(
                         f"Spacing is not constant. Cannot create z coordinate"
                     )
-                dz = updated_ds["dz"][0, 0]
+
+                dz = updated_ds["dz"].min()
             else:
                 dz = updated_ds["dz"]
 
             z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
             z1 = z0 + nz * dz
-            if not np.isclose(
-                z1, 2.0 * np.pi * updated_ds.metadata["ZMAX"], rtol=1.0e-15, atol=0.0
+            if not np.all(
+                np.isclose(
+                    z1,
+                    2.0 * np.pi * updated_ds.metadata["ZMAX"],
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )
             ):
                 warn(
                     f"Size of toroidal domain as calculated from nz*dz ({str(z1 - z0)}"
