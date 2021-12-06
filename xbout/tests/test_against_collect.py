@@ -136,12 +136,22 @@ class TestAccuracyAgainstOldCollect:
 
         for v in METADATA_VARS:
             expected = old_collect(v, path=test_dir)
+            if v == "run_id":
+                # Workaround for weird handling of byte arrays.
+                # Also convert to utf-8, like workaround in _separate_metadata().
+                expected = expected.tobytes().decode("utf-8")
             # Check metadata against new standard - open_boutdataset
             actual = ds.bout.metadata[v]
             npt.assert_equal(actual, expected)
 
             # Check against backwards compatible collect function
             actual = new_collect(v, path=test_dir)
+            if v == "run_id":
+                expected = old_collect(v, path=test_dir)
+                # Workaround for weird handling of byte array.
+                # Conversion to str is not done by xBOUT-based collect(), which uses
+                # _auto_open_mfboutdataset(), not the full open_boutdataset().
+                expected = expected.tobytes()
             npt.assert_equal(actual, expected)
 
     def test_new_collect_indexing_int(self, tmp_path_factory):

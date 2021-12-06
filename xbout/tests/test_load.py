@@ -696,6 +696,7 @@ def create_bout_ds(
     else:
         ds["dz"] = 2.0 * np.pi / nz
 
+    ds["run_id"] = b"x" * 36
     ds["iteration"] = t_length
     ds["t_array"] = DataArray(np.arange(t_length, dtype=float) * 10.0, dims="t")
 
@@ -787,6 +788,7 @@ METADATA_VARS = [
     "ZMIN",
     "ZMAX",
     "use_metric_3d",
+    "run_id",
 ]
 
 

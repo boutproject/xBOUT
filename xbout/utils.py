@@ -69,6 +69,14 @@ def _separate_metadata(ds):
 
     # Save metadata as a dictionary
     metadata_vals = [ds[var].values.item() for var in scalar_vars]
+
+    # xarray cannot save byte-strings to NetCDF, so convert all byte-strings to str.
+    # Doing this conversion at load-time so that when re-loading an xbout-saved Dataset
+    # it should be identical to the Dataset before saving.
+    metadata_vals = [
+        v.decode("utf-8") if isinstance(v, bytes) else v for v in metadata_vals
+    ]
+
     metadata = dict(zip(scalar_vars, metadata_vals))
 
     # Add default values for dimensions to metadata. These may be modified later by
