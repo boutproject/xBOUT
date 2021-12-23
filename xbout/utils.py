@@ -81,7 +81,46 @@ def _separate_metadata(ds):
     return ds.drop_vars(scalar_vars), metadata
 
 
-def _update_metadata_increased_resolution(da, n):
+def _update_metadata_increased_x_resolution(da, *, ixseps1=None, ixseps2=None, nx=None):
+    """
+    Update the metadata variables to account for a change in x-direction resolution.
+
+    Parameters
+    ----------
+    da : DataArray
+        The variable to update
+    ixseps1 : int
+        The value to give to ixseps1
+    ixseps2 : int
+        The value to give to ixseps2
+    nx : int
+        The value to give to nx
+    """
+
+    # Take deepcopy to ensure we do not alter metadata of other variables
+    da.attrs["metadata"] = deepcopy(da.metadata)
+
+    def set_var(var, value):
+        if value is None:
+            da[var] = -1
+        else:
+            da[var] = value
+
+    set_var("ixseps1", ixseps1)
+    set_var("ixseps2", ixseps2)
+    set_var("nx", nx)
+    if nx is not None:
+        da.metadata["MXSUB"] = nx - 2 * da.metadata["MXG"]
+
+    # Update attrs of coordinates to be consistent with da
+    for coord in da.coords:
+        da[coord].attrs = {}
+        _add_attrs_to_var(da, coord)
+
+    return da
+
+
+def _update_metadata_increased_y_resolution(da, n):
     """
     Update the metadata variables to account for a y-direction resolution increased by a
     factor n.
@@ -193,6 +232,25 @@ def _1d_coord_from_spacing(spacing, dim, ds=None, *, origin_at=None):
         raise ValueError(f"Unrecognised argument origin_at={origin_at}")
 
     return xr.Variable(dim, coord_values)
+
+
+def _make_1d_xcoord(ds_or_da):
+    # Make index 'x' a coordinate, useful for handling global indexing
+    # Note we have to use the index value, not the value calculated from 'dx' because
+    # 'dx' may not be consistent between different regions (e.g. core and PFR).
+    # For some geometries xcoord may have already been created by
+    # add_geometry_coords, in which case we do not need this.
+    xcoord = ds_or_da.metadata["bout_xdim"]
+    nx = ds_or_da.dims[xcoord]
+
+    # can't use commented out version, uncommented one works around xarray bug
+    # removing attrs
+    # https://github.com/pydata/xarray/issues/4415
+    # https://github.com/pydata/xarray/issues/4393
+    # updated_ds = updated_ds.assign_coords(**{xcoord: np.arange(nx)})
+    ds_or_da[xcoord] = (xcoord, np.arange(nx))
+
+    _add_attrs_to_var(ds_or_da, xcoord)
 
 
 def _check_new_nxpe(ds, nxpe):

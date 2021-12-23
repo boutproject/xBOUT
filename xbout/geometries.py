@@ -7,6 +7,7 @@ import numpy as np
 from .region import Region, _create_regions_toroidal, _create_single_region
 from .utils import (
     _add_attrs_to_var,
+    _make_1d_xcoord,
     _set_attrs_on_all_vars,
     _set_as_coord,
     _1d_coord_from_spacing,
@@ -139,21 +140,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         updated_ds = updated_ds.drop_vars("t_array")
 
     if xcoord not in updated_ds.coords:
-        # Make index 'x' a coordinate, useful for handling global indexing
-        # Note we have to use the index value, not the value calculated from 'dx' because
-        # 'dx' may not be consistent between different regions (e.g. core and PFR).
-        # For some geometries xcoord may have already been created by
-        # add_geometry_coords, in which case we do not need this.
-        nx = updated_ds.dims[xcoord]
-
-        # can't use commented out version, uncommented one works around xarray bug
-        # removing attrs
-        # https://github.com/pydata/xarray/issues/4415
-        # https://github.com/pydata/xarray/issues/4393
-        # updated_ds = updated_ds.assign_coords(**{xcoord: np.arange(nx)})
-        updated_ds[xcoord] = (xcoord, np.arange(nx))
-
-        _add_attrs_to_var(updated_ds, xcoord)
+        _make_1d_xcoord(updated_ds)
 
     if ycoord not in updated_ds.coords:
         ny = updated_ds.dims[ycoord]

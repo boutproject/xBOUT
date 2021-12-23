@@ -262,6 +262,93 @@ class BoutDatasetAccessor:
 
         return ds
 
+    def interpolate_radial(self, variables, **kwargs):
+        """
+        Interpolate in the parallel direction to get a higher resolution version of the
+        variable.
+
+        Note that the high-resolution variables are all loaded into memory, so most
+        likely it is necessary to select only a small number. The toroidal_points
+        argument can also be used to reduce the memory demand.
+
+        Parameters
+        ----------
+        variables : str or sequence of str or ...
+            The names of the variables to interpolate. If 'variables=...' is passed
+            explicitly, then interpolate all variables in the Dataset.
+        psi : 1d array, optional
+            Values of `psixy` to interpolate data to. If not given use `n` instead. If
+            `psi` is given, it must be a 1d array with psi values for the region if
+            `region` is passed and otherwise must be a 2d {x,y} array.
+        dx : 1d array, optional
+            New values of `dx`, corresponding to the values of `psi`. Required if `psi`
+            is passed.
+        n : int, optional
+            The factor to increase the resolution by. Defaults to the value set by
+            BoutDataset.setupParallelInterp(), or 10 if that has not been called.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataArray.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+
+        Returns
+        -------
+        A new Dataset containing a high-resolution versions of the variables. The new
+        Dataset is a valid BoutDataset, although containing only the specified variables.
+        """
+
+        if variables is ...:
+            variables = [v for v in self.data]
+
+        if isinstance(variables, str):
+            variables = [variables]
+        if isinstance(variables, tuple):
+            variables = list(variables)
+
+        # Need to start with a Dataset with attrs as merge() drops the attrs of the
+        # passed-in argument.
+        # Make sure the first variable has all dimensions so we don't lose any
+        # coordinates
+        def find_with_dims(first_var, dims):
+            if first_var is None:
+                dims = set(dims)
+                for v in variables:
+                    if set(self.data[v].dims) == dims:
+                        first_var = v
+                        break
+            return first_var
+
+        tcoord = self.data.metadata.get("bout_tdim", "t")
+        zcoord = self.data.metadata.get("bout_zdim", "z")
+        first_var = find_with_dims(None, self.data.dims)
+        first_var = find_with_dims(first_var, set(self.data.dims) - set(tcoord))
+        first_var = find_with_dims(first_var, set(self.data.dims) - set(zcoord))
+        first_var = find_with_dims(
+            first_var, set(self.data.dims) - set([tcoord, zcoord])
+        )
+        if first_var is None:
+            raise ValueError(
+                f"Could not find variable to interpolate with both "
+                f"{ds.metadata.get('bout_xdim', 'x')} and "
+                f"{ds.metadata.get('bout_ydim', 'y')} dimensions"
+            )
+        variables.remove(first_var)
+        ds = self.data[first_var].bout.interpolate_radial(return_dataset=True, **kwargs)
+        xcoord = ds.metadata.get("bout_xdim", "x")
+        ycoord = ds.metadata.get("bout_ydim", "y")
+        for var in variables:
+            da = self.data[var]
+            if xcoord in da.dims and ycoord in da.dims:
+                ds = ds.merge(da.bout.interpolate_radial(return_dataset=True, **kwargs))
+            elif xcoord not in da.dims:
+                ds[var] = da
+            # Can't interpolate a variable that depends on x but not y, so just skip
+
+        # Apply geometry
+        ds = apply_geometry(ds, ds.geometry)
+
+        return ds
+
     def integrate_midpoints(self, variable, *, dims=None, cumulative_t=False):
         """
         Integrate using the midpoint rule for spatial dimensions, and trapezium rule for
