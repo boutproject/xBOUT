@@ -67,6 +67,7 @@ def open_boutdataset(
     keep_yboundaries=False,
     run_name=None,
     info=True,
+    restarts=None,
     **kwargs,
 ):
     """
@@ -137,6 +138,12 @@ def open_boutdataset(
         Useful if you are going to open multiple simulations and compare the
         results.
     info : bool or "terse", optional
+    restarts : bool, optional
+        Set to `True` to read in restart files (rather than dump files). Allows a couple
+        of workarounds to be applied for differences in the variables that are in the
+        files, etc. By default, act as if `restarts=True` if the string `"restart"` is
+        in the filename part of `datapath` - set to `False` explicitly if `"restart"` is
+        in the name, but the file should be treated as dump files.
     kwargs : optional
         Keyword arguments are passed down to `xarray.open_mfdataset`, which in
         turn passes extra kwargs down to `xarray.open_dataset`.
@@ -148,6 +155,18 @@ def open_boutdataset(
 
     if chunks is None:
         chunks = {}
+    if restarts is None:
+        try:
+            p = Path(datapath)
+        except TypeError:
+            # datapath was a list of Datasets, not a path, so cannot get file name.
+            # Need to pass restarts=True explicitly in this case, if it is needed.
+            restarts = False
+        else:
+            if "restart" in p.name.lower():
+                restarts = True
+            else:
+                restarts = False
 
     input_type = _check_dataset_type(datapath)
 
@@ -239,6 +258,7 @@ def open_boutdataset(
             chunks=chunks,
             keep_xboundaries=keep_xboundaries,
             keep_yboundaries=keep_yboundaries,
+            restarts=restarts,
             **kwargs,
         )
     elif "grid" in input_type:
@@ -497,6 +517,7 @@ def _auto_open_mfboutdataset(
     info=True,
     keep_xboundaries=False,
     keep_yboundaries=False,
+    restarts=False,
     **kwargs,
 ):
     if chunks is None:
@@ -535,7 +556,7 @@ def _auto_open_mfboutdataset(
             paths_grid,
             concat_dim=concat_dims,
             combine="nested",
-            data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
+            data_vars=("minimal" if restarts else _BOUT_TIME_DEPENDENT_META_VARS),
             preprocess=_preprocess,
             engine=filetype,
             chunks=chunks,
@@ -582,15 +603,17 @@ def _auto_open_mfboutdataset(
         ds = xr.combine_nested(
             ds_grid,
             concat_dim=concat_dims,
-            data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
+            data_vars=("minimal" if restarts else _BOUT_TIME_DEPENDENT_META_VARS),
             join="exact",
             combine_attrs="no_conflicts",
         )
 
     # Remove any duplicate time values from concatenation
-    _, unique_indices = unique(ds["t_array"], return_index=True)
-
-    return ds.isel(t=unique_indices), remove_yboundaries
+    if not restarts:
+        _, unique_indices = unique(ds["t_array"], return_index=True)
+        return ds.isel(t=unique_indices), remove_yboundaries
+    else:
+        return ds, remove_yboundaries
 
 
 def _expand_filepaths(datapath):
