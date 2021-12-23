@@ -120,7 +120,17 @@ def _update_metadata_increased_x_resolution(da, *, ixseps1=None, ixseps2=None, n
     return da
 
 
-def _update_metadata_increased_y_resolution(da, n):
+def _update_metadata_increased_y_resolution(
+    da,
+    *,
+    n=None,
+    jyseps1_1=None,
+    jyseps2_1=None,
+    jyseps1_2=None,
+    jyseps2_2=None,
+    ny_inner=None,
+    ny=None,
+):
     """
     Update the metadata variables to account for a y-direction resolution increased by a
     factor n.
@@ -129,8 +139,9 @@ def _update_metadata_increased_y_resolution(da, n):
     ----------
     da : DataArray
         The variable to update
-    n : int
-        The factor to increase the y-resolution by
+    n : int, optional
+        The factor to increase the y-resolution by. If n is not given, y-dependent
+        metadata variables are set to -1, assuming they will be corrected later.
     """
 
     # Take deepcopy to ensure we do not alter metadata of other variables
@@ -139,19 +150,25 @@ def _update_metadata_increased_y_resolution(da, n):
     def update_jyseps(name):
         # If any jyseps<=0, need to leave as is
         if da.metadata[name] > 0:
-            da.metadata[name] = n * (da.metadata[name] + 1) - 1
+            if n is None:
+                da.metadata[name] = -1
+            else:
+                da.metadata[name] = n * (da.metadata[name] + 1) - 1
 
-    update_jyseps("jyseps1_1")
-    update_jyseps("jyseps2_1")
-    update_jyseps("jyseps1_2")
-    update_jyseps("jyseps2_2")
+    update_jyseps("jyseps1_1", jyseps1_1)
+    update_jyseps("jyseps2_1", jyseps2_1)
+    update_jyseps("jyseps1_2", jyseps1_2)
+    update_jyseps("jyseps2_2", jyseps2_2)
 
     def update_ny(name):
-        da.metadata[name] = n * da.metadata[name]
+        if n is None:
+            da.metadata[name] = -1
+        else:
+            da.metadata[name] = n * da.metadata[name]
 
-    update_ny("ny")
-    update_ny("ny_inner")
-    update_ny("MYSUB")
+    update_ny("ny", ny)
+    update_ny("ny_inner", ny_inner)
+    update_ny("MYSUB", None)
 
     # Update attrs of coordinates to be consistent with da
     for coord in da.coords:
