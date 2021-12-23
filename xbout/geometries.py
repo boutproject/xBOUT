@@ -364,7 +364,17 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     # Get extra geometry information from grid file if it's not in the dump files
     ds = _add_vars_from_grid(
-        ds, grid, ["psixy", "Rxy", "Zxy"], optional_variables=["Bpxy", "Brxy", "Bzxy"]
+        ds,
+        grid,
+        ["psixy", "Rxy", "Zxy"],
+        optional_variables=[
+            "Bpxy",
+            "Brxy",
+            "Bzxy",
+            "poloidal_distance",
+            "poloidal_distance_ylow",
+            "total_poloidal_distance",
+        ],
     )
 
     if "t" in ds.dims:
@@ -402,6 +412,11 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         ds = ds.set_coords(("R", "Z"))
     else:
         ds = ds.set_coords(("Rxy", "Zxy"))
+
+    if "poloidal_distance" in ds:
+        ds = ds.set_coords(
+            ["poloidal_distance", "poloidal_distance_ylow", "total_poloidal_distance"]
+        )
 
     # Add zShift as a coordinate, so that it gets interpolated along with a variable
     ds = _set_as_coord(ds, "zShift")
