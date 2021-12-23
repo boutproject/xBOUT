@@ -142,17 +142,24 @@ def _update_metadata_increased_y_resolution(
     n : int, optional
         The factor to increase the y-resolution by. If n is not given, y-dependent
         metadata variables are set to -1, assuming they will be corrected later.
+    jyseps1_1, jyseps2_1, jyseps1_2, jyseps2_2, ny_inner, ny : int
+        Metadata variables for y-grid. Should not be passed if `n` is passed.
     """
 
     # Take deepcopy to ensure we do not alter metadata of other variables
     da.attrs["metadata"] = deepcopy(da.metadata)
 
-    def update_jyseps(name):
+    def update_jyseps(name, value):
         # If any jyseps<=0, need to leave as is
         if da.metadata[name] > 0:
             if n is None:
-                da.metadata[name] = -1
+                if value is None:
+                    da.metadata[name] = -1
+                else:
+                    da.metadata[name] = value
             else:
+                if value is not None:
+                    raise ValueError(f"n set, but value also passed to {name}")
                 da.metadata[name] = n * (da.metadata[name] + 1) - 1
 
     update_jyseps("jyseps1_1", jyseps1_1)
@@ -160,10 +167,15 @@ def _update_metadata_increased_y_resolution(
     update_jyseps("jyseps1_2", jyseps1_2)
     update_jyseps("jyseps2_2", jyseps2_2)
 
-    def update_ny(name):
+    def update_ny(name, value):
         if n is None:
-            da.metadata[name] = -1
+            if value is None:
+                da.metadata[name] = -1
+            else:
+                da.metadata[name] = value
         else:
+            if value is not None:
+                raise ValueError(f"n set, but value also passed to {name}")
             da.metadata[name] = n * da.metadata[name]
 
     update_ny("ny", ny)

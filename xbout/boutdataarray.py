@@ -11,6 +11,7 @@ import xarray as xr
 from xarray import register_dataarray_accessor
 
 from .geometries import apply_geometry
+from .load import open_boutdataset
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 from .plotting.utils import _create_norm
@@ -257,7 +258,8 @@ class BoutDataArrayAccessor:
         region : str, optional
             By default, return a result with all regions interpolated separately and then
             combined. If an explicit region argument is passed, then return the variable
-            from only that region.
+            from only that region. If the DataArray has already been restricted to a
+            single region, pass `region=False` to skip calling `from_region()` again.
         poloidal_distance : 2d array, optional
             Poloidal distance values to interpolate to - interpolation is calculated as
             a function of poloidal distance along psi contours. Should have the same
@@ -332,15 +334,16 @@ class BoutDataArrayAccessor:
                 result = apply_geometry(result, self.data.geometry)
                 return result[self.data.name]
 
-        # Select a particular 'region' and interpolate to higher parallel resolution
-        da = self.data
-        region = da.bout._regions[region]
+        da = self.data.copy()
         tcoord = da.metadata["bout_tdim"]
         xcoord = da.metadata["bout_xdim"]
         ycoord = da.metadata["bout_ydim"]
         zcoord = da.metadata["bout_zdim"]
 
-        da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
+        if region is not False:
+            # Select a particular 'region' and interpolate to higher parallel resolution
+            region = da.bout._regions[region]
+            da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
 
         if zcoord in da.dims and da.direction_y != "Aligned":
             aligned_input = False
@@ -483,7 +486,8 @@ class BoutDataArrayAccessor:
         region : str, optional
             By default, return a result with all regions interpolated separately and then
             combined. If an explicit region argument is passed, then return the variable
-            from only that region.
+            from only that region. If the DataArray has already been restricted to a
+            single region, pass `region=False` to skip calling `from_region()` again.
         psi : 1d or 2d array, optional
             Values of `psixy` to interpolate data to. If not given use `n` instead. If
             `psi` is given, it must be a 1d array with psi values for the region if
@@ -555,10 +559,13 @@ class BoutDataArrayAccessor:
                 # ixseps2, which are needed to create the 'regions'.
                 return result[self.data.name]
 
-        # Select a particular 'region' and interpolate to higher parallel resolution
         da = self.data
 
-        da = da.bout.from_region(region.name, with_guards={xcoord: 2, ycoord: 0})
+        if region is not False:
+            # Select a particular 'region' and interpolate to higher parallel resolution
+            region = da.bout._regions[region]
+            da = da.bout.from_region(region.name, with_guards={xcoord: 2, ycoord: 0})
+
         da = da.chunk({xcoord: None})
 
         old_psi = da["psi_poloidal"].isel({ycoord: 0}, drop=True).values
@@ -627,6 +634,129 @@ class BoutDataArrayAccessor:
         del da[xcoord]
 
         return da
+
+    def interpolate_to_new_grid(
+        self, new_gridfile, *, method="cubic", return_dataset=False
+    ):
+        """
+        Interpolate the DataArray onto a new set of grid points, given by a grid file.
+
+        The grid file is asssumed to represent the same equilibrium as the one
+        associated by the original DataArray, so that psi-values and poloidal distances
+        along psi-contours of the equilibrium are the same.
+
+        Parameters
+        ----------
+        new_gridfile : str, pathlib.Path or Dataset
+            Path to a new grid file, or grid file opened as a Dataset.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataArray.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+        return_dataset : bool, default False
+            Return the result as a Dataset containing the new DataArray.
+        """
+        if not isinstance(new_gridfile, xr.Dataset):
+            new_gridfile = open_boutdataset(
+                new_gridfile,
+                keep_xboundaries=da.metadata["keep_xboundaries"],
+                keep_yboundaries=da.metadata["keep_yboundaries"],
+                drop_variables=["theta"],
+                info=False,
+            )
+            new_gridfile = apply_geometry(new_gridfile, self.data.geometry)
+
+        xcoord = self.data.metadata["bout_xdim"]
+        ycoord = self.data.metadata["bout_ydim"]
+
+        da = self.data
+
+        parts = []
+        for region in self._regions:
+            # Note, need to set 0 x-guards here. If we include x-guards in the radial
+            # interpolation, poloidal_distance gets messed up at the edges for the
+            # parallel interpolation because poloidal_distance does not have to be
+            # consistent between different regions.
+            part = da.bout.from_region(region, with_guards={xcoord: 0, ycoord: 2})
+
+            # Radial interpolation first, because the psi coordinate is 1d (in each
+            # region), so does not need to be interpolated in y-direction, whereas
+            # poloidal_distance would need to be interpolated to the original
+            # DataArray's radial grid points.
+            psi_part = (
+                new_gridfile["psi_poloidal"]
+                .bout.from_region(region, with_guards={xcoord: 0, ycoord: 0})
+                .isel({ycoord: 0}, drop=True)
+            )
+            dx_part = (
+                new_gridfile["dx"]
+                .bout.from_region(region, with_guards={xcoord: 0, ycoord: 0})
+                .isel({ycoord: 0}, drop=True)
+            )
+
+            part = part.bout.interpolate_radial(
+                False,
+                psi=psi_part,
+                dx=dx_part,
+                method=method,
+                return_dataset=return_dataset,
+            )
+
+            poloidal_distance_part = new_gridfile["poloidal_distance"].bout.from_region(
+                region, with_guards={xcoord: 0, ycoord: 0}
+            )
+            dy_part = new_gridfile["dy"].bout.from_region(
+                region, with_guards={xcoord: 0, ycoord: 0}
+            )
+
+            part = part.bout.interpolate_parallel(
+                False,
+                poloidal_distance=poloidal_distance_part,
+                dy=dy_part,
+                method=method,
+                return_dataset=return_dataset,
+            )
+
+            # Get theta coordinate from new_gridfile, as interpolated versions may not
+            # be consistent between different regions.
+            part["theta"] = poloidal_distance_part["theta"]
+
+            # 'region' is not the same for all parts, and should not exist in the result,
+            # so delete
+            if "region" in part.attrs:
+                del part.attrs["region"]
+
+            parts.append(part.to_dataset(name=self.data.name))
+
+        result = xr.combine_by_coords(parts, combine_attrs="drop_conflicts")
+
+        # Get attributes from original DataArray, then update for increased resolution
+        result.attrs = self.data.attrs
+
+        result = _update_metadata_increased_x_resolution(
+            result,
+            ixseps1=new_gridfile.metadata["ixseps1"],
+            ixseps2=new_gridfile.metadata["ixseps2"],
+            nx=new_gridfile.metadata["nx"],
+        )
+        result = _update_metadata_increased_y_resolution(
+            result,
+            jyseps1_1=new_gridfile.metadata["jyseps1_1"],
+            jyseps2_1=new_gridfile.metadata["jyseps2_1"],
+            jyseps1_2=new_gridfile.metadata["jyseps1_2"],
+            jyseps2_2=new_gridfile.metadata["jyseps2_2"],
+            ny_inner=new_gridfile.metadata["ny_inner"],
+            ny=new_gridfile.metadata["ny"],
+        )
+
+        _make_1d_xcoord(result)
+
+        if return_dataset:
+            return result
+        else:
+            # Extract the DataArray to return
+            result = apply_geometry(result, self.data.geometry)
+            return result[self.data.name]
 
     def remove_yboundaries(self, return_dataset=False, remove_extra_upper=False):
         """
