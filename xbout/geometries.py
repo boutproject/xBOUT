@@ -4,7 +4,7 @@ from textwrap import dedent
 import xarray as xr
 import numpy as np
 
-from .region import Region, _create_regions_toroidal
+from .region import Region, _create_regions_toroidal, _create_single_region
 from .utils import (
     _add_attrs_to_var,
     _set_attrs_on_all_vars,
@@ -183,8 +183,9 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
 
         # In BOUT++ v5, dz is either a Field2D or Field3D.
         # We can use it as a 1D coordinate if it's a Field3D, _or_ if nz == 1
-        bout_v5 = updated_ds.metadata["BOUT_VERSION"] > 5.0 or (
-            updated_ds.metadata["BOUT_VERSION"] == 5.0 and updated_ds["dz"].ndim == 2
+        bout_version = updated_ds.metadata.get("BOUT_VERSION", 4.3)
+        bout_v5 = bout_version > 5.0 or (
+            bout_version == 5.0 and updated_ds["dz"].ndim >= 2
         )
         use_metric_3d = updated_ds.metadata.get("use_metric_3d", False)
         can_use_1d_z_coord = (nz == 1) or use_metric_3d
@@ -197,14 +198,20 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
                     raise ValueError(
                         f"Spacing is not constant. Cannot create z coordinate"
                     )
-                dz = updated_ds["dz"][0, 0]
+
+                dz = updated_ds["dz"].min()
             else:
                 dz = updated_ds["dz"]
 
             z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
             z1 = z0 + nz * dz
-            if not np.isclose(
-                z1, 2.0 * np.pi * updated_ds.metadata["ZMAX"], rtol=1.0e-15, atol=0.0
+            if not np.all(
+                np.isclose(
+                    z1,
+                    2.0 * np.pi * updated_ds.metadata["ZMAX"],
+                    rtol=1.0e-15,
+                    atol=0.0,
+                )
             ):
                 warn(
                     f"Size of toroidal domain as calculated from nz*dz ({str(z1 - z0)}"
@@ -272,7 +279,10 @@ def _set_default_toroidal_coordinates(coordinates, ds):
         coordinates = {}
 
     # Replace any values that have not been passed in with defaults
-    coordinates["t"] = coordinates.get("t", ds.metadata["bout_tdim"])
+    if ds.metadata["is_restart"] == 0:
+        # Don't need "t" coordinate for restart files which have no time dimension, and
+        # adding it breaks the check for reloading in open_boutdataset
+        coordinates["t"] = coordinates.get("t", ds.metadata["bout_tdim"])
 
     default_x = (
         ds.metadata["bout_xdim"] if ds.metadata["bout_xdim"] != "x" else "psi_poloidal"
@@ -286,6 +296,28 @@ def _set_default_toroidal_coordinates(coordinates, ds):
     coordinates["z"] = coordinates.get("z", default_z)
 
     return coordinates
+
+
+def _add_vars_from_grid(ds, grid, variables):
+    # Get extra geometry information from grid file if it's not in the dump files
+    for v in variables:
+        if v not in ds:
+            if grid is None:
+                raise ValueError(
+                    f"Grid file is required to provide {v}. Pass the grid "
+                    f"file name as the 'gridfilepath' argument to "
+                    f"open_boutdataset()."
+                )
+            # ds[v] = grid[v]
+            # Work around issue where xarray drops attributes on coordinates when a new
+            # DataArray is assigned to the Dataset, see
+            # https://github.com/pydata/xarray/issues/4415
+            # https://github.com/pydata/xarray/issues/4393
+            # This way adds as a 'Variable' instead of as a 'DataArray'
+            ds[v] = (grid[v].dims, grid[v].values)
+
+            _add_attrs_to_var(ds, v)
+    return ds
 
 
 @register_geometry("toroidal")
@@ -311,24 +343,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         )
 
     # Get extra geometry information from grid file if it's not in the dump files
-    needed_variables = ["psixy", "Rxy", "Zxy"]
-    for v in needed_variables:
-        if v not in ds:
-            if grid is None:
-                raise ValueError(
-                    f"Grid file is required to provide {v}. Pass the grid "
-                    f"file name as the 'gridfilepath' argument to "
-                    f"open_boutdataset()."
-                )
-            # ds[v] = grid[v]
-            # Work around issue where xarray drops attributes on coordinates when a new
-            # DataArray is assigned to the Dataset, see
-            # https://github.com/pydata/xarray/issues/4415
-            # https://github.com/pydata/xarray/issues/4393
-            # This way adds as a 'Variable' instead of as a 'DataArray'
-            ds[v] = (grid[v].dims, grid[v].values)
-
-            _add_attrs_to_var(ds, v)
+    ds = _add_vars_from_grid(ds, grid, ["psixy", "Rxy", "Zxy"])
 
     if "t" in ds.dims:
         # Rename 't' if user requested it
@@ -343,7 +358,8 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     ds[coordinates["x"]].attrs["units"] = "Wb"
 
     # Record which dimensions 't', 'x', and 'y' were renamed to.
-    ds.metadata["bout_tdim"] = coordinates["t"]
+    if ds.metadata["is_restart"] == 0:
+        ds.metadata["bout_tdim"] = coordinates["t"]
     # x dimension not renamed, so this is still 'x'
     ds.metadata["bout_xdim"] = "x"
     ds.metadata["bout_ydim"] = coordinates["y"]
@@ -417,4 +433,13 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
         # remove hthe because it does not have correct metadata
         del ds["hthe"]
 
+    return ds
+
+
+@register_geometry("fci")
+def add_fci_geometry_coords(ds, *, coordinates=None, grid=None):
+    assert coordinates is None, "Not implemented"
+    ds = _add_vars_from_grid(ds, grid, ["R", "Z"])
+    ds = ds.set_coords(("R", "Z"))
+    ds = _create_single_region(ds, periodic_y=True)
     return ds

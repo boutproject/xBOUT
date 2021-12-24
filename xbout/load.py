@@ -24,12 +24,11 @@ _BOUT_PER_PROC_VARIABLES = [
     "wtime_per_rhs",
     "wtime_per_rhs_e",
     "wtime_per_rhs_i",
-    "hist_hi",
-    "tt",
     "PE_XIND",
     "PE_YIND",
     "MYPE",
 ]
+_BOUT_PER_PROC_VARIABLES_REQUIRED_FROM_RESTARTS = ["hist_hi", "tt"]
 _BOUT_TIME_DEPENDENT_META_VARS = ["iteration"]
 
 
@@ -67,11 +66,12 @@ def open_boutdataset(
     keep_yboundaries=False,
     run_name=None,
     info=True,
+    is_restart=None,
     **kwargs,
 ):
     """
     Load a dataset from a set of BOUT output files, including the input options
-    file. Can also load from a grid file.
+    file. Can also load from a grid file or from restart files.
 
     Note that when reloading a Dataset that was saved by xBOUT, the state of the saved
     Dataset is restored, and the values of `keep_xboundaries`, `keep_yboundaries`, and
@@ -137,6 +137,12 @@ def open_boutdataset(
         Useful if you are going to open multiple simulations and compare the
         results.
     info : bool or "terse", optional
+    is_restart : bool, optional
+        Restart files require some special handling (e.g. working around variables that
+        are not present in restart files). By default, this special handling is enabled
+        if the files do not have a time dimension and `restart` is present in the file
+        name in `datapath`. This option can be set to True or False to explicitly enable
+        or disable the restart file handling.
     kwargs : optional
         Keyword arguments are passed down to `xarray.open_mfdataset`, which in
         turn passes extra kwargs down to `xarray.open_dataset`.
@@ -150,6 +156,11 @@ def open_boutdataset(
         chunks = {}
 
     input_type = _check_dataset_type(datapath)
+
+    if is_restart is None:
+        is_restart = input_type == "restart"
+    elif is_restart is True:
+        input_type = "restart"
 
     if "reload" in input_type:
         if input_type == "reload":
@@ -232,13 +243,14 @@ def open_boutdataset(
 
     # Determine if file is a grid file or data dump files
     remove_yboundaries = False
-    if "dump" in input_type:
+    if "dump" in input_type or "restart" in input_type:
         # Gather pointers to all numerical data from BOUT++ output files
         ds, remove_yboundaries = _auto_open_mfboutdataset(
             datapath=datapath,
             chunks=chunks,
             keep_xboundaries=keep_xboundaries,
             keep_yboundaries=keep_yboundaries,
+            is_restart=is_restart,
             **kwargs,
         )
     elif "grid" in input_type:
@@ -257,6 +269,7 @@ def open_boutdataset(
     # bool attributes
     metadata["keep_xboundaries"] = int(keep_xboundaries)
     metadata["keep_yboundaries"] = int(keep_yboundaries)
+    metadata["is_restart"] = int(is_restart)
     ds = _set_attrs_on_all_vars(ds, "metadata", metadata)
 
     if remove_yboundaries:
@@ -264,13 +277,14 @@ def open_boutdataset(
         # grid file, as they will be removed from the full Dataset below
         keep_yboundaries = True
 
-    for var in _BOUT_TIME_DEPENDENT_META_VARS:
-        if var in ds:
-            # Assume different processors in x & y have same iteration etc.
-            latest_top_left = {dim: 0 for dim in ds[var].dims}
-            if "t" in ds[var].dims:
-                latest_top_left["t"] = -1
-            ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
+    if not is_restart:
+        for var in _BOUT_TIME_DEPENDENT_META_VARS:
+            if var in ds:
+                # Assume different processors in x & y have same iteration etc.
+                latest_top_left = {dim: 0 for dim in ds[var].dims}
+                if "t" in ds[var].dims:
+                    latest_top_left["t"] = -1
+                ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
 
     ds = _add_options(ds, inputfilepath)
 
@@ -450,6 +464,8 @@ def _check_dataset_type(datapath):
         - only one file, and no time dimension
     (iii) produced by BOUT++
         - one or several files
+    (iv) restart files produced by BOUT++
+        - one or several files, no time dimension, filenames include `restart`
     """
 
     if not _is_path(datapath):
@@ -483,12 +499,18 @@ def _check_dataset_type(datapath):
     if "metadata:keep_yboundaries" in ds.attrs:
         # (i)
         return "reload"
-    elif len(filepaths) > 1 or "t" in ds.dims:
+    elif "t" in ds.dims:
         # (iii)
         return "dump"
-    else:
+    elif all(["restart" in Path(p).name for p in filepaths]):
+        # (iv)
+        return "restart"
+    elif len(filepaths) == 1:
         # (ii)
         return "grid"
+    else:
+        # fall back to opening as dump files
+        return "dump"
 
 
 def _auto_open_mfboutdataset(
@@ -497,10 +519,16 @@ def _auto_open_mfboutdataset(
     info=True,
     keep_xboundaries=False,
     keep_yboundaries=False,
+    is_restart=False,
     **kwargs,
 ):
     if chunks is None:
         chunks = {}
+
+    if is_restart:
+        data_vars = "minimal"
+    else:
+        data_vars = _BOUT_TIME_DEPENDENT_META_VARS
 
     if _is_path(datapath):
         filepaths, filetype = _expand_filepaths(datapath)
@@ -527,6 +555,7 @@ def _auto_open_mfboutdataset(
             keep_boundaries={"x": keep_xboundaries, "y": keep_yboundaries},
             nxpe=nxpe,
             nype=nype,
+            is_restart=is_restart,
         )
 
         paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
@@ -535,7 +564,7 @@ def _auto_open_mfboutdataset(
             paths_grid,
             concat_dim=concat_dims,
             combine="nested",
-            data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
+            data_vars=data_vars,
             preprocess=_preprocess,
             engine=filetype,
             chunks=chunks,
@@ -573,6 +602,7 @@ def _auto_open_mfboutdataset(
             keep_boundaries={"x": keep_xboundaries, "y": keep_yboundaries},
             nxpe=nxpe,
             nype=nype,
+            is_restart=is_restart,
         )
 
         datapath = [_preprocess(x) for x in datapath]
@@ -582,15 +612,17 @@ def _auto_open_mfboutdataset(
         ds = xr.combine_nested(
             ds_grid,
             concat_dim=concat_dims,
-            data_vars=_BOUT_TIME_DEPENDENT_META_VARS,
+            data_vars=data_vars,
             join="exact",
             combine_attrs="no_conflicts",
         )
 
-    # Remove any duplicate time values from concatenation
-    _, unique_indices = unique(ds["t_array"], return_index=True)
+    if not is_restart:
+        # Remove any duplicate time values from concatenation
+        _, unique_indices = unique(ds["t_array"], return_index=True)
+        ds = ds.isel(t=unique_indices)
 
-    return ds.isel(t=unique_indices), remove_yboundaries
+    return ds, remove_yboundaries
 
 
 def _expand_filepaths(datapath):
@@ -749,7 +781,7 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     return paths_grid, concat_dims
 
 
-def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
+def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
     """
     Trims all guard (and optionally boundary) cells off a single dataset read from a
     single BOUT dump file, to prepare for concatenation.
@@ -767,6 +799,8 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
         Number of processors in x direction
     nype : int
         Number of processors in y direction
+    is_restart : bool
+        Is data being loaded from restart files?
     """
 
     if any(keep_boundaries.values()):
@@ -791,7 +825,13 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype):
         ):
             trimmed_ds = trimmed_ds.drop_vars(name)
 
-    return trimmed_ds.drop_vars(_BOUT_PER_PROC_VARIABLES, errors="ignore")
+    to_drop = _BOUT_PER_PROC_VARIABLES
+    if not is_restart:
+        # These variables are required to be consistent when loading restart files, so
+        # that they can be written out again in to_restart()
+        to_drop = to_drop + _BOUT_PER_PROC_VARIABLES_REQUIRED_FROM_RESTARTS
+
+    return trimmed_ds.drop_vars(to_drop, errors="ignore")
 
 
 def _infer_contains_boundaries(ds, nxpe, nype):
