@@ -260,6 +260,7 @@ def open_boutdataset(
             chunks=chunks,
             keep_xboundaries=keep_xboundaries,
             keep_yboundaries=keep_yboundaries,
+            **kwargs,
         )
     else:
         raise ValueError(f"internal error: unexpected input_type={input_type}")
@@ -899,7 +900,7 @@ def _get_limit(side, dim, keep_boundaries, boundaries, guards):
     return limit
 
 
-def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
+def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kwargs):
     """
     Opens a single grid file. Implements slightly different logic for
     boundaries to deal with different conventions in a BOUT grid file.
@@ -917,7 +918,9 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2):
 
     if _is_path(datapath):
         gridfilepath = Path(datapath)
-        grid = xr.open_dataset(gridfilepath, engine=_check_filetype(gridfilepath))
+        grid = xr.open_dataset(
+            gridfilepath, engine=_check_filetype(gridfilepath), **kwargs
+        )
     else:
         grid = datapath
 
