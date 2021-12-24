@@ -463,6 +463,9 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
             restart_ds["PE_XIND"] = xproc
             restart_ds["PE_YIND"] = yproc
             restart_ds["hist_hi"] = hist_hi
+            restart_ds["PE_XIND"] = xproc
+            restart_ds["PE_YIND"] = yproc
+            restart_ds["MYPE"] = yproc * nxpe + xproc
 
             # tt is the simulation time where the restart happens
             restart_ds["tt"] = tt
