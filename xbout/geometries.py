@@ -374,6 +374,8 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
             "poloidal_distance",
             "poloidal_distance_ylow",
             "total_poloidal_distance",
+            "zShift",
+            "zShift_ylow",
         ],
     )
 
@@ -413,6 +415,14 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     else:
         ds = ds.set_coords(("Rxy", "Zxy"))
 
+    # Rename zShift_ylow if it was added from grid file, to be consistent with name if
+    # it was added from dump file
+    if "zShift_CELL_YLOW" in ds and "zShift_ylow" in ds:
+        # Remove redundant copy
+        del ds["zShift_ylow"]
+    elif "zShift_ylow" in ds:
+        ds = ds.rename(zShift_ylow="zShift_CELL_YLOW")
+
     if "poloidal_distance" in ds:
         ds = ds.set_coords(
             ["poloidal_distance", "poloidal_distance_ylow", "total_poloidal_distance"]
@@ -420,6 +430,8 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     # Add zShift as a coordinate, so that it gets interpolated along with a variable
     ds = _set_as_coord(ds, "zShift")
+    if "zShift_CELL_YLOW" in ds:
+        ds = _set_as_coord(ds, "zShift_CELL_YLOW")
 
     ds = _create_regions_toroidal(ds)
 
