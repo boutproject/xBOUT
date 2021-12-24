@@ -450,9 +450,9 @@ class BoutDataArrayAccessor:
             )
 
             # This prevents da.interp() from being very slow.
-            # Apparently large attrs (i.e. regions) on a coordinate which is passed as an
-            # argument to dask.array.map_blocks() slow things down, maybe because coordinates
-            # are numpy arrays, not dask arrays?
+            # Apparently large attrs (i.e. regions) on a coordinate which is passed as
+            # an argument to dask.array.map_blocks() slow things down, maybe because
+            # coordinates are numpy arrays, not dask arrays?
             # Slow-down was introduced in d062fa9e75c02fbfdd46e5d1104b9b12f034448f when
             # _add_attrs_to_var(updated_ds, ycoord) was added in geometries.py
             da[ycoord].attrs = {}
@@ -472,8 +472,8 @@ class BoutDataArrayAccessor:
             )
             da["dy"] = da["dy"].copy(data=dy_array)
 
-            # Remove regions which have incorrect information for the high-resolution grid.
-            # New regions will be generated when creating a new Dataset in
+            # Remove regions which have incorrect information for the high-resolution
+            # grid.  New regions will be generated when creating a new Dataset in
             # BoutDataset.getHighParallelResVars
             del da.attrs["regions"]
 
@@ -508,10 +508,11 @@ class BoutDataArrayAccessor:
         Parameters
         ----------
         region : str, optional
-            By default, return a result with all regions interpolated separately and then
-            combined. If an explicit region argument is passed, then return the variable
-            from only that region. If the DataArray has already been restricted to a
-            single region, pass `region=False` to skip calling `from_region()` again.
+            By default, return a result with all regions interpolated separately and
+            then combined. If an explicit region argument is passed, then return the
+            variable from only that region. If the DataArray has already been restricted
+            to a single region, pass `region=False` to skip calling `from_region()`
+            again.
         psi : 1d or 2d array, optional
             Values of `psixy` to interpolate data to. If not given use `n` instead. If
             `psi` is given, it must be a 1d array with psi values for the region if
@@ -527,8 +528,8 @@ class BoutDataArrayAccessor:
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
             'cubic'.
         return_dataset : bool, optional
-            If this is set to True, return a Dataset containing this variable as a member
-            (by default returns a DataArray). Only used when region=None.
+            If this is set to True, return a Dataset containing this variable as a
+            member (by default returns a DataArray). Only used when region=None.
 
         Returns
         -------
@@ -563,8 +564,8 @@ class BoutDataArrayAccessor:
                 for (region, this_psi) in zip(self._regions, psi_parts)
             ]
 
-            # 'region' is not the same for all parts, and should not exist in the result,
-            # so delete before merging
+            # 'region' is not the same for all parts, and should not exist in the
+            # result, so delete before merging
             for part in parts:
                 if "region" in part.attrs:
                     del part.attrs["region"]
@@ -758,8 +759,8 @@ class BoutDataArrayAccessor:
             # be consistent between different regions.
             part["theta"] = poloidal_distance_part["theta"]
 
-            # 'region' is not the same for all parts, and should not exist in the result,
-            # so delete
+            # 'region' is not the same for all parts, and should not exist in the
+            # result, so delete
             if "region" in part.attrs:
                 del part.attrs["region"]
 

@@ -1576,8 +1576,8 @@ def _concat_lower_guards(da, da_global, mxg, myg):
             # poloidal_distance_ylow should be zero at the boundary of this region
             poloidal_distance_bottom = da["poloidal_distance_ylow"].isel({ycoord: 0})
             if all(abs(poloidal_distance_bottom) < 1.0e-16):
-                # Offset so that the poloidal_distance in da_lower is continuous from the
-                # poloidal_distance in this region.
+                # Offset so that the poloidal_distance in da_lower is continuous from
+                # the poloidal_distance in this region.
                 # Expect there to be y-boundary cells in the Dataset, this will probably
                 # fail if there are not.
                 total_poloidal_distance = da["total_poloidal_distance"]
@@ -1694,8 +1694,8 @@ def _concat_upper_guards(da, da_global, mxg, myg):
                 {ycoord: 0}
             )
             if all(abs(poloidal_distance_bottom) < 1.0e-16):
-                # Offset so that the poloidal_distance in da_upper is continuous from the
-                # poloidal_distance in this region.
+                # Offset so that the poloidal_distance in da_upper is continuous from
+                # the poloidal_distance in this region.
                 # Expect there to be y-boundary cells in the Dataset, this will probably
                 # fail if there are not.
                 total_poloidal_distance = da["total_poloidal_distance"]

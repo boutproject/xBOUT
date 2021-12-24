@@ -295,7 +295,8 @@ class BoutDatasetAccessor:
         Returns
         -------
         A new Dataset containing a high-resolution versions of the variables. The new
-        Dataset is a valid BoutDataset, although containing only the specified variables.
+        Dataset is a valid BoutDataset, although containing only the specified
+        variables.
         """
 
         if variables is ...:
