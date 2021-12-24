@@ -3,6 +3,8 @@ from copy import deepcopy
 import inspect
 from pathlib import Path
 import re
+from functools import reduce
+import operator
 
 import pytest
 
@@ -48,6 +50,15 @@ def test_check_extensions(tmp_path):
     example_hdf5_file.write_text("content_txt")
     with pytest.raises(IOError):
         filetype = _check_filetype(example_invalid_file)
+
+
+def test_set_fci_coords(create_example_grid_file_fci, create_example_files_fci):
+    grid = create_example_grid_file_fci
+    data = create_example_files_fci
+
+    ds = open_boutdataset(data, gridfilepath=grid, geometry="fci")
+    assert "R" in ds
+    assert "Z" in ds
 
 
 class TestPathHandling:
@@ -518,10 +529,16 @@ def create_bout_ds(
 
     T = DataArray(data, dims=["t", "x", "y", "z"])
     n = DataArray(data, dims=["t", "x", "y", "z"])
+    S = DataArray(data[:, :, :, 0], dims=["t", "x", "y"])
     for v in [n, T]:
         v.attrs["direction_y"] = "Standard"
         v.attrs["cell_location"] = "CELL_CENTRE"
-    ds = Dataset({"n": n, "T": T})
+        v.attrs["direction_z"] = "Standard"
+    for v in [S]:
+        v.attrs["direction_y"] = "Standard"
+        v.attrs["cell_location"] = "CELL_CENTRE"
+        v.attrs["direction_z"] = "Average"
+    ds = Dataset({"n": n, "T": T, "S": S})
 
     # BOUT_VERSION needed to deal with backwards incompatible changes:
     #
@@ -1161,6 +1178,14 @@ class TestOpen:
     def test_combine_along_tx(self):
         ...
 
+    def test_restarts(self):
+        datapath = Path(__file__).parent.joinpath(
+            "data", "restart", "BOUT.restart.*.nc"
+        )
+        ds = open_boutdataset(datapath, keep_xboundaries=True, keep_yboundaries=True)
+
+        assert "T" in ds
+
 
 _test_processor_layouts_list = [
     # No parallelization
@@ -1231,18 +1256,23 @@ _test_processor_layouts_doublenull_list = [
 
 
 class TestTrim:
-    def test_no_trim(self):
+    @pytest.mark.parametrize("is_restart", [False, True])
+    def test_no_trim(self, is_restart):
         ds = create_test_data(0)
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding["source"] = "folder0/BOUT.dmp.0.nc"
-        actual = _trim(ds, guards={}, keep_boundaries={}, nxpe=1, nype=1)
+        actual = _trim(
+            ds, guards={}, keep_boundaries={}, nxpe=1, nype=1, is_restart=is_restart
+        )
         xrt.assert_equal(actual, ds)
 
     def test_trim_guards(self):
         ds = create_test_data(0)
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding["source"] = "folder0/BOUT.dmp.0.nc"
-        actual = _trim(ds, guards={"time": 2}, keep_boundaries={}, nxpe=1, nype=1)
+        actual = _trim(
+            ds, guards={"time": 2}, keep_boundaries={}, nxpe=1, nype=1, is_restart=False
+        )
         selection = {"time": slice(2, -2)}
         expected = ds.isel(**selection)
         xrt.assert_equal(expected, actual)
@@ -1369,7 +1399,8 @@ class TestTrim:
         assert actual_lower_boundaries == lower_boundaries
         assert actual_upper_boundaries == upper_boundaries
 
-    def test_keep_xboundaries(self):
+    @pytest.mark.parametrize("is_restart", [False, True])
+    def test_keep_xboundaries(self, is_restart):
         ds = create_test_data(0)
         ds = ds.rename({"dim2": "x"})
 
@@ -1379,11 +1410,19 @@ class TestTrim:
         ds["jyseps2_1"] = 8
         ds["jyseps1_2"] = 8
 
-        actual = _trim(ds, guards={"x": 2}, keep_boundaries={"x": True}, nxpe=1, nype=1)
+        actual = _trim(
+            ds,
+            guards={"x": 2},
+            keep_boundaries={"x": True},
+            nxpe=1,
+            nype=1,
+            is_restart=is_restart,
+        )
         expected = ds  # Should be unchanged
         xrt.assert_equal(expected, actual)
 
-    def test_keep_yboundaries(self):
+    @pytest.mark.parametrize("is_restart", [False, True])
+    def test_keep_yboundaries(self, is_restart):
         ds = create_test_data(0)
         ds = ds.rename({"dim2": "y"})
 
@@ -1393,7 +1432,14 @@ class TestTrim:
         ds["jyseps2_1"] = 8
         ds["jyseps1_2"] = 8
 
-        actual = _trim(ds, guards={"y": 2}, keep_boundaries={"y": True}, nxpe=1, nype=1)
+        actual = _trim(
+            ds,
+            guards={"y": 2},
+            keep_boundaries={"y": True},
+            nxpe=1,
+            nype=1,
+            is_restart=is_restart,
+        )
         expected = ds  # Should be unchanged
         xrt.assert_equal(expected, actual)
 
@@ -1401,7 +1447,10 @@ class TestTrim:
         "filenum, lower, upper",
         [(0, True, False), (1, False, True), (2, True, False), (3, False, True)],
     )
-    def test_keep_yboundaries_doublenull_by_filenum(self, filenum, lower, upper):
+    @pytest.mark.parametrize("is_restart", [False, True])
+    def test_keep_yboundaries_doublenull_by_filenum(
+        self, filenum, lower, upper, is_restart
+    ):
         ds = create_test_data(0)
         ds = ds.rename({"dim2": "y"})
 
@@ -1413,7 +1462,14 @@ class TestTrim:
         ds["ny_inner"] = 8
         ds["MYSUB"] = 4
 
-        actual = _trim(ds, guards={"y": 2}, keep_boundaries={"y": True}, nxpe=1, nype=4)
+        actual = _trim(
+            ds,
+            guards={"y": 2},
+            keep_boundaries={"y": True},
+            nxpe=1,
+            nype=4,
+            is_restart=is_restart,
+        )
         expected = ds  # Should be unchanged
         if not lower:
             expected = expected.isel(y=slice(2, None, None))
@@ -1421,7 +1477,8 @@ class TestTrim:
             expected = expected.isel(y=slice(None, -2, None))
         xrt.assert_equal(expected, actual)
 
-    def test_trim_timing_info(self):
+    @pytest.mark.parametrize("is_restart", [False, True])
+    def test_trim_timing_info(self, is_restart):
         ds = create_test_data(0)
         from xbout.load import _BOUT_PER_PROC_VARIABLES
 
@@ -1431,7 +1488,60 @@ class TestTrim:
 
         for v in _BOUT_PER_PROC_VARIABLES:
             ds[v] = 42.0
-        ds = _trim(ds, guards={}, keep_boundaries={}, nxpe=1, nype=1)
+        ds = _trim(
+            ds, guards={}, keep_boundaries={}, nxpe=1, nype=1, is_restart=is_restart
+        )
 
         expected = create_test_data(0)
         xrt.assert_equal(ds, expected)
+
+
+fci_shape = (2, 2, 3, 4)
+fci_guards = (2, 2, 0)
+
+
+@pytest.fixture
+def create_example_grid_file_fci(tmp_path_factory):
+    """
+    Mocks up a FCI-like netCDF file, and return the temporary test
+    directory containing them.
+
+    Deletes the temporary directory once that test is done.
+    """
+
+    # Create grid dataset
+    shape = (fci_shape[1] + 2 * fci_guards[0], *fci_shape[2:])
+    arr = np.arange(reduce(operator.mul, shape, 1)).reshape(shape)
+    grid = DataArray(data=arr, name="R", dims=["x", "y", "z"]).to_dataset()
+    grid["Z"] = DataArray(np.random.random(shape), dims=["x", "y", "z"])
+    grid["dy"] = DataArray(np.ones(shape), dims=["x", "y", "z"])
+    grid = grid.set_coords(["dy"])
+
+    # Create temporary directory
+    save_dir = tmp_path_factory.mktemp("griddata")
+
+    # Save
+    filepath = save_dir.joinpath("fci.nc")
+    grid.to_netcdf(filepath, engine="netcdf4")
+
+    return filepath
+
+
+@pytest.fixture
+def create_example_files_fci(tmp_path_factory):
+
+    return _bout_xyt_example_files(
+        tmp_path_factory,
+        lengths=fci_shape,
+        nxpe=1,
+        nype=1,
+        # nt=1,
+        guards={a: b for a, b in zip("xyz", fci_guards)},
+        syn_data_type="random",
+        grid=None,
+        squashed=False,
+        # topology="core",
+        write_to_disk=False,
+        bout_v5=True,
+        metric_3D=True,
+    )

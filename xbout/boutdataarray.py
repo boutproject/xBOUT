@@ -118,7 +118,7 @@ class BoutDataArrayAccessor:
 
         data_shifted_fft = data_fft * np.exp(phase.data)
 
-        data_shifted = fft.irfft(data_shifted_fft, n=nz)
+        data_shifted = fft.irfft(data_shifted_fft, n=nz, axis=axis)
 
         # Return a DataArray with the same attributes as self, but values from
         # data_shifted

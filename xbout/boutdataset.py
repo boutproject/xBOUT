@@ -238,8 +238,8 @@ class BoutDatasetAccessor:
         if first_var is None:
             raise ValueError(
                 f"Could not find variable to interpolate with both "
-                f"{ds.metadata.get('bout_xdim', 'x')} and "
-                f"{ds.metadata.get('bout_ydim', 'y')} dimensions"
+                f"{self.data.metadata.get('bout_xdim', 'x')} and "
+                f"{self.data.metadata.get('bout_ydim', 'y')} dimensions"
             )
         variables.remove(first_var)
         ds = self.data[first_var].bout.interpolate_parallel(
@@ -440,19 +440,21 @@ class BoutDatasetAccessor:
 
         spatial_dims = set(dims) - set([tcoord])
 
+        integrand = variable * spatial_volume_element
+
         # Need to check if the variable being integrated is a Field2D, which does not
         # have a z-dimension to sum over. Other variables are OK because metric
         # coefficients, dx and dy all have both x- and y-dimensions so variable would be
         # broadcast to include them if necessary
         missing_z_sum = zcoord in dims and zcoord not in variable.dims
 
-        integrand = variable * spatial_volume_element
-
-        integral = integrand.sum(dim=spatial_dims)
-
         # If integrand is a Field2D, need to multiply by nz if integrating over z
         if missing_z_sum:
+            spatial_dims -= set(zcoord)
+            integral = integrand.sum(dim=spatial_dims)
             integral = integral * ds.sizes[zcoord]
+        else:
+            integral = integrand.sum(dim=spatial_dims)
 
         if tcoord in dims:
             if cumulative_t:
