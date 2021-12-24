@@ -56,8 +56,6 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         ds = _set_attrs_on_all_vars(ds, "geometry", "")
         updated_ds = ds
     else:
-        ds = _set_attrs_on_all_vars(ds, "geometry", geometry_name)
-
         try:
             add_geometry_coords = REGISTERED_GEOMETRIES[geometry_name]
         except KeyError:
@@ -80,6 +78,11 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
             updated_ds = add_geometry_coords(ds, grid=grid)
         else:
             updated_ds = add_geometry_coords(ds)
+
+        # Set "geometry" attribute after adding coordinates, so that functions in
+        # `REGISTERED_GEOMETRIES` can check if ds.attrs["geometry"] is already defined
+        # to see if they are being applied for the first time or re-applied.
+        updated_ds = _set_attrs_on_all_vars(updated_ds, "geometry", geometry_name)
 
     del ds
 
@@ -298,7 +301,7 @@ def _set_default_toroidal_coordinates(coordinates, ds):
     return coordinates
 
 
-def _add_vars_from_grid(ds, grid, variables):
+def _add_vars_from_grid(ds, grid, variables, *, optional_variables=None):
     # Get extra geometry information from grid file if it's not in the dump files
     for v in variables:
         if v not in ds:
@@ -317,6 +320,23 @@ def _add_vars_from_grid(ds, grid, variables):
             ds[v] = (grid[v].dims, grid[v].values)
 
             _add_attrs_to_var(ds, v)
+
+    if optional_variables is not None:
+        for v in optional_variables:
+            if v not in ds:
+                if grid is None:
+                    continue
+                if v in grid:
+                    # ds[v] = grid[v]
+                    # Work around issue where xarray drops attributes on
+                    # coordinates when a new DataArray is assigned to the
+                    # Dataset, see https://github.com/pydata/xarray/issues/4415
+                    # https://github.com/pydata/xarray/issues/4393
+                    # This way adds as a 'Variable' instead of as a 'DataArray'
+                    ds[v] = (grid[v].dims, grid[v].values)
+
+                    _add_attrs_to_var(ds, v)
+
     return ds
 
 
@@ -325,7 +345,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     coordinates = _set_default_toroidal_coordinates(coordinates, ds)
 
-    if set(coordinates.values()).issubset(set(ds.coords).union(ds.dims)):
+    if ds.attrs.get("geometry", None) == "toroidal":
         # Loading a Dataset which already had the coordinates created for it
         ds = _create_regions_toroidal(ds)
         return ds
@@ -343,7 +363,9 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         )
 
     # Get extra geometry information from grid file if it's not in the dump files
-    ds = _add_vars_from_grid(ds, grid, ["psixy", "Rxy", "Zxy"])
+    ds = _add_vars_from_grid(
+        ds, grid, ["psixy", "Rxy", "Zxy"], optional_variables=["Bpxy", "Brxy", "Bzxy"]
+    )
 
     if "t" in ds.dims:
         # Rename 't' if user requested it
