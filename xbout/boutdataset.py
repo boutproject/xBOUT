@@ -238,8 +238,8 @@ class BoutDatasetAccessor:
         if first_var is None:
             raise ValueError(
                 f"Could not find variable to interpolate with both "
-                f"{ds.metadata.get('bout_xdim', 'x')} and "
-                f"{ds.metadata.get('bout_ydim', 'y')} dimensions"
+                f"{self.data.metadata.get('bout_xdim', 'x')} and "
+                f"{self.data.metadata.get('bout_ydim', 'y')} dimensions"
             )
         variables.remove(first_var)
         ds = self.data[first_var].bout.interpolate_parallel(

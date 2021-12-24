@@ -183,8 +183,9 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
 
         # In BOUT++ v5, dz is either a Field2D or Field3D.
         # We can use it as a 1D coordinate if it's a Field3D, _or_ if nz == 1
-        bout_v5 = updated_ds.metadata["BOUT_VERSION"] > 5.0 or (
-            updated_ds.metadata["BOUT_VERSION"] == 5.0 and updated_ds["dz"].ndim >= 2
+        bout_version = updated_ds.metadata.get("BOUT_VERSION", 4.3)
+        bout_v5 = bout_version > 5.0 or (
+            bout_version == 5.0 and updated_ds["dz"].ndim >= 2
         )
         use_metric_3d = updated_ds.metadata.get("use_metric_3d", False)
         can_use_1d_z_coord = (nz == 1) or use_metric_3d
@@ -278,7 +279,10 @@ def _set_default_toroidal_coordinates(coordinates, ds):
         coordinates = {}
 
     # Replace any values that have not been passed in with defaults
-    coordinates["t"] = coordinates.get("t", ds.metadata["bout_tdim"])
+    if ds.metadata["is_restart"] == 0:
+        # Don't need "t" coordinate for restart files which have no time dimension, and
+        # adding it breaks the check for reloading in open_boutdataset
+        coordinates["t"] = coordinates.get("t", ds.metadata["bout_tdim"])
 
     default_x = (
         ds.metadata["bout_xdim"] if ds.metadata["bout_xdim"] != "x" else "psi_poloidal"
@@ -354,7 +358,8 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     ds[coordinates["x"]].attrs["units"] = "Wb"
 
     # Record which dimensions 't', 'x', and 'y' were renamed to.
-    ds.metadata["bout_tdim"] = coordinates["t"]
+    if ds.metadata["is_restart"] == 0:
+        ds.metadata["bout_tdim"] = coordinates["t"]
     # x dimension not renamed, so this is still 'x'
     ds.metadata["bout_xdim"] = "x"
     ds.metadata["bout_ydim"] = coordinates["y"]

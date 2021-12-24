@@ -6,6 +6,7 @@ import xarray.testing as xrt
 
 import dask.array
 import numpy as np
+from pathlib import Path
 from scipy.integrate import quad_vec
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
@@ -2161,6 +2162,9 @@ class TestSaveRestart:
                 # No coordinates saved in restart files, so unset them in check_ds
                 check_ds = check_ds.reset_coords()
 
+                # ignore variables that depend on the rank of the BOUT++ process - they
+                # cannot be consistent with check_ds
+                rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2169,7 +2173,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == -1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
-                        else:
+                        elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
     def test_to_restart_change_npe(self, tmp_path_factory, bout_xyt_example_files):
@@ -2223,6 +2227,9 @@ class TestSaveRestart:
                 # No coordinates saved in restart files, so unset them in check_ds
                 check_ds = check_ds.reset_coords()
 
+                # ignore variables that depend on the rank of the BOUT++ process - they
+                # cannot be consistent with check_ds
+                rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2233,7 +2240,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == -1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
-                        else:
+                        elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
     @pytest.mark.long
@@ -2291,6 +2298,9 @@ class TestSaveRestart:
                 # No coordinates saved in restart files, so unset them in check_ds
                 check_ds = check_ds.reset_coords()
 
+                # ignore variables that depend on the rank of the BOUT++ process - they
+                # cannot be consistent with check_ds
+                rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2301,7 +2311,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == -1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
-                        else:
+                        elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
     @pytest.mark.long
@@ -2338,3 +2348,11 @@ class TestSaveRestart:
         )
         with pytest.raises(ValueError):
             ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
+
+    def test_from_restart_to_restart(self, tmp_path):
+        datapath = Path(__file__).parent.joinpath(
+            "data", "restart", "BOUT.restart.*.nc"
+        )
+        ds = open_boutdataset(datapath, keep_xboundaries=True, keep_yboundaries=True)
+
+        ds.bout.to_restart(savepath=tmp_path, nxpe=1, nype=4)
