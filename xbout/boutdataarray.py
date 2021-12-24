@@ -253,6 +253,10 @@ class BoutDataArrayAccessor:
         Interpolate in the parallel direction to get a higher resolution version of the
         variable.
 
+        Note: when using poloidal_distance for interpolation, have to convert to numpy
+        arrays for calculation. This means that dask cannot be used to parallelise this
+        calculation, so may be slow for large Datasets.
+
         Parameters
         ----------
         region : str, optional
@@ -293,9 +297,13 @@ class BoutDataArrayAccessor:
         if region is None:
             # Call the single-region version of this method for each region, and combine
             # the results together
+
+            # apply_unfunc of scipy.interp1d() fails if data is a dask array
+            self.data.load()
             if poloidal_distance is None:
                 poloidal_distance_parts = [None for _ in self._regions]
             else:
+                poloidal_distance.load()
                 poloidal_distance_parts = [
                     poloidal_distance.from_region(
                         region, with_guards={xcoord: 2, ycoord: 0}
@@ -352,7 +360,14 @@ class BoutDataArrayAccessor:
             aligned_input = True
 
         if poloidal_distance is not None:
+            # apply_unfunc of scipy.interp1d() fails if data is a dask array
+            da.load()
+            poloidal_distance.load()
+
             poloidal_distance = poloidal_distance.copy()
+            # Need to delete xcoord 'indexer', because it is not present on 'result', so
+            # would cause an error in apply_ufunc() if it was present.
+            del poloidal_distance[xcoord]
             # Need to delete ycoord to avoid a clash below
             del poloidal_distance[ycoord]
 
@@ -364,30 +379,39 @@ class BoutDataArrayAccessor:
             if dy is None:
                 raise ValueError()
 
-            sizes = {k: v for (k, v) in da.sizes.items()}
-            sizes[ycoord] = poloidal_distance.sizes[ycoord]
-            result = xr.DataArray(np.zeros([sizes[d] for d in da.dims]), dims=da.dims)
-            result["poloidal_distance"] = poloidal_distance.drop_vars("x")
-            for coord in da.coords:
-                if ycoord not in da[coord].dims:
-                    result[coord] = da[coord]
+            from scipy.interpolate import interp1d
 
-            for ix in range(da.sizes[xcoord]):
-                xsel = {xcoord: da[xcoord][ix].values}
-                # Need to make psi_poloidal a dimension coordinate in order to
-                # interpolate using it
-                result[ycoord] = result["poloidal_distance"].isel(xsel, drop=True).data
-                da[ycoord] = da["poloidal_distance"].isel(xsel, drop=True).data
-                result.loc[xsel] = (
-                    da.isel(xsel)
-                    .interp(
-                        {ycoord: poloidal_distance.isel(xsel)},
-                        assume_sorted=True,
-                        method=method,
-                        kwargs={"fill_value": "extrapolate"},
-                    )
-                    .data
+            def y_interp_func(
+                data, poloidal_distance_in, poloidal_distance_out, method=None
+            ):
+                interp_func = interp1d(
+                    poloidal_distance_in, data, kind=method, assume_sorted=True
                 )
+                return interp_func(poloidal_distance_out)
+
+            # Need to give different name to output dimension to avoid clash
+            new_ycoord = ycoord + "_interpolate_to_new_grid_new_ycoord"
+            poloidal_distance = poloidal_distance.rename({ycoord: new_ycoord})
+            result = xr.apply_ufunc(
+                y_interp_func,
+                da,
+                da["poloidal_distance"],
+                poloidal_distance,
+                method,
+                input_core_dims=[[ycoord], [ycoord], [new_ycoord], []],
+                output_core_dims=[[new_ycoord]],
+                exclude_dims=set([ycoord]),
+                vectorize=True,
+                dask="parallelized",
+                dask_gufunc_kwargs={
+                    "output_sizes": {new_ycoord: poloidal_distance.sizes[new_ycoord]}
+                },
+            )
+            # Rename new_ycoord back to ycoord for output
+            result = result.rename({new_ycoord: ycoord})
+
+            # Transpose to original dimension order
+            result = result.transpose(*da.dims)
 
             result.attrs = da.attrs.copy()
             da = result
@@ -645,6 +669,11 @@ class BoutDataArrayAccessor:
         associated by the original DataArray, so that psi-values and poloidal distances
         along psi-contours of the equilibrium are the same.
 
+        Note: poloidal_distance is used for parallel interpolation inside this method.
+        For this, have to convert to numpy arrays for calculation. Means that dask
+        cannot be used to parallelise that part of the calculation, so this method may
+        be slow for large Datasets.
+
         Parameters
         ----------
         new_gridfile : str, pathlib.Path or Dataset
@@ -670,6 +699,10 @@ class BoutDataArrayAccessor:
         ycoord = self.data.metadata["bout_ydim"]
 
         da = self.data
+
+        # apply_unfunc() of scipy.interp1d() fails with dask arrays, so load
+        da.load()
+        new_gridfile["poloidal_distance"].load()
 
         parts = []
         for region in self._regions:
@@ -708,6 +741,10 @@ class BoutDataArrayAccessor:
             dy_part = new_gridfile["dy"].bout.from_region(
                 region, with_guards={xcoord: 0, ycoord: 0}
             )
+
+            # apply_unfunc() of scipy.interp1d() fails with dask arrays, so load
+            part.load()
+            poloidal_distance_part.load()
 
             part = part.bout.interpolate_parallel(
                 False,
