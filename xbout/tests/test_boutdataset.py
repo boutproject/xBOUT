@@ -2162,6 +2162,9 @@ class TestSaveRestart:
                 # No coordinates saved in restart files, so unset them in check_ds
                 check_ds = check_ds.reset_coords()
 
+                # ignore variables that depend on the rank of the BOUT++ process - they
+                # cannot be consistent with check_ds
+                rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2170,7 +2173,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == -1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
-                        else:
+                        elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
     def test_to_restart_change_npe(self, tmp_path_factory, bout_xyt_example_files):
@@ -2224,6 +2227,9 @@ class TestSaveRestart:
                 # No coordinates saved in restart files, so unset them in check_ds
                 check_ds = check_ds.reset_coords()
 
+                # ignore variables that depend on the rank of the BOUT++ process - they
+                # cannot be consistent with check_ds
+                rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2234,7 +2240,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == -1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
-                        else:
+                        elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
     @pytest.mark.long
@@ -2292,6 +2298,9 @@ class TestSaveRestart:
                 # No coordinates saved in restart files, so unset them in check_ds
                 check_ds = check_ds.reset_coords()
 
+                # ignore variables that depend on the rank of the BOUT++ process - they
+                # cannot be consistent with check_ds
+                rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2302,7 +2311,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == -1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
-                        else:
+                        elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
     @pytest.mark.long
