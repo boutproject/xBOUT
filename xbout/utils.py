@@ -344,28 +344,17 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
 
     ny_inner = ds.metadata["ny_inner"]
 
-    # These variables need to be saved to restart files in addition to evolving ones
-    restart_metadata_vars = [
-        "zperiod",
-        "MZSUB",
-        "MXG",
-        "MYG",
-        "MZG",
-        "nx",
-        "ny",
-        "nz",
-        "MZ",
-        "NZPE",
-        "ixseps1",
-        "ixseps2",
-        "jyseps1_1",
-        "jyseps2_1",
-        "jyseps1_2",
-        "jyseps2_2",
-        "ny_inner",
-        "ZMAX",
-        "ZMIN",
-        "BOUT_VERSION",
+    # These metadata variables are created by xBOUT, so should not be saved to restart
+    # files
+    restart_exclude_metadata_vars = [
+        "bout_tdim",
+        "bout_xdim",
+        "bout_ydim",
+        "bout_zdim",
+        "fine_interpolation_factor",
+        "is_restart",
+        "keep_xboundaries",
+        "keep_yboundaries",
     ]
 
     if variables is None:
@@ -455,8 +444,12 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
                 data_variable.attrs = {}
 
                 restart_ds[v] = data_variable
-            for v in restart_metadata_vars:
-                restart_ds[v] = ds.metadata[v]
+            for v in ds.metadata:
+                if v not in restart_exclude_metadata_vars:
+                    restart_ds[v] = ds.metadata[v]
+
+            # These variables need to be altered, because they depend on the number of
+            # files and/or the rank of this file.
             restart_ds["MXSUB"] = mxsub
             restart_ds["MYSUB"] = mysub
             restart_ds["NXPE"] = nxpe
