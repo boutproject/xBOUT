@@ -396,8 +396,9 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
         "g_13",
         "g_23",
         "J",
+        "zShift",
     ]:
-        if v not in variables:
+        if v not in variables and v in ds:
             variables.append(v)
 
     # number of points in the domain on each processor, not including guard or boundary
