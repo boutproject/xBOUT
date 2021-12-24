@@ -55,10 +55,16 @@ def _separate_metadata(ds):
 
     # Find only the scalar variables
     variables = list(ds.variables)
+
+    # Remove dz from metadata if it's present. Allows treating dz more consistently
+    # whether it is scalar or 2d/3d array.
+    exclude = ["dz"]
+
     scalar_vars = [
         var
         for var in variables
         if not any(dim in ["t", "x", "y", "z"] for dim in ds[var].dims)
+        and var not in exclude
     ]
 
     # Save metadata as a dictionary
@@ -357,7 +363,6 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
         "ny_inner",
         "ZMAX",
         "ZMIN",
-        "dz",
         "BOUT_VERSION",
     ]
 
@@ -369,6 +374,7 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
     for v in [
         "dx",
         "dy",
+        "dz",
         "g11",
         "g22",
         "g33",
@@ -450,7 +456,7 @@ _bounding_surface_checks = {}
 
 
 def _check_upper_y(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
-    region = list(ds_region.regions.values())[0]
+    region = list(ds_region.bout._regions.values())[0]
     xcoord = ds_region.metadata["bout_xdim"]
     ycoord = ds_region.metadata["bout_ydim"]
 
@@ -483,7 +489,7 @@ _bounding_surface_checks["upper_y"] = _check_upper_y
 
 
 def _check_inner_x(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
-    region = list(ds_region.regions.values())[0]
+    region = list(ds_region.bout._regions.values())[0]
     xcoord = ds_region.metadata["bout_xdim"]
     ycoord = ds_region.metadata["bout_ydim"]
 
@@ -516,7 +522,7 @@ _bounding_surface_checks["inner_x"] = _check_inner_x
 
 
 def _check_lower_y(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
-    region = list(ds_region.regions.values())[0]
+    region = list(ds_region.bout._regions.values())[0]
     xcoord = ds_region.metadata["bout_xdim"]
     ycoord = ds_region.metadata["bout_ydim"]
 
@@ -544,7 +550,7 @@ _bounding_surface_checks["lower_y"] = _check_lower_y
 
 
 def _check_outer_x(ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord):
-    region = list(ds_region.regions.values())[0]
+    region = list(ds_region.bout._regions.values())[0]
     xcoord = ds_region.metadata["bout_xdim"]
     ycoord = ds_region.metadata["bout_ydim"]
 
@@ -591,7 +597,7 @@ def _follow_boundary(ds, start_region, start_direction, xbndry, ybndry, Rcoord, 
         visited_regions.append(this_region)
 
         ds_region = ds.bout.from_region(this_region, with_guards=0)
-        region = ds.regions[this_region]
+        region = ds.bout._regions[this_region]
 
         # Get all boundary points from this region, and decide which region to go to next
         this_region = None
@@ -659,14 +665,14 @@ def _get_bounding_surfaces(ds, coords):
 
     # First find the outer boundary
     start_region = None
-    for name, region in ds.regions.items():
+    for name, region in ds.bout._regions.items():
         if region.connection_lower_y is None and region.connection_outer_x is None:
             start_region = name
             break
     if start_region is None:
         # No y-boundary region found, presumably is core-only simulation. Start on any
         # region with an outer-x boundary
-        for name, region in ds.regions.items():
+        for name, region in ds.bout._regions.items():
             if region.connection_outer_x is None:
                 start_region = name
     if start_region is None:
@@ -676,7 +682,7 @@ def _get_bounding_surfaces(ds, coords):
 
     # First region has outer-x boundary, but we only visit start_region once, so need to
     # add all boundaries in it the first time.
-    region = ds.regions[start_region]
+    region = ds.bout._regions[start_region]
     if region.connection_upper_y is None:
         start_direction = "inner_x"
     elif region.connection_inner_x is None and region.connection_lower_y is None:
@@ -699,7 +705,7 @@ def _get_bounding_surfaces(ds, coords):
 
     # Look for an inner boundary
     ############################
-    remaining_regions = set(ds.regions) - set(checked_regions)
+    remaining_regions = set(ds.bout._regions) - set(checked_regions)
     start_region = None
     if not remaining_regions:
         # Check for separate inner-x boundary on any of the already visited regions.
@@ -709,9 +715,9 @@ def _get_bounding_surfaces(ds, coords):
         # a separate inner boundary
         for r in checked_regions:
             if (
-                ds.regions[r].connection_inner_x is None
-                and ds.regions[r].connection_lower_y is not None
-                and ds.regions[r].connection_upper_y is not None
+                ds.bout._regions[r].connection_inner_x is None
+                and ds.bout._regions[r].connection_lower_y is not None
+                and ds.bout._regions[r].connection_upper_y is not None
                 and checked_regions.count(r) < 2
             ):
                 start_region = r
@@ -719,9 +725,9 @@ def _get_bounding_surfaces(ds, coords):
     else:
         for r in remaining_regions:
             if (
-                ds.regions[r].connection_inner_x is None
-                and ds.regions[r].connection_lower_y is not None
-                and ds.regions[r].connection_upper_y is not None
+                ds.bout._regions[r].connection_inner_x is None
+                and ds.bout._regions[r].connection_lower_y is not None
+                and ds.bout._regions[r].connection_upper_y is not None
             ):
                 start_region = r
                 break
@@ -738,11 +744,11 @@ def _get_bounding_surfaces(ds, coords):
         boundaries.append(boundary)
         checked_regions += more_checked_regions
 
-        remaining_regions = set(ds.regions) - set(checked_regions)
+        remaining_regions = set(ds.bout._regions) - set(checked_regions)
 
     # If there are any remaining regions, they should not have any boundaries
     for r in remaining_regions:
-        region = ds.regions[r]
+        region = ds.bout._regions[r]
         if (
             region.connection_lower_y is None
             or region.connection_outer_x is None

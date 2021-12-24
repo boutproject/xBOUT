@@ -1,4 +1,6 @@
 from boutdata.data import BoutOptionsFile
+from gelidum import freeze
+import inspect
 import numpy as np
 from pathlib import Path
 
@@ -85,9 +87,9 @@ def set_geometry_from_input_file(ds, name):
     # Set dz as it would be calculated by BOUT++ (but don't support zmin, zmax or
     # zperiod here)
     if "dz" in options["mesh"]:
-        ds.metadata["dz"] = options.evaluate_scalar("mesh:dz")
+        ds["dz"] = options.evaluate_scalar("mesh:dz")
     else:
-        ds.metadata["dz"] = 2.0 * np.pi / ds.metadata["nz"]
+        ds["dz"] = 2.0 * np.pi / ds.metadata["nz"]
 
     # Add extra fields needed by "toroidal" geometry
     for v in ["Rxy", "Zxy", "psixy"]:
@@ -111,3 +113,29 @@ def set_geometry_from_input_file(ds, name):
             ds[v] = ds[v].copy(data=np.broadcast_to(float("nan"), ds[v].shape))
 
     return ds, options
+
+
+def _get_kwargs(ignore=None):
+    """
+    Get the arguments of a function as a frozendict. Extended version of code from here:
+    https://stackoverflow.com/a/65927265
+
+    Parameters
+    ----------
+    ignore : str or Sequence of str
+        Arguments to drop when constructing the returned frozendict
+    """
+    frame = inspect.currentframe().f_back
+    keys, _, _, values = inspect.getargvalues(frame)
+    kwargs = {}
+    keys_to_ignore = ["self"]
+    if ignore is not None:
+        if isinstance(ignore, str):
+            ignore = [ignore]
+        keys_to_ignore += ignore
+    for key in keys:
+        if key not in keys_to_ignore:
+            value = values[key]
+            kwargs[key] = value
+
+    return freeze(kwargs)

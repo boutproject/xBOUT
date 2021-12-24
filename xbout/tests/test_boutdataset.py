@@ -6,7 +6,6 @@ import xarray.testing as xrt
 
 import dask.array
 import numpy as np
-from pathlib import Path
 from scipy.integrate import quad_vec
 
 from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
@@ -57,23 +56,6 @@ class TestBoutDatasetIsXarrayDataset:
 
 
 class TestBoutDatasetMethods:
-    @pytest.mark.skip
-    def test_test_method(self, bout_xyt_example_files):
-        dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
-        ds = open_boutdataset(datapath=dataset_list, inputfilepath=None)
-        # ds = collect(path=path)
-        # bd = BoutAccessor(ds)
-        print(ds)
-        # ds.bout.test_method()
-        # print(ds.bout.options)
-        # print(ds.bout.metadata)
-        print(ds.isel(t=-1))
-
-        # ds.bout.set_extra_data('stored')
-        ds.bout.extra_data = "stored"
-
-        print(ds.bout.extra_data)
-
     def test_get_field_aligned(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(None, nxpe=3, nype=4, nt=1)
         with pytest.warns(UserWarning):
@@ -1219,7 +1201,7 @@ class TestBoutDatasetMethods:
         ds["t"].data[...] = t.squeeze()
         ds["dx"].data[...] = 0.1
         ds["dy"].data[...] = 0.2
-        ds.metadata["dz"] = 0.3
+        ds["dz"] = 0.3
         tfunc = 1.5 * t
         xfunc = x ** 2
         yfunc = 10.0 * y - y ** 2
@@ -1880,10 +1862,10 @@ class TestLoadLogFile:
 
 
 class TestSave:
-    def test_save_all(self, tmpdir_factory, bout_xyt_example_files):
+    def test_save_all(self, tmp_path_factory, bout_xyt_example_files):
         # Create data
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=5, nt=1, write_to_disk=True
+            tmp_path_factory, nxpe=4, nype=5, nt=1, write_to_disk=True
         )
 
         # Load it as a boutdataset
@@ -1891,7 +1873,8 @@ class TestSave:
             original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + "temp_boutdata.nc"
+        savedir = tmp_path_factory.mktemp("test_save_all")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath)
 
         # Load it again using bare xarray
@@ -1901,13 +1884,13 @@ class TestSave:
         xrt.assert_equal(original, recovered)
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
-    def test_reload_all(self, tmpdir_factory, bout_xyt_example_files, geometry):
+    def test_reload_all(self, tmp_path_factory, bout_xyt_example_files, geometry):
         # Create data
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=5, nt=1, grid="grid", write_to_disk=True
+            tmp_path_factory, nxpe=4, nype=5, nt=1, grid="grid", write_to_disk=True
         )
 
-        gridpath = str(Path(path).parent) + "/grid.nc"
+        gridpath = path.parent.joinpath("grid.nc")
 
         # Load it as a boutdataset
         if geometry is None:
@@ -1927,7 +1910,8 @@ class TestSave:
             )
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + "/temp_boutdata.nc"
+        savedir = tmp_path_factory.mktemp("test_reload_all")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath)
 
         # Load it again
@@ -1959,12 +1943,12 @@ class TestSave:
         "separate_vars", [False, pytest.param(True, marks=pytest.mark.long)]
     )
     def test_save_dtype(
-        self, tmpdir_factory, bout_xyt_example_files, save_dtype, separate_vars
+        self, tmp_path_factory, bout_xyt_example_files, save_dtype, separate_vars
     ):
 
         # Create data
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=1, nype=1, nt=1, write_to_disk=True
+            tmp_path_factory, nxpe=1, nype=1, nt=1, write_to_disk=True
         )
 
         # Load it as a boutdataset
@@ -1972,7 +1956,8 @@ class TestSave:
             original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + "/temp_boutdata.nc"
+        savedir = tmp_path_factory.mktemp("test_save_dtype")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(
             savepath=savepath, save_dtype=save_dtype, separate_vars=separate_vars
         )
@@ -1980,7 +1965,7 @@ class TestSave:
         # Load it again using bare xarray
         if separate_vars:
             for v in ["n", "T"]:
-                savepath = str(Path(path).parent) + f"/temp_boutdata_{v}.nc"
+                savepath = savedir.joinpath(f"temp_boutdata_{v}.nc")
                 recovered = open_dataset(savepath)
                 assert recovered[v].values.dtype == np.dtype(save_dtype)
         else:
@@ -1989,9 +1974,9 @@ class TestSave:
             for v in original:
                 assert recovered[v].values.dtype == np.dtype(save_dtype)
 
-    def test_save_separate_variables(self, tmpdir_factory, bout_xyt_example_files):
+    def test_save_separate_variables(self, tmp_path_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=1, nt=1, write_to_disk=True
+            tmp_path_factory, nxpe=4, nype=1, nt=1, write_to_disk=True
         )
 
         # Load it as a boutdataset
@@ -1999,25 +1984,26 @@ class TestSave:
             original = open_boutdataset(datapath=path, inputfilepath=None)
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + "/temp_boutdata.nc"
+        savedir = tmp_path_factory.mktemp("test_save_separate_variables")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath, separate_vars=True)
 
         for var in ["n", "T"]:
             # Load it again using bare xarray
-            savepath = str(Path(path).parent) + "/temp_boutdata_" + var + ".nc"
+            savepath = savedir.joinpath(f"temp_boutdata_{var}.nc")
             recovered = open_dataset(savepath)
 
             # Compare equal (not identical because attributes are changed when saving)
             xrt.assert_equal(recovered[var], original[var])
 
         # test open_boutdataset() on dataset saved with separate_vars=True
-        savepath = str(Path(path).parent) + "/temp_boutdata_*.nc"
+        savepath = savedir.joinpath("temp_boutdata_*.nc")
         recovered = open_boutdataset(savepath)
         xrt.assert_identical(original, recovered)
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables(
-        self, tmpdir_factory, bout_xyt_example_files, geometry
+        self, tmp_path_factory, bout_xyt_example_files, geometry
     ):
         if geometry is not None:
             grid = "grid"
@@ -2025,11 +2011,11 @@ class TestSave:
             grid = None
 
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=1, nt=1, grid=grid, write_to_disk=True
+            tmp_path_factory, nxpe=4, nype=1, nt=1, grid=grid, write_to_disk=True
         )
 
         if grid is not None:
-            gridpath = str(Path(path).parent) + "/grid.nc"
+            gridpath = path.parent.joinpath("grid.nc")
         else:
             gridpath = None
 
@@ -2051,11 +2037,12 @@ class TestSave:
             )
 
         # Save it to a netCDF file
-        savepath = str(Path(path).parent) + "/temp_boutdata.nc"
+        savedir = tmp_path_factory.mktemp("test_reload_separate_variables")
+        savepath = savedir.joinpath("temp_boutdata.nc")
         original.bout.save(savepath=savepath, separate_vars=True)
 
         # Load it again
-        savepath = str(Path(path).parent) + "/temp_boutdata_*.nc"
+        savepath = savedir.joinpath("temp_boutdata_*.nc")
         recovered = open_boutdataset(savepath)
 
         # Compare
@@ -2063,7 +2050,7 @@ class TestSave:
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables_time_split(
-        self, tmpdir_factory, bout_xyt_example_files, geometry
+        self, tmp_path_factory, bout_xyt_example_files, geometry
     ):
         if geometry is not None:
             grid = "grid"
@@ -2071,11 +2058,11 @@ class TestSave:
             grid = None
 
         path = bout_xyt_example_files(
-            tmpdir_factory, nxpe=4, nype=1, nt=1, grid=grid, write_to_disk=True
+            tmp_path_factory, nxpe=4, nype=1, nt=1, grid=grid, write_to_disk=True
         )
 
         if grid is not None:
-            gridpath = str(Path(path).parent) + "/grid.nc"
+            gridpath = path.parent.joinpath("grid.nc")
         else:
             gridpath = None
 
@@ -2098,17 +2085,18 @@ class TestSave:
 
         # Save it to a netCDF file
         tcoord = original.metadata.get("bout_tdim", "t")
-        savepath = str(Path(path).parent) + "/temp_boutdata_1.nc"
+        savedir = tmp_path_factory.mktemp("test_reload_separate_variables_time_split")
+        savepath = savedir.joinpath("temp_boutdata_1.nc")
         original.isel({tcoord: slice(3)}).bout.save(
             savepath=savepath, separate_vars=True
         )
-        savepath = str(Path(path).parent) + "/temp_boutdata_2.nc"
+        savepath = savedir.joinpath("temp_boutdata_2.nc")
         original.isel({tcoord: slice(3, None)}).bout.save(
             savepath=savepath, separate_vars=True
         )
 
         # Load it again
-        savepath = str(Path(path).parent) + "/temp_boutdata_*.nc"
+        savepath = savedir.joinpath("temp_boutdata_*.nc")
         recovered = open_boutdataset(savepath)
 
         # Compare
@@ -2117,12 +2105,12 @@ class TestSave:
 
 class TestSaveRestart:
     @pytest.mark.parametrize("tind", [None, pytest.param(1, marks=pytest.mark.long)])
-    def test_to_restart(self, tmpdir_factory, bout_xyt_example_files, tind):
+    def test_to_restart(self, tmp_path_factory, bout_xyt_example_files, tind):
         nxpe = 3
         nype = 2
 
         path = bout_xyt_example_files(
-            tmpdir_factory,
+            tmp_path_factory,
             nxpe=nxpe,
             nype=nype,
             nt=1,
@@ -2139,7 +2127,7 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = Path(path).parent
+        savepath = tmp_path_factory.mktemp("test_to_restart")
         if tind is None:
             ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
         else:
@@ -2170,6 +2158,9 @@ class TestSaveRestart:
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2181,7 +2172,7 @@ class TestSaveRestart:
                         else:
                             assert restart_ds[v].values == check_ds.metadata[v]
 
-    def test_to_restart_change_npe(self, tmpdir_factory, bout_xyt_example_files):
+    def test_to_restart_change_npe(self, tmp_path_factory, bout_xyt_example_files):
         nxpe_in = 3
         nype_in = 2
 
@@ -2189,7 +2180,7 @@ class TestSaveRestart:
         nype = 4
 
         path = bout_xyt_example_files(
-            tmpdir_factory,
+            tmp_path_factory,
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
@@ -2206,7 +2197,7 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = Path(path).parent
+        savepath = tmp_path_factory.mktemp("test_to_restart_change_npe")
         ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
 
         mxsub = (nx - 4) // nxpe
@@ -2229,6 +2220,9 @@ class TestSaveRestart:
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2244,7 +2238,7 @@ class TestSaveRestart:
 
     @pytest.mark.long
     def test_to_restart_change_npe_doublenull(
-        self, tmpdir_factory, bout_xyt_example_files
+        self, tmp_path_factory, bout_xyt_example_files
     ):
         nxpe_in = 3
         nype_in = 6
@@ -2253,7 +2247,7 @@ class TestSaveRestart:
         nype = 12
 
         path = bout_xyt_example_files(
-            tmpdir_factory,
+            tmp_path_factory,
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
@@ -2271,7 +2265,7 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = Path(path).parent
+        savepath = tmp_path_factory.mktemp("test_to_restart_change_npe_doublenull")
         ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
 
         mxsub = (nx - 4) // nxpe
@@ -2294,6 +2288,9 @@ class TestSaveRestart:
                 t_array = check_ds["t"]
                 check_ds = check_ds.drop_vars(["t", "x", "y", "z"])
 
+                # No coordinates saved in restart files, so unset them in check_ds
+                check_ds = check_ds.reset_coords()
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2310,7 +2307,7 @@ class TestSaveRestart:
     @pytest.mark.long
     @pytest.mark.parametrize("npes", [(2, 6), (3, 4)])
     def test_to_restart_change_npe_doublenull_expect_fail(
-        self, tmpdir_factory, bout_xyt_example_files, npes
+        self, tmp_path_factory, bout_xyt_example_files, npes
     ):
         nxpe_in = 3
         nype_in = 6
@@ -2318,7 +2315,7 @@ class TestSaveRestart:
         nxpe, nype = npes
 
         path = bout_xyt_example_files(
-            tmpdir_factory,
+            tmp_path_factory,
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
@@ -2336,6 +2333,8 @@ class TestSaveRestart:
         ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
-        savepath = Path(path).parent
+        savepath = tmp_path_factory.mktemp(
+            "test_to_restart_change_npe_doublenull_expect_fail"
+        )
         with pytest.raises(ValueError):
             ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)

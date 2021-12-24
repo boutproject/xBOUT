@@ -998,3 +998,27 @@ class TestBoutDataArrayMethods:
         npt.assert_allclose(
             n.bout.ddz().values, expected.values, rtol=1.0e-2, atol=1.0e-13
         )
+
+    def test_derivatives_doublenull(self, bout_xyt_example_files):
+        # Check function does not error on double-null topology
+        dataset_list, grid_ds = bout_xyt_example_files(
+            None,
+            lengths=(2, 3, 4, 3),
+            nxpe=1,
+            nype=6,
+            nt=1,
+            grid="grid",
+            guards={"x": 2, "y": 2},
+            topology="connected-double-null",
+        )
+
+        ds = open_boutdataset(
+            datapath=dataset_list,
+            gridfilepath=grid_ds,
+            geometry="toroidal",
+            keep_yboundaries=True,
+        )
+
+        test_ddx = ds["n"].bout.ddx()
+        test_ddy = ds["n"].bout.ddy()
+        test_ddz = ds["n"].bout.ddz()
