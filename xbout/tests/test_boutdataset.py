@@ -1120,6 +1120,7 @@ class TestBoutDatasetMethods:
             (
                 "n",
                 "T",
+                "S",
                 "g11",
                 "g22",
                 "g33",
@@ -1282,6 +1283,89 @@ class TestBoutDatasetMethods:
         )
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["t", "x", "y", "z"]),
+            (tintegral * xintegral * yintegral * zintegral),
+            rtol=1.4e-4,
+        )
+
+        # Create and test Field2D
+        ds["S"][...] = (tfunc * xfunc * yfunc).squeeze()
+
+        # S is 'axisymmetric' so z-integral is just the length of the
+        # z-dimension
+        zintegral = 36.0
+
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims="t"),
+            (tintegral * xfunc * yfunc).squeeze(),
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims="x"),
+            (tfunc * xintegral * yfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims="y"),
+            (tfunc * xfunc * yintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims="z"),
+            (tfunc * xfunc * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims=["t", "x"]),
+            (tintegral * xintegral * yfunc).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims=["t", "y"]),
+            (tintegral * xfunc * yintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims=["t", "z"]),
+            (tintegral * xfunc * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims=["x", "y"]),
+            (tfunc * xintegral * yintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims=["x", "z"]),
+            (tfunc * xintegral * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims=["y", "z"]),
+            (tfunc * xfunc * yintegral * zintegral).squeeze(),
+            rtol=1.2e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims=["t", "x", "y"]),
+            (tintegral * xintegral * yintegral),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims=["t", "x", "z"]),
+            (tintegral * xintegral * yfunc * zintegral).squeeze(),
+            rtol=1.0e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims=["t", "y", "z"]),
+            (tintegral * xfunc * yintegral * zintegral).squeeze(),
+            rtol=1.2e-4,
+        )
+        # default dims
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S"),
+            (tfunc * xintegral * yintegral * zintegral).squeeze(),
+            rtol=1.4e-4,
+        )
+        npt.assert_allclose(
+            ds.bout.integrate_midpoints("S", dims=["t", "x", "y", "z"]),
             (tintegral * xintegral * yintegral * zintegral),
             rtol=1.4e-4,
         )
