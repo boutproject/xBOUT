@@ -936,17 +936,28 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
         )
         grid = grid.drop_dims(unrecognised_dims)
 
-    if not keep_xboundaries:
+    if keep_xboundaries:
+        # Set MXG so that it is picked up in metadata - needed for applying geometry,
+        # etc.
+        grid["MXG"] = mxg
+    else:
         xboundaries = mxg
         if xboundaries > 0:
             grid = grid.isel(x=slice(xboundaries, -xboundaries, None))
-    if not keep_yboundaries:
-        try:
-            yboundaries = int(grid["y_boundary_guards"])
-        except KeyError:
-            # y_boundary_guards variable not in grid file - older grid files
-            # never had y-boundary cells
-            yboundaries = 0
+        # Set MXG so that it is picked up in metadata - needed for applying geometry,
+        # etc.
+        grid["MXG"] = 0
+    try:
+        yboundaries = int(grid["y_boundary_guards"])
+    except KeyError:
+        # y_boundary_guards variable not in grid file - older grid files
+        # never had y-boundary cells
+        yboundaries = 0
+    if keep_yboundaries:
+        # Set MYG so that it is picked up in metadata - needed for applying geometry,
+        # etc.
+        grid["MYG"] = yboundaries
+    else:
         if yboundaries > 0:
             # Remove y-boundary cells from first divertor target
             grid = grid.isel(y=slice(yboundaries, -yboundaries, None))
@@ -963,6 +974,9 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
                     compat="identical",
                     join="exact",
                 )
+        # Set MYG so that it is picked up in metadata - needed for applying geometry,
+        # etc.
+        grid["MYG"] = 0
 
     if "z" in grid_chunks and "z" not in grid.dims:
         del grid_chunks["z"]
