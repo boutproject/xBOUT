@@ -9,6 +9,8 @@ from .boutdataarray import BoutDataArrayAccessor
 from .plotting.animate import animate_pcolormesh, animate_poloidal
 from .plotting.utils import plot_separatrix
 
+from .fastoutput import open_fastoutput
+
 try:
     from importlib.metadata import version, PackageNotFoundError
 except ModuleNotFoundError:

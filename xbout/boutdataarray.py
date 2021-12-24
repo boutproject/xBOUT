@@ -583,6 +583,9 @@ class BoutDataArrayAccessor:
             # Want output in non-aligned coordinates
             result = result.bout.from_field_aligned()
 
+        if "regions" in result.attrs:
+            del result.attrs["regions"]
+
         result.name = f"d({da.name})/dy"
         if "standard_name" in result.attrs:
             result.attrs["standard_name"] = f"d({result.attrs['standard_name']})/dy"

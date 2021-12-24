@@ -64,7 +64,7 @@ def _separate_metadata(ds):
         var
         for var in variables
         if not any(dim in ["t", "x", "y", "z"] for dim in ds[var].dims)
-        and not var in exclude
+        and var not in exclude
     ]
 
     # Save metadata as a dictionary
