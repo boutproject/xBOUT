@@ -158,7 +158,11 @@ class BoutDataArrayAccessor:
                 f"argument to open_boutdataset()?"
             )
 
-        result = self._shift_z(self.data[zShift_coord])
+        # zShift may have NaNs in the corners. These should not affect any useful
+        # results, but may cause parts or all of arrays to be filled with NaN, even
+        # where the entries should not depend on the NaN values. Replace NaN with 0 to
+        # avoid this.
+        result = self._shift_z(self.data[zShift_coord].fillna(0.0))
         result.attrs["direction_y"] = "Aligned"
         return result
 
@@ -190,7 +194,11 @@ class BoutDataArrayAccessor:
                 f"argument to open_boutdataset()?"
             )
 
-        result = self._shift_z(-self.data[zShift_coord])
+        # zShift may have NaNs in the corners. These should not affect any useful
+        # results, but may cause parts or all of arrays to be filled with NaN, even
+        # where the entries should not depend on the NaN values. Replace NaN with 0 to
+        # avoid this.
+        result = self._shift_z(-self.data[zShift_coord].fillna(0.0))
         result.attrs["direction_y"] = "Standard"
         return result
 
