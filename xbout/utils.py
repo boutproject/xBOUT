@@ -102,9 +102,9 @@ def _update_metadata_increased_x_resolution(da, *, ixseps1=None, ixseps2=None, n
 
     def set_var(var, value):
         if value is None:
-            da[var] = -1
+            da.metadata[var] = -1
         else:
-            da[var] = value
+            da.metadata[var] = value
 
     set_var("ixseps1", ixseps1)
     set_var("ixseps2", ixseps2)
