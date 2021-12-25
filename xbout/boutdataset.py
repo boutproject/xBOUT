@@ -366,6 +366,13 @@ class BoutDatasetAccessor:
             explicitly, then interpolate all variables in the Dataset.
         new_gridfile : str, pathlib.Path or Dataset
             Path to a new grid file, or grid file opened as a Dataset.
+        field_aligned_radial_interpolation : bool, default False
+            If set to True, transform to field-aligned grid for radial interpolation
+            (parallel interpolation is always on field-aligned grid). Probably less
+            accurate, at least in some parts of the grid where integrated shear is high,
+            but may (especially if most of the turbulence is at the outboard midplane)
+            produce a result that is better field-aligned and so creates less of an
+            initial transient when restarting.
         method : str, optional
             The interpolation method to use. Options from xarray.DataSet.interp(),
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is

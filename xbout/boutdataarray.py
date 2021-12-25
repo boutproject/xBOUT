@@ -669,7 +669,12 @@ class BoutDataArrayAccessor:
         return da
 
     def interpolate_to_new_grid(
-        self, new_gridfile, *, method="cubic", return_dataset=False
+        self,
+        new_gridfile,
+        *,
+        field_aligned_radial_interpolation=False,
+        method="cubic",
+        return_dataset=False,
     ):
         """
         Interpolate the DataArray onto a new set of grid points, given by a grid file.
@@ -687,6 +692,13 @@ class BoutDataArrayAccessor:
         ----------
         new_gridfile : str, pathlib.Path or Dataset
             Path to a new grid file, or grid file opened as a Dataset.
+        field_aligned_radial_interpolation : bool, default False
+            If set to True, transform to field-aligned grid for radial interpolation
+            (parallel interpolation is always on field-aligned grid). Probably less
+            accurate, at least in some parts of the grid where integrated shear is high,
+            but may (especially if most of the turbulence is at the outboard midplane)
+            produce a result that is better field-aligned and so creates less of an
+            initial transient when restarting.
         method : str, optional
             The interpolation method to use. Options from xarray.DataArray.interp(),
             currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
@@ -706,6 +718,7 @@ class BoutDataArrayAccessor:
 
         xcoord = self.data.metadata["bout_xdim"]
         ycoord = self.data.metadata["bout_ydim"]
+        zcoord = self.data.metadata["bout_zdim"]
 
         da = self.data
 
@@ -736,6 +749,9 @@ class BoutDataArrayAccessor:
                 .isel({ycoord: 0}, drop=True)
             )
 
+            if field_aligned_radial_interpolation and zcoord in part.dims:
+                part = part.bout.to_field_aligned()
+
             part = part.bout.interpolate_radial(
                 False,
                 psi=psi_part,
@@ -762,6 +778,9 @@ class BoutDataArrayAccessor:
                 method=method,
                 return_dataset=return_dataset,
             )
+
+            if field_aligned_radial_interpolation and zcoord in part.dims:
+                part = part.bout.from_field_aligned()
 
             # Get theta coordinate from new_gridfile, as interpolated versions may not
             # be consistent between different regions.
