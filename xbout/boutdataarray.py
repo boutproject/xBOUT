@@ -693,8 +693,8 @@ class BoutDataArrayAccessor:
                 keep_yboundaries=da.metadata["keep_yboundaries"],
                 drop_variables=["theta"],
                 info=False,
+                geometry=self.data.geometry,
             )
-            new_gridfile = apply_geometry(new_gridfile, self.data.geometry)
 
         xcoord = self.data.metadata["bout_xdim"]
         ycoord = self.data.metadata["bout_ydim"]

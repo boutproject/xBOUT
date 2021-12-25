@@ -390,8 +390,8 @@ class BoutDatasetAccessor:
                 keep_yboundaries=self.data.metadata["keep_yboundaries"],
                 drop_variables=["theta"],
                 info=False,
+                geometry=self.data.geometry,
             )
-            new_gridfile = apply_geometry(new_gridfile, self.data.geometry)
 
         if isinstance(variables, str):
             variables = [variables]
