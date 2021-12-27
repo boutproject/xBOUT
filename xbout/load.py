@@ -11,26 +11,12 @@ from numpy import unique
 from natsort import natsorted
 
 from . import geometries
+from .bout_info import (
+    _BOUT_PER_PROC_VARIABLES,
+    _BOUT_PER_PROC_VARIABLES_REQUIRED_FROM_RESTARTS,
+    _BOUT_TIME_DEPENDENT_META_VARS,
+)
 from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype, _is_path
-
-
-_BOUT_PER_PROC_VARIABLES = [
-    "wall_time",
-    "wtime",
-    "wtime_rhs",
-    "wtime_invert",
-    "wtime_comms",
-    "wtime_io",
-    "wtime_per_rhs",
-    "wtime_per_rhs_e",
-    "wtime_per_rhs_i",
-    "PE_XIND",
-    "PE_YIND",
-    "MYPE",
-]
-_BOUT_PER_PROC_VARIABLES_REQUIRED_FROM_RESTARTS = ["hist_hi", "tt"]
-_BOUT_TIME_DEPENDENT_META_VARS = ["iteration"]
-
 
 # This code should run whenever any function from this module is imported
 # Set all attrs to survive all mathematical operations
