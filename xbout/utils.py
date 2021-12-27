@@ -5,6 +5,8 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
+from .bout_info import _BOUT_VARIABLE_ATTRIBUTES
+
 
 def _set_attrs_on_all_vars(ds, key, attr_data, copy=False):
     ds.attrs[key] = attr_data
@@ -527,8 +529,13 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
             for v in variables:
                 data_variable = ds_slice[v].variable
 
-                # delete attrs so we don't try to save metadata dict to restart files
-                data_variable.attrs = {}
+                # delete attrs, except for those that were created by BOUT++,  so we
+                # don't try to save metadata dict to restart files
+                data_variable.attrs = {
+                    k: v
+                    for k, v in data_variable.attrs.items()
+                    if k in _BOUT_VARIABLE_ATTRIBUTES
+                }
 
                 restart_ds[v] = data_variable
             for v in ds.metadata:
