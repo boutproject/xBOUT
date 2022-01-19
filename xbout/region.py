@@ -1568,6 +1568,22 @@ def _concat_lower_guards(da, da_global, mxg, myg):
         da_lower[xcoord].data[...] = new_xcoord.data
         da_lower[ycoord].data[...] = new_ycoord.data
 
+    if "poloidal_distance" in da.coords and myg > 0:
+        # Special handling for core regions to deal with branch cut
+        if "core" in region.name:
+            # import pdb; pdb.set_trace()
+            # Try to detect whether there is branch cut at lower boundary: if there is
+            # poloidal_distance_ylow should be zero at the boundary of this region
+            poloidal_distance_bottom = da["poloidal_distance_ylow"].isel({ycoord: 0})
+            if all(abs(poloidal_distance_bottom) < 1.0e-16):
+                # Offset so that the poloidal_distance in da_lower is continuous from
+                # the poloidal_distance in this region.
+                # Expect there to be y-boundary cells in the Dataset, this will probably
+                # fail if there are not.
+                total_poloidal_distance = da["total_poloidal_distance"]
+                da_lower["poloidal_distance"] -= total_poloidal_distance
+                da_lower["poloidal_distance_ylow"] -= total_poloidal_distance
+
     save_regions = da.bout._regions
     da = xr.concat((da_lower, da), ycoord, join="exact")
     # xr.concat takes attributes from the first variable (for xarray>=0.15.0, keeps attrs
@@ -1667,6 +1683,24 @@ def _concat_upper_guards(da, da_global, mxg, myg):
         # da_upper = da_upper.assign_coords(**{xcoord: new_xcoord, ycoord: new_ycoord})
         da_upper[xcoord].data[...] = new_xcoord.data
         da_upper[ycoord].data[...] = new_ycoord.data
+
+    if "poloidal_distance" in da.coords and myg > 0:
+        # Special handling for core regions to deal with branch cut
+        if "core" in region.name:
+            # import pdb; pdb.set_trace()
+            # Try to detect whether there is branch cut at upper boundary: if there is
+            # poloidal_distance_ylow should be zero at the boundary of da_upper
+            poloidal_distance_bottom = da_upper["poloidal_distance_ylow"].isel(
+                {ycoord: 0}
+            )
+            if all(abs(poloidal_distance_bottom) < 1.0e-16):
+                # Offset so that the poloidal_distance in da_upper is continuous from
+                # the poloidal_distance in this region.
+                # Expect there to be y-boundary cells in the Dataset, this will probably
+                # fail if there are not.
+                total_poloidal_distance = da["total_poloidal_distance"]
+                da_upper["poloidal_distance"] += total_poloidal_distance
+                da_upper["poloidal_distance_ylow"] += total_poloidal_distance
 
     save_regions = da.bout._regions
     da = xr.concat((da, da_upper), ycoord, join="exact")

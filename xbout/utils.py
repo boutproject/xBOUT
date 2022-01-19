@@ -344,28 +344,17 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
 
     ny_inner = ds.metadata["ny_inner"]
 
-    # These variables need to be saved to restart files in addition to evolving ones
-    restart_metadata_vars = [
-        "zperiod",
-        "MZSUB",
-        "MXG",
-        "MYG",
-        "MZG",
-        "nx",
-        "ny",
-        "nz",
-        "MZ",
-        "NZPE",
-        "ixseps1",
-        "ixseps2",
-        "jyseps1_1",
-        "jyseps2_1",
-        "jyseps1_2",
-        "jyseps2_2",
-        "ny_inner",
-        "ZMAX",
-        "ZMIN",
-        "BOUT_VERSION",
+    # These metadata variables are created by xBOUT, so should not be saved to restart
+    # files
+    restart_exclude_metadata_vars = [
+        "bout_tdim",
+        "bout_xdim",
+        "bout_ydim",
+        "bout_zdim",
+        "fine_interpolation_factor",
+        "is_restart",
+        "keep_xboundaries",
+        "keep_yboundaries",
     ]
 
     if variables is None:
@@ -374,7 +363,8 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
             # variables
             variables = [v for v in ds if "t" in ds[v].dims]
         else:
-            # No time dimension, so just save all variables
+            # No time dimension in Dataset, so cannot distinguish time-evolving
+            # variables: just include all variables
             variables = [v for v in ds]
 
     # Add extra variables always needed
@@ -395,8 +385,9 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
         "g_13",
         "g_23",
         "J",
+        "zShift",
     ]:
-        if v not in variables:
+        if v not in variables and v in ds:
             variables.append(v)
 
     # number of points in the domain on each processor, not including guard or boundary
@@ -404,16 +395,18 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
     mxsub = (ds.metadata["nx"] - 2 * mxg) // nxpe
     mysub = ds.metadata["ny"] // nype
 
-    if "hist_hi" in ds.metadata:
-        hist_hi = ds.metadata["hist_hi"]
-    else:
-        # hist_hi represents the number of iterations before the restart. Attempt to
-        # reconstruct here
-        iteration = ds.metadata.get("iteration", -1)
+    # hist_hi represents the number of iterations before the restart. Attempt to
+    # reconstruct here
+    iteration = ds.metadata.get("iteration", -1)
+    if "t" in ds.dims:
         nt = ds.sizes["t"]
         hist_hi = iteration - (nt - tind)
         if hist_hi < 0:
             hist_hi = -1
+    elif "hist_hi" in ds.metadata:
+        hist_hi = ds.metadata["hist_hi"]
+    else:
+        hist_hi = -1
 
     has_second_divertor = ds.metadata["jyseps2_1"] != ds.metadata["jyseps1_2"]
 
@@ -422,8 +415,11 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
         ds = ds.isel({"t": tind}).persist()
         tt = ds["t"].values.flatten()[0]
     else:
-        # If loaded from restart files, "tt" should be a scalar in metadata
-        tt = ds.metadata["tt"]
+        if "tt" in ds.metadata:
+            # If loaded from restart files, "tt" should be a scalar in metadata
+            tt = ds.metadata["tt"]
+        else:
+            tt = 0.0
 
     ds = _pad_x_boundaries(ds)
     ds = _pad_y_boundaries(ds)
@@ -448,8 +444,12 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
                 data_variable.attrs = {}
 
                 restart_ds[v] = data_variable
-            for v in restart_metadata_vars:
-                restart_ds[v] = ds.metadata[v]
+            for v in ds.metadata:
+                if v not in restart_exclude_metadata_vars:
+                    restart_ds[v] = ds.metadata[v]
+
+            # These variables need to be altered, because they depend on the number of
+            # files and/or the rank of this file.
             restart_ds["MXSUB"] = mxsub
             restart_ds["MYSUB"] = mysub
             restart_ds["NXPE"] = nxpe
@@ -457,6 +457,9 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
             restart_ds["PE_XIND"] = xproc
             restart_ds["PE_YIND"] = yproc
             restart_ds["hist_hi"] = hist_hi
+            restart_ds["PE_XIND"] = xproc
+            restart_ds["PE_YIND"] = yproc
+            restart_ds["MYPE"] = yproc * nxpe + xproc
 
             # tt is the simulation time where the restart happens
             restart_ds["tt"] = tt

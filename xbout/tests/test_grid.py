@@ -17,9 +17,9 @@ def create_example_grid_file(tmp_path_factory):
     """
 
     # Create grid dataset
-    arr = np.arange(6).reshape(2, 3)
+    arr = np.arange(15).reshape(5, 3)
     grid = DataArray(data=arr, name="arr", dims=["x", "y"]).to_dataset()
-    grid["dy"] = DataArray(np.ones((2, 3)), dims=["x", "y"])
+    grid["dy"] = DataArray(np.ones((5, 3)), dims=["x", "y"])
     grid = grid.set_coords(["dy"])
 
     # Create temporary directory
@@ -44,7 +44,11 @@ class TestOpenGrid:
     def test_open_grid_extra_dims(self, create_example_grid_file, tmp_path_factory):
         example_grid = open_dataset(create_example_grid_file)
 
-        new_var = DataArray(name="new", data=[[1, 2], [8, 9]], dims=["x", "w"])
+        new_var = DataArray(
+            name="new",
+            data=[[1, 2], [8, 9], [16, 17], [27, 28], [37, 38]],
+            dims=["x", "w"],
+        )
 
         dodgy_grid_directory = tmp_path_factory.mktemp("dodgy_grid")
         dodgy_grid_path = dodgy_grid_directory.joinpath("dodgy_grid.nc")
