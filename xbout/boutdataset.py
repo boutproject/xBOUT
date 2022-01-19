@@ -790,7 +790,9 @@ class BoutDatasetAccessor:
         variables : str or sequence of str, optional
             The evolving variables needed in the restart files. If not given explicitly,
             all time-evolving variables in the Dataset will be used, which may result in
-            larger restart files than necessary.
+            larger restart files than necessary. If there is no time-dimension in the
+            Dataset (e.g. if it was loaded from restart files), then all variables will
+            be added if this argument is not given explicitly.
         savepath : str, default '.'
             Directory to save the created restart files under
         nxpe : int, optional
