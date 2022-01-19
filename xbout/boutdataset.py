@@ -1060,6 +1060,8 @@ class BoutDatasetAccessor:
                             animate=False,
                             axis_coords=this_axis_coords,
                             aspect=this_aspect,
+                            vmin=this_vmin,
+                            vmax=this_vmax,
                             **this_kwargs,
                         )
                     )
@@ -1073,6 +1075,8 @@ class BoutDatasetAccessor:
                                 animate=False,
                                 axis_coords=this_axis_coords,
                                 aspect=this_aspect,
+                                vmin=this_vmin,
+                                vmax=this_vmax,
                                 label=w.name,
                                 **this_kwargs,
                             )
