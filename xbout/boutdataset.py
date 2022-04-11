@@ -802,7 +802,13 @@ class BoutDatasetAccessor:
             Number of processors in the y-direction. If not given, keep the number used
             for the original simulation
         tind : int, default -1
-            Time-index of the slice to write to the restart files
+            Time-index of the slice to write to the restart files. Note, when creating
+            restart files from 'dump' files it is recommended to open the Dataset using
+            the full time range and use the `tind` argument here, rather than selecting
+            a time point manually, so that the calculation of `hist_hi` in the output
+            can be correct (which requires knowing the existing value of `hist_hi`
+            (output step count at the end of the simulation), `tind` and the total
+            number of time points in the current output data).
         prefix : str, default "BOUT.restart"
             Prefix to use for names of restart files
         overwrite : bool, default False

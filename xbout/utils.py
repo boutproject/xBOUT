@@ -397,16 +397,18 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
 
     # hist_hi represents the number of iterations before the restart. Attempt to
     # reconstruct here
-    iteration = ds.metadata.get("iteration", -1)
+    final_hist_hi = ds.metadata.get("hist_hi", -1)
     if "t" in ds.dims:
         nt = ds.sizes["t"]
-        hist_hi = iteration - (nt - tind)
+        hist_hi = final_hist_hi - (nt - 1 - tind)
         if hist_hi < 0:
             hist_hi = -1
-    elif "hist_hi" in ds.metadata:
-        hist_hi = ds.metadata["hist_hi"]
     else:
-        hist_hi = -1
+        # Either input is a set of restart files, in which case we should just use
+        # `hist_hi` if it exists, or the user has already selected a single time-point,
+        # and the best guess we have left is the existing `hist_hi` (although it might
+        # not be right).
+        hist_hi = final_hist_hi
 
     has_second_divertor = ds.metadata["jyseps2_1"] != ds.metadata["jyseps1_2"]
 
