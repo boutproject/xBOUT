@@ -19,7 +19,7 @@ class TestRootMeanSquare:
         dat = np.array([5, 7, 3.2, -1, -4.4])
         orig = DataArray(dat, dims=["x"])
 
-        sum_squares = np.sum(dat ** 2)
+        sum_squares = np.sum(dat**2)
         mean_squares = sum_squares / dat.size
         rootmeansquare = np.sqrt(mean_squares)
 
@@ -31,7 +31,7 @@ class TestRootMeanSquare:
     def test_reduce_2d(self, dim, axis):
         dat = np.array([[5, 7, 3.2, -1, -4.4], [-1, -2.5, 0, 8, 3.0]])
         orig = DataArray(dat, dims=["x", "t"])
-        sum_squares = np.sum(dat ** 2, axis=axis)
+        sum_squares = np.sum(dat**2, axis=axis)
         mean_squares = sum_squares / dat.shape[axis]
         rootmeansquare = np.sqrt(mean_squares)
 
@@ -44,7 +44,7 @@ class TestRootMeanSquare:
         orig = DataArray(dat, dims=["x", "t"])
         chunked = orig.chunk({"x": 1})
         axis = 1
-        sum_squares = np.sum(dat ** 2, axis=axis)
+        sum_squares = np.sum(dat**2, axis=axis)
         mean_squares = sum_squares / dat.shape[axis]
         rootmeansquare = np.sqrt(mean_squares)
 

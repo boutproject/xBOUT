@@ -1204,14 +1204,14 @@ class TestBoutDatasetMethods:
         ds["dy"].data[...] = 0.2
         ds["dz"] = 0.3
         tfunc = 1.5 * t
-        xfunc = x ** 2
-        yfunc = 10.0 * y - y ** 2
-        zfunc = 2.0 * z ** 2 - 30.0 * z
+        xfunc = x**2
+        yfunc = 10.0 * y - y**2
+        zfunc = 2.0 * z**2 - 30.0 * z
         ds["n"].data[...] = tfunc * xfunc * yfunc * zfunc
         tintegral = 48.0
         xintegral = 1000.0 / 3.0
-        yintegral = 5.0 * 22.0 ** 2 - 22.0 ** 3 / 3.0
-        zintegral = 2.0 * 36.0 ** 3 / 3.0 - 15.0 * 36.0 ** 2
+        yintegral = 5.0 * 22.0**2 - 22.0**3 / 3.0
+        zintegral = 2.0 * 36.0**3 / 3.0 - 15.0 * 36.0**2
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims="t"),
             (tintegral * xfunc * yfunc * zfunc).squeeze(),
@@ -1429,28 +1429,28 @@ class TestBoutDatasetMethods:
         # Default is to integrate over all spatial dimensions
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n"),
-            2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            2.0 * np.pi * R * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
         # Pass all spatial dims explicitly
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["x", "theta", "zeta"]),
-            2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            2.0 * np.pi * R * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
         # Integrate in time too
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["t", "x", "theta", "zeta"]),
-            T_total * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            T_total * 2.0 * np.pi * R * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
         # Integrate in time using dims=...
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=...),
-            T_total * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            T_total * 2.0 * np.pi * R * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
@@ -1459,7 +1459,7 @@ class TestBoutDatasetMethods:
             ds.bout.integrate_midpoints(
                 "n", dims=["t", "x", "theta", "zeta"], cumulative_t=True
             ),
-            T_cumulative * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            T_cumulative * 2.0 * np.pi * R * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
@@ -1496,14 +1496,14 @@ class TestBoutDatasetMethods:
         # router and circle with radius rinner, pi*(router**2 - rinner**2)
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["x", "theta"]),
-            np.pi * (router ** 2 - rinner ** 2),
+            np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
         # Integrate in time too
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["t", "x", "theta"]),
-            T_total * np.pi * (router ** 2 - rinner ** 2),
+            T_total * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
@@ -1514,7 +1514,7 @@ class TestBoutDatasetMethods:
             ),
             T_cumulative[:, np.newaxis]
             * np.pi
-            * (router ** 2 - rinner ** 2)
+            * (router**2 - rinner**2)
             * np.ones(ds.sizes["zeta"])[np.newaxis, :],
             rtol=1.0e-5,
             atol=0.0,
@@ -1651,9 +1651,9 @@ class TestBoutDatasetMethods:
         #                  / (cos(theta/2)**2 + (1-r/R0)/(1+r/R0)*sin(theta/2)**2)**2
         #               )
         # field line length is int_{0}^{2 pi} dl
-        a = r ** 2
+        a = r**2
         c = (1 - r / R) / (1 + r / R)
-        b = q ** 2 * c
+        b = q**2 * c
 
         def func(theta):
             return np.sqrt(
