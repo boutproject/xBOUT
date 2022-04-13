@@ -87,10 +87,10 @@ def open_boutdataset(
     keyword argument `drop_vars` to ignore the variables with conflicts, e.g. if `"S1"`
     and `"S2"` have conflicts
     ```
-    ds = open_boutdataset("data*/boutdata.nc", drop_vars=["S1", "S2"])
+    ds = open_boutdataset("data*/boutdata.nc", drop_variables=["S1", "S2"])
     ```
     will open a Dataset which is missing `"S1"` and `"S2"`.\
-    [`drop_vars` is an argument of `xarray.open_dataset()` that is passed down through
+    [`drop_variables` is an argument of `xarray.open_dataset()` that is passed down through
     `kwargs`.]
 
     Parameters
