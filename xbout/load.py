@@ -90,8 +90,8 @@ def open_boutdataset(
     ds = open_boutdataset("data*/boutdata.nc", drop_variables=["S1", "S2"])
     ```
     will open a Dataset which is missing `"S1"` and `"S2"`.\
-    [`drop_variables` is an argument of `xarray.open_dataset()` that is passed down through
-    `kwargs`.]
+    [`drop_variables` is an argument of `xarray.open_dataset()` that is passed down
+    through `kwargs`.]
 
     Parameters
     ----------
