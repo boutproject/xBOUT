@@ -400,7 +400,15 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
     final_hist_hi = ds.metadata.get("hist_hi", -1)
     if "t" in ds.dims:
         nt = ds.sizes["t"]
-        hist_hi = final_hist_hi - (nt - 1 - tind)
+        if tind < 0:
+            absolute_tind = tind + nt
+            if absolute_tind < 0:
+                absolute_tind = 0
+        elif tind >= nt:
+            absolute_tind = nt - 1
+        else:
+            absolute_tind = tind
+        hist_hi = final_hist_hi - (nt - 1 - absolute_tind)
         if hist_hi < 0:
             hist_hi = -1
     else:
