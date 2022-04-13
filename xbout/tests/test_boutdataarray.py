@@ -602,7 +602,7 @@ class TestBoutDataArrayMethods:
 
         def f(t):
             t = np.sin(t)
-            return t ** 3 - t ** 2 + t - 1.0
+            return t**3 - t**2 + t - 1.0
 
         n.data = f(theta).broadcast_like(n)
 
@@ -664,7 +664,7 @@ class TestBoutDataArrayMethods:
 
         def f(t):
             t = np.sin(t)
-            return t ** 3 - t ** 2 + t - 1.0
+            return t**3 - t**2 + t - 1.0
 
         n.data = f(theta).broadcast_like(n)
 
@@ -712,7 +712,7 @@ class TestBoutDataArrayMethods:
 
         def f(t):
             t = np.sin(t)
-            return t ** 3 - t ** 2 + t - 1.0
+            return t**3 - t**2 + t - 1.0
 
         n.data = f(theta).broadcast_like(n)
 
@@ -761,7 +761,7 @@ class TestBoutDataArrayMethods:
 
         def f(t):
             t = np.sin(3.0 * t)
-            return t ** 3 - t ** 2 + t - 1.0
+            return t**3 - t**2 + t - 1.0
 
         n.data = f(theta).broadcast_like(n)
 
@@ -834,7 +834,7 @@ class TestBoutDataArrayMethods:
 
         def f_y(t):
             t = np.sin(3.0 * t)
-            return t ** 3 - t ** 2 + t - 1.0
+            return t**3 - t**2 + t - 1.0
 
         f = f_y(theta) * (x + 1.0)
 
@@ -886,7 +886,7 @@ class TestBoutDataArrayMethods:
 
         def f_y(t):
             t = np.sin(t)
-            return t ** 3 - t ** 2 + t - 1.0
+            return t**3 - t**2 + t - 1.0
 
         f = f_y(theta) * (x + 1.0)
 

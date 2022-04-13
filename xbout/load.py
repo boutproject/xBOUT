@@ -28,8 +28,7 @@ _BOUT_PER_PROC_VARIABLES = [
     "PE_YIND",
     "MYPE",
 ]
-_BOUT_PER_PROC_VARIABLES_REQUIRED_FROM_RESTARTS = ["hist_hi", "tt"]
-_BOUT_TIME_DEPENDENT_META_VARS = ["iteration"]
+_BOUT_TIME_DEPENDENT_META_VARS = ["iteration", "hist_hi", "tt"]
 
 
 # This code should run whenever any function from this module is imported
@@ -265,6 +264,15 @@ def open_boutdataset(
     else:
         raise ValueError(f"internal error: unexpected input_type={input_type}")
 
+    if not is_restart:
+        for var in _BOUT_TIME_DEPENDENT_META_VARS:
+            if var in ds:
+                # Assume different processors in x & y have same iteration etc.
+                latest_top_left = {dim: 0 for dim in ds[var].dims}
+                if "t" in ds[var].dims:
+                    latest_top_left["t"] = -1
+                ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
+
     ds, metadata = _separate_metadata(ds)
     # Store as ints because netCDF doesn't support bools, so we can't save
     # bool attributes
@@ -277,15 +285,6 @@ def open_boutdataset(
         # If remove_yboundaries is True, we need to keep y-boundaries when opening the
         # grid file, as they will be removed from the full Dataset below
         keep_yboundaries = True
-
-    if not is_restart:
-        for var in _BOUT_TIME_DEPENDENT_META_VARS:
-            if var in ds:
-                # Assume different processors in x & y have same iteration etc.
-                latest_top_left = {dim: 0 for dim in ds[var].dims}
-                if "t" in ds[var].dims:
-                    latest_top_left["t"] = -1
-                ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
 
     ds = _add_options(ds, inputfilepath)
 
@@ -827,10 +826,6 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
             trimmed_ds = trimmed_ds.drop_vars(name)
 
     to_drop = _BOUT_PER_PROC_VARIABLES
-    if not is_restart:
-        # These variables are required to be consistent when loading restart files, so
-        # that they can be written out again in to_restart()
-        to_drop = to_drop + _BOUT_PER_PROC_VARIABLES_REQUIRED_FROM_RESTARTS
 
     return trimmed_ds.drop_vars(to_drop, errors="ignore")
 
