@@ -2110,12 +2110,14 @@ class TestSaveRestart:
         nxpe = 3
         nype = 2
 
+        nt = 6
+
         path = bout_xyt_example_files(
             tmp_path_factory,
             nxpe=nxpe,
             nype=nype,
             nt=1,
-            lengths=[6, 4, 4, 7],
+            lengths=[nt, 4, 4, 7],
             guards={"x": 2, "y": 2},
             write_to_disk=True,
         )
@@ -2170,7 +2172,10 @@ class TestSaveRestart:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
                     else:
                         if v == "hist_hi":
-                            assert restart_ds[v].values == -1
+                            if t >= 0:
+                                assert restart_ds[v].values == t
+                            else:
+                                assert restart_ds[v].values == nt - 1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:
@@ -2183,12 +2188,14 @@ class TestSaveRestart:
         nxpe = 2
         nype = 4
 
+        nt = 6
+
         path = bout_xyt_example_files(
             tmp_path_factory,
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
-            lengths=[6, 4, 4, 7],
+            lengths=[nt, 4, 4, 7],
             guards={"x": 2, "y": 2},
             write_to_disk=True,
         )
@@ -2237,7 +2244,7 @@ class TestSaveRestart:
                         if v in ["NXPE", "NYPE", "MXSUB", "MYSUB"]:
                             pass
                         elif v == "hist_hi":
-                            assert restart_ds[v].values == -1
+                            assert restart_ds[v].values == nt - 1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:
@@ -2253,13 +2260,15 @@ class TestSaveRestart:
         nxpe = 1
         nype = 12
 
+        nt = 6
+
         path = bout_xyt_example_files(
             tmp_path_factory,
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
             guards={"x": 2, "y": 2},
-            lengths=(6, 5, 4, 7),
+            lengths=(nt, 5, 4, 7),
             topology="upper-disconnected-double-null",
             write_to_disk=True,
         )
@@ -2308,7 +2317,7 @@ class TestSaveRestart:
                         if v in ["NXPE", "NYPE", "MXSUB", "MYSUB"]:
                             pass
                         elif v == "hist_hi":
-                            assert restart_ds[v].values == -1
+                            assert restart_ds[v].values == nt - 1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:
