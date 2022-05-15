@@ -185,7 +185,10 @@ def open_boutdataset(
             sectionlength = len(section)
             for key in list(obj.attrs):
                 if key[:sectionlength] == section:
-                    result[key[sectionlength:]] = obj.attrs.pop(key)
+                    val = obj.attrs.pop(key)
+                    if isinstance(val, bytes):
+                        val = val.decode()
+                    result[key[sectionlength:]] = val
             return result
 
         def attrs_remove_section(obj, section):
