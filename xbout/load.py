@@ -203,6 +203,10 @@ def open_boutdataset(
 
         # Restore metadata from attrs
         metadata = attrs_to_dict(ds, "metadata")
+        if "is_restart" not in metadata:
+            # Loading data that was saved with a version of xbout from before
+            # "is_restart" was added, so need to add it to the metadata.
+            metadata["is_restart"] = int(is_restart)
         ds.attrs["metadata"] = metadata
         # Must do this for all variables and coordinates in dataset too
         for da in chain(ds.data_vars.values(), ds.coords.values()):
