@@ -542,7 +542,7 @@ def _auto_open_mfboutdataset(
 
         # Open just one file to read processor splitting
         nxpe, nype, mxg, myg, mxsub, mysub, is_squashed_doublenull = _read_splitting(
-            filepaths[0], info
+            filepaths[0], info, keep_yboundaries
         )
 
         if is_squashed_doublenull:
@@ -675,7 +675,7 @@ def _expand_wildcards(path):
     return natsorted(filepaths, key=lambda filepath: str(filepath))
 
 
-def _read_splitting(filepath, info=True):
+def _read_splitting(filepath, info, keep_yboundaries):
     ds = xr.open_dataset(str(filepath))
 
     # Account for case of no parallelisation, when nxpe etc won't be in dataset
@@ -739,6 +739,23 @@ def _read_splitting(filepath, info=True):
                 nxpe = 1
                 nype = 1
                 is_squashed_doublenull = (ds["jyseps2_1"] != ds["jyseps1_2"]).values
+            elif ny_file == ny + 2 * myg:
+                # Older squashed file from double-null grid but containing only lower
+                # target boundary cells.
+                if keep_yboundaries:
+                    raise ValueError(
+                        "Cannot keep y-boundary points: squashed file is missing upper "
+                        "target boundary points."
+                    )
+                has_yboundaries = not (ny_file == ny)
+                if not has_yboundaries:
+                    myg = 0
+
+                nxpe = 1
+                nype = 1
+                # For this case, do not need the special handling enabled by
+                # is_squashed_doublenull=True, as keeping y-boundaries is not allowed
+                is_squashed_doublenull = False
 
     # Avoid trying to open this file twice
     ds.close()
