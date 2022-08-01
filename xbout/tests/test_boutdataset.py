@@ -1838,6 +1838,43 @@ class TestBoutDatasetMethods:
         n_unstruct = n_unstruct.isel(t=0, zeta=0)
         npt.assert_allclose(n_unstruct.values, n_check, atol=1.0e-7)
 
+    def test_add_cartesian_coordinates(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
+
+        ds["psixy"] = ds["g11"].copy(deep=True)
+        ds["Rxy"] = ds["g11"].copy(deep=True)
+        ds["Zxy"] = ds["g11"].copy(deep=True)
+
+        r = np.linspace(1.0, 2.0, ds.metadata["nx"])
+        theta = np.linspace(0.0, 2.0 * np.pi, ds.metadata["ny"])
+        R = r[:, np.newaxis] * np.cos(theta[np.newaxis, :])
+        Z = r[:, np.newaxis] * np.sin(theta[np.newaxis, :])
+        ds["Rxy"].values[:] = R
+        ds["Zxy"].values[:] = Z
+
+        ds = apply_geometry(ds, "toroidal")
+
+        zeta = ds["zeta"].values
+
+        ds = ds.bout.add_cartesian_coordinates()
+
+        npt.assert_allclose(
+            ds["X_cartesian"],
+            R[:, :, np.newaxis] * np.cos(zeta[np.newaxis, np.newaxis, :]),
+        )
+        npt.assert_allclose(
+            ds["Y_cartesian"],
+            R[:, :, np.newaxis] * np.sin(zeta[np.newaxis, np.newaxis, :]),
+        )
+        npt.assert_allclose(
+            ds["Z_cartesian"],
+            Z[:, :, np.newaxis] * np.ones(ds.metadata["nz"])[np.newaxis, np.newaxis, :],
+        )
+
 
 class TestLoadInputFile:
     @pytest.mark.skip

@@ -27,7 +27,11 @@ from .plotting.animate import (
     _parse_coord_option,
 )
 from .region import _from_region
-from .utils import _get_bounding_surfaces, _split_into_restarts
+from .utils import (
+    _add_cartesian_coordinates,
+    _get_bounding_surfaces,
+    _split_into_restarts,
+)
 
 
 @xr.register_dataset_accessor("bout")
@@ -541,6 +545,17 @@ class BoutDatasetAccessor:
         ds = ds.set_coords(coords_to_interpolate)
 
         return ds
+
+    def add_cartesian_coordinates(self):
+        """
+        Add Cartesian (X,Y,Z) coordinates.
+
+        Returns
+        -------
+        Dataset with new coordinates added, which are named 'X_cartesian',
+        'Y_cartesian', and 'Z_cartesian'
+        """
+        return _add_cartesian_coordinates(self.data)
 
     def remove_yboundaries(self, **kwargs):
         """
