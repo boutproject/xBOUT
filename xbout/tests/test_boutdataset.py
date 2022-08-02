@@ -1838,8 +1838,10 @@ class TestBoutDatasetMethods:
         n_unstruct = n_unstruct.isel(t=0, zeta=0)
         npt.assert_allclose(n_unstruct.values, n_check, atol=1.0e-7)
 
-    def test_add_cartesian_coordinates(self, bout_xyt_example_files):
-        dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
+    def test_interpolate_to_cartesian(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(2, 16, 17, 18), nxpe=1, nype=1, nt=1
+        )
         with pytest.warns(UserWarning):
             ds = open_boutdataset(
                 datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
@@ -1852,6 +1854,48 @@ class TestBoutDatasetMethods:
         r = np.linspace(1.0, 2.0, ds.metadata["nx"])
         theta = np.linspace(0.0, 2.0 * np.pi, ds.metadata["ny"])
         R = r[:, np.newaxis] * np.cos(theta[np.newaxis, :])
+        Z = r[:, np.newaxis] * np.sin(theta[np.newaxis, :])
+        ds["Rxy"].values[:] = R
+        ds["Zxy"].values[:] = Z
+
+        ds = apply_geometry(ds, "toroidal")
+
+        ds["n"].values[:] = 1.0
+
+        nX = 30
+        nY = 30
+        nZ = 10
+        ds_cartesian = ds.bout.interpolate_to_cartesian(nX, nY, nZ)
+
+        # Check a point inside the original grid
+        npt.assert_allclose(
+            ds_cartesian["n"]
+            .isel(t=0, X=round(nX * 4 / 5), Y=nY // 2, Z=nZ // 2)
+            .item(),
+            1.0,
+            rtol=1.0e-15,
+            atol=1.0e-15,
+        )
+        # Check a point outside the original grid
+        assert np.isnan(ds_cartesian["n"].isel(t=0, X=0, Y=0, Z=0).item())
+        # Check output is float32
+        assert ds_cartesian["n"].dtype == np.float32
+
+    def test_add_cartesian_coordinates(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
+
+        ds["psixy"] = ds["g11"].copy(deep=True)
+        ds["Rxy"] = ds["g11"].copy(deep=True)
+        ds["Zxy"] = ds["g11"].copy(deep=True)
+
+        R0 = 3.0
+        r = np.linspace(1.0, 2.0, ds.metadata["nx"])
+        theta = np.linspace(0.0, 2.0 * np.pi, ds.metadata["ny"])
+        R = R0 + r[:, np.newaxis] * np.cos(theta[np.newaxis, :])
         Z = r[:, np.newaxis] * np.sin(theta[np.newaxis, :])
         ds["Rxy"].values[:] = R
         ds["Zxy"].values[:] = Z
