@@ -27,7 +27,11 @@ from .plotting.animate import (
     _parse_coord_option,
 )
 from .region import _from_region
-from .utils import _get_bounding_surfaces, _split_into_restarts
+from .utils import (
+    _add_cartesian_coordinates,
+    _get_bounding_surfaces,
+    _split_into_restarts,
+)
 
 
 @xr.register_dataset_accessor("bout")
@@ -541,6 +545,171 @@ class BoutDatasetAccessor:
         ds = ds.set_coords(coords_to_interpolate)
 
         return ds
+
+    def interpolate_to_cartesian(
+        self, nX=300, nY=300, nZ=100, *, use_float32=True, fill_value=np.nan
+    ):
+        """
+        Interpolate the Dataset to a regular Cartesian grid.
+
+        This method is intended to be used to produce data for visualisation, which
+        normally does not require double-precision values, so by default the data is
+        converted to `np.float32`. Pass `use_float32=False` to retain the original
+        precision.
+
+        Parameters
+        ----------
+        nX : int (default 300)
+            Number of grid points in the X direction
+        nY : int (default 300)
+            Number of grid points in the Y direction
+        nZ : int (default 100)
+            Number of grid points in the Z direction
+        use_float32 : bool (default True)
+            Downgrade precision to `np.float32`?
+        fill_value : float (default np.nan)
+            Value to use for points outside the interpolation domain (passed to
+            `scipy.RegularGridInterpolator`)
+
+        See Also
+        --------
+        BoutDataArray.interpolate_to_cartesian
+        """
+        ds = self.data
+        ds = ds.bout.add_cartesian_coordinates()
+
+        if not isinstance(use_float32, bool):
+            raise ValueError(f"use_float32 must be a bool, got '{use_float32}'")
+        if use_float32:
+            float_type = np.float32
+            ds = ds.astype(float_type)
+            for coord in ds.coords:
+                # Coordinates are not converted by Dataset.astype, so convert explicitly
+                ds[coord] = ds[coord].astype(float_type)
+            fill_value = float_type(fill_value)
+        else:
+            float_type = ds[ds.data_vars[0]].dtype
+
+        tdim = ds.metadata["bout_tdim"]
+        zdim = ds.metadata["bout_zdim"]
+        if tdim in ds.dims:
+            nt = ds.sizes[tdim]
+        n_toroidal = ds.sizes[zdim]
+
+        # Create Cartesian grid to interpolate to
+        Xmin = ds["X_cartesian"].min()
+        Xmax = ds["X_cartesian"].max()
+        Ymin = ds["Y_cartesian"].min()
+        Ymax = ds["Y_cartesian"].max()
+        Zmin = ds["Z_cartesian"].min()
+        Zmax = ds["Z_cartesian"].max()
+        newX_1d = xr.DataArray(np.linspace(Xmin, Xmax, nX), dims="X")
+        newX = newX_1d.expand_dims({"Y": nY, "Z": nZ}, axis=[1, 2])
+        newY_1d = xr.DataArray(np.linspace(Ymin, Ymax, nY), dims="Y")
+        newY = newY_1d.expand_dims({"X": nX, "Z": nZ}, axis=[0, 2])
+        newZ_1d = xr.DataArray(np.linspace(Zmin, Zmax, nZ), dims="Z")
+        newZ = newZ_1d.expand_dims({"X": nX, "Y": nY}, axis=[0, 1])
+        newR = np.sqrt(newX**2 + newY**2)
+        newzeta = np.arctan2(newY, newX)
+        # Define newzeta in range 0->2*pi
+        newzeta = np.where(newzeta < 0.0, newzeta + 2.0 * np.pi, newzeta)
+
+        from scipy.interpolate import (
+            RegularGridInterpolator,
+            griddata,
+        )
+
+        # Create Cylindrical coordinates for intermediate grid
+        Rcyl_min = float_type(ds["R"].min())
+        Rcyl_max = float_type(ds["R"].max())
+        Zcyl_min = float_type(ds["Z"].min())
+        Zcyl_max = float_type(ds["Z"].max())
+        n_Rcyl = int(round(nZ * (Rcyl_max - Rcyl_min) / (Zcyl_max - Zcyl_min)))
+        Rcyl = xr.DataArray(np.linspace(Rcyl_min, Rcyl_max, 2 * n_Rcyl), dims="r")
+        Zcyl = xr.DataArray(np.linspace(Zcyl_min, Zcyl_max, 2 * nZ), dims="z")
+
+        # Create Dataset for result
+        result = xr.Dataset()
+        result.attrs["metadata"] = ds.metadata
+
+        # Interpolate in two stages for efficiency. Unstructured 3d interpolation is
+        # very slow. Unstructured 2d interpolation onto Cartesian (R, Z) grids, followed
+        # by structured 3d interpolation onto the (X, Y, Z) grid, is much faster.
+        # Structured 3d interpolation straight from (psi, theta, zeta) to (X, Y, Z)
+        # leaves artifacts in the output, because theta does not vary continuously
+        # everywhere (has branch cuts).
+
+        zeta_out = np.zeros(n_toroidal + 1)
+        zeta_out[:-1] = ds[zdim].values
+        zeta_out[-1] = zeta_out[-2] + ds["dz"].mean()
+
+        def interp_single_time(da):
+            print("    interpolate poloidal planes")
+
+            da_cyl = da.bout.interpolate_from_unstructured(R=Rcyl, Z=Zcyl).transpose(
+                "R", "Z", zdim, missing_dims="ignore"
+            )
+
+            if zdim not in da_cyl.dims:
+                da_cyl = da_cyl.expand_dims({zdim: n_toroidal + 1}, axis=-1)
+            else:
+                # Impose toroidal periodicity by appending zdim=0 to end of array
+                da_cyl = xr.concat((da_cyl, da_cyl.isel({zdim: 0})), zdim)
+
+            print("    build 3d interpolator")
+            interp = RegularGridInterpolator(
+                (Rcyl.values, Zcyl.values, zeta_out),
+                da_cyl.values,
+                bounds_error=False,
+                fill_value=fill_value,
+            )
+
+            print("    do 3d interpolation")
+            return interp(
+                (newR, newZ, newzeta),
+                method="linear",
+            )
+
+        for name, da in ds.data_vars.items():
+            print(f"\ninterpolating {name}")
+            # order of dimensions does not really matter here - output only depends on
+            # shape of newR, newZ, newzeta. Possibly more efficient to assign the 2d
+            # results in the loop to the last two dimensions, so put zeta first.  Can't
+            # just use da.min().item() here (to get a scalar value instead of a
+            # zero-size array) because .item() doesn't work for dask arrays (yet!).
+
+            datamin = float_type(da.min().values)
+            datamax = float_type(da.max().values)
+
+            if tdim in da.dims:
+                data_cartesian = np.zeros((nt, nX, nY, nZ), dtype=float_type)
+                for tind in range(nt):
+                    print(f"  tind={tind}")
+                    data_cartesian[tind, :, :, :] = interp_single_time(
+                        da.isel({tdim: tind})
+                    )
+                result[name] = xr.DataArray(data_cartesian, dims=[tdim, "X", "Y", "Z"])
+            else:
+                data_cartesian = interp_single_time(da)
+                result[name] = xr.DataArray(data_cartesian, dims=["X", "Y", "Z"])
+
+            # Copy metadata to data variables, in case it is needed
+            result[name].attrs["metadata"] = ds.metadata
+
+        result = result.assign_coords(X=newX_1d, Y=newY_1d, Z=newZ_1d)
+
+        return result
+
+    def add_cartesian_coordinates(self):
+        """
+        Add Cartesian (X,Y,Z) coordinates.
+
+        Returns
+        -------
+        Dataset with new coordinates added, which are named 'X_cartesian',
+        'Y_cartesian', and 'Z_cartesian'
+        """
+        return _add_cartesian_coordinates(self.data)
 
     def remove_yboundaries(self, **kwargs):
         """

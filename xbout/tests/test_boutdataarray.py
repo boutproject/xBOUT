@@ -954,6 +954,85 @@ class TestBoutDataArrayMethods:
 
         xrt.assert_identical(n_highres_truncated, n_highres.isel(zeta=points_list))
 
+    def test_interpolate_to_cartesian(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(2, 16, 17, 18), nxpe=1, nype=1, nt=1
+        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
+
+        ds["psixy"] = ds["g11"].copy(deep=True)
+        ds["Rxy"] = ds["g11"].copy(deep=True)
+        ds["Zxy"] = ds["g11"].copy(deep=True)
+
+        r = np.linspace(1.0, 2.0, ds.metadata["nx"])
+        theta = np.linspace(0.0, 2.0 * np.pi, ds.metadata["ny"])
+        R = r[:, np.newaxis] * np.cos(theta[np.newaxis, :])
+        Z = r[:, np.newaxis] * np.sin(theta[np.newaxis, :])
+        ds["Rxy"].values[:] = R
+        ds["Zxy"].values[:] = Z
+
+        ds = apply_geometry(ds, "toroidal")
+
+        da = ds["n"]
+        da.values[:] = 1.0
+
+        nX = 30
+        nY = 30
+        nZ = 10
+        da_cartesian = da.bout.interpolate_to_cartesian(nX, nY, nZ)
+
+        # Check a point inside the original grid
+        npt.assert_allclose(
+            da_cartesian.isel(t=0, X=round(nX * 4 / 5), Y=nY // 2, Z=nZ // 2).item(),
+            1.0,
+            rtol=1.0e-15,
+            atol=1.0e-15,
+        )
+        # Check a point outside the original grid
+        assert np.isnan(da_cartesian.isel(t=0, X=0, Y=0, Z=0).item())
+        # Check output is float32
+        assert da_cartesian.dtype == np.float32
+
+    def test_add_cartesian_coordinates(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
+
+        ds["psixy"] = ds["g11"].copy(deep=True)
+        ds["Rxy"] = ds["g11"].copy(deep=True)
+        ds["Zxy"] = ds["g11"].copy(deep=True)
+
+        r = np.linspace(1.0, 2.0, ds.metadata["nx"])
+        theta = np.linspace(0.0, 2.0 * np.pi, ds.metadata["ny"])
+        R = r[:, np.newaxis] * np.cos(theta[np.newaxis, :])
+        Z = r[:, np.newaxis] * np.sin(theta[np.newaxis, :])
+        ds["Rxy"].values[:] = R
+        ds["Zxy"].values[:] = Z
+
+        ds = apply_geometry(ds, "toroidal")
+
+        zeta = ds["zeta"].values
+
+        da = ds["n"].bout.add_cartesian_coordinates()
+
+        npt.assert_allclose(
+            da["X_cartesian"],
+            R[:, :, np.newaxis] * np.cos(zeta[np.newaxis, np.newaxis, :]),
+        )
+        npt.assert_allclose(
+            da["Y_cartesian"],
+            R[:, :, np.newaxis] * np.sin(zeta[np.newaxis, np.newaxis, :]),
+        )
+        npt.assert_allclose(
+            da["Z_cartesian"],
+            Z[:, :, np.newaxis] * np.ones(ds.metadata["nz"])[np.newaxis, np.newaxis, :],
+        )
+
     def test_ddx(self, bout_xyt_example_files):
 
         nx = 64
