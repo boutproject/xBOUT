@@ -48,7 +48,7 @@ def _is_path(p):
 
 
 def _is_dir(p):
-    return os.path.isdir(p)
+    return _is_path(p) and os.path.isdir(p)
 
 
 def _separate_metadata(ds):
