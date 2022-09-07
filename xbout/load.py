@@ -11,7 +11,13 @@ from numpy import unique
 from natsort import natsorted
 
 from . import geometries
-from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype, _is_path
+from .utils import (
+    _set_attrs_on_all_vars,
+    _separate_metadata,
+    _check_filetype,
+    _is_path,
+    _is_dir,
+)
 
 
 _BOUT_PER_PROC_VARIABLES = [
@@ -302,6 +308,8 @@ def open_boutdataset(
         if info:
             print("Applying {} geometry conventions".format(geometry))
 
+        if _is_dir(gridfilepath):
+            gridfilepath += "/" + ds.options["grid"]
         if gridfilepath is not None:
             grid = _open_grid(
                 gridfilepath,

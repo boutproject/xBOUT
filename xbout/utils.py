@@ -1,6 +1,7 @@
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
+import os
 
 import numpy as np
 import xarray as xr
@@ -44,6 +45,10 @@ def _is_path(p):
         return True
     except TypeError:
         return False
+
+
+def _is_dir(p):
+    return os.path.isdir(p)
 
 
 def _separate_metadata(ds):
