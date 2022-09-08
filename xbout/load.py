@@ -60,6 +60,7 @@ def open_boutdataset(
     inputfilepath=None,
     geometry=None,
     gridfilepath=None,
+    grid_mismatch="raise",  #: Union[Literal["raise"], Literal["warn"], Literal["ignore"]]
     chunks=None,
     keep_xboundaries=True,
     keep_yboundaries=False,
@@ -121,6 +122,10 @@ def open_boutdataset(
     gridfilepath : str, optional
         The path to a grid file, containing any variables needed to apply the geometry
         specified by the 'geometry' option, which are not contained in the dump files.
+    grid_mismatch : str, optional
+        How to handle if the grid is not the grid that has been used for the
+        simulation. Can be "raise" to raise a RuntimeError, "warn" to raise a
+        warning, or ignore to ignore the mismatch silently.
     keep_xboundaries : bool, optional
         If true, keep x-direction boundary cells (the cells past the physical
         edges of the grid, where boundary conditions are set); increases the
@@ -317,6 +322,19 @@ def open_boutdataset(
         if info:
             warn("No geometry type found, no physical coordinates will be added")
 
+    if grid and ds.options:
+        grididoptions = ds.options.get("grid_id", None)
+        grididfile = grid.get("grid_id_fu", None)
+        if grididoptions and grididfile and grididfile != grididoptions:
+            msg = f"""The grid used for the simulation is not the one used.
+For the simulation {grididoptions} was used,
+but we did load {grididfile}."""
+            if grid_mismatch == "warn":
+                warn(msg)
+            elif gird_mismatch == "ignore":
+                pass
+            else:
+                raise RuntimeError(msg)
     # Update coordinates to match particular geometry of grid
     ds = geometries.apply_geometry(ds, geometry, grid=grid)
 
