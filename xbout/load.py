@@ -127,6 +127,8 @@ def open_boutdataset(
     gridfilepath : str, optional
         The path to a grid file, containing any variables needed to apply the geometry
         specified by the 'geometry' option, which are not contained in the dump files.
+        This may either be the path of the grid file itself, or the directory
+        relative to which the grid from the settings file can be found.
     keep_xboundaries : bool, optional
         If true, keep x-direction boundary cells (the cells past the physical
         edges of the grid, where boundary conditions are set); increases the
