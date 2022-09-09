@@ -322,9 +322,9 @@ def open_boutdataset(
         if info:
             warn("No geometry type found, no physical coordinates will be added")
 
-    if grid and ds.options:
-        grididoptions = ds.options.get("grid_id", None)
-        grididfile = grid.get("grid_id_fu", None)
+    if grid:
+        grididoptions = ds.metadata.get("grid_id", None)
+        grididfile = grid.get("grid_id", None)
         if grididoptions and grididfile and grididfile != grididoptions:
             msg = f"""The grid used for the simulation is not the one used.
 For the simulation {grididoptions} was used,
