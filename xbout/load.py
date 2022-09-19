@@ -791,46 +791,81 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
 
     nprocs = nxpe * nype
     n_runs = int(len(filepaths) / nprocs)
-    if len(filepaths) < nprocs:
-        if len(filepaths) == 1:
+    runids = []
+    for fp in filepaths:
+        with xr.open_dataset(fp) as tmp:
+            if "run_id" not in tmp:
+                runids = None
+                break
+            runids.append(tmp["run_id"])
+    if not runids:
+        if len(filepaths) < nprocs:
+            if len(filepaths) == 1:
+                raise ValueError(
+                    "A parallel simulation was loaded, but only a single "
+                    "file was loaded. Please ensure to pass in all files "
+                    "by specifing e.g. `BOUT.dmp.*.nc` rather than "
+                    "`BOUT.dmp.0.nc`."
+                )
             raise ValueError(
-                "A parallel simulation was loaded, but only a single "
-                "file was loaded. Please ensure to pass in all files "
-                "by specifing e.g. `BOUT.dmp.*.nc` rather than "
-                "`BOUT.dmp.0.nc`."
+                f"A parallel simulation was loaded, but only a {len(filepathts)} "
+                "files were loaded. Please ensure to pass in all files "
+                "by specifing e.g. `BOUT.dmp.*.nc`"
             )
-        raise ValueError(
-            f"A parallel simulation was loaded, but only a {len(filepathts)} "
-            "files were loaded. Please ensure to pass in all files "
-            "by specifing e.g. `BOUT.dmp.*.nc`"
-        )
-    if len(filepaths) % nprocs != 0:
-        raise ValueError(
-            "Each run directory does not contain an equal number "
-            "of output files. If the parallelization scheme of "
-            "your simulation changed partway-through, then please "
-            "load each directory separately and concatenate them "
-            "along the time dimension with xarray.concat()."
-        )
+        if len(filepaths) % nprocs != 0:
+            raise ValueError(
+                "Each run directory does not contain an equal number "
+                "of output files. If the parallelization scheme of "
+                "your simulation changed partway-through, then please "
+                "load each directory separately and concatenate them "
+                "along the time dimension with xarray.concat()."
+            )
+        # Create list of lists of filepaths, so that xarray knows how they should
+        # be concatenated by xarray.open_mfdataset()
+        paths = iter(filepaths)
+        paths_grid = [
+            [[next(paths) for x in range(nxpe)] for y in range(nype)]
+            for t in range(n_runs)
+        ]
 
-    # Create list of lists of filepaths, so that xarray knows how they should
-    # be concatenated by xarray.open_mfdataset()
-    paths = iter(filepaths)
-    paths_grid = [
-        [[next(paths) for x in range(nxpe)] for y in range(nype)] for t in range(n_runs)
-    ]
+    else:
+        paths_sorted = []
+        lastid = None
+        for path, gid in zip(filepaths, runids):
+            if lastid != gid:
+                lastid = gid
+                paths_sorted.append([])
+            paths_sorted[-1].append(path)
+        paths_grid = []
+        for paths in paths_sorted:
+            if len(paths) != nprocs:
+                with xr.open_dataset(paths[0]) as tmp:
+                    if tmp["PE_XIND"] != 0 or tmp["PE_YIND"] != 0:
+                        # The first file is missing.
+                        warn(
+                            f"Ignoring {len(paths)} files as the first seems to be missing: {paths}"
+                        )
+                        continue
+                    assert tmp["NXPE"] == nxpe
+                    assert tmp["NYPE"] == nype
+                raise ValueError(
+                    f"Something is wrong. We expected {nprocs} files but found {len(paths)} files."
+                )
+            paths = iter(paths)
 
-    # Dimensions along which no concatenation is needed are still present as
-    # single-element lists, so need to concatenation along dim=None for those
-    concat_dims = [None, None, None]
-    if len(filepaths) > nprocs:
-        concat_dims[0] = "t"
-    if nype > 1:
-        concat_dims[1] = "y"
-    if nxpe > 1:
-        concat_dims[2] = "x"
+            paths_grid.append([[next(paths) for x in range(nxpe)] for y in range(nype)])
 
-    return paths_grid, concat_dims
+        # Dimensions along which no concatenation is needed are still present as
+        # single-element lists, so need to concatenation along dim=None for those
+        concat_dims = [None, None, None]
+        if len(filepaths) > nprocs:
+            concat_dims[0] = "t"
+        if nype > 1:
+            concat_dims[1] = "y"
+        if nxpe > 1:
+            concat_dims[2] = "x"
+
+        return paths_grid, concat_dims
 
 
 def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
