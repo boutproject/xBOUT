@@ -791,6 +791,19 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
 
     nprocs = nxpe * nype
     n_runs = int(len(filepaths) / nprocs)
+    if len(filepaths) < nprocs:
+        if len(filepaths) == 1:
+            raise ValueError(
+                "A parallel simulation was loaded, but only a single "
+                "file was loaded. Please ensure to pass in all files "
+                "by specifing e.g. `BOUT.dmp.*.nc` rather than "
+                "`BOUT.dmp.0.nc`."
+            )
+        raise ValueError(
+            f"A parallel simulation was loaded, but only a {len(filepathts)} "
+            "files were loaded. Please ensure to pass in all files "
+            "by specifing e.g. `BOUT.dmp.*.nc`"
+        )
     if len(filepaths) % nprocs != 0:
         raise ValueError(
             "Each run directory does not contain an equal number "
