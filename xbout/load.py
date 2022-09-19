@@ -311,10 +311,12 @@ def open_boutdataset(
             print("Applying {} geometry conventions".format(geometry))
 
         if _is_dir(gridfilepath):
-            assert ds.options.get(
-                "grid", None
-            ), "specified gridfilepath as directory, but grid not in options"
-            gridfilepath += "/" + ds.options["grid"]
+            if "grid" in ds.options:
+                gridfilepath += "/" + ds.options["grid"]
+            else:
+                warn(
+                    "gridfilepath set to a directory, but no grid used in simulation. Continuing without grid."
+                )
         if gridfilepath is not None:
             grid = _open_grid(
                 gridfilepath,
