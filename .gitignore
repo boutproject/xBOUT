@@ -108,3 +108,6 @@ venv.bak/
 
 # Generated files:
 _version.py
+
+# Submodules
+xbout/modules/*/
