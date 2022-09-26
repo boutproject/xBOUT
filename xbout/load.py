@@ -18,7 +18,7 @@ from .utils import (
     _is_path,
     _is_dir,
 )
-
+from .modules import avail as modules
 
 _BOUT_PER_PROC_VARIABLES = [
     "wall_time",
@@ -247,6 +247,14 @@ def open_boutdataset(
             ds = geometries.apply_geometry(ds, ds.attrs["geometry"])
         else:
             ds = geometries.apply_geometry(ds, None)
+
+        matches = [module for module in modules if module.does_match(ds)]
+        if len(matches):
+            assert (
+                len(matches) == 1
+            ), f"More than module claim to be able to read the dataset: {[x.__file__ for x in matches]}"
+            (match,) = matches
+            ds = match.update(ds)
 
         if info == "terse":
             print("Read in dataset from {}".format(str(Path(datapath))))
