@@ -334,7 +334,7 @@ but we did load {grididfile}."""
             elif gird_mismatch == "ignore":
                 pass
             else:
-                raise RuntimeError(msg)
+                raise ValueError(msg)
     # Update coordinates to match particular geometry of grid
     ds = geometries.apply_geometry(ds, geometry, grid=grid)
 
