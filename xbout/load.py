@@ -793,7 +793,7 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
                     "`BOUT.dmp.0.nc`."
                 )
             raise ValueError(
-                f"A parallel simulation was loaded, but only a {len(filepathts)} "
+                f"A parallel simulation was loaded, but only {len(filepathts)} "
                 "files were loaded. Please ensure to pass in all files "
                 "by specifing e.g. `BOUT.dmp.*.nc`"
             )
