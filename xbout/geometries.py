@@ -324,7 +324,7 @@ def _add_vars_from_grid(ds, grid, variables, *, optional_variables=None):
             # https://github.com/pydata/xarray/issues/4415
             # https://github.com/pydata/xarray/issues/4393
             # This way adds as a 'Variable' instead of as a 'DataArray'
-            ds[v] = (grid[v].dims, grid[v].values)
+            ds[v] = (grid[v].dims, grid[v].values, grid[v].attrs)
 
             _add_attrs_to_var(ds, v)
 
@@ -340,7 +340,7 @@ def _add_vars_from_grid(ds, grid, variables, *, optional_variables=None):
                     # Dataset, see https://github.com/pydata/xarray/issues/4415
                     # https://github.com/pydata/xarray/issues/4393
                     # This way adds as a 'Variable' instead of as a 'DataArray'
-                    ds[v] = (grid[v].dims, grid[v].values)
+                    ds[v] = (grid[v].dims, grid[v].values, grid[v].attrs)
 
                     _add_attrs_to_var(ds, v)
 
