@@ -331,7 +331,7 @@ For the simulation {grididoptions} was used,
 but we did load {grididfile}."""
             if grid_mismatch == "warn":
                 warn(msg)
-            elif gird_mismatch == "ignore":
+            elif grid_mismatch == "ignore":
                 pass
             else:
                 raise ValueError(msg)
