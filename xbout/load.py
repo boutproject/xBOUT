@@ -800,12 +800,22 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     nprocs = nxpe * nype
     n_runs = int(len(filepaths) / nprocs)
     runids = []
+
+    def getrunid(fp):
+        if _is_path(fp):
+            try:
+                with xr.open_dataset(fp) as tmp:
+                    return tmp.get("run_id", None)
+            except FileNotFoundError:
+                return None
+        return fp.get("run_id", None)
+
     for fp in filepaths:
-        with xr.open_dataset(fp) as tmp:
-            if "run_id" not in tmp:
-                runids = None
-                break
-            runids.append(tmp["run_id"])
+        thisrunid = getrunid(fp)
+        if thisrunid is None:
+            runids = None
+            break
+        runids.append(thisrunid)
     if not runids:
         if len(filepaths) < nprocs:
             if len(filepaths) == 1:
