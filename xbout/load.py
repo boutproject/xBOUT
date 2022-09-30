@@ -863,17 +863,17 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
 
             paths_grid.append([[next(paths) for x in range(nxpe)] for y in range(nype)])
 
-        # Dimensions along which no concatenation is needed are still present as
-        # single-element lists, so need to concatenation along dim=None for those
-        concat_dims = [None, None, None]
-        if len(filepaths) > nprocs:
-            concat_dims[0] = "t"
-        if nype > 1:
-            concat_dims[1] = "y"
-        if nxpe > 1:
-            concat_dims[2] = "x"
+    # Dimensions along which no concatenation is needed are still present as
+    # single-element lists, so need to concatenation along dim=None for those
+    concat_dims = [None, None, None]
+    if len(filepaths) > nprocs:
+        concat_dims[0] = "t"
+    if nype > 1:
+        concat_dims[1] = "y"
+    if nxpe > 1:
+        concat_dims[2] = "x"
 
-        return paths_grid, concat_dims
+    return paths_grid, concat_dims
 
 
 def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
