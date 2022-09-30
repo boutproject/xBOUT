@@ -355,6 +355,14 @@ def open_boutdataset(
     # BOUT++
     ds.bout.fine_interpolation_factor = 8
 
+    matches = [module for module in modules if module.does_match(ds)]
+    if len(matches):
+        assert (
+            len(matches) == 1
+        ), f"More than module claim to be able to read the dataset: {[x.__file__ for x in matches]}"
+        (match,) = matches
+        ds = match.update(ds)
+
     if info == "terse":
         print("Read in dataset from {}".format(str(Path(datapath))))
     elif info:
