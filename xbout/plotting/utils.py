@@ -64,6 +64,8 @@ def plot_separatrix(da, sep_pos, ax, radial_coord="x"):
 
 def _decompose_regions(da):
 
+    if da.geometry == "fci":
+        return {region: da for region in da.bout._regions}
     return {
         region: da.bout.from_region(region, with_guards=1)
         for region in da.bout._regions

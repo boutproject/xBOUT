@@ -194,7 +194,14 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         can_use_1d_z_coord = (nz == 1) or use_metric_3d
 
         if can_use_1d_z_coord:
-            z = _1d_coord_from_spacing(updated_ds["dz"], zcoord, updated_ds)
+            if updated_ds.geometry == "fci":
+                # dz is varying. just set to a linspace
+                z = xr.DataArray(
+                    np.linspace(start=0, stop=2 * np.pi, num=nz, endpoint=False),
+                    dims=zcoord,
+                )
+            else:
+                z = _1d_coord_from_spacing(updated_ds["dz"], zcoord, updated_ds)
         else:
             if bout_v5:
                 if not np.all(updated_ds["dz"].min() == updated_ds["dz"].max()):
