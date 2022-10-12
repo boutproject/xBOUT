@@ -20,7 +20,7 @@ jobs:
     if: always()
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8, 3.9, '3.10']
         pip-packages:
           - "setuptools pip pytest pytest-cov coverage codecov boutdata xarray numpy>=1.16.0"
       fail-fast: false
