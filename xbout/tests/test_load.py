@@ -713,8 +713,10 @@ def create_bout_ds(
     else:
         ds["dz"] = 2.0 * np.pi / nz
 
-    ds["iteration"] = t_length
+    ds["iteration"] = t_length - 1
+    ds["hist_hi"] = t_length - 1
     ds["t_array"] = DataArray(np.arange(t_length, dtype=float) * 10.0, dims="t")
+    ds["tt"] = ds["t_array"][-1]
 
     # xarray adds this encoding when opening a file. Emulate here as it may be used to
     # get the file number
@@ -793,6 +795,8 @@ METADATA_VARS = [
     "MXSUB",
     "MYSUB",
     "MZSUB",
+    "hist_hi",
+    "iteration",
     "ixseps1",
     "ixseps2",
     "jyseps1_1",
@@ -800,6 +804,7 @@ METADATA_VARS = [
     "jyseps2_1",
     "jyseps2_2",
     "ny_inner",
+    "tt",
     "zperiod",
     "ZMIN",
     "ZMAX",

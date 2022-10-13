@@ -1204,14 +1204,14 @@ class TestBoutDatasetMethods:
         ds["dy"].data[...] = 0.2
         ds["dz"] = 0.3
         tfunc = 1.5 * t
-        xfunc = x ** 2
-        yfunc = 10.0 * y - y ** 2
-        zfunc = 2.0 * z ** 2 - 30.0 * z
+        xfunc = x**2
+        yfunc = 10.0 * y - y**2
+        zfunc = 2.0 * z**2 - 30.0 * z
         ds["n"].data[...] = tfunc * xfunc * yfunc * zfunc
         tintegral = 48.0
         xintegral = 1000.0 / 3.0
-        yintegral = 5.0 * 22.0 ** 2 - 22.0 ** 3 / 3.0
-        zintegral = 2.0 * 36.0 ** 3 / 3.0 - 15.0 * 36.0 ** 2
+        yintegral = 5.0 * 22.0**2 - 22.0**3 / 3.0
+        zintegral = 2.0 * 36.0**3 / 3.0 - 15.0 * 36.0**2
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims="t"),
             (tintegral * xfunc * yfunc * zfunc).squeeze(),
@@ -1429,28 +1429,28 @@ class TestBoutDatasetMethods:
         # Default is to integrate over all spatial dimensions
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n"),
-            2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            2.0 * np.pi * R * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
         # Pass all spatial dims explicitly
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["x", "theta", "zeta"]),
-            2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            2.0 * np.pi * R * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
         # Integrate in time too
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["t", "x", "theta", "zeta"]),
-            T_total * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            T_total * 2.0 * np.pi * R * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
         # Integrate in time using dims=...
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=...),
-            T_total * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            T_total * 2.0 * np.pi * R * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
@@ -1459,7 +1459,7 @@ class TestBoutDatasetMethods:
             ds.bout.integrate_midpoints(
                 "n", dims=["t", "x", "theta", "zeta"], cumulative_t=True
             ),
-            T_cumulative * 2.0 * np.pi * R * np.pi * (router ** 2 - rinner ** 2),
+            T_cumulative * 2.0 * np.pi * R * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
@@ -1496,14 +1496,14 @@ class TestBoutDatasetMethods:
         # router and circle with radius rinner, pi*(router**2 - rinner**2)
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["x", "theta"]),
-            np.pi * (router ** 2 - rinner ** 2),
+            np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
         # Integrate in time too
         npt.assert_allclose(
             ds.bout.integrate_midpoints("n", dims=["t", "x", "theta"]),
-            T_total * np.pi * (router ** 2 - rinner ** 2),
+            T_total * np.pi * (router**2 - rinner**2),
             rtol=1.0e-5,
             atol=0.0,
         )
@@ -1514,7 +1514,7 @@ class TestBoutDatasetMethods:
             ),
             T_cumulative[:, np.newaxis]
             * np.pi
-            * (router ** 2 - rinner ** 2)
+            * (router**2 - rinner**2)
             * np.ones(ds.sizes["zeta"])[np.newaxis, :],
             rtol=1.0e-5,
             atol=0.0,
@@ -1651,9 +1651,9 @@ class TestBoutDatasetMethods:
         #                  / (cos(theta/2)**2 + (1-r/R0)/(1+r/R0)*sin(theta/2)**2)**2
         #               )
         # field line length is int_{0}^{2 pi} dl
-        a = r ** 2
+        a = r**2
         c = (1 - r / R) / (1 + r / R)
-        b = q ** 2 * c
+        b = q**2 * c
 
         def func(theta):
             return np.sqrt(
@@ -1837,6 +1837,87 @@ class TestBoutDatasetMethods:
         n_check = R_unstruct + Z_unstruct
         n_unstruct = n_unstruct.isel(t=0, zeta=0)
         npt.assert_allclose(n_unstruct.values, n_check, atol=1.0e-7)
+
+    def test_interpolate_to_cartesian(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(
+            None, lengths=(2, 16, 17, 18), nxpe=1, nype=1, nt=1
+        )
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
+
+        ds["psixy"] = ds["g11"].copy(deep=True)
+        ds["Rxy"] = ds["g11"].copy(deep=True)
+        ds["Zxy"] = ds["g11"].copy(deep=True)
+
+        r = np.linspace(1.0, 2.0, ds.metadata["nx"])
+        theta = np.linspace(0.0, 2.0 * np.pi, ds.metadata["ny"])
+        R = r[:, np.newaxis] * np.cos(theta[np.newaxis, :])
+        Z = r[:, np.newaxis] * np.sin(theta[np.newaxis, :])
+        ds["Rxy"].values[:] = R
+        ds["Zxy"].values[:] = Z
+
+        ds = apply_geometry(ds, "toroidal")
+
+        ds["n"].values[:] = 1.0
+
+        nX = 30
+        nY = 30
+        nZ = 10
+        ds_cartesian = ds.bout.interpolate_to_cartesian(nX, nY, nZ)
+
+        # Check a point inside the original grid
+        npt.assert_allclose(
+            ds_cartesian["n"]
+            .isel(t=0, X=round(nX * 4 / 5), Y=nY // 2, Z=nZ // 2)
+            .item(),
+            1.0,
+            rtol=1.0e-15,
+            atol=1.0e-15,
+        )
+        # Check a point outside the original grid
+        assert np.isnan(ds_cartesian["n"].isel(t=0, X=0, Y=0, Z=0).item())
+        # Check output is float32
+        assert ds_cartesian["n"].dtype == np.float32
+
+    def test_add_cartesian_coordinates(self, bout_xyt_example_files):
+        dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath=dataset_list, inputfilepath=None, keep_xboundaries=False
+            )
+
+        ds["psixy"] = ds["g11"].copy(deep=True)
+        ds["Rxy"] = ds["g11"].copy(deep=True)
+        ds["Zxy"] = ds["g11"].copy(deep=True)
+
+        R0 = 3.0
+        r = np.linspace(1.0, 2.0, ds.metadata["nx"])
+        theta = np.linspace(0.0, 2.0 * np.pi, ds.metadata["ny"])
+        R = R0 + r[:, np.newaxis] * np.cos(theta[np.newaxis, :])
+        Z = r[:, np.newaxis] * np.sin(theta[np.newaxis, :])
+        ds["Rxy"].values[:] = R
+        ds["Zxy"].values[:] = Z
+
+        ds = apply_geometry(ds, "toroidal")
+
+        zeta = ds["zeta"].values
+
+        ds = ds.bout.add_cartesian_coordinates()
+
+        npt.assert_allclose(
+            ds["X_cartesian"],
+            R[:, :, np.newaxis] * np.cos(zeta[np.newaxis, np.newaxis, :]),
+        )
+        npt.assert_allclose(
+            ds["Y_cartesian"],
+            R[:, :, np.newaxis] * np.sin(zeta[np.newaxis, np.newaxis, :]),
+        )
+        npt.assert_allclose(
+            ds["Z_cartesian"],
+            Z[:, :, np.newaxis] * np.ones(ds.metadata["nz"])[np.newaxis, np.newaxis, :],
+        )
 
 
 class TestLoadInputFile:
@@ -2110,12 +2191,14 @@ class TestSaveRestart:
         nxpe = 3
         nype = 2
 
+        nt = 6
+
         path = bout_xyt_example_files(
             tmp_path_factory,
             nxpe=nxpe,
             nype=nype,
             nt=1,
-            lengths=[6, 4, 4, 7],
+            lengths=[nt, 4, 4, 7],
             guards={"x": 2, "y": 2},
             write_to_disk=True,
         )
@@ -2170,7 +2253,10 @@ class TestSaveRestart:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
                     else:
                         if v == "hist_hi":
-                            assert restart_ds[v].values == -1
+                            if t >= 0:
+                                assert restart_ds[v].values == t
+                            else:
+                                assert restart_ds[v].values == nt - 1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:
@@ -2183,12 +2269,14 @@ class TestSaveRestart:
         nxpe = 2
         nype = 4
 
+        nt = 6
+
         path = bout_xyt_example_files(
             tmp_path_factory,
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
-            lengths=[6, 4, 4, 7],
+            lengths=[nt, 4, 4, 7],
             guards={"x": 2, "y": 2},
             write_to_disk=True,
         )
@@ -2237,7 +2325,7 @@ class TestSaveRestart:
                         if v in ["NXPE", "NYPE", "MXSUB", "MYSUB"]:
                             pass
                         elif v == "hist_hi":
-                            assert restart_ds[v].values == -1
+                            assert restart_ds[v].values == nt - 1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:
@@ -2253,13 +2341,15 @@ class TestSaveRestart:
         nxpe = 1
         nype = 12
 
+        nt = 6
+
         path = bout_xyt_example_files(
             tmp_path_factory,
             nxpe=nxpe_in,
             nype=nype_in,
             nt=1,
             guards={"x": 2, "y": 2},
-            lengths=(6, 5, 4, 7),
+            lengths=(nt, 5, 4, 7),
             topology="upper-disconnected-double-null",
             write_to_disk=True,
         )
@@ -2308,7 +2398,7 @@ class TestSaveRestart:
                         if v in ["NXPE", "NYPE", "MXSUB", "MYSUB"]:
                             pass
                         elif v == "hist_hi":
-                            assert restart_ds[v].values == -1
+                            assert restart_ds[v].values == nt - 1
                         elif v == "tt":
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:

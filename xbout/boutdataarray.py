@@ -17,6 +17,7 @@ from .plotting import plotfuncs
 from .plotting.utils import _create_norm
 from .region import _from_region
 from .utils import (
+    _add_cartesian_coordinates,
     _make_1d_xcoord,
     _update_metadata_increased_x_resolution,
     _update_metadata_increased_y_resolution,
@@ -823,6 +824,17 @@ class BoutDataArrayAccessor:
             result = apply_geometry(result, self.data.geometry)
             return result[self.data.name]
 
+    def add_cartesian_coordinates(self):
+        """
+        Add Cartesian (X,Y,Z) coordinates.
+
+        Returns
+        -------
+        DataArray with new coordinates added, which are named 'X_cartesian',
+        'Y_cartesian', and 'Z_cartesian'
+        """
+        return _add_cartesian_coordinates(self.data)
+
     def remove_yboundaries(self, return_dataset=False, remove_extra_upper=False):
         """
         Remove y-boundary points, if present, from the DataArray
@@ -1442,6 +1454,42 @@ class BoutDataArrayAccessor:
         )
 
         return result
+
+    def interpolate_to_cartesian(self, *args, **kwargs):
+        """
+        Interpolate the DataArray to a regular Cartesian grid.
+
+        This method is intended to be used to produce data for visualisation, which
+        normally does not require double-precision values, so by default the data is
+        converted to `np.float32`. Pass `use_float32=False` to retain the original
+        precision.
+
+        Parameters
+        ----------
+        nX : int (default 300)
+            Number of grid points in the X direction
+        nY : int (default 300)
+            Number of grid points in the Y direction
+        nZ : int (default 100)
+            Number of grid points in the Z direction
+        use_float32 : bool (default True)
+            Downgrade precision to `np.float32`?
+        fill_value : float (default np.nan)
+            Value to use for points outside the interpolation domain (passed to
+            `scipy.RegularGridInterpolator`)
+
+        See Also
+        --------
+        BoutDataset.interpolate_to_cartesian
+        """
+        da = self.data
+        name = da.name
+        ds = da.to_dataset()
+        # Dataset needs geometry and metadata attributes, but these are not copied from
+        # the DataArray by default
+        ds.attrs["geometry"] = da.geometry
+        ds.attrs["metadata"] = da.metadata
+        return ds.bout.interpolate_to_cartesian(*args, **kwargs)[name]
 
     # BOUT-specific plotting functionality: methods that plot on a poloidal (R-Z) plane
     def contour(self, ax=None, **kwargs):

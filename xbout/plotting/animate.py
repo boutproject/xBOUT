@@ -81,7 +81,7 @@ def _normalise_time_coord(time_values):
     tmax = time_values.max()
     if tmax < 1.0e-2 or tmax > 1.0e6:
         scale_pow = int(np.floor(np.log10(tmax)))
-        scale_factor = 10 ** scale_pow
+        scale_factor = 10**scale_pow
         time_values = time_values / scale_factor
         suffix = f"e{scale_pow}"
     else:

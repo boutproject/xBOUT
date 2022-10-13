@@ -73,11 +73,11 @@ def open_boutdataset(
     keyword argument `drop_vars` to ignore the variables with conflicts, e.g. if `"S1"`
     and `"S2"` have conflicts
     ```
-    ds = open_boutdataset("data*/boutdata.nc", drop_vars=["S1", "S2"])
+    ds = open_boutdataset("data*/boutdata.nc", drop_variables=["S1", "S2"])
     ```
     will open a Dataset which is missing `"S1"` and `"S2"`.\
-    [`drop_vars` is an argument of `xarray.open_dataset()` that is passed down through
-    `kwargs`.]
+    [`drop_variables` is an argument of `xarray.open_dataset()` that is passed down
+    through `kwargs`.]
 
     Parameters
     ----------
@@ -172,7 +172,10 @@ def open_boutdataset(
             sectionlength = len(section)
             for key in list(obj.attrs):
                 if key[:sectionlength] == section:
-                    result[key[sectionlength:]] = obj.attrs.pop(key)
+                    val = obj.attrs.pop(key)
+                    if isinstance(val, bytes):
+                        val = val.decode()
+                    result[key[sectionlength:]] = val
             return result
 
         def attrs_remove_section(obj, section):
@@ -187,6 +190,10 @@ def open_boutdataset(
 
         # Restore metadata from attrs
         metadata = attrs_to_dict(ds, "metadata")
+        if "is_restart" not in metadata:
+            # Loading data that was saved with a version of xbout from before
+            # "is_restart" was added, so need to add it to the metadata.
+            metadata["is_restart"] = int(is_restart)
         ds.attrs["metadata"] = metadata
         # Must do this for all variables and coordinates in dataset too
         for da in chain(ds.data_vars.values(), ds.coords.values()):
@@ -251,6 +258,15 @@ def open_boutdataset(
     else:
         raise ValueError(f"internal error: unexpected input_type={input_type}")
 
+    if not is_restart:
+        for var in _BOUT_TIME_DEPENDENT_META_VARS:
+            if var in ds:
+                # Assume different processors in x & y have same iteration etc.
+                latest_top_left = {dim: 0 for dim in ds[var].dims}
+                if "t" in ds[var].dims:
+                    latest_top_left["t"] = -1
+                ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
+
     ds, metadata = _separate_metadata(ds)
     # Store as ints because netCDF doesn't support bools, so we can't save
     # bool attributes
@@ -263,15 +279,6 @@ def open_boutdataset(
         # If remove_yboundaries is True, we need to keep y-boundaries when opening the
         # grid file, as they will be removed from the full Dataset below
         keep_yboundaries = True
-
-    if not is_restart:
-        for var in _BOUT_TIME_DEPENDENT_META_VARS:
-            if var in ds:
-                # Assume different processors in x & y have same iteration etc.
-                latest_top_left = {dim: 0 for dim in ds[var].dims}
-                if "t" in ds[var].dims:
-                    latest_top_left["t"] = -1
-                ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
 
     ds = _add_options(ds, inputfilepath)
 
@@ -522,7 +529,7 @@ def _auto_open_mfboutdataset(
 
         # Open just one file to read processor splitting
         nxpe, nype, mxg, myg, mxsub, mysub, is_squashed_doublenull = _read_splitting(
-            filepaths[0], info
+            filepaths[0], info, keep_yboundaries
         )
 
         if is_squashed_doublenull:
@@ -655,7 +662,7 @@ def _expand_wildcards(path):
     return natsorted(filepaths, key=lambda filepath: str(filepath))
 
 
-def _read_splitting(filepath, info=True):
+def _read_splitting(filepath, info, keep_yboundaries):
     ds = xr.open_dataset(str(filepath))
 
     # Account for case of no parallelisation, when nxpe etc won't be in dataset
@@ -719,6 +726,23 @@ def _read_splitting(filepath, info=True):
                 nxpe = 1
                 nype = 1
                 is_squashed_doublenull = (ds["jyseps2_1"] != ds["jyseps1_2"]).values
+            elif ny_file == ny + 2 * myg:
+                # Older squashed file from double-null grid but containing only lower
+                # target boundary cells.
+                if keep_yboundaries:
+                    raise ValueError(
+                        "Cannot keep y-boundary points: squashed file is missing upper "
+                        "target boundary points."
+                    )
+                has_yboundaries = not (ny_file == ny)
+                if not has_yboundaries:
+                    myg = 0
+
+                nxpe = 1
+                nype = 1
+                # For this case, do not need the special handling enabled by
+                # is_squashed_doublenull=True, as keeping y-boundaries is not allowed
+                is_squashed_doublenull = False
 
     # Avoid trying to open this file twice
     ds.close()
@@ -813,10 +837,6 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
             trimmed_ds = trimmed_ds.drop_vars(name)
 
     to_drop = _BOUT_PER_PROC_VARIABLES
-    if not is_restart:
-        # These variables are required to be consistent when loading restart files, so
-        # that they can be written out again in to_restart()
-        to_drop = to_drop + _BOUT_PER_PROC_VARIABLES_REQUIRED_FROM_RESTARTS
 
     return trimmed_ds.drop_vars(to_drop, errors="ignore")
 

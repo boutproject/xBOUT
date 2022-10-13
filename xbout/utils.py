@@ -71,6 +71,7 @@ def _separate_metadata(ds):
 
     # Save metadata as a dictionary
     metadata_vals = [ds[var].values.item() for var in scalar_vars]
+    metadata_vals = [x.decode() if isinstance(x, bytes) else x for x in metadata_vals]
     metadata = dict(zip(scalar_vars, metadata_vals))
 
     # Add default values for dimensions to metadata. These may be modified later by
@@ -284,6 +285,32 @@ def _make_1d_xcoord(ds_or_da):
     _add_attrs_to_var(ds_or_da, xcoord)
 
 
+def _add_cartesian_coordinates(ds):
+    # Add Cartesian X and Y coordinates if they do not exist already
+    # Works on either BoutDataset or BoutDataArray
+
+    if ds.geometry == "toroidal":
+        R = ds["R"]
+        Z = ds["Z"]
+        zeta = ds[ds.metadata["bout_zdim"]]
+        if "X_cartesian" not in ds.coords:
+            X = R * np.cos(zeta)
+            ds = ds.assign_coords(X_cartesian=X)
+        if "Y_cartesian" not in ds.coords:
+            Y = R * np.sin(zeta)
+            ds = ds.assign_coords(Y_cartesian=Y)
+        if "Z_cartesian" not in ds.coords:
+            zcoord = ds.metadata["bout_zdim"]
+            nz = len(ds[zcoord])
+            ds = ds.assign_coords(Z_cartesian=Z.expand_dims({zcoord: nz}, axis=-1))
+    else:
+        raise ValueError(
+            f"Adding Cartesian coordinates to geometry={ds.geometry} is not supported"
+        )
+
+    return ds
+
+
 def _check_new_nxpe(ds, nxpe):
     # Check nxpe is valid
 
@@ -486,16 +513,26 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
 
     # hist_hi represents the number of iterations before the restart. Attempt to
     # reconstruct here
-    iteration = ds.metadata.get("iteration", -1)
+    final_hist_hi = ds.metadata.get("hist_hi", -1)
     if "t" in ds.dims:
         nt = ds.sizes["t"]
-        hist_hi = iteration - (nt - tind)
+        if tind < 0:
+            absolute_tind = tind + nt
+            if absolute_tind < 0:
+                absolute_tind = 0
+        elif tind >= nt:
+            absolute_tind = nt - 1
+        else:
+            absolute_tind = tind
+        hist_hi = final_hist_hi - (nt - 1 - absolute_tind)
         if hist_hi < 0:
             hist_hi = -1
-    elif "hist_hi" in ds.metadata:
-        hist_hi = ds.metadata["hist_hi"]
     else:
-        hist_hi = -1
+        # Either input is a set of restart files, in which case we should just use
+        # `hist_hi` if it exists, or the user has already selected a single time-point,
+        # and the best guess we have left is the existing `hist_hi` (although it might
+        # not be right).
+        hist_hi = final_hist_hi
 
     has_second_divertor = ds.metadata["jyseps2_1"] != ds.metadata["jyseps1_2"]
 

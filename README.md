@@ -1,7 +1,7 @@
 # xBOUT
 
 [![Build Status](https://github.com/boutproject/xBOUT/workflows/master/badge.svg)](https://github.com/boutproject/xBOUT/actions)
-[![codecov](https://codecov.io/gh/boutproject/xBOUT/branch/master/graph/badge.svg)](https://codecov.io/gh/boutproject/xBOUT)
+[![codecov](https://codecov.io/gh/boutproject/xBOUT/branch/master/graph/badge.svg)](https://codecov.io/gh/boutproject/xBOUT) [![Documentation Status](https://readthedocs.org/projects/xbout/badge/?version=latest)](https://xbout.readthedocs.io/en/latest/?badge=latest) [![DOI](https://zenodo.org/badge/160846663.svg)](https://zenodo.org/badge/latestdoi/160846663)
 
 Documentation: https://xbout.readthedocs.io
 
