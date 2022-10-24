@@ -22,7 +22,7 @@ jobs:
       matrix:
         python-version: [3.7, 3.8, 3.9]
         pip-packages:
-          - "setuptools pip pytest pytest-cov coverage codecov boutdata xarray numpy>=1.16.0"
+          - "setuptools pip pytest pytest-cov coverage codecov boutdata git+https://github.com/headtr1ck/xarray@copy numpy>=1.16.0"
       fail-fast: false
 
     steps:
