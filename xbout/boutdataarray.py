@@ -352,7 +352,7 @@ class BoutDataArrayAccessor:
         da[ycoord].attrs = {}
 
         da = da.interp(
-            {ycoord: y_fine.data},
+            {ycoord: y_fine},
             assume_sorted=True,
             method=method,
             kwargs={"fill_value": "extrapolate"},
