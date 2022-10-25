@@ -11,7 +11,13 @@ from numpy import unique
 from natsort import natsorted
 
 from . import geometries
-from .utils import _set_attrs_on_all_vars, _separate_metadata, _check_filetype, _is_path
+from .utils import (
+    _set_attrs_on_all_vars,
+    _separate_metadata,
+    _check_filetype,
+    _is_path,
+    _is_dir,
+)
 
 
 _BOUT_PER_PROC_VARIABLES = [
@@ -122,6 +128,8 @@ def open_boutdataset(
     gridfilepath : str, optional
         The path to a grid file, containing any variables needed to apply the geometry
         specified by the 'geometry' option, which are not contained in the dump files.
+        This may either be the path of the grid file itself, or the directory
+        relative to which the grid from the settings file can be found.
     grid_mismatch : str, optional
         How to handle if the grid is not the grid that has been used for the
         simulation. Can be "raise" to raise a RuntimeError, "warn" to raise a
@@ -307,6 +315,13 @@ def open_boutdataset(
         if info:
             print("Applying {} geometry conventions".format(geometry))
 
+        if _is_dir(gridfilepath):
+            if "grid" in ds.options:
+                gridfilepath += "/" + ds.options["grid"]
+            else:
+                warn(
+                    "gridfilepath set to a directory, but no grid used in simulation. Continuing without grid."
+                )
         if gridfilepath is not None:
             grid = _open_grid(
                 gridfilepath,
