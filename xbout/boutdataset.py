@@ -1239,10 +1239,15 @@ class BoutDatasetAccessor:
                             aspect=this_aspect,
                             vmin=this_vmin,
                             vmax=this_vmax,
+                            logscale=this_logscale,
                             **this_kwargs,
                         )
                     )
                 else:
+                    if this_vmin is None:
+                        this_vmin = min(np.min(w).values for w in v)
+                    if this_vmax is None:
+                        this_vmax = max(np.max(w).values for w in v)
                     for w in v:
                         blocks.append(
                             animate_line(
@@ -1254,6 +1259,7 @@ class BoutDatasetAccessor:
                                 aspect=this_aspect,
                                 vmin=this_vmin,
                                 vmax=this_vmax,
+                                logscale=this_logscale,
                                 label=w.name,
                                 **this_kwargs,
                             )
