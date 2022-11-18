@@ -488,7 +488,13 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
                 restart_ds[v] = data_variable
             for v in ds.metadata:
                 if v not in restart_exclude_metadata_vars:
-                    restart_ds[v] = ds.metadata[v]
+                    value = ds.metadata[v]
+
+                    if isinstance(value, str):
+                        # Write strings as byte-strings so BOUT++ can read them
+                        value = value.encode()
+
+                    restart_ds[v] = value
 
             # These variables need to be altered, because they depend on the number of
             # files and/or the rank of this file.
