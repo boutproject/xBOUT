@@ -35,6 +35,17 @@ _BOUT_PER_PROC_VARIABLES = [
     "MYPE",
 ]
 _BOUT_TIME_DEPENDENT_META_VARS = ["iteration", "hist_hi", "tt"]
+_BOUT_GEOMETRY_VARS = [
+    "ixseps1",
+    "ixseps2",
+    "jyseps1_1",
+    "jyseps2_1",
+    "jyseps1_2",
+    "jyseps2_2",
+    "nx",
+    "ny",
+    "ny_inner",
+]
 
 
 # This code should run whenever any function from this module is imported
@@ -350,6 +361,10 @@ but we did load {grididfile}."""
                 pass
             else:
                 raise ValueError(msg)
+        for v in _BOUT_GEOMETRY_VARS:
+            if v not in ds.metadata and v in grid:
+                ds.metadata[v] = grid[v].values
+
     # Update coordinates to match particular geometry of grid
     ds = geometries.apply_geometry(ds, geometry, grid=grid)
 
@@ -364,6 +379,40 @@ but we did load {grididfile}."""
     # Set some default settings that are only used in post-processing by xBOUT, not by
     # BOUT++
     ds.bout.fine_interpolation_factor = 8
+
+    if ds.metadata["BOUT_VERSION"] < 4.0:
+        # Add workarounds for missing information or different conventions in data saved
+        # by BOUT++ v3.x.
+        for v in ds:
+            if ds.metadata["bout_zdim"] in ds[v].dims:
+                # All fields saved on aligned grid for BOUT-3
+                ds[v].attrs["direction_y"] = "Aligned"
+
+            added_location = False
+            if any(
+                d in ds[v].dims
+                for d in (
+                    ds.metadata["bout_xdim"],
+                    ds.metadata["bout_ydim"],
+                    ds.metadata["bout_zdim"],
+                )
+            ):
+                # zShift, etc. did not support staggered grids in BOUT++ v3 anyway, so
+                # just treat all variables as if they were at CELL_CENTRE
+                ds[v].attrs["cell_location"] = "CELL_CENTRE"
+                added_location = True
+            if added_location:
+                warn(
+                    "Detected data from BOUT++ v3.x. Treating all variables as being "
+                    "at `CELL_CENTRE`. Should be similar to what BOUT++ v3.x did, but "
+                    "if your code uses staggered grids, this may produce unexpected "
+                    "effects in some places."
+                )
+
+        if "nz" not in ds.metadata:
+            # `nz` used to be stored as `MZ` and `MZ` used to include an extra buffer
+            # point that was not used for data.
+            ds.metadata["nz"] = ds.metadata["MZ"] - 1
 
     if info == "terse":
         print("Read in dataset from {}".format(str(Path(datapath))))
