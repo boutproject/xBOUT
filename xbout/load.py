@@ -600,17 +600,40 @@ def _auto_open_mfboutdataset(
 
         paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
-        ds = xr.open_mfdataset(
-            paths_grid,
-            concat_dim=concat_dims,
-            combine="nested",
-            data_vars=data_vars,
-            preprocess=_preprocess,
-            engine=filetype,
-            chunks=chunks,
-            join="exact",
-            **kwargs,
-        )
+        try:
+            ds = xr.open_mfdataset(
+                paths_grid,
+                concat_dim=concat_dims,
+                combine="nested",
+                data_vars=data_vars,
+                preprocess=_preprocess,
+                engine=filetype,
+                chunks=chunks,
+                join="exact",
+                **kwargs,
+            )
+        except ValueError as e:
+            message_to_catch = (
+                "some variables in data_vars are not data variables on the first "
+                "dataset:"
+            )
+            if str(e)[: len(message_to_catch)] == message_to_catch:
+                # Open concatenating any variables that are different in
+                # different files as a work around to support opening older
+                # data.
+                ds = xr.open_mfdataset(
+                    paths_grid,
+                    concat_dim=concat_dims,
+                    combine="nested",
+                    data_vars="different",
+                    preprocess=_preprocess,
+                    engine=filetype,
+                    chunks=chunks,
+                    join="exact",
+                    **kwargs,
+                )
+            else:
+                raise
     else:
         # datapath was nested list of Datasets
 
@@ -744,8 +767,16 @@ def _read_splitting(filepath, info, keep_yboundaries):
 
     # Check whether this is a single file squashed from the multiple output files of a
     # parallel run (i.e. NXPE*NYPE > 1 even though there is only a single file to read).
-    nx = ds["nx"].values
-    ny = ds["ny"].values
+    if "nx" in ds:
+        nx = ds["nx"].values
+    else:
+        # Workaround for older data files
+        nx = ds["MXSUB"].values * ds["NXPE"].values + 2 * ds["MXG"].values
+    if "ny" in ds:
+        ny = ds["ny"].values
+    else:
+        # Workaround for older data files
+        ny = ds["MYSUB"].values * ds["NYPE"].values
     nx_file = ds.dims["x"]
     ny_file = ds.dims["y"]
     is_squashed_doublenull = False
@@ -758,7 +789,10 @@ def _read_splitting(filepath, info, keep_yboundaries):
                 mxg = 0
 
             # Check if there are two divertor targets present
-            if ds["jyseps1_2"] > ds["jyseps2_1"]:
+            # Note: if jyseps2_1 and jyseps1_2 are not in ds it probably
+            # indicates older data and likely the upper target boundary cells
+            # were not saved anyway, so continue as if they were not.
+            if "jyseps2_1" in ds and ds["jyseps1_2"] > ds["jyseps2_1"]:
                 upper_target_cells = myg
             else:
                 upper_target_cells = 0
@@ -771,7 +805,13 @@ def _read_splitting(filepath, info, keep_yboundaries):
 
                 nxpe = 1
                 nype = 1
-                is_squashed_doublenull = (ds["jyseps2_1"] != ds["jyseps1_2"]).values
+                if "jyseps2_1" in ds:
+                    is_squashed_doublenull = (ds["jyseps2_1"] != ds["jyseps1_2"]).values
+                else:
+                    # For older data with no jyseps2_1 or jyseps1_2 in the
+                    # dataset, probably do not need to handle double null data
+                    # squashed with upper target points.
+                    is_squashed_doublenull = False
             elif ny_file == ny + 2 * myg:
                 # Older squashed file from double-null grid but containing only lower
                 # target boundary cells.
