@@ -163,7 +163,7 @@ class Region:
 
         xo = self.xouter_ind
         if self.connection_outer_x is not None and xo is not None:
-            xi += mxg
+            xo += mxg
 
         yl = self.ylower_ind
         if self.connection_lower_y is not None and yl is not None:
