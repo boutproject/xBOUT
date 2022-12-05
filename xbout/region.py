@@ -72,30 +72,30 @@ class Region:
             if ds.metadata["keep_xboundaries"]:
                 xbndry = ds.metadata["MXG"]
                 if self.connection_inner_x is None:
-                    self.nx -= xbndry
+                    self.nx = self.nx - xbndry
 
                     # used to calculate x-coordinate of inner side (self.xinner)
-                    xinner_ind += xbndry
+                    xinner_ind = xinner_ind + xbndry
 
                 if self.connection_outer_x is None:
-                    self.nx -= xbndry
+                    self.nx = self.nx - xbndry
 
                     # used to calculate x-coordinate of outer side (self.xouter)
-                    xouter_ind -= xbndry
+                    xouter_ind = xouter_ind - xbndry
 
             if ds.metadata["keep_yboundaries"]:
                 ybndry = ds.metadata["MYG"]
                 if self.connection_lower_y is None:
-                    self.ny -= ybndry
+                    self.ny = self.ny - ybndry
 
                     # used to calculate y-coordinate of lower side (self.ylower)
-                    ylower_ind += ybndry
+                    ylower_ind = ylower_ind + ybndry
 
                 if self.connection_upper_y is None:
-                    self.ny -= ybndry
+                    self.ny = self.ny - ybndry
 
                     # used to calculate y-coordinate of upper side (self.yupper)
-                    yupper_ind -= ybndry
+                    yupper_ind = yupper_ind - ybndry
 
             # calculate start and end coordinates
             #####################################
@@ -159,19 +159,19 @@ class Region:
         """
         xi = self.xinner_ind
         if self.connection_inner_x is not None and xi is not None:
-            xi -= mxg
+            xi = xi - mxg
 
         xo = self.xouter_ind
         if self.connection_outer_x is not None and xo is not None:
-            xo += mxg
+            xo = xo + mxg
 
         yl = self.ylower_ind
         if self.connection_lower_y is not None and yl is not None:
-            yl -= myg
+            yl = yl - myg
 
         yu = self.yupper_ind
         if self.connection_upper_y is not None and yu is not None:
-            yu += myg
+            yu = yu + myg
 
         return {self.xcoord: slice(xi, xo), self.ycoord: slice(yl, yu)}
 
@@ -189,10 +189,10 @@ class Region:
         """
         ylower = self.ylower_ind
         if self.connection_lower_y is not None:
-            ylower -= myg
+            ylower = ylower - myg
         yupper = self.yupper_ind
         if self.connection_upper_y is not None:
-            yupper += myg
+            yupper = yupper + myg
         return {
             self.xcoord: slice(self.xinner_ind - mxg, self.xinner_ind),
             self.ycoord: slice(ylower, yupper),
@@ -212,10 +212,10 @@ class Region:
         """
         ylower = self.ylower_ind
         if self.connection_lower_y is not None:
-            ylower -= myg
+            ylower = ylower - myg
         yupper = self.yupper_ind
         if self.connection_upper_y is not None:
-            yupper += myg
+            yupper = yupper + myg
         return {
             self.xcoord: slice(self.xouter_ind, self.xouter_ind + mxg),
             self.ycoord: slice(ylower, yupper),
@@ -235,10 +235,10 @@ class Region:
         """
         xinner = self.xinner_ind
         if self.connection_inner_x is not None:
-            xinner -= mxg
+            xinner = xinner - mxg
         xouter = self.xouter_ind
         if self.connection_outer_x is not None:
-            xouter += mxg
+            xouter = xouter + mxg
 
         ystart = self.ylower_ind - myg
         ystop = self.ylower_ind
@@ -270,10 +270,10 @@ class Region:
         """
         xinner = self.xinner_ind
         if self.connection_inner_x is not None:
-            xinner -= mxg
+            xinner = xinner - mxg
         xouter = self.xouter_ind
         if self.connection_outer_x is not None:
-            xouter += mxg
+            xouter = xouter + mxg
 
         # wrap around to the beginning of the grid if necessary
         ystart = self.yupper_ind
@@ -1189,15 +1189,15 @@ def _create_regions_toroidal(ds):
     # Adjust for boundary cells
     # keep_xboundaries is 1 if there are x-boundaries and 0 if there are not
     if not ds.metadata["keep_xboundaries"]:
-        ixs1 -= mxg
-        ixs2 -= mxg
-        nx -= 2 * mxg
-    jys11 += ybndry
-    jys21 += ybndry
-    ny_inner += ybndry + ybndry_upper
-    jys12 += ybndry + 2 * ybndry_upper
-    jys22 += ybndry + 2 * ybndry_upper
-    ny += 2 * ybndry + 2 * ybndry_upper
+        ixs1 = ixs1 - mxg
+        ixs2 = ixs2 - mxg
+        nx = nx - 2 * mxg
+    jys11 = jys11 + ybndry
+    jys21 = jys21 + ybndry
+    ny_inner = ny_inner + ybndry + ybndry_upper
+    jys12 = jys12 + ybndry + 2 * ybndry_upper
+    jys22 = jys22 + ybndry + 2 * ybndry_upper
+    ny = ny + 2 * ybndry + 2 * ybndry_upper
 
     # Note, include guard cells in the created regions, fill them later
     if topology in topologies:
