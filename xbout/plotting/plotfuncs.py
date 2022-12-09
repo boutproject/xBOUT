@@ -358,6 +358,9 @@ def plot3d(
     outputgrid=(100, 100, 25),
     color_map=None,
     plot=None,
+    mayavi_figure=None,
+    mayavi_figure_args=None,
+    mayavi_view=None,
     **kwargs,
 ):
     """
@@ -382,6 +385,15 @@ def plot3d(
         Color map for k3d plots
     plot : k3d plot instance, optional
         Existing plot to add new plots to
+    mayavi_figure : mayavi.core.scene.Scene, default None
+        Existing Mayavi figure to add this plot to.
+    mayavi_figure_args : dict, default None
+        Arguments to use when creating a new Mayavi figure. Ignored if `mayavi_figure`
+        is passed.
+    mayavi_view : (float, float, float), default None
+        If set, arguments are passed to mlab.view() to set the view when engine="mayavi"
+    **kwargs
+        Extra keyword arguments are passed to the backend plotting function
     """
 
     if len(da.dims) != 3:
@@ -708,6 +720,16 @@ def plot3d(
 
     elif engine == "mayavi":
         from mayavi import mlab
+
+        if mayavi_figure is None:
+            if mayavi_figure_args is None:
+                mayavi_figure_args = {}
+            mlab.figure(**mayavi_figure_args)
+        else:
+            mlab.figure(mayavi_figure)
+
+        if mayavi_view is not None:
+            mlab.view(*mayavi_view)
 
         if style == "surface":
             for region_name, da_region in _decompose_regions(da).items():
