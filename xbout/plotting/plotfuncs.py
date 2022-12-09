@@ -357,6 +357,9 @@ def plot3d(
     outputgrid=(100, 100, 25),
     color_map=None,
     plot=None,
+    surface_xinds=None,
+    surface_yinds=None,
+    surface_zinds=None,
     mayavi_figure=None,
     mayavi_figure_args=None,
     mayavi_view=None,
@@ -384,6 +387,18 @@ def plot3d(
         Color map for k3d plots
     plot : k3d plot instance, optional
         Existing plot to add new plots to
+    surface_xinds : (int, int), default None
+        Indices to select when plotting radial surfaces. These indices are local to the
+        region being plotted, so values will be strange. Recommend using values relative
+        to the radial boundaries (i.e. positive for inner boundary and negative for
+        outer boundary).
+    surface_yinds : (int, int), default None
+        Indices to select when plotting poloidal surfaces. These indices are local to the
+        region being plotted, so values will be strange. Recommend using values relative
+        to the poloidal boundaries (i.e. positive for lower boundaries and negative for
+        upper boundaries).
+    surface_zinds : (int, int), default None
+        Indices to select when plotting toroidal surfaces
     mayavi_figure : mayavi.core.scene.Scene, default None
         Existing Mayavi figure to add this plot to.
     mayavi_figure_args : dict, default None
@@ -735,22 +750,28 @@ def plot3d(
                 region = da_region.regions[region_name]
 
                 # Always include z-surfaces
+                zstart_ind = 0 if surface_zinds is None else surface_zinds[0]
+                zend_ind = -1 if surface_zinds is None else surface_zinds[1]
                 surface_selections = [
-                    {da.metadata["bout_zdim"]: 0},
-                    {da.metadata["bout_zdim"]: -1},
+                    {da.metadata["bout_zdim"]: zstart_ind},
+                    {da.metadata["bout_zdim"]: zend_ind},
                 ]
                 if region.connection_inner_x is None:
                     # Plot the inner-x surface
-                    surface_selections.append({da.metadata["bout_xdim"]: 0})
+                    xstart_ind = 0 if surface_xinds is None else surface_xinds[0]
+                    surface_selections.append({xcoord: xstart_ind})
                 if region.connection_outer_x is None:
                     # Plot the outer-x surface
-                    surface_selections.append({da.metadata["bout_xdim"]: -1})
+                    xend_ind = -1 if surface_xinds is None else surface_xinds[1]
+                    surface_selections.append({xcoord: xend_ind})
                 if region.connection_lower_y is None:
                     # Plot the lower-y surface
-                    surface_selections.append({da.metadata["bout_ydim"]: 0})
+                    ystart_ind = 0 if surface_yinds is None else surface_yinds[0]
+                    surface_selections.append({ycoord: ystart_ind})
                 if region.connection_upper_y is None:
                     # Plot the upper-y surface
-                    surface_selections.append({da.metadata["bout_ydim"]: -1})
+                    yend_ind = -1 if surface_yinds is None else surface_yinds[1]
+                    surface_selections.append({ycoord: yend_ind})
 
                 for surface_sel in surface_selections:
                     da_sel = da_region.isel(surface_sel)
