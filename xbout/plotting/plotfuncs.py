@@ -410,17 +410,40 @@ def plot3d(
         Extra keyword arguments are passed to the backend plotting function
     """
 
-    if len(da.dims) != 3:
-        raise ValueError(f"plot3d needs to be passed 3d data. Got {da.dims}.")
-
-    da = da.bout.add_cartesian_coordinates()
-    vmin = kwargs.pop("vmin", float(da.min().values))
-    vmax = kwargs.pop("vmax", float(da.max().values))
+    tcoord = da.metadata["bout_tdim"]
     xcoord = da.metadata["bout_xdim"]
     ycoord = da.metadata["bout_ydim"]
     zcoord = da.metadata["bout_zdim"]
 
+    if tcoord in da.dims:
+        animate = True
+        if len(da.dims) != 4:
+            raise ValueError(
+                f"plot3d needs to be passed 3d spatial data. Got {da.dims}."
+            )
+    else:
+        animate = False
+        if len(da.dims) != 3:
+            raise ValueError(
+                f"plot3d needs to be passed 3d spatial data. Got {da.dims}."
+            )
+
+    da = da.bout.add_cartesian_coordinates()
+    if "vmin" in kwargs:
+        vmin = kwargs.pop("vmin")
+    else:
+        vmin = float(da.min().values)
+    if "vmax" in kwargs:
+        vmax = kwargs.pop("vmax")
+    else:
+        vmax = float(da.max().values)
+
     if engine == "k3d":
+        if animate:
+            raise ValueError(
+                "animation not supported by k3d, do not pass time-dependent DataArray"
+            )
+
         import k3d
 
         if color_map is None:
@@ -746,41 +769,75 @@ def plot3d(
             mlab.view(*mayavi_view)
 
         if style == "surface":
-            for region_name, da_region in _decompose_regions(da).items():
-                region = da_region.regions[region_name]
 
-                # Always include z-surfaces
-                zstart_ind = 0 if surface_zinds is None else surface_zinds[0]
-                zend_ind = -1 if surface_zinds is None else surface_zinds[1]
-                surface_selections = [
-                    {da.metadata["bout_zdim"]: zstart_ind},
-                    {da.metadata["bout_zdim"]: zend_ind},
-                ]
-                if region.connection_inner_x is None:
-                    # Plot the inner-x surface
-                    xstart_ind = 0 if surface_xinds is None else surface_xinds[0]
-                    surface_selections.append({xcoord: xstart_ind})
-                if region.connection_outer_x is None:
-                    # Plot the outer-x surface
-                    xend_ind = -1 if surface_xinds is None else surface_xinds[1]
-                    surface_selections.append({xcoord: xend_ind})
-                if region.connection_lower_y is None:
-                    # Plot the lower-y surface
-                    ystart_ind = 0 if surface_yinds is None else surface_yinds[0]
-                    surface_selections.append({ycoord: ystart_ind})
-                if region.connection_upper_y is None:
-                    # Plot the upper-y surface
-                    yend_ind = -1 if surface_yinds is None else surface_yinds[1]
-                    surface_selections.append({ycoord: yend_ind})
+            def create_or_update_plot(plot_objects=None, tind=None):
+                if plot_objects is None:
+                    # Creating plot for first time
+                    plot_objects_to_return = {}
+                    this_da = da
+                if tind is not None:
+                    this_da = da.isel({tcoord: tind})
 
-                for surface_sel in surface_selections:
-                    da_sel = da_region.isel(surface_sel)
-                    X = da_sel["X_cartesian"].values
-                    Y = da_sel["Y_cartesian"].values
-                    Z = da_sel["Z_cartesian"].values
-                    data = da_sel.values
+                for region_name, da_region in _decompose_regions(this_da).items():
+                    region = da_region.regions[region_name]
 
-                    mlab.mesh(X, Y, Z, scalars=data, vmin=vmin, vmax=vmax, **kwargs)
+                    # Always include z-surfaces
+                    zstart_ind = 0 if surface_zinds is None else surface_zinds[0]
+                    zend_ind = -1 if surface_zinds is None else surface_zinds[1]
+                    surface_selections = [
+                        {this_da.metadata["bout_zdim"]: zstart_ind},
+                        {this_da.metadata["bout_zdim"]: zend_ind},
+                    ]
+                    if region.connection_inner_x is None:
+                        # Plot the inner-x surface
+                        xstart_ind = 0 if surface_xinds is None else surface_xinds[0]
+                        surface_selections.append({xcoord: xstart_ind})
+                    if region.connection_outer_x is None:
+                        # Plot the outer-x surface
+                        xend_ind = -1 if surface_xinds is None else surface_xinds[1]
+                        surface_selections.append({xcoord: xend_ind})
+                    if region.connection_lower_y is None:
+                        # Plot the lower-y surface
+                        ystart_ind = 0 if surface_yinds is None else surface_yinds[0]
+                        surface_selections.append({ycoord: ystart_ind})
+                    if region.connection_upper_y is None:
+                        # Plot the upper-y surface
+                        yend_ind = -1 if surface_yinds is None else surface_yinds[1]
+                        surface_selections.append({ycoord: yend_ind})
+
+                    for i, surface_sel in enumerate(surface_selections):
+                        da_sel = da_region.isel(surface_sel)
+                        X = da_sel["X_cartesian"].values
+                        Y = da_sel["Y_cartesian"].values
+                        Z = da_sel["Z_cartesian"].values
+                        data = da_sel.values
+
+                        if plot_objects is None:
+                            plot_objects_to_return[region_name + str(i)] = mlab.mesh(
+                                X, Y, Z, scalars=data, vmin=vmin, vmax=vmax, **kwargs
+                            )
+                        else:
+                            plot_objects[
+                                region_name + str(i)
+                            ].mlab_source.scalars = data
+                if plot_objects is None:
+                    return plot_objects_to_return
+
+            if animate:
+                print(f"tind=0")
+                plot_objects = create_or_update_plot(tind=0)
+
+                @mlab.animate
+                def animation_func():
+                    for tind in range(1, da.sizes[tcoord]):
+                        print(f"tind={tind}")
+                        create_or_update_plot(plot_objects=plot_objects, tind=tind)
+                        yield
+
+                a = animation_func()
+                mlab.show()
+            else:
+                create_or_update_plot()
         else:
             raise ValueError(f"style='{style}' not implemented for engine='mayavi'")
 
