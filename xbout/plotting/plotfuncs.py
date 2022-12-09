@@ -358,6 +358,7 @@ def plot3d(
     outputgrid=(100, 100, 25),
     color_map=None,
     plot=None,
+    save_as=None,
     surface_xinds=None,
     surface_yinds=None,
     surface_zinds=None,
@@ -388,6 +389,9 @@ def plot3d(
         Color map for k3d plots
     plot : k3d plot instance, optional
         Existing plot to add new plots to
+    save_as : str
+        Filename to save figure to. Animations will be saved as a sequence of
+        numbered files.
     surface_xinds : (int, int), default None
         Indices to select when plotting radial surfaces. These indices are local to the
         region being plotted, so values will be strange. Recommend using values relative
@@ -444,6 +448,8 @@ def plot3d(
             raise ValueError(
                 "animation not supported by k3d, do not pass time-dependent DataArray"
             )
+        if save_as is not None:
+            raise ValueError("save_as not supported by k3d implementation yet")
 
         import k3d
 
@@ -821,6 +827,14 @@ def plot3d(
                             plot_objects[
                                 region_name + str(i)
                             ].mlab_source.scalars = data
+                if save_as:
+                    if tind is None:
+                        mlab.savefig(save_as)
+                    else:
+                        name_parts = save_as.split(".")
+                        name_parts = name_parts[:-1] + [str(tind)] + name_parts[-1:]
+                        this_save_as = ".".join(name_parts)
+                        mlab.savefig(this_save_as)
                 if plot_objects is None:
                     return plot_objects_to_return
 
