@@ -356,6 +356,8 @@ def plot3d(
     levels=None,
     outputgrid=(100, 100, 25),
     color_map=None,
+    colorbar=True,
+    colorbar_font_size=None,
     plot=None,
     save_as=None,
     surface_xinds=None,
@@ -386,6 +388,11 @@ def plot3d(
         Cartesian (useful for slab simulations).
     color_map : k3d color map, optional
         Color map for k3d plots
+    colorbar : bool or dict, default True
+        Add a color bar. If a dict is passed, it is passed on to the colorbar() function
+        as keyword arguments.
+    colorbar_font_size : float, default None
+        Set the font size used by the colorbar (for engine="mayavi")
     plot : k3d plot instance, optional
         Existing plot to add new plots to
     save_as : str
@@ -449,6 +456,8 @@ def plot3d(
             )
         if save_as is not None:
             raise ValueError("save_as not supported by k3d implementation yet")
+        if colorbar:
+            warnings.warn("colorbar not added to k3d plots yet")
 
         import k3d
 
@@ -823,8 +832,20 @@ def plot3d(
                             plot_objects[
                                 region_name + str(i)
                             ].mlab_source.scalars = data
+
                 if mayavi_view is not None:
                     mlab.view(*mayavi_view)
+
+                if colorbar and (tind is None or tind == 0):
+                    if isinstance(colorbar, dict):
+                        colorbar_args = colorbar
+                    else:
+                        colorbar_args = {}
+                    cb = mlab.colorbar(**colorbar_args)
+                    if colorbar_font_size is not None:
+                        cb.scalar_bar.unconstrained_font_size = True
+                        cb.label_text_property.font_size = colorbar_font_size
+                        cb.title_text_property.font_size = colorbar_font_size
 
                 if save_as:
                     if tind is None:
