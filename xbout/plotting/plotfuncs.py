@@ -772,9 +772,6 @@ def plot3d(
         else:
             mlab.figure(mayavi_figure)
 
-        if mayavi_view is not None:
-            mlab.view(*mayavi_view)
-
         if style == "surface":
 
             def create_or_update_plot(plot_objects=None, tind=None):
@@ -827,6 +824,9 @@ def plot3d(
                             plot_objects[
                                 region_name + str(i)
                             ].mlab_source.scalars = data
+                if mayavi_view is not None:
+                    mlab.view(*mayavi_view)
+
                 if save_as:
                     if tind is None:
                         mlab.savefig(save_as)
@@ -853,6 +853,7 @@ def plot3d(
                 mlab.show()
             else:
                 create_or_update_plot()
+
         else:
             raise ValueError(f"style='{style}' not implemented for engine='mayavi'")
 
