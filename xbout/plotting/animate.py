@@ -600,7 +600,7 @@ def animate_line(
 
     # Check plot is the right orientation
     t_read, x_read = data.dims
-    if t_read is animate_over:
+    if t_read == animate_over:
         x = x_read
     else:
         data = data.transpose(animate_over, t_read, transpose_coords=True)
