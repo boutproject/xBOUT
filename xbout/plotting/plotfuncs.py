@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -180,18 +181,18 @@ def plot2d_wrapper(
     # set up 'levels' if needed
     if method is xr.plot.contourf or method is xr.plot.contour:
         levels = kwargs.get("levels", 7)
-        if isinstance(levels, np.int):
-            levels = np.linspace(vmin, vmax, levels, endpoint=True)
-            # put levels back into kwargs
-            kwargs["levels"] = levels
-        else:
+        if isinstance(levels, Sequence):
             levels = np.array(list(levels))
             kwargs["levels"] = levels
             vmin = np.min(levels)
             vmax = np.max(levels)
+        else:
+            levels = np.linspace(vmin, vmax, levels, endpoint=True)
+            # put levels back into kwargs
+            kwargs["levels"] = levels
 
         levels = kwargs.get("levels", 7)
-        if isinstance(levels, np.int):
+        if isinstance(levels, np.int64):
             levels = np.linspace(vmin, vmax, levels, endpoint=True)
             # put levels back into kwargs
             kwargs["levels"] = levels
