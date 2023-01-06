@@ -375,6 +375,12 @@ def plot3d(
     """
     Make a 3d plot
 
+    Warnings
+    --------
+
+    3d plotting functionality is still a bit of a work in progress. Bugs are likely, and
+    help developing is welcome!
+
     Parameters
     ----------
     style : {'surface', 'poloidal planes'}
