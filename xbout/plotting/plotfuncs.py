@@ -2,6 +2,8 @@ from collections.abc import Sequence
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import warnings
 
 import xarray as xr
@@ -364,6 +366,7 @@ def plot3d(
     surface_xinds=None,
     surface_yinds=None,
     surface_zinds=None,
+    fps=20.0,
     mayavi_figure=None,
     mayavi_figure_args=None,
     mayavi_view=None,
@@ -411,6 +414,8 @@ def plot3d(
         upper boundaries).
     surface_zinds : (int, int), default None
         Indices to select when plotting toroidal surfaces
+    fps : float, default 20
+        Frames per second to use when creating an animation.
     mayavi_figure : mayavi.core.scene.Scene, default None
         Existing Mayavi figure to add this plot to.
     mayavi_figure_args : dict, default None
@@ -418,6 +423,11 @@ def plot3d(
         is passed.
     mayavi_view : (float, float, float), default None
         If set, arguments are passed to mlab.view() to set the view when engine="mayavi"
+    vmin, vmax : float
+        vmin and vmax are treated specially. If a float is passed, then it is used for
+        vmin/vmax. If the arguments are not passed, then the minimum and maximum of the
+        data are used. For an animation, to get minimum and/or maximum calculated
+        separately for each frame, pass `vmin=None` and/or `vmax=None` explicitly.
     **kwargs
         Extra keyword arguments are passed to the backend plotting function
     """
@@ -783,7 +793,7 @@ def plot3d(
 
         if style == "surface":
 
-            def create_or_update_plot(plot_objects=None, tind=None):
+            def create_or_update_plot(plot_objects=None, tind=None, this_save_as=None):
                 if plot_objects is None:
                     # Creating plot for first time
                     plot_objects_to_return = {}
@@ -848,32 +858,78 @@ def plot3d(
                         cb.label_text_property.font_size = colorbar_font_size
                         cb.title_text_property.font_size = colorbar_font_size
 
-                if save_as:
+                if this_save_as:
                     if tind is None:
-                        mlab.savefig(save_as)
-                    else:
-                        name_parts = save_as.split(".")
-                        name_parts = name_parts[:-1] + [str(tind)] + name_parts[-1:]
-                        this_save_as = ".".join(name_parts)
                         mlab.savefig(this_save_as)
+                    else:
+                        name_parts = this_save_as.split(".")
+                        name_parts = name_parts[:-1] + [str(tind)] + name_parts[-1:]
+                        frame_save_as = ".".join(name_parts)
+                        mlab.savefig(frame_save_as)
                 if plot_objects is None:
                     return plot_objects_to_return
 
             if animate:
-                print(f"tind=0")
-                plot_objects = create_or_update_plot(tind=0)
+                orig_offscreen_option = mlab.options.offscreen
+                mlab.options.offscreen = True
 
-                @mlab.animate
-                def animation_func():
-                    for tind in range(1, da.sizes[tcoord]):
-                        print(f"tind={tind}")
-                        create_or_update_plot(plot_objects=plot_objects, tind=tind)
-                        yield
+                try:
+                    # resets mlab.options.offscreen when it finishes, even if there is
+                    # an error
+                    if save_as is None:
+                        raise ValueError(
+                            "Must pass `save_as` for a mayavi animation, or no output will "
+                            "be created"
+                        )
+                    with TemporaryDirectory() as d:
+                        nframes = da.sizes[tcoord]
 
-                a = animation_func()
-                mlab.show()
+                        # First create png files in the temporary directory
+                        temp_path = Path(d)
+                        temp_save_as = str(temp_path.joinpath("temp.png"))
+                        print(f"tind=0")
+                        plot_objects = create_or_update_plot(
+                            tind=0, this_save_as=temp_save_as
+                        )
+
+                        # @mlab.animate # interative mayavi animation too slow
+                        def animation_func():
+                            for tind in range(1, nframes):
+                                print(f"tind={tind}")
+                                create_or_update_plot(
+                                    plot_objects=plot_objects,
+                                    tind=tind,
+                                    this_save_as=temp_save_as,
+                                )
+                                # yield # needed for an interactive mayavi animation
+
+                        a = animation_func()
+
+                        # Use ImageMagick via the wand package to turn the .png files into
+                        # an animation
+                        try:
+                            from wand.image import Image
+                        except ImportError:
+                            raise ImportError(
+                                "Please install the `wand` package to save the 3d animation"
+                            )
+                        with Image() as animation:
+                            for i in range(nframes):
+                                filename = str(temp_path.joinpath(f"temp.{i}.png"))
+                                with Image(filename=filename) as frame:
+                                    animation.sequence.append(frame)
+                            animation.type = "optimize"
+                            animation.loop = 0
+                            # Delay is in milliseconds
+                            animation.delay = int(round(1000.0 / fps))
+                            animation.save(filename=save_as)
+                finally:
+                    mlab.options.offscreen = orig_offscreen_option
+
+                # mlab.show() # interative mayavi animation so slow that it's not useful
+                return a
             else:
-                create_or_update_plot()
+                create_or_update_plot(this_save_as=save_as)
 
         else:
             raise ValueError(f"style='{style}' not implemented for engine='mayavi'")
