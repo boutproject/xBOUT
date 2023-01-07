@@ -213,32 +213,44 @@ def _make_structured_triangulation(m, n):
     # indices[0] = [0, 1, n]
     # indices[1] = [1, n+1, n]
 
+    # Each quadrilateral grid cell with corners (i,j), (i,j+1), (i+1,j+1), (i+1,j), at
+    # flattened index I=i*n+j is split into two triangles, one with corners (i,j),
+    # (i,j+1), (i+1,j) and the other with corners (i,j+1) (i+1,j+1), (i+1,j),
+
+    # Lower left triangles
+    # (i,j) corner
     indices[:, ::2, 0] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
     )
+    # (i,j+1) corner
     indices[:, ::2, 1] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
         + 1
     )
+    # (i+1,j) corner
     indices[:, ::2, 2] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
         + n
     )
 
+    # Upper right triangles
+    # (i,j+1) corner
     indices[:, 1::2, 0] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
         + 1
     )
+    # (i+1,j+1) corner
     indices[:, 1::2, 1] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
         + n
         + 1
     )
+    # (i+1,j) corner
     indices[:, 1::2, 2] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
