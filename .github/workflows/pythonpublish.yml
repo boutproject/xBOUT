@@ -27,7 +27,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get install libhdf5-dev libnetcdf-dev
+        sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
         pip install --upgrade ${{ matrix.pip-packages }}
         pip install -e .
@@ -60,7 +60,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get install libhdf5-dev libnetcdf-dev
+        sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
         pip install --upgrade ${{ matrix.pip-packages }}
         pip install -e .
@@ -123,7 +123,7 @@ jobs:
         python-version: '3.x'
     - name: Install dependencies
       run: |
-        sudo apt-get install libhdf5-dev libnetcdf-dev
+        sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
         pip install --upgrade setuptools wheel twine
         pip install -e .
