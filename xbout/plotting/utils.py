@@ -213,39 +213,39 @@ def _make_structured_triangulation(m, n):
     # indices[0] = [0, 1, n]
     # indices[1] = [1, n+1, n]
 
-    indices[:, 0 : 2 * (n - 1) : 2, 0] = (
+    indices[:, ::2, 0] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
     )
-    indices[:, 0 : 2 * (n - 1) : 2, 1] = (
+    indices[:, ::2, 1] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
         + 1
     )
-    indices[:, 0 : 2 * (n - 1) : 2, 2] = (
+    indices[:, ::2, 2] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
         + n
     )
 
-    indices[:, 1 : 2 * (n - 1) : 2, 0] = (
+    indices[:, 1::2, 0] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
         + 1
     )
-    indices[:, 1 : 2 * (n - 1) : 2, 1] = (
+    indices[:, 1::2, 1] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
         + n
         + 1
     )
-    indices[:, 1 : 2 * (n - 1) : 2, 2] = (
+    indices[:, 1::2, 2] = (
         n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
         + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
         + n
     )
 
-    return indices.reshape((2 * (m - 1) * (n - 1), 3))
+    return indices.reshape((-1, 3))
 
 
 def _k3d_plot_isel(da_region, isel, vmin, vmax, **kwargs):
