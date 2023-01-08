@@ -476,7 +476,12 @@ def plot3d(
         if colorbar:
             warnings.warn("colorbar not added to k3d plots yet")
 
-        import k3d
+        try:
+            import k3d
+        except ImportError:
+            raise ImportError(
+                'Please install the `k3d` package for 3d plotting with `engine="k3d"`'
+            )
 
         if color_map is None:
             color_map = k3d.matplotlib_color_maps.Viridis
@@ -788,7 +793,13 @@ def plot3d(
             return
 
     elif engine == "mayavi":
-        from mayavi import mlab
+        try:
+            from mayavi import mlab
+        except ImportError:
+            raise ImportError(
+                "Please install the `mayavi` package for 3d plotting with "
+                '`engine="mayavi"`'
+            )
 
         if mayavi_figure is None:
             if mayavi_figure_args is None:
