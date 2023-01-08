@@ -217,45 +217,25 @@ def _make_structured_triangulation(m, n):
     # flattened index I=i*n+j is split into two triangles, one with corners (i,j),
     # (i,j+1), (i+1,j) and the other with corners (i,j+1) (i+1,j+1), (i+1,j),
 
+    lower_left_indices = (
+        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
+        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
+    )
     # Lower left triangles
     # (i,j) corner
-    indices[:, ::2, 0] = (
-        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
-        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
-    )
+    indices[:, ::2, 0] = lower_left_indices
     # (i,j+1) corner
-    indices[:, ::2, 1] = (
-        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
-        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
-        + 1
-    )
+    indices[:, ::2, 1] = lower_left_indices + 1
     # (i+1,j) corner
-    indices[:, ::2, 2] = (
-        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
-        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
-        + n
-    )
+    indices[:, ::2, 2] = lower_left_indices + n
 
     # Upper right triangles
     # (i,j+1) corner
-    indices[:, 1::2, 0] = (
-        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
-        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
-        + 1
-    )
+    indices[:, 1::2, 0] = lower_left_indices + 1
     # (i+1,j+1) corner
-    indices[:, 1::2, 1] = (
-        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
-        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
-        + n
-        + 1
-    )
+    indices[:, 1::2, 1] = lower_left_indices + n + 1
     # (i+1,j) corner
-    indices[:, 1::2, 2] = (
-        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
-        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
-        + n
-    )
+    indices[:, 1::2, 2] = lower_left_indices + n
 
     return indices.reshape((-1, 3))
 
