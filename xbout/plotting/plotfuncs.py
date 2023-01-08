@@ -494,13 +494,8 @@ def plot3d(
 
         if style == "isosurface" or style == "volume":
             data = da.copy(deep=True).load()
-            # data = da.bout.from_region('upper_outer_PFR').copy(deep=True).load()
             datamin = data.min().item()
             datamax = data.max().item()
-            # data[0, :, :] = datamin - 2.*(datamax - datamin)
-            # data[-1, :, :] = datamin - 2.*(datamax - datamin)
-            # data[:, 0, :] = datamin - 2.*(datamax - datamin)
-            # data[:, -1, :] = datamin - 2.*(datamax - datamin)
 
             if outputgrid is None:
                 Xmin = da[da.metadata["bout_xdim"]][0]
@@ -512,48 +507,6 @@ def plot3d(
 
                 grid = da.astype(np.float32).values
             else:
-                ##interpolate to Cartesian array
-                # rpoints = 200
-                # zpoints = 200
-                # Rmin = data['R'].min()
-                # Rmax = data['R'].max()
-                # Zmin = data['Z'].min()
-                # Zmax = data['Z'].max()
-                # nx, ny, nz = data.shape
-
-                # newR = (xr.DataArray(np.linspace(Rmin, Rmax, rpoints), dims='r')
-                #          .expand_dims({'z': zpoints, 'zeta': nz}, axis=[0, 1]))
-                # newZ = (xr.DataArray(np.linspace(Zmin, Zmax, zpoints), dims='z')
-                #        .expand_dims({'r': rpoints, 'zeta': nz}, axis=[2, 1]))
-                # newzeta = data['zeta'].expand_dims({'r': rpoints, 'z': zpoints}, axis=[2, 0])
-
-                # R = data['R'].expand_dims({'zeta': nz}, axis=2)
-                # Z = data['Z'].expand_dims({'zeta': nz}, axis=2)
-                # zeta = data['zeta'].expand_dims({'x': nx, 'theta': ny}, axis=[0, 1])
-
-                # from scipy.interpolate import griddata
-                # grid = griddata(
-                #        (R.values.flatten(), Z.values.flatten(),
-                #            zeta.values.flatten()),
-                #        data.values.flatten(),
-                #        (newR.values, newZ.values, newzeta.values),
-                #        method='nearest')
-
-                # if style == 'isosurface':
-                #    plot += k3d.marching_cubes(grid.astype(np.float32),
-                #                               bounds=[Rmin, Rmax, 0., 2.*np.pi, Zmin, Zmax],
-                #                               level=1.,
-                #                              )
-                # elif style == 'volume':
-                #    plot += k3d.volume(grid.astype(np.float32),
-                #                       color_range=[datamin, datamax],
-                #                       bounds=[Rmin, Rmax, 0., 2.*np.pi, Zmin, Zmax],
-                #                      )
-                # else:
-                #    raise ValueError(f'{style} not supported here')
-
-                # return plot
-
                 xpoints, ypoints, zpoints = outputgrid
                 nx, ny, nz = data.shape
 
@@ -586,70 +539,7 @@ def plot3d(
                     LinearNDInterpolator,
                 )
 
-                # need to create 3d arrays of x and y values
-                # create interpolators for x and y from R and Z
-                # print('interpolate x')
-                # newx = griddata((data['R'].values.flatten(), data['Z'].values.flatten()),
-                #                data['x'].expand_dims({'theta': ny}, axis=1).values.flatten(),
-                #                (newR.values, newZ.values),
-                #                method = 'linear',
-                #               )
-                # print('interpolate y')
-                # newy = griddata((data['R'].values.flatten(), data['Z'].values.flatten()),
-                #                data['theta'].expand_dims({'x': nx}, axis=0).values.flatten(),
-                #                (newR.values, newZ.values),
-                #                method = 'linear',
-                #               )
-                # from scipy.interpolate import griddata
-                # print('start interpolating')
-                # grid = griddata(
-                #        (data['X_cartesian'].values.flatten(),
-                #            data['Y_cartesian'].values.flatten(),
-                #            data['Z_cartesian'].values.flatten()),
-                #        data.values.flatten(),
-                #        (newX.values, newY.values, newZ.values),
-                #        method='nearest',
-                #        fill_value = datamin - 2.*(datamax - datamin)
-                #       )
-                # print('done interpolating')
-                # print('start interpolating')
-                # x = data['x']
-                # y = data['theta']
-                # z = data['zeta']
-                # interp = RegularGridInterpolator(
-                #          (x, y, z),
-                #          data.values,
-                #          bounds_error = False,
-                #          fill_value = datamin - 2.*(datamax - datamin)
-                #         )
-                # grid = interp((newx, newy, newzeta),
-                #              method='linear',
-                #             )
-                # print('done interpolating')
                 print("start interpolating")
-                # R3d = data['R'].expand_dims({'zeta': nz}, axis=2)
-                # Z3d = data['Z'].expand_dims({'zeta': nz}, axis=2)
-                # zeta3d = data['zeta'].expand_dims({'x': nx, 'theta': ny}, axis=(0, 1))
-                # grid = griddata(
-                #        (R3d.values.flatten(),
-                #            Z3d.values.flatten(),
-                #            zeta3d.values.flatten()),
-                #        data.values.flatten(),
-                #        (newR.values, newZ.values, newzeta.values),
-                #        method='linear',
-                #        fill_value = datamin - 2.*(datamax - datamin)
-                #       )
-                # interp = LinearNDInterpolator((R3d.values.flatten(), Z3d.values.flatten,
-                #                                  zeta3d.values.flatten()),
-                #                              data.values.flatten(),
-                #                              fill_value = datamin - 2.*(datamax - datamin)
-                #                             )
-                # print('made interpolator')
-                # grid = interp((newR.values, newZ.values, newzeta.values), method='linear')
-                # Rcyl = (xr.DataArray(np.linspace(Rmin, Rmax, zpoints), dims='r')
-                #          .expand_dims({'z': zpoints, 'zeta': nz}, axis=[1, 2]))
-                # Zcyl = (xr.DataArray(np.linspace(Zmin, Zmax, zpoints), dims='z')
-                #          .expand_dims({'r': zpoints, 'zeta': nz}, axis=[0, 2]))
                 Rcyl = xr.DataArray(
                     np.linspace(Rmin, Rmax, 2 * zpoints), dims="r"
                 ).expand_dims({"z": 2 * zpoints}, axis=1)
