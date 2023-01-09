@@ -20,7 +20,7 @@ jobs:
     if: always()
     strategy:
       matrix:
-        python-version: [3.8, 3.9, '3.10']
+        python-version: [3.8, 3.9, '3.10', 3.x]
         pip-packages:
           - "setuptools pip pytest pytest-cov coverage codecov boutdata xarray numpy>=1.16.0"
       fail-fast: false
@@ -43,8 +43,6 @@ jobs:
         pytest -v --long --cov
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
-      with:
-        fail_ci_if_error: true
 
 
   pytest-min-versions:
@@ -76,8 +74,6 @@ jobs:
         pytest -v --long --cov
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
-      with:
-        fail_ci_if_error: true
 
 
   # Need to tidy up the things that flake8 finds before we activate this
