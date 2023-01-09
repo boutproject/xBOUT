@@ -128,6 +128,27 @@ def _update_metadata_increased_resolution(da, n):
     return da
 
 
+def _add_cartesian_coordinates(ds):
+    # Add Cartesian X and Y coordinates if they do not exist already
+    # Works on either BoutDataset or BoutDataArray
+
+    R = ds["R"]
+    Z = ds["Z"]
+    zeta = ds[ds.metadata["bout_zdim"]]
+    if "X_cartesian" not in ds.coords:
+        X = R * np.cos(zeta)
+        ds = ds.assign_coords(X_cartesian=X)
+    if "Y_cartesian" not in ds.coords:
+        Y = R * np.sin(zeta)
+        ds = ds.assign_coords(Y_cartesian=Y)
+    if "Z_cartesian" not in ds.coords:
+        zcoord = ds.metadata["bout_zdim"]
+        nz = len(ds[zcoord])
+        ds = ds.assign_coords(Z_cartesian=Z.expand_dims({zcoord: nz}, axis=-1))
+
+    return ds
+
+
 def _1d_coord_from_spacing(spacing, dim, ds=None, *, origin_at=None):
     """
     Create a 1d coordinate varying along the dimension 'dim' from the grid spacing
@@ -488,7 +509,13 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
                 restart_ds[v] = data_variable
             for v in ds.metadata:
                 if v not in restart_exclude_metadata_vars:
-                    restart_ds[v] = ds.metadata[v]
+                    value = ds.metadata[v]
+
+                    if isinstance(value, str):
+                        # Write strings as byte-strings so BOUT++ can read them
+                        value = value.encode()
+
+                    restart_ds[v] = value
 
             # These variables need to be altered, because they depend on the number of
             # files and/or the rank of this file.
