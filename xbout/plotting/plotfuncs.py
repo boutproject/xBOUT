@@ -2,6 +2,8 @@ from collections.abc import Sequence
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import warnings
 
 import xarray as xr
@@ -10,6 +12,8 @@ from .utils import (
     _create_norm,
     _decompose_regions,
     _is_core_only,
+    _k3d_plot_isel,
+    _make_structured_triangulation,
     plot_separatrices,
     plot_targets,
 )
@@ -69,7 +73,7 @@ def plot_regions(da, ax=None, **kwargs):
                 infer_intervals=False,
                 add_colorbar=False,
                 ax=ax,
-                **kwargs
+                **kwargs,
             )
             for region in colored_regions
         ]
@@ -93,7 +97,7 @@ def plot2d_wrapper(
     vmax=None,
     aspect=None,
     extend=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Make a 2D plot using an xarray method, taking into account branch cuts (X-points).
@@ -269,7 +273,7 @@ def plot2d_wrapper(
                 add_colorbar=False,
                 add_labels=add_label,
                 cmap=cmap,
-                **kwargs
+                **kwargs,
             )
             for region, add_label in zip(da_regions.values(), add_labels)
         ]
@@ -346,3 +350,497 @@ def plot2d_wrapper(
         plot_targets(da_regions, ax, x=x, y=y, hatching=add_limiter_hatching)
 
     return artists
+
+
+def plot3d(
+    da,
+    style="surface",
+    engine="k3d",
+    levels=None,
+    outputgrid=(100, 100, 25),
+    color_map=None,
+    colorbar=True,
+    colorbar_font_size=None,
+    plot=None,
+    save_as=None,
+    surface_xinds=None,
+    surface_yinds=None,
+    surface_zinds=None,
+    fps=20.0,
+    mayavi_figure=None,
+    mayavi_figure_args=None,
+    mayavi_view=None,
+    **kwargs,
+):
+    """
+    Make a 3d plot
+
+    Warnings
+    --------
+
+    3d plotting functionality is still a bit of a work in progress. Bugs are likely, and
+    help developing is welcome!
+
+    Parameters
+    ----------
+    style : {'surface', 'poloidal planes'}
+        Type of plot to make:
+        - 'surface' plots the outer surface of the DataArray
+        - 'poloidal planes' plots each poloidal plane in the DataArray
+    engine : {'k3d', 'mayavi'}
+        3d plotting library to use
+    levels : sequence of (float, float)
+        For isosurface, the pairs of (level-value, opacity) to plot
+    outputgrid : (int, int, int) or None, optional
+        For isosurface or volume plots, the number of points to use in the Cartesian
+        (X,Y,Z) grid, that data is interpolated onto for plotting. If None, then do not
+        interpolate and treat "bout_xdim", "bout_ydim" and "bout_zdim" coordinates as
+        Cartesian (useful for slab simulations).
+    color_map : k3d color map, optional
+        Color map for k3d plots
+    colorbar : bool or dict, default True
+        Add a color bar. If a dict is passed, it is passed on to the colorbar() function
+        as keyword arguments.
+    colorbar_font_size : float, default None
+        Set the font size used by the colorbar (for engine="mayavi")
+    plot : k3d plot instance, optional
+        Existing plot to add new plots to
+    save_as : str
+        Filename to save figure to. Animations will be saved as a sequence of
+        numbered files.
+    surface_xinds : (int, int), default None
+        Indices to select when plotting radial surfaces. These indices are local to the
+        region being plotted, so values will be strange. Recommend using values relative
+        to the radial boundaries (i.e. positive for inner boundary and negative for
+        outer boundary).
+    surface_yinds : (int, int), default None
+        Indices to select when plotting poloidal surfaces. These indices are local to the
+        region being plotted, so values will be strange. Recommend using values relative
+        to the poloidal boundaries (i.e. positive for lower boundaries and negative for
+        upper boundaries).
+    surface_zinds : (int, int), default None
+        Indices to select when plotting toroidal surfaces
+    fps : float, default 20
+        Frames per second to use when creating an animation.
+    mayavi_figure : mayavi.core.scene.Scene, default None
+        Existing Mayavi figure to add this plot to.
+    mayavi_figure_args : dict, default None
+        Arguments to use when creating a new Mayavi figure. Ignored if `mayavi_figure`
+        is passed.
+    mayavi_view : (float, float, float), default None
+        If set, arguments are passed to mlab.view() to set the view when engine="mayavi"
+    vmin, vmax : float
+        vmin and vmax are treated specially. If a float is passed, then it is used for
+        vmin/vmax. If the arguments are not passed, then the minimum and maximum of the
+        data are used. For an animation, to get minimum and/or maximum calculated
+        separately for each frame, pass `vmin=None` and/or `vmax=None` explicitly.
+    **kwargs
+        Extra keyword arguments are passed to the backend plotting function
+    """
+
+    tcoord = da.metadata["bout_tdim"]
+    xcoord = da.metadata["bout_xdim"]
+    ycoord = da.metadata["bout_ydim"]
+    zcoord = da.metadata["bout_zdim"]
+
+    if tcoord in da.dims:
+        animate = True
+        if len(da.dims) != 4:
+            raise ValueError(
+                f"plot3d needs to be passed 3d spatial data. Got {da.dims}."
+            )
+    else:
+        animate = False
+        if len(da.dims) != 3:
+            raise ValueError(
+                f"plot3d needs to be passed 3d spatial data. Got {da.dims}."
+            )
+
+    da = da.bout.add_cartesian_coordinates()
+    if "vmin" in kwargs:
+        vmin = kwargs.pop("vmin")
+    else:
+        vmin = float(da.min().values)
+    if "vmax" in kwargs:
+        vmax = kwargs.pop("vmax")
+    else:
+        vmax = float(da.max().values)
+
+    if engine == "k3d":
+        if animate:
+            raise ValueError(
+                "animation not supported by k3d, do not pass time-dependent DataArray"
+            )
+        if save_as is not None:
+            raise ValueError("save_as not supported by k3d implementation yet")
+        if colorbar:
+            warnings.warn("colorbar not added to k3d plots yet")
+
+        try:
+            import k3d
+        except ImportError:
+            raise ImportError(
+                'Please install the `k3d` package for 3d plotting with `engine="k3d"`'
+            )
+
+        if color_map is None:
+            color_map = k3d.matplotlib_color_maps.Viridis
+
+        if plot is None:
+            plot = k3d.plot()
+            return_plot = True
+        else:
+            return_plot = False
+
+        if style == "isosurface" or style == "volume":
+            data = da.copy(deep=True).load()
+            datamin = data.min().item()
+            datamax = data.max().item()
+
+            if outputgrid is None:
+                Xmin = da[da.metadata["bout_xdim"]][0]
+                Xmax = da[da.metadata["bout_xdim"]][-1]
+                Ymin = da[da.metadata["bout_ydim"]][0]
+                Ymax = da[da.metadata["bout_ydim"]][-1]
+                Zmin = da[da.metadata["bout_zdim"]][0]
+                Zmax = da[da.metadata["bout_zdim"]][-1]
+
+                grid = da.astype(np.float32).values
+            else:
+                xpoints, ypoints, zpoints = outputgrid
+                nx, ny, nz = data.shape
+
+                # interpolate to Cartesian array
+                Xmin = data["X_cartesian"].min()
+                Xmax = data["X_cartesian"].max()
+                Ymin = data["Y_cartesian"].min()
+                Ymax = data["Y_cartesian"].max()
+                Zmin = data["Z_cartesian"].min()
+                Zmax = data["Z_cartesian"].max()
+                Rmin = data["R"].min()
+                Rmax = data["R"].max()
+                Zmin = data["Z"].min()
+                Zmax = data["Z"].max()
+                newX = xr.DataArray(
+                    np.linspace(Xmin, Xmax, xpoints), dims="x"
+                ).expand_dims({"y": ypoints, "z": zpoints}, axis=[1, 0])
+                newY = xr.DataArray(
+                    np.linspace(Ymin, Ymax, ypoints), dims="y"
+                ).expand_dims({"x": xpoints, "z": zpoints}, axis=[2, 0])
+                newZ = xr.DataArray(
+                    np.linspace(Zmin, Zmax, zpoints), dims="z"
+                ).expand_dims({"x": xpoints, "y": ypoints}, axis=[2, 1])
+                newR = np.sqrt(newX**2 + newY**2)
+                newzeta = np.arctan2(newY, newX)  # .values
+
+                from scipy.interpolate import (
+                    RegularGridInterpolator,
+                    griddata,
+                    LinearNDInterpolator,
+                )
+
+                print("start interpolating")
+                Rcyl = xr.DataArray(
+                    np.linspace(Rmin, Rmax, 2 * zpoints), dims="r"
+                ).expand_dims({"z": 2 * zpoints}, axis=1)
+                Zcyl = xr.DataArray(
+                    np.linspace(Zmin, Zmax, 2 * zpoints), dims="z"
+                ).expand_dims({"r": 2 * zpoints}, axis=0)
+
+                # Interpolate in two stages for efficiency. Unstructured 3d interpolation is
+                # very slow. Unstructured 2d interpolation onto Cartesian (R, Z) grids,
+                # followed by structured 3d interpolation onto the (X, Y, Z) grid, is much
+                # faster.
+                # Structured 3d interpolation straight from (psi, theta, zeta) to (X, Y, Z)
+                # leaves artifacts in the output, because theta does not vary continuously
+                # everywhere (has branch cuts).
+
+                # order of dimensions does not really matter here - output only depends on
+                # shape of newR, newZ, newzeta. Possibly more efficient to assign the 2d
+                # results in the loop to the last two dimensions, so put zeta first.
+                data_cyl = np.zeros((nz, 2 * zpoints, 2 * zpoints))
+                print("interpolate poloidal planes")
+                for z in range(nz):
+                    data_cyl[z] = griddata(
+                        (data["R"].values.flatten(), data["Z"].values.flatten()),
+                        data.isel(zeta=z).values.flatten(),
+                        (Rcyl.values, Zcyl.values),
+                        method="cubic",
+                        fill_value=datamin - 2.0 * (datamax - datamin),
+                    )
+                print("build 3d interpolator")
+                interp = RegularGridInterpolator(
+                    (data["zeta"].values, Rcyl.isel(z=0).values, Zcyl.isel(r=0).values),
+                    data_cyl,
+                    bounds_error=False,
+                    fill_value=datamin - 2.0 * (datamax - datamin),
+                )
+                print("do 3d interpolation")
+                grid = interp(
+                    (newzeta, newR, newZ),
+                    method="linear",
+                )
+                print("done interpolating")
+
+            if style == "isosurface":
+                if levels is None:
+                    levels = [(0.5 * (datamin + datamax), 1.0)]
+                for level, opacity in levels:
+                    plot += k3d.marching_cubes(
+                        grid.astype(np.float32),
+                        bounds=[Xmin, Xmax, Ymin, Ymax, Zmin, Zmax],
+                        level=level,
+                        color_map=color_map,
+                    )
+            elif style == "volume":
+                plot += k3d.volume(
+                    grid.astype(np.float32),
+                    color_range=[datamin, datamax],
+                    bounds=[Xmin, Xmax, Ymin, Ymax, Zmin, Zmax],
+                    color_map=color_map,
+                )
+            if return_plot:
+                return plot
+            else:
+                return
+
+        for region_name, da_region in _decompose_regions(da).items():
+
+            npsi, ntheta, nzeta = da_region.shape
+
+            if style == "surface":
+                region = da_region.regions[region_name]
+
+                if region.connection_inner_x is None:
+                    # Plot the inner-x surface
+                    plot += _k3d_plot_isel(
+                        da_region,
+                        {xcoord: 0},
+                        vmin,
+                        vmax,
+                        color_map=color_map,
+                        **kwargs,
+                    )
+
+                if region.connection_outer_x is None:
+                    # Plot the outer-x surface
+                    plot += _k3d_plot_isel(
+                        da_region,
+                        {xcoord: -1},
+                        vmin,
+                        vmax,
+                        color_map=color_map,
+                        **kwargs,
+                    )
+
+                if region.connection_lower_y is None:
+                    # Plot the lower-y surface
+                    plot += _k3d_plot_isel(
+                        da_region,
+                        {ycoord: 0},
+                        vmin,
+                        vmax,
+                        color_map=color_map,
+                        **kwargs,
+                    )
+
+                if region.connection_upper_y is None:
+                    # Plot the upper-y surface
+                    plot += _k3d_plot_isel(
+                        da_region,
+                        {ycoord: -1},
+                        vmin,
+                        vmax,
+                        color_map=color_map,
+                        **kwargs,
+                    )
+
+                # First z-surface
+                plot += _k3d_plot_isel(
+                    da_region, {zcoord: 0}, vmin, vmax, color_map=color_map, **kwargs
+                )
+
+                # Last z-surface
+                plot += _k3d_plot_isel(
+                    da_region, {zcoord: -1}, vmin, vmax, color_map=color_map, **kwargs
+                )
+            elif style == "poloidal planes":
+                for zeta in range(nzeta):
+                    plot += _k3d_plot_isel(
+                        da_region,
+                        {zcoord: zeta},
+                        vmin,
+                        vmax,
+                        color_map=color_map,
+                        **kwargs,
+                    )
+            else:
+                raise ValueError(f"style='{style}' not implemented for engine='k3d'")
+
+        if return_plot:
+            return plot
+        else:
+            return
+
+    elif engine == "mayavi":
+        try:
+            from mayavi import mlab
+        except ImportError:
+            raise ImportError(
+                "Please install the `mayavi` package for 3d plotting with "
+                '`engine="mayavi"`'
+            )
+
+        if mayavi_figure is None:
+            if mayavi_figure_args is None:
+                mayavi_figure_args = {}
+            mlab.figure(**mayavi_figure_args)
+        else:
+            mlab.figure(mayavi_figure)
+
+        if style == "surface":
+
+            def create_or_update_plot(plot_objects=None, tind=None, this_save_as=None):
+                if plot_objects is None:
+                    # Creating plot for first time
+                    plot_objects_to_return = {}
+                    this_da = da
+                if tind is not None:
+                    this_da = da.isel({tcoord: tind})
+
+                for region_name, da_region in _decompose_regions(this_da).items():
+                    region = da_region.regions[region_name]
+
+                    # Always include z-surfaces
+                    zstart_ind = 0 if surface_zinds is None else surface_zinds[0]
+                    zend_ind = -1 if surface_zinds is None else surface_zinds[1]
+                    surface_selections = [
+                        {this_da.metadata["bout_zdim"]: zstart_ind},
+                        {this_da.metadata["bout_zdim"]: zend_ind},
+                    ]
+                    if region.connection_inner_x is None:
+                        # Plot the inner-x surface
+                        xstart_ind = 0 if surface_xinds is None else surface_xinds[0]
+                        surface_selections.append({xcoord: xstart_ind})
+                    if region.connection_outer_x is None:
+                        # Plot the outer-x surface
+                        xend_ind = -1 if surface_xinds is None else surface_xinds[1]
+                        surface_selections.append({xcoord: xend_ind})
+                    if region.connection_lower_y is None:
+                        # Plot the lower-y surface
+                        ystart_ind = 0 if surface_yinds is None else surface_yinds[0]
+                        surface_selections.append({ycoord: ystart_ind})
+                    if region.connection_upper_y is None:
+                        # Plot the upper-y surface
+                        yend_ind = -1 if surface_yinds is None else surface_yinds[1]
+                        surface_selections.append({ycoord: yend_ind})
+
+                    for i, surface_sel in enumerate(surface_selections):
+                        da_sel = da_region.isel(surface_sel)
+                        X = da_sel["X_cartesian"].values
+                        Y = da_sel["Y_cartesian"].values
+                        Z = da_sel["Z_cartesian"].values
+                        data = da_sel.values
+
+                        if plot_objects is None:
+                            plot_objects_to_return[region_name + str(i)] = mlab.mesh(
+                                X, Y, Z, scalars=data, vmin=vmin, vmax=vmax, **kwargs
+                            )
+                        else:
+                            plot_objects[
+                                region_name + str(i)
+                            ].mlab_source.scalars = data
+
+                if mayavi_view is not None:
+                    mlab.view(*mayavi_view)
+
+                if colorbar and (tind is None or tind == 0):
+                    if isinstance(colorbar, dict):
+                        colorbar_args = colorbar
+                    else:
+                        colorbar_args = {}
+                    cb = mlab.colorbar(**colorbar_args)
+                    if colorbar_font_size is not None:
+                        cb.scalar_bar.unconstrained_font_size = True
+                        cb.label_text_property.font_size = colorbar_font_size
+                        cb.title_text_property.font_size = colorbar_font_size
+
+                if this_save_as:
+                    if tind is None:
+                        mlab.savefig(this_save_as)
+                    else:
+                        name_parts = this_save_as.split(".")
+                        name_parts = name_parts[:-1] + [str(tind)] + name_parts[-1:]
+                        frame_save_as = ".".join(name_parts)
+                        mlab.savefig(frame_save_as)
+                if plot_objects is None:
+                    return plot_objects_to_return
+
+            if animate:
+                orig_offscreen_option = mlab.options.offscreen
+                mlab.options.offscreen = True
+
+                try:
+                    # resets mlab.options.offscreen when it finishes, even if there is
+                    # an error
+                    if save_as is None:
+                        raise ValueError(
+                            "Must pass `save_as` for a mayavi animation, or no output will "
+                            "be created"
+                        )
+                    with TemporaryDirectory() as d:
+                        nframes = da.sizes[tcoord]
+
+                        # First create png files in the temporary directory
+                        temp_path = Path(d)
+                        temp_save_as = str(temp_path.joinpath("temp.png"))
+                        print(f"tind=0")
+                        plot_objects = create_or_update_plot(
+                            tind=0, this_save_as=temp_save_as
+                        )
+
+                        # @mlab.animate # interative mayavi animation too slow
+                        def animation_func():
+                            for tind in range(1, nframes):
+                                print(f"tind={tind}")
+                                create_or_update_plot(
+                                    plot_objects=plot_objects,
+                                    tind=tind,
+                                    this_save_as=temp_save_as,
+                                )
+                                # yield # needed for an interactive mayavi animation
+
+                        a = animation_func()
+
+                        # Use ImageMagick via the wand package to turn the .png files into
+                        # an animation
+                        try:
+                            from wand.image import Image
+                        except ImportError:
+                            raise ImportError(
+                                "Please install the `wand` package to save the 3d animation"
+                            )
+                        with Image() as animation:
+                            for i in range(nframes):
+                                filename = str(temp_path.joinpath(f"temp.{i}.png"))
+                                with Image(filename=filename) as frame:
+                                    animation.sequence.append(frame)
+                            animation.type = "optimize"
+                            animation.loop = 0
+                            # Delay is in milliseconds
+                            animation.delay = int(round(1000.0 / fps))
+                            animation.save(filename=save_as)
+                finally:
+                    mlab.options.offscreen = orig_offscreen_option
+
+                # mlab.show() # interative mayavi animation so slow that it's not useful
+                return a
+            else:
+                create_or_update_plot(this_save_as=save_as)
+
+        else:
+            raise ValueError(f"style='{style}' not implemented for engine='mayavi'")
+
+        plt.show()
+    else:
+        raise ValueError(f"Unrecognised plot3d() 'engine' argument: {engine}")
