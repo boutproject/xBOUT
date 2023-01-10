@@ -692,9 +692,8 @@ def plot3d(
             )
 
         if mayavi_figure is None:
-            if mayavi_figure_args is None:
-                mayavi_figure_args = {}
-            mlab.figure(**mayavi_figure_args)
+            if mayavi_figure_args is not None:
+                mlab.figure(**mayavi_figure_args)
         else:
             mlab.figure(mayavi_figure)
 
