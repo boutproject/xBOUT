@@ -10,6 +10,7 @@ from .utils import (
     _set_attrs_on_all_vars,
     _set_as_coord,
     _1d_coord_from_spacing,
+    _maybe_rename_dimension,
 )
 
 REGISTERED_GEOMETRIES = {}
@@ -386,12 +387,12 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         ],
     )
 
-    if "t" in ds.dims:
+    if coordinates["t"] != "t":
         # Rename 't' if user requested it
-        ds = ds.rename(t=coordinates["t"])
+        ds = _maybe_rename_dimension(ds, "t", coordinates["t"])
 
     # Change names of dimensions to Orthogonal Toroidal ones
-    ds = ds.rename(y=coordinates["y"])
+    ds = _maybe_rename_dimension(ds, "y", coordinates["y"])
 
     # TODO automatically make this coordinate 1D in simplified cases?
     ds = ds.rename(psixy=coordinates["x"])
@@ -407,7 +408,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     # If full data (not just grid file) then toroidal dim will be present
     if "z" in ds.dims:
-        ds = ds.rename(z=coordinates["z"])
+        ds = _maybe_rename_dimension(ds, "z", coordinates["z"])
 
         # Record which dimension 'z' was renamed to.
         ds.metadata["bout_zdim"] = coordinates["z"]
@@ -482,7 +483,7 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
     ds["r"] = ds["hthe"].isel({ycoord: 0}).squeeze(drop=True)
     ds["r"].attrs["units"] = "m"
     ds = ds.set_coords("r")
-    ds = ds.rename(x="r")
+    ds = ds.swap_dims(x="r")
     ds.metadata["bout_xdim"] = "r"
 
     if hthe_from_grid:

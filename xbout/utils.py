@@ -880,3 +880,14 @@ def _set_as_coord(ds, name):
     except ValueError:
         pass
     return ds
+
+
+def _maybe_rename_dimension(ds, old_name, new_name):
+    if old_name in ds.dims and new_name != old_name:
+        # Rename dimension
+        ds = ds.swap_dims({old_name: new_name})
+        if old_name in ds:
+            # Rename coordinate if it exists
+            ds = ds.rename({old_name: new_name})
+
+    return ds
