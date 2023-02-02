@@ -4,9 +4,19 @@ import eudist
 from warnings import warn
 
 
-def rz_to_ab(rz, mesh):
+class OutOfDomainError(ValueError):
+    pass
+
+
+def _rz_to_ab(rz, mesh):
+    """
+    This functions finds the position (R-z) in the mesh and
+    returns the index and the relative coordinates [0,1] in that cell.
+    It uses a newton iteration.
+    """
     ij = mesh.find_cell(rz)
-    assert ij >= 0, "We left the domain"
+    if ij < 0:
+        raise OutOfDomainError()
     _, nz = mesh.shape
     i, j = ij // nz, ij % nz
     ABCD = mesh.grid[i : i + 2, j : j + 2]
@@ -17,10 +27,12 @@ def rz_to_ab(rz, mesh):
     rz0 = rz - A
 
     def fun(albe):
+        "The forwards function"
         al, be = albe
         return rz0 - a * al - b * be - c * al * be
 
     def J(albe):
+        "The jacobian"
         al, be = albe
         return np.array([-a - c * be, -b - c * al])
 
@@ -33,7 +45,12 @@ def rz_to_ab(rz, mesh):
             return albe, ij
 
 
-def ab_to_rz(ab, ij, mesh):
+def _ab_to_rz(ab, ij, mesh):
+    """
+    Calculate the position in cartesian R-z coordinates
+    given the relative position in the grid cell (ab) and
+    the grid indices ij.
+    """
     _, nz = mesh.shape
     i, j = ij // nz, ij % nz
     A = mesh.grid[i, j]
@@ -44,18 +61,30 @@ def ab_to_rz(ab, ij, mesh):
     return A + al * a + be * b + al * be * c
 
 
-def setup_mesh(x, y):
-    def per(d):
+def _setup_mesh(x, y):
+    """
+    Setup the mesh and store some additional info.
+
+    The fci-mesh is assumed to periodic in z - but eudist does not
+    handle this so we need to copy the first corners around.
+    """
+
+    def make_periodic(d):
+        "The grid should be periodic in z"
         return np.concatenate((d, d[:, :1]), axis=1)
 
     assert x.dims == y.dims
     assert x.dims == ("x", "z")
-    x = per(x.data)
-    y = per(y.data)
-    return mymesh(x, y)
+    x = make_periodic(x.data)
+    y = make_periodic(y.data)
+    return _MyMesh(x, y)
 
 
-class mymesh(eudist.PolyMesh):
+class _MyMesh(eudist.PolyMesh):
+    """
+    Like the PolyMesh but with extra data
+    """
+
     def __init__(self, x, y):
         super().__init__()
         self.r = x
@@ -65,13 +94,28 @@ class mymesh(eudist.PolyMesh):
 
 
 class Tracer:
+    """
+    Use an EMC3-like tracing. This relies on the grid containing a
+    tracing to the next slice. The current position in RZ coordinates
+    is converted to the relative position in the grid, and then the
+    reverse is done for the end of the "flux tube" defined by corners
+    of the cells.
+    """
+
     def __init__(self, ds, direction="forward"):
+        """
+        ds: xr.Dataset
+            a dataset with the needed FCI data from zoidberg.
+
+        direction: str
+            "forward" or "backward"
+        """
         meshes = []
         for yi in range(len(ds.y)):
             dsi = ds.isel(y=yi)
             meshes.append(
                 [
-                    setup_mesh(dsi[f"{pre}R"], dsi[f"{pre}Z"])
+                    _setup_mesh(dsi[f"{pre}R"], dsi[f"{pre}Z"])
                     for pre in ["", f"{direction}_"]
                 ]
                 + [yi]
@@ -79,6 +123,27 @@ class Tracer:
         self.meshes = meshes
 
     def poincare(self, rz, yind=0, num=100, early_exit="warn"):
+        """
+        rz : array-like with 2 values
+            The RZ position where to start tracing
+        yind : int
+            The y-index of the slice where to start tracing.
+        num : int
+            Number of rounds to trace for
+        early_exit : str
+            How to handle if we leave the domain before doing `num` rounds.
+            The possible values are:
+            "ignore" : do nothing
+            "warn": raise a warning
+            "plot" : try to plot the grid and where we leave
+            "raise" : Raise the exception for handling by the caller
+
+        Returns
+        -------
+        np.array
+        An array of shape (num, 2) or less then num if the tracing leaves the domain.
+        It contains the r-z coordinates at the y-index where tracing started.
+        """
         rz = np.array(rz)
         assert rz.shape == (2,)
         thismeshes = self.meshes[yind:] + self.meshes[:yind]
@@ -88,7 +153,7 @@ class Tracer:
         for i in range(1, num):
             for d, meshes in enumerate(thismeshes):
                 try:
-                    abij = rz_to_ab(rz, meshes[0])
+                    abij = _rz_to_ab(rz, meshes[0])
                 except AssertionError as e:
                     if early_exit == "warn":
                         warn(f"early exit in iteration {i} because `{e}`")
@@ -105,11 +170,13 @@ class Tracer:
                     elif early_exit == "raise":
                         raise
                     else:
-                        assert (
-                            early_exit == "ignore"
-                        ), f'early_exit needs to be one of ["warn", "plot", "raise", ignore"] but got `{early_exit}`'
+                        assert early_exit == "ignore", (
+                            "early_exit needs to be one of "
+                            + '["warn", "plot", "raise", ignore"] '
+                            + f"but got `{early_exit}`"
+                        )
                     return out[:i]
-                rz = ab_to_rz(*abij, meshes[1])
+                rz = _ab_to_rz(*abij, meshes[1])
                 last = meshes
             out[i] = rz
         return out
