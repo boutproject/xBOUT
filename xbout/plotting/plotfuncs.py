@@ -239,11 +239,18 @@ def plot2d_wrapper(
         kwargs["vmax"] = vmax
 
         # create colorbar
-        norm = _create_norm(logscale, norm, vmin, vmax)
+        norm = _create_norm(logscale, norm, vmin, vmax)    
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cmap = sm.get_cmap()
-        fig.colorbar(sm, ax=ax, extend=extend)
+        cbar = fig.colorbar(sm, ax=ax, extend=extend)
+        if "long_name" in da.attrs:
+            cbar_label = da.long_name
+        else:
+            cbar_label = da.name
+        if "units" in da.attrs:
+            cbar_label += f" [{da.units}]"
+        cbar.ax.set_ylabel(cbar_label)
 
     if method is xr.plot.pcolormesh:
         if "infer_intervals" not in kwargs:
