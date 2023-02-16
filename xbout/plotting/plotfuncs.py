@@ -280,6 +280,7 @@ def plot2d_wrapper(
                 add_colorbar=False,
                 add_labels=add_label,
                 cmap=cmap,
+                norm=norm,
                 **kwargs,
             )
             for region, add_label in zip(da_regions.values(), add_labels)
