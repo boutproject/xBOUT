@@ -864,6 +864,8 @@ def plot2d_polygon(
     
     if ax == None:
         fig, ax = plt.subplots(figsize=(3, 6), dpi = 120)
+    else:
+        fig = ax.get_figure()
     
     if cax == None:
         cax = ax    
