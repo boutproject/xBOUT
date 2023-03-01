@@ -848,15 +848,32 @@ def plot2d_polygon(
     da,
     ax = None,
     cax = None,
+    cmap = "viridis",
+    norm = None,
+    logscale = False,
     vmin = None,
     vmax = None,
-    logscale = False,
-    cmap = "viridis",
+    extend = None,
+    separatrix = False,
+    targets = False,
+    add_limiter_hatching=True,
+    linewidth = 0,
+    linecolour = "black",
     
 ):
     
     if ax == None:
-        fig, ax = plt.subplots(figsize=(6, 10))
+        fig, ax = plt.subplots(figsize=(3, 6), dpi = 120)
+    
+    if cax == None:
+        cax = ax    
+        
+    if vmin is None:
+        vmin = da.min().values
+        
+    if vmax is None:
+        vmax = da.max().values
+    
 
     if "Rxy_lower_right_corners" in da.coords:
         r_nodes = ["R", "Rxy_lower_left_corners", "Rxy_lower_right_corners", "Rxy_upper_left_corners", "Rxy_upper_right_corners"]
@@ -881,27 +898,43 @@ def plot2d_polygon(
                 np.concatenate((cell_r[i][j][tuple(idx)], cell_z[i][j][tuple(idx)])).reshape(2, 5).T,
                 fill=False,
                 closed=True,
-                edgecolor=edgecolor,
             )
             patches.append(p)
 
         
     # create colorbar
     norm = _create_norm(logscale, norm, vmin, vmax)
-    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
-    sm.set_array([])
-    cmap = sm.get_cmap()
-    fig.colorbar(sm, ax=ax, extend=extend)
 
     colors = da.data.flatten()
-    polys = matplotlib.collections.PatchCollection(patches, alpha = 1, cmap = "Spectral_r", antialiaseds = True)
+    polys = matplotlib.collections.PatchCollection(
+        patches, alpha = 1, norm = norm, cmap = cmap, 
+        antialiaseds = True,
+        edgecolors = linecolour,
+        linewidths = linewidth,
+        joinstyle = "bevel")
+
+
+
+
     polys.set_array(colors)
 
-    fig.colorbar(polys, ax = ax)
-
-    ax.add_collection(polys)        
+    fig.colorbar(polys, ax = cax)
+    ax.add_collection(polys)     
+       
     ax.set_aspect("equal", adjustable="box")
     ax.set_xlabel("R [m]")
     ax.set_ylabel("Z [m]")
     ax.set_ylim(cell_z.min(), cell_z.max())
     ax.set_xlim(cell_r.min(), cell_r.max())
+    ax.set_title(da.name)
+    
+    if separatrix:
+        # plot_separatrices(da, ax, x = "R", y = "Z")
+        
+        m = da.metadata
+        sel = (m["ixseps1"]-m["MXG"], slice(0,m["ny"]))
+
+        ax.plot(da["R"].data[sel], da["Z"].data[sel])
+
+    if targets:
+        plot_targets(da, ax, x = "R", y = "Z", hatching = add_limiter_hatching)
