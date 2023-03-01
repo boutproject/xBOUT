@@ -843,3 +843,65 @@ def plot3d(
         plt.show()
     else:
         raise ValueError(f"Unrecognised plot3d() 'engine' argument: {engine}")
+
+def plot2d_polygon(
+    da,
+    ax = None,
+    cax = None,
+    vmin = None,
+    vmax = None,
+    logscale = False,
+    cmap = "viridis",
+    
+):
+    
+    if ax == None:
+        fig, ax = plt.subplots(figsize=(6, 10))
+
+    if "Rxy_lower_right_corners" in da.coords:
+        r_nodes = ["R", "Rxy_lower_left_corners", "Rxy_lower_right_corners", "Rxy_upper_left_corners", "Rxy_upper_right_corners"]
+        z_nodes = ["Z", "Zxy_lower_left_corners", "Zxy_lower_right_corners", "Zxy_upper_left_corners", "Zxy_upper_right_corners"] 
+        cell_r = np.concatenate([np.expand_dims(da[x], axis = 2) for x in r_nodes], axis = 2)
+        cell_z = np.concatenate([np.expand_dims(da[x], axis = 2) for x in z_nodes], axis = 2)
+    else:
+        raise Exception("Cell corners not present in mesh, cannot do polygon plot")
+
+    Nx = len(cell_r)
+    Ny = len(cell_r[0])
+    edgecolor = "black"
+    patches = []
+
+    # https://matplotlib.org/2.0.2/examples/api/patch_collection.html
+
+    idx = [np.array([1, 2, 4, 3, 1])]
+    patches = []
+    for i in range(Nx):
+        for j in range(Ny):
+            p = matplotlib.patches.Polygon(
+                np.concatenate((cell_r[i][j][tuple(idx)], cell_z[i][j][tuple(idx)])).reshape(2, 5).T,
+                fill=False,
+                closed=True,
+                edgecolor=edgecolor,
+            )
+            patches.append(p)
+
+        
+    # create colorbar
+    norm = _create_norm(logscale, norm, vmin, vmax)
+    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+    sm.set_array([])
+    cmap = sm.get_cmap()
+    fig.colorbar(sm, ax=ax, extend=extend)
+
+    colors = da.data.flatten()
+    polys = matplotlib.collections.PatchCollection(patches, alpha = 1, cmap = "Spectral_r", antialiaseds = True)
+    polys.set_array(colors)
+
+    fig.colorbar(polys, ax = ax)
+
+    ax.add_collection(polys)        
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlabel("R [m]")
+    ax.set_ylabel("Z [m]")
+    ax.set_ylim(cell_z.min(), cell_z.max())
+    ax.set_xlim(cell_r.min(), cell_r.max())
