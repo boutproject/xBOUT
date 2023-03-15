@@ -851,9 +851,11 @@ def plot2d_polygon(
     cmap = "viridis",
     norm = None,
     logscale = False,
+    antialias = False,
     vmin = None,
     vmax = None,
     extend = None,
+    add_colorbar = True,
     separatrix = False,
     targets = False,
     add_limiter_hatching=True,
@@ -910,7 +912,7 @@ def plot2d_polygon(
     colors = da.data.flatten()
     polys = matplotlib.collections.PatchCollection(
         patches, alpha = 1, norm = norm, cmap = cmap, 
-        antialiaseds = True,
+        antialiaseds = antialias,
         edgecolors = linecolour,
         linewidths = linewidth,
         joinstyle = "bevel")
@@ -920,7 +922,8 @@ def plot2d_polygon(
 
     polys.set_array(colors)
 
-    fig.colorbar(polys, ax = cax)
+    if add_colorbar:
+        fig.colorbar(polys, ax = cax)
     ax.add_collection(polys)     
        
     ax.set_aspect("equal", adjustable="box")
@@ -934,9 +937,11 @@ def plot2d_polygon(
         # plot_separatrices(da, ax, x = "R", y = "Z")
         
         m = da.metadata
-        sel = (m["ixseps1"]-m["MXG"], slice(0,m["ny"]))
-
-        ax.plot(da["R"].data[sel], da["Z"].data[sel])
+        lhs = (m["ixseps1"]-m["MXG"]-1, slice(0,m["ny_inner"]))
+        rhs = (m["ixseps1"]-m["MXG"]-1, slice(m["ny_inner"]+m["MYG"], None))
+        
+        ax.plot(da["Rxy_lower_right_corners"].data[lhs], da["Zxy_lower_right_corners"].data[lhs], c = "white")
+        ax.plot(da["Rxy_lower_right_corners"].data[rhs], da["Zxy_lower_right_corners"].data[rhs], c = "white")
 
     if targets:
         plot_targets(da, ax, x = "R", y = "Z", hatching = add_limiter_hatching)
