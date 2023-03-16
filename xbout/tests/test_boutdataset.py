@@ -261,7 +261,6 @@ class TestBoutDatasetMethods:
                 )  # noqa: E501
 
     def test_to_field_aligned_dask(self, bout_xyt_example_files):
-
         nz = 6
 
         dataset_list = bout_xyt_example_files(
@@ -2027,7 +2026,6 @@ class TestSave:
     def test_save_dtype(
         self, tmp_path_factory, bout_xyt_example_files, save_dtype, separate_vars
     ):
-
         # Create data
         path = bout_xyt_example_files(
             tmp_path_factory, nxpe=1, nype=1, nt=1, write_to_disk=True

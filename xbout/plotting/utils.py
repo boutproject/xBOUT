@@ -42,7 +42,6 @@ def plot_separatrix(da, sep_pos, ax, radial_coord="x"):
     # 2D domain needs to intersect the separatrix plane to be able to plot it
     dims = da.dims
     if radial_coord not in dims:
-
         warnings.warn(
             "Cannot plot separatrix as domain does not cross "
             "separatrix, as it does not have a radial dimension",
@@ -63,7 +62,6 @@ def plot_separatrix(da, sep_pos, ax, radial_coord="x"):
 
 
 def _decompose_regions(da):
-
     if da.geometry == "fci":
         return {region: da for region in da.bout._regions}
     return {
@@ -73,7 +71,6 @@ def _decompose_regions(da):
 
 
 def _is_core_only(da):
-
     nx = da.metadata["nx"]
     ix1 = da.metadata["ixseps1"]
     ix2 = da.metadata["ixseps2"]

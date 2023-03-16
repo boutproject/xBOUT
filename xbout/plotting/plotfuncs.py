@@ -243,7 +243,14 @@ def plot2d_wrapper(
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cmap = sm.get_cmap()
-        fig.colorbar(sm, ax=ax, extend=extend)
+        cbar = fig.colorbar(sm, ax=ax, extend=extend)
+        if "long_name" in da.attrs:
+            cbar_label = da.long_name
+        else:
+            cbar_label = da.name
+        if "units" in da.attrs:
+            cbar_label += f" [{da.units}]"
+        cbar.ax.set_ylabel(cbar_label)
 
     if method is xr.plot.pcolormesh:
         if "infer_intervals" not in kwargs:
@@ -273,6 +280,7 @@ def plot2d_wrapper(
                 add_colorbar=False,
                 add_labels=add_label,
                 cmap=cmap,
+                norm=norm,
                 **kwargs,
             )
             for region, add_label in zip(da_regions.values(), add_labels)
@@ -605,7 +613,6 @@ def plot3d(
                 return
 
         for region_name, da_region in _decompose_regions(da).items():
-
             npsi, ntheta, nzeta = da_region.shape
 
             if style == "surface":
