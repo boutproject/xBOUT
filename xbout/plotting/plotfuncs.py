@@ -239,7 +239,7 @@ def plot2d_wrapper(
         kwargs["vmax"] = vmax
 
         # create colorbar
-        norm = _create_norm(logscale, norm, vmin, vmax)    
+        norm = _create_norm(logscale, norm, vmin, vmax)
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cmap = sm.get_cmap()
@@ -613,7 +613,6 @@ def plot3d(
                 return
 
         for region_name, da_region in _decompose_regions(da).items():
-
             npsi, ntheta, nzeta = da_region.shape
 
             if style == "surface":
