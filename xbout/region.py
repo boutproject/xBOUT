@@ -1221,7 +1221,7 @@ def _create_regions_toroidal(ds):
 
     ds = _set_attrs_on_all_vars(ds, "regions", regions)
     ds.metadata["topology"] = topology
-    
+
     return ds
 
 
