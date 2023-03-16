@@ -814,7 +814,6 @@ METADATA_VARS = [
 
 class TestStripMetadata:
     def test_strip_metadata(self):
-
         original = create_bout_ds()
         assert original["NXPE"] == 1
 
@@ -1534,7 +1533,6 @@ def create_example_grid_file_fci(tmp_path_factory):
 
 @pytest.fixture
 def create_example_files_fci(tmp_path_factory):
-
     return _bout_xyt_example_files(
         tmp_path_factory,
         lengths=fci_shape,

@@ -605,7 +605,6 @@ def plot3d(
                 return
 
         for region_name, da_region in _decompose_regions(da).items():
-
             npsi, ntheta, nzeta = da_region.shape
 
             if style == "surface":
