@@ -179,6 +179,9 @@ class TestAnimate:
     def test_animate_list_1d_multiline(self, create_test_file):
         save_dir, ds = create_test_file
 
+        if matplotlib._version.version_tuple >= (3, 7):
+            pytest.xfail("Broken with new matplotlib")
+
         animation = ds.isel(y=2, z=3).bout.animate_list(
             [["n", "T"], ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)]
         )
