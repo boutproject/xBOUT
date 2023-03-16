@@ -1220,7 +1220,8 @@ def _create_regions_toroidal(ds):
     _check_connections(regions)
 
     ds = _set_attrs_on_all_vars(ds, "regions", regions)
-
+    ds["topology"] = topology
+    
     return ds
 
 
