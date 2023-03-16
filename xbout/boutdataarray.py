@@ -352,7 +352,7 @@ class BoutDataArrayAccessor:
         da[ycoord].attrs = {}
 
         da = da.interp(
-            {ycoord: y_fine.data},
+            {ycoord: y_fine},
             assume_sorted=True,
             method=method,
             kwargs={"fill_value": "extrapolate"},
@@ -384,6 +384,9 @@ class BoutDataArrayAccessor:
                 da = da.isel(**{zcoord: toroidal_points})
 
         return da
+
+    def add_cartesian_coordinates(self):
+        return _add_cartesian_coordinates(self.data)
 
     def add_cartesian_coordinates(self):
         """
@@ -1077,3 +1080,20 @@ class BoutDataArrayAccessor:
         tokamak topology.
         """
         return plotfuncs.plot_regions(self.data, ax=ax, **kwargs)
+
+    def plot3d(self, ax=None, **kwargs):
+        """
+        Make a 3d plot
+
+        Warnings
+        --------
+
+        3d plotting functionality is still a bit of a work in progress. Bugs are likely, and
+        help developing is welcome!
+
+        Parameters
+        ----------
+
+        See plotfuncs.plot3d()
+        """
+        return plotfuncs.plot3d(self.data, **kwargs)

@@ -520,6 +520,7 @@ def animate_line(
     axis_coords=None,
     vmin=None,
     vmax=None,
+    logscale=False,
     fps=10,
     save_as=None,
     sep_pos=None,
@@ -555,6 +556,12 @@ def animate_line(
     vmax : float, optional
         Maximum value to use for colorbar. Default is to use maximum value of
         data across whole timeseries.
+    logscale : bool or float, optional
+        If True, default to a logarithmic color scale instead of a linear one.
+        If a non-bool type is passed it is treated as a float used to set the linear
+        threshold of a symmetric logarithmic scale as
+        linthresh=min(abs(vmin),abs(vmax))*logscale, defaults to 1e-5 if True is
+        passed.
     fps : int, optional
         Frames per second of resulting gif
     save_as : True or str, optional
@@ -593,7 +600,7 @@ def animate_line(
 
     # Check plot is the right orientation
     t_read, x_read = data.dims
-    if t_read is animate_over:
+    if t_read == animate_over:
         x = x_read
     else:
         data = data.transpose(animate_over, t_read, transpose_coords=True)
@@ -639,6 +646,17 @@ def animate_line(
     if "units" in data.attrs:
         y_label = y_label + f" [{data.units}]"
     ax.set_ylabel(y_label)
+
+    if logscale:
+        if vmin * vmax > 0.0:
+            ax.set_yscale("log")
+        else:
+            if not isinstance(logscale, bool):
+                linear_scale = logscale
+            else:
+                linear_scale = 1.0e-5
+            linear_threshold = min(abs(vmin), abs(vmax)) * linear_scale
+            ax.set_yscale("symlog", linthresh=linear_threshold)
 
     # Plot separatrix
     if sep_pos:

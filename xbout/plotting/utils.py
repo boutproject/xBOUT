@@ -42,7 +42,6 @@ def plot_separatrix(da, sep_pos, ax, radial_coord="x"):
     # 2D domain needs to intersect the separatrix plane to be able to plot it
     dims = da.dims
     if radial_coord not in dims:
-
         warnings.warn(
             "Cannot plot separatrix as domain does not cross "
             "separatrix, as it does not have a radial dimension",
@@ -63,7 +62,6 @@ def plot_separatrix(da, sep_pos, ax, radial_coord="x"):
 
 
 def _decompose_regions(da):
-
     if da.geometry == "fci":
         return {region: da for region in da.bout._regions}
     return {
@@ -73,7 +71,6 @@ def _decompose_regions(da):
 
 
 def _is_core_only(da):
-
     nx = da.metadata["nx"]
     ix1 = da.metadata["ixseps1"]
     ix2 = da.metadata["ixseps2"]
@@ -204,3 +201,57 @@ def _get_perp_vec(u1, u2, magnitude=0.04):
     v = np.linalg.norm((vx, vy))
     wx, wy = -vy / v * magnitude, vx / v * magnitude
     return wx, wy
+
+
+def _make_structured_triangulation(m, n):
+    # Construct a 'triangulation' of an (m x n) grid
+    # Returns an array of triples of (flattened) indices of the corners of the triangles
+    indices = np.zeros((m - 1, 2 * (n - 1), 3), dtype=np.uint32)
+    # indices[0] = [0, 1, n]
+    # indices[1] = [1, n+1, n]
+
+    # Each quadrilateral grid cell with corners (i,j), (i,j+1), (i+1,j+1), (i+1,j), at
+    # flattened index I=i*n+j is split into two triangles, one with corners (i,j),
+    # (i,j+1), (i+1,j) and the other with corners (i,j+1) (i+1,j+1), (i+1,j),
+
+    lower_left_indices = (
+        n * np.arange(m - 1, dtype=np.uint32)[:, np.newaxis]
+        + np.arange((n - 1), dtype=np.uint32)[np.newaxis, :]
+    )
+    # Lower left triangles
+    # (i,j) corner
+    indices[:, ::2, 0] = lower_left_indices
+    # (i,j+1) corner
+    indices[:, ::2, 1] = lower_left_indices + 1
+    # (i+1,j) corner
+    indices[:, ::2, 2] = lower_left_indices + n
+
+    # Upper right triangles
+    # (i,j+1) corner
+    indices[:, 1::2, 0] = lower_left_indices + 1
+    # (i+1,j+1) corner
+    indices[:, 1::2, 1] = lower_left_indices + n + 1
+    # (i+1,j) corner
+    indices[:, 1::2, 2] = lower_left_indices + n
+
+    return indices.reshape((-1, 3))
+
+
+def _k3d_plot_isel(da_region, isel, vmin, vmax, **kwargs):
+    import k3d
+
+    da_sel = da_region.isel(isel)
+    X = da_sel["X_cartesian"].values.flatten().astype(np.float32)
+    Y = da_sel["Y_cartesian"].values.flatten().astype(np.float32)
+    Z = da_sel["Z_cartesian"].values.flatten().astype(np.float32)
+    data = da_sel.values.flatten().astype(np.float32)
+
+    indices = _make_structured_triangulation(*da_sel.shape)
+
+    return k3d.mesh(
+        np.vstack([X, Y, Z]).T,
+        indices,
+        attribute=data,
+        color_range=[vmin, vmax],
+        **kwargs
+    )
