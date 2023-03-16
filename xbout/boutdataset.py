@@ -1185,7 +1185,6 @@ class BoutDatasetAccessor:
                 extend,
             )
         ):
-
             (
                 v,
                 ax,

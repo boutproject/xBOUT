@@ -11,7 +11,6 @@ old_collect = boutdata.collect
 
 class TestAccuracyAgainstOldCollect:
     def test_single_file(self, tmp_path_factory):
-
         # Create temp directory for files
         test_dir = tmp_path_factory.mktemp("test_data")
 
@@ -37,7 +36,6 @@ class TestAccuracyAgainstOldCollect:
         npt.assert_equal(actual, expected)
 
     def test_multiple_files_along_x(self, tmp_path_factory):
-
         # Create temp directory for files
         test_dir = tmp_path_factory.mktemp("test_data")
 
@@ -66,7 +64,6 @@ class TestAccuracyAgainstOldCollect:
         npt.assert_equal(actual, expected)
 
     def test_multiple_files_along_y(self, tmp_path_factory):
-
         # Create temp directory for files
         test_dir = tmp_path_factory.mktemp("test_data")
 
@@ -95,7 +92,6 @@ class TestAccuracyAgainstOldCollect:
         npt.assert_equal(actual, expected)
 
     def test_multiple_files_along_xy(self, tmp_path_factory):
-
         # Create temp directory for files
         test_dir = tmp_path_factory.mktemp("test_data")
 
