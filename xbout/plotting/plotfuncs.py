@@ -863,11 +863,11 @@ def plot2d_polygon(
     vmax = None,
     extend = None,
     add_colorbar = True,
-    separatrix = False,
+    separatrix = True,
     targets = False,
     add_limiter_hatching=True,
     linewidth = 0,
-    linecolour = "black",
+    linecolor = "black",
     
 ):
     
@@ -920,7 +920,7 @@ def plot2d_polygon(
     polys = matplotlib.collections.PatchCollection(
         patches, alpha = 1, norm = norm, cmap = cmap, 
         antialiaseds = antialias,
-        edgecolors = linecolour,
+        edgecolors = linecolor,
         linewidths = linewidth,
         joinstyle = "bevel")
 
@@ -943,12 +943,22 @@ def plot2d_polygon(
     if separatrix:
         # plot_separatrices(da, ax, x = "R", y = "Z")
         
-        m = da.metadata
-        lhs = (m["ixseps1"]-m["MXG"]-1, slice(0,m["ny_inner"]))
-        rhs = (m["ixseps1"]-m["MXG"]-1, slice(m["ny_inner"]+m["MYG"], None))
+        color = "white"
+        ls = "-"
+        lw = 1
         
-        ax.plot(da["Rxy_lower_right_corners"].data[lhs], da["Zxy_lower_right_corners"].data[lhs], c = "white")
-        ax.plot(da["Rxy_lower_right_corners"].data[rhs], da["Zxy_lower_right_corners"].data[rhs], c = "white")
+        m = da.metadata
+        
+        if m["topology"] == "connected-double-null":
+            lhs = (m["ixseps1"]-m["MXG"]-1, slice(0,m["ny_inner"]))
+            rhs = (m["ixseps1"]-m["MXG"]-1, slice(m["ny_inner"], None))
+            ax.plot(da["Rxy_lower_right_corners"].data[lhs], da["Zxy_lower_right_corners"].data[lhs], c = color, lw = lw, ls = ls)
+            ax.plot(da["Rxy_lower_right_corners"].data[rhs], da["Zxy_lower_right_corners"].data[rhs], c = color, lw = lw, ls = ls)
+        
+        if m["topology"] == "single-null":
+            points = (m["ixseps1"]-m["MXG"]-1, slice(0,None))      
+            ax.plot(da["Rxy_lower_right_corners"].data[points], da["Zxy_lower_right_corners"].data[points], c = color, lw = lw, ls = ls)
+
 
     if targets:
         plot_targets(da, ax, x = "R", y = "Z", hatching = add_limiter_hatching)
