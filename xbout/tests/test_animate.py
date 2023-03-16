@@ -190,16 +190,7 @@ class TestAnimate:
         assert isinstance(animation.blocks[3], Line)
 
         # check there were actually 3 subplots
-        assert (
-            len(
-                [
-                    x
-                    for x in plt.gcf().get_axes()
-                    if isinstance(x, matplotlib.axes.Subplot)
-                ]
-            )
-            == 3
-        )
+        assert len([x for x in plt.gcf().get_axes() if x.get_xlabel() != ""]) == 3
 
         plt.close()
 
