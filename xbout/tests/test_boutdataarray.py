@@ -209,7 +209,6 @@ class TestBoutDataArrayMethods:
         "permute_dims", [False, pytest.param(True, marks=pytest.mark.long)]
     )
     def test_to_field_aligned_dask(self, bout_xyt_example_files, permute_dims):
-
         nz = 6
 
         dataset_list = bout_xyt_example_files(
@@ -1034,7 +1033,6 @@ class TestBoutDataArrayMethods:
         )
 
     def test_ddx(self, bout_xyt_example_files):
-
         nx = 64
 
         dataset_list = bout_xyt_example_files(
@@ -1069,7 +1067,6 @@ class TestBoutDataArrayMethods:
         )
 
     def test_ddy(self, bout_xyt_example_files):
-
         ny = 64
 
         dataset_list, gridfilepath = bout_xyt_example_files(

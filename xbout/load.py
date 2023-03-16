@@ -508,7 +508,6 @@ def collect(
 
     # Convert indexing values to an isel suitable format
     for dim, ind in zip(dims, inds):
-
         if isinstance(ind, int):
             indexer = [ind]
         elif isinstance(ind, list):

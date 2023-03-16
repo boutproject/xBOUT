@@ -13,7 +13,6 @@ from animatplot.blocks import Pcolormesh, Line
 
 @pytest.fixture
 def create_test_file(tmp_path_factory):
-
     # Create temp dir for output of animate1D/2D
     save_dir = tmp_path_factory.mktemp("test_data")
 
@@ -37,7 +36,6 @@ class TestAnimate:
     """
 
     def test_animate2D(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds["n"].isel(x=1).bout.animate2D(save_as="%s/testyz" % save_dir)
@@ -107,7 +105,6 @@ class TestAnimate:
             plt.close()
 
     def test_animate1D(self, create_test_file):
-
         save_dir, ds = create_test_file
         animation = ds["n"].isel(y=2, z=0).bout.animate1D(save_as="%s/test" % save_dir)
 
@@ -152,7 +149,6 @@ class TestAnimate:
             plt.close()
 
     def test_animate_list(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -167,7 +163,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_1d_default(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(y=2, z=3).bout.animate_list(
@@ -182,7 +177,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_1d_multiline(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(y=2, z=3).bout.animate_list(
@@ -196,21 +190,11 @@ class TestAnimate:
         assert isinstance(animation.blocks[3], Line)
 
         # check there were actually 3 subplots
-        assert (
-            len(
-                [
-                    x
-                    for x in plt.gcf().get_axes()
-                    if isinstance(x, matplotlib.axes.Subplot)
-                ]
-            )
-            == 3
-        )
+        assert len([x for x in plt.gcf().get_axes() if x.get_xlabel() != ""]) == 3
 
         plt.close()
 
     def test_animate_list_animate_over(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -225,7 +209,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_save_as(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -241,7 +224,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_fps(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -257,7 +239,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_nrows(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -272,7 +253,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_ncols(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -287,7 +267,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_not_enough_nrowsncols(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         with pytest.raises(ValueError):
@@ -297,7 +276,6 @@ class TestAnimate:
 
     @pytest.mark.skip(reason="test data for plot_poloidal needs more work")
     def test_animate_list_poloidal_plot(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         metadata = ds.metadata
@@ -340,7 +318,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_subplots_adjust(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         with pytest.warns(UserWarning):
@@ -357,7 +334,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_vmin(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -372,7 +348,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_vmin_list(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -387,7 +362,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_vmax(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -402,7 +376,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_vmax_list(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -417,7 +390,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_logscale(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -432,7 +404,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_logscale_float(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -447,7 +418,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_logscale_list(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
@@ -463,7 +433,6 @@ class TestAnimate:
         plt.close()
 
     def test_animate_list_titles_list(self, create_test_file):
-
         save_dir, ds = create_test_file
 
         animation = ds.isel(z=3).bout.animate_list(
