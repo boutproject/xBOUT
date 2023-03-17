@@ -707,6 +707,9 @@ class BoutDataArrayAccessor:
         return_dataset : bool, default False
             Return the result as a Dataset containing the new DataArray.
         """
+
+        da = self.data
+
         if not isinstance(new_gridfile, xr.Dataset):
             new_gridfile = open_boutdataset(
                 new_gridfile,
@@ -717,11 +720,9 @@ class BoutDataArrayAccessor:
                 geometry=self.data.geometry,
             )
 
-        xcoord = self.data.metadata["bout_xdim"]
-        ycoord = self.data.metadata["bout_ydim"]
-        zcoord = self.data.metadata["bout_zdim"]
-
-        da = self.data
+        xcoord = da.metadata["bout_xdim"]
+        ycoord = da.metadata["bout_ydim"]
+        zcoord = da.metadata["bout_zdim"]
 
         # apply_unfunc() of scipy.interp1d() fails with dask arrays, so load
         da.load()
