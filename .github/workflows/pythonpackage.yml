@@ -20,7 +20,7 @@ jobs:
     if: always()
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8, 3.9, '3.10', 3.x]
         pip-packages:
           - "setuptools pip pytest pytest-cov coverage codecov boutdata xarray numpy>=1.16.0"
       fail-fast: false
@@ -33,7 +33,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get install libhdf5-dev libnetcdf-dev
+        sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
         pip install --upgrade ${{ matrix.pip-packages }}
         pip install -e .
@@ -43,8 +43,6 @@ jobs:
         pytest -v --long --cov
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
-      with:
-        fail_ci_if_error: true
 
 
   pytest-min-versions:
@@ -53,7 +51,7 @@ jobs:
     if: always()
     strategy:
       matrix:
-        python-version: [3.7, 3.8]
+        python-version: [3.8]
         pip-packages:
           - "setuptools pip pytest pytest-cov coverage codecov boutdata==0.1.4 xarray==0.18.0 dask==2.10.0 numpy==1.18.0 natsort==5.5.0 matplotlib==3.1.1 animatplot==0.4.2 netcdf4==1.4.2 Pillow==7.2.0" # test with oldest supported version of packages. Note, using numpy==1.18.0 as a workaround because numpy==1.17.0 is not supported on Python-3.7, even though we should currently support numpy==1.17.0.
       fail-fast: false
@@ -66,7 +64,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get install libhdf5-dev libnetcdf-dev
+        sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
         pip install --upgrade ${{ matrix.pip-packages }}
         pip install -e .
@@ -76,8 +74,6 @@ jobs:
         pytest -v --long --cov
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
-      with:
-        fail_ci_if_error: true
 
 
   # Need to tidy up the things that flake8 finds before we activate this

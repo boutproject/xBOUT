@@ -1,6 +1,7 @@
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
+import os
 
 import numpy as np
 import xarray as xr
@@ -46,6 +47,10 @@ def _is_path(p):
         return True
     except TypeError:
         return False
+
+
+def _is_dir(p):
+    return _is_path(p) and os.path.isdir(p)
 
 
 def _separate_metadata(ds):
@@ -191,6 +196,27 @@ def _update_metadata_increased_y_resolution(
         _add_attrs_to_var(da, coord)
 
     return da
+
+
+def _add_cartesian_coordinates(ds):
+    # Add Cartesian X and Y coordinates if they do not exist already
+    # Works on either BoutDataset or BoutDataArray
+
+    R = ds["R"]
+    Z = ds["Z"]
+    zeta = ds[ds.metadata["bout_zdim"]]
+    if "X_cartesian" not in ds.coords:
+        X = R * np.cos(zeta)
+        ds = ds.assign_coords(X_cartesian=X)
+    if "Y_cartesian" not in ds.coords:
+        Y = R * np.sin(zeta)
+        ds = ds.assign_coords(Y_cartesian=Y)
+    if "Z_cartesian" not in ds.coords:
+        zcoord = ds.metadata["bout_zdim"]
+        nz = len(ds[zcoord])
+        ds = ds.assign_coords(Z_cartesian=Z.expand_dims({zcoord: nz}, axis=-1))
+
+    return ds
 
 
 def _1d_coord_from_spacing(spacing, dim, ds=None, *, origin_at=None):
@@ -577,7 +603,13 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
                 restart_ds[v] = data_variable
             for v in ds.metadata:
                 if v not in restart_exclude_metadata_vars:
-                    restart_ds[v] = ds.metadata[v]
+                    value = ds.metadata[v]
+
+                    if isinstance(value, str):
+                        # Write strings as byte-strings so BOUT++ can read them
+                        value = value.encode()
+
+                    restart_ds[v] = value
 
             # These variables need to be altered, because they depend on the number of
             # files and/or the rank of this file.

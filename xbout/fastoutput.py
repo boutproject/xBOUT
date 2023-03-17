@@ -15,7 +15,6 @@ def open_fastoutput(datapath="BOUT.fast.*.nc"):
     # Iterate over all files, extracting DataArrays ready for combining
     fo_data = []
     for i, filepath in enumerate(filepaths):
-
         fo = xr.open_dataset(filepath)
 
         if i == 0:
@@ -27,9 +26,7 @@ def open_fastoutput(datapath="BOUT.fast.*.nc"):
 
         # There might be no virtual probe in this region
         if len(fo.data_vars) > 0:
-
             for name, da in fo.items():
-
                 # Save the physical position (in index units)
                 da = da.expand_dims(x=1, y=1, z=1)
                 da = da.assign_coords(

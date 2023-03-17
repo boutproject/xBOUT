@@ -1516,3 +1516,20 @@ class BoutDataArrayAccessor:
         tokamak topology.
         """
         return plotfuncs.plot_regions(self.data, ax=ax, **kwargs)
+
+    def plot3d(self, ax=None, **kwargs):
+        """
+        Make a 3d plot
+
+        Warnings
+        --------
+
+        3d plotting functionality is still a bit of a work in progress. Bugs are likely, and
+        help developing is welcome!
+
+        Parameters
+        ----------
+
+        See plotfuncs.plot3d()
+        """
+        return plotfuncs.plot3d(self.data, **kwargs)

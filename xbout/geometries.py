@@ -336,7 +336,6 @@ def _add_vars_from_grid(ds, grid, variables, *, optional_variables=None):
 
 @register_geometry("toroidal")
 def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
-
     coordinates = _set_default_toroidal_coordinates(coordinates, ds)
 
     if ds.attrs.get("geometry", None) == "toroidal":
@@ -434,7 +433,6 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
 @register_geometry("s-alpha")
 def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
-
     coordinates = _set_default_toroidal_coordinates(coordinates, ds)
 
     if set(coordinates.values()).issubset(set(ds.coords).union(ds.dims)):
