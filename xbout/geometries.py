@@ -324,7 +324,7 @@ def _add_vars_from_grid(ds, grid, variables, *, optional_variables=None):
             # https://github.com/pydata/xarray/issues/4415
             # https://github.com/pydata/xarray/issues/4393
             # This way adds as a 'Variable' instead of as a 'DataArray'
-            ds[v] = (grid[v].dims, grid[v].values)
+            ds[v] = (grid[v].dims, grid[v].values, grid[v].attrs)
 
             _add_attrs_to_var(ds, v)
 
@@ -340,7 +340,7 @@ def _add_vars_from_grid(ds, grid, variables, *, optional_variables=None):
                     # Dataset, see https://github.com/pydata/xarray/issues/4415
                     # https://github.com/pydata/xarray/issues/4393
                     # This way adds as a 'Variable' instead of as a 'DataArray'
-                    ds[v] = (grid[v].dims, grid[v].values)
+                    ds[v] = (grid[v].dims, grid[v].values, grid[v].attrs)
 
                     _add_attrs_to_var(ds, v)
 
@@ -493,7 +493,16 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
 @register_geometry("fci")
 def add_fci_geometry_coords(ds, *, coordinates=None, grid=None):
     assert coordinates is None, "Not implemented"
-    ds = _add_vars_from_grid(ds, grid, ["R", "Z"])
+
+    keys = sum(
+        [
+            [f"{pre}R", f"{pre}Z", f"{pre}xt_prime", f"{pre}zt_prime"]
+            for pre in ["forward_", "backward_"]
+        ],
+        [],
+    )
+
+    ds = _add_vars_from_grid(ds, grid, ["R", "Z"], optional_variables=keys + ["B"])
     ds = ds.set_coords(("R", "Z"))
     ds = _create_single_region(ds, periodic_y=True)
     return ds
