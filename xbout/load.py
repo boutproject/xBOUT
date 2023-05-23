@@ -972,7 +972,11 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
         ):
             trimmed_ds = trimmed_ds.drop_vars(name)
 
-    to_drop = _BOUT_PER_PROC_VARIABLES
+    if ds["MYPE"] == 0:
+        # Keep per-process variables from the root process
+        to_drop = None
+    else:
+        to_drop = _BOUT_PER_PROC_VARIABLES
 
     return trimmed_ds.drop_vars(to_drop, errors="ignore")
 
