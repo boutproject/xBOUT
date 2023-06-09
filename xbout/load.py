@@ -745,7 +745,7 @@ def _auto_open_mfboutdataset(
             combine_attrs="no_conflicts",
         )
 
-    if not is_restart:
+    if not is_restart and "t_array" in ds:
         # Remove any duplicate time values from concatenation
         _, unique_indices = unique(ds["t_array"], return_index=True)
         ds = ds.isel(t=unique_indices)
