@@ -199,7 +199,7 @@ def animate_poloidal(
         spatial_dims.remove(animate_over)
     except ValueError:
         raise ValueError(
-            "Dimension animate_over={} is not present in the data".format(animate_over)
+            f"Dimension animate_over={animate_over} is not present in the data, only have {spatial_dims}"
         )
 
     if len(da.dims) != 3:
