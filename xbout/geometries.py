@@ -190,7 +190,9 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         bout_v5 = bout_version > 5.0 or (
             bout_version == 5.0 and updated_ds["dz"].ndim >= 2
         )
-        use_metric_3d = updated_ds.metadata.get("use_metric_3d", False)
+        use_metric_3d = updated_ds.metadata.get("use_metric_3d", None)
+        if use_metric_3d is None:
+            use_metric_3d = len(updated_ds["dz"].shape) == 3
         can_use_1d_z_coord = (nz == 1) or use_metric_3d
 
         if can_use_1d_z_coord:
