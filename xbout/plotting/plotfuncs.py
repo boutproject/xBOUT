@@ -176,6 +176,13 @@ def plot2d_wrapper(
         vmin = da.min().values
     if vmax is None:
         vmax = da.max().values
+    if vmin == vmax:
+        vmin -= 0.5
+        vmax += 0.5
+        # in case of huge values:
+        if vmin == vmax:
+            vmin *= 0.9
+            vmax *= 1.1
 
     if extend is None:
         # Replicate default for older matplotlib that does not handle extend=None
