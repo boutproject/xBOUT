@@ -949,9 +949,17 @@ def plot2d_polygon(
         
         m = da.metadata
         
+        
+        
         if m["topology"] == "connected-double-null":
-            lhs = (m["ixseps1"]-m["MXG"]-1, slice(0,m["ny_inner"]))
-            rhs = (m["ixseps1"]-m["MXG"]-1, slice(m["ny_inner"], None))
+            
+            # TODO: test this for single null
+            if m["MXG"] > 0 or m["MYG"] > 0:
+                lhs = (m["ixseps1"] + 1 - m["MXG"], slice(0,m["ny_inner"] + m["MYG"] * int(4/2)))
+                rhs = (m["ixseps1"] + 1 - m["MXG"], slice(m["ny_inner"]+m["MYG"]*(4 - 1), None))
+            else:
+                lhs = (m["ixseps1"]-m["MXG"]-1, slice(0,m["ny_inner"]))
+                rhs = (m["ixseps1"]-m["MXG"]-1, slice(m["ny_inner"], None))
             ax.plot(da["Rxy_lower_right_corners"].data[lhs], da["Zxy_lower_right_corners"].data[lhs], c = color, lw = lw, ls = ls)
             ax.plot(da["Rxy_lower_right_corners"].data[rhs], da["Zxy_lower_right_corners"].data[rhs], c = color, lw = lw, ls = ls)
         
