@@ -868,6 +868,7 @@ def plot2d_polygon(
     add_limiter_hatching=True,
     linewidth = 0,
     linecolor = "black",
+    alpha = 1,
     
 ):
     
@@ -918,7 +919,7 @@ def plot2d_polygon(
 
     colors = da.data.flatten()
     polys = matplotlib.collections.PatchCollection(
-        patches, alpha = 1, norm = norm, cmap = cmap, 
+        patches, alpha = alpha, norm = norm, cmap = cmap, 
         antialiaseds = antialias,
         edgecolors = linecolor,
         linewidths = linewidth,
