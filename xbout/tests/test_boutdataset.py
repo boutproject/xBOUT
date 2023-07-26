@@ -1,7 +1,7 @@
 import pytest
 
 import numpy.testing as npt
-from xarray import Dataset, DataArray, concat, open_dataset, open_mfdataset
+from xarray import Dataset, DataArray, concat, open_dataset
 import xarray.testing as xrt
 
 import dask.array
@@ -9,14 +9,13 @@ import numpy as np
 from pathlib import Path
 from scipy.integrate import quad_vec
 
-from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout.tests.test_region import (
     params_guards,
     params_guards_values,
     params_boundaries,
     params_boundaries_values,
 )
-from xbout import BoutDatasetAccessor, open_boutdataset
+from xbout import open_boutdataset
 from xbout.geometries import apply_geometry
 from xbout.utils import _set_attrs_on_all_vars, _1d_coord_from_spacing
 from xbout.tests.utils_for_tests import set_geometry_from_input_file
@@ -683,7 +682,6 @@ class TestBoutDatasetMethods:
         ny_inner = ds.metadata["ny_inner"] + 2 * ybndry
         jys12 = ds.metadata["jyseps1_2"] + 3 * ybndry
         jys22 = ds.metadata["jyseps2_2"] + 3 * ybndry
-        ny = ds.metadata["ny"] + 4 * ybndry
 
         for var in ["n", "T"]:
             v = ds[var]
@@ -1172,7 +1170,6 @@ class TestBoutDatasetMethods:
         # Get high parallel resolution version of ds, and check that
         ds = ds.bout.interpolate_parallel(["n", "T"])
         mxg = 2
-        myg = 2
         ixs1 = ds.metadata["ixseps1"]
         for var in ["n", "T"]:
             v = ds[var]
@@ -2426,9 +2423,6 @@ class TestSaveRestart:
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
             ds = open_boutdataset(datapath=path)
-
-        nx = ds.metadata["nx"]
-        ny = ds.metadata["ny"]
 
         # Save it to a netCDF file
         savepath = tmp_path_factory.mktemp(

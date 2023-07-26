@@ -252,7 +252,6 @@ def _check_new_nxpe(ds, nxpe):
     # Check nxpe is valid
 
     nx = ds.metadata["nx"] - 2 * ds.metadata["MXG"]
-    mxsub = nx // nxpe
 
     if nx % nxpe != 0:
         raise ValueError(
@@ -686,7 +685,6 @@ def _follow_boundary(ds, start_region, start_direction, xbndry, ybndry, Rcoord, 
         visited_regions.append(this_region)
 
         ds_region = ds.bout.from_region(this_region, with_guards=0)
-        region = ds.bout._regions[this_region]
 
         # Get all boundary points from this region, and decide which region to go to next
         this_region = None
@@ -748,9 +746,6 @@ def _get_bounding_surfaces(ds, coords):
         ybndry = ds.metadata["MYG"]
     else:
         ybndry = 0
-
-    xcoord = ds.metadata["bout_xdim"]
-    ycoord = ds.metadata["bout_ydim"]
 
     # First find the outer boundary
     start_region = None

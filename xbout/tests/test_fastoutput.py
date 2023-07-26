@@ -1,10 +1,8 @@
 import numpy as np
 import random
 
-import pytest
 
 from xarray import DataArray, Dataset
-import xarray.testing as xrt
 
 from xbout.fastoutput import open_fastoutput
 

@@ -13,7 +13,6 @@ from .utils import (
     _decompose_regions,
     _is_core_only,
     _k3d_plot_isel,
-    _make_structured_triangulation,
     plot_separatrices,
     plot_targets,
 )
@@ -311,11 +310,11 @@ def plot2d_wrapper(
 
         for x, y in zip(x_regions, y_regions):
             if (
-                not da.metadata["bout_xdim"] in x.dims
-                and not da.metadata["bout_ydim"] in x.dims
+                da.metadata["bout_xdim"] not in x.dims
+                and da.metadata["bout_ydim"] not in x.dims
             ) or (
-                not da.metadata["bout_xdim"] in y.dims
-                and not da.metadata["bout_ydim"] in y.dims
+                da.metadata["bout_xdim"] not in y.dims
+                and da.metadata["bout_ydim"] not in y.dims
             ):
                 # Small regions around X-point do not have segments in x- or y-directions,
                 # so skip
@@ -545,7 +544,6 @@ def plot3d(
                 from scipy.interpolate import (
                     RegularGridInterpolator,
                     griddata,
-                    LinearNDInterpolator,
                 )
 
                 print("start interpolating")
@@ -801,7 +799,7 @@ def plot3d(
                         # First create png files in the temporary directory
                         temp_path = Path(d)
                         temp_save_as = str(temp_path.joinpath("temp.png"))
-                        print(f"tind=0")
+                        print("tind=0")
                         plot_objects = create_or_update_plot(
                             tind=0, this_save_as=temp_save_as
                         )

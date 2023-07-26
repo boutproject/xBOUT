@@ -1,4 +1,4 @@
-from copy import copy, deepcopy
+from copy import deepcopy
 import numpy as np
 import xarray as xr
 from .utils import _set_attrs_on_all_vars
@@ -1228,11 +1228,6 @@ def _create_regions_toroidal(ds):
 def _create_single_region(ds, periodic_y=True):
     nx = ds.metadata["nx"]
     ny = ds.metadata["ny"]
-
-    mxg = ds.metadata["MXG"]
-    myg = ds.metadata["MYG"]
-    # keep_yboundaries is 1 if there are y-boundaries and 0 if there are not
-    ybndry = ds.metadata["keep_yboundaries"] * myg
 
     connection = "all" if periodic_y else None
 

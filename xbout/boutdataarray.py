@@ -306,7 +306,6 @@ class BoutDataArrayAccessor:
         # Select a particular 'region' and interpolate to higher parallel resolution
         da = self.data
         region = da.bout._regions[region]
-        tcoord = da.metadata["bout_tdim"]
         xcoord = da.metadata["bout_xdim"]
         ycoord = da.metadata["bout_ydim"]
         zcoord = da.metadata["bout_zdim"]
@@ -950,7 +949,6 @@ class BoutDataArrayAccessor:
             method = "linear"
 
         # extend input coordinates to cover all dims, so we can flatten them
-        input_coords = []
         for coord in kwargs:
             data = da[coord]
             missing_dims = tuple(set(dims) - set(data.dims))

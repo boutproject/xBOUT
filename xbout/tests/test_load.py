@@ -1,6 +1,4 @@
-from collections import namedtuple
 from copy import deepcopy
-import inspect
 from pathlib import Path
 import re
 from functools import reduce
@@ -124,7 +122,7 @@ class TestPathHandling:
 
         with pytest.raises(IOError):
             path = files_dir.joinpath("run*/example.*.nc")
-            actual_filepaths = _expand_filepaths(path)
+            _expand_filepaths(path)
 
 
 @pytest.fixture()
@@ -307,9 +305,6 @@ def _bout_xyt_example_files(
     if guards is None:
         guards = {}
 
-    mxg = guards.get("x", 0)
-    myg = guards.get("y", 0)
-
     if squashed:
         # create a single data-file, but alter the 'nxpe' and 'nype' variables, as if the
         # file had been created by combining a set of BOUT.dmp.*.nc files
@@ -423,10 +418,6 @@ def create_bout_ds_list(
             num = i + nxpe * j
             filename = prefix + "." + str(num) + ".nc"
             file_list.append(filename)
-
-            # Include guard cells
-            upper_bndry_cells = {dim: guards.get(dim) for dim in guards.keys()}
-            lower_bndry_cells = {dim: guards.get(dim) for dim in guards.keys()}
 
             ds = create_bout_ds(
                 syn_data_type=syn_data_type,
@@ -575,7 +566,6 @@ def create_bout_ds(
 
     MYSUB = lengths[2]
 
-    extra_boundary_points = 0
 
     if topology == "core":
         ds["ixseps1"] = nx
@@ -770,7 +760,6 @@ def create_bout_grid_ds(xsize=2, ysize=4, guards={}, topology="core", ny_inner=0
             "jyseps2_1": jyseps2_1,
             "jyseps1_2": jyseps1_2,
             "ny_inner": ny_inner,
-            "y_boundary_guards": myg,
         }
     )
 
