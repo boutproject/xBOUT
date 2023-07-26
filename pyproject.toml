@@ -79,3 +79,6 @@ write_to = "xbout/_version.py"
 
 [tool.setuptools]
 packages = ["xbout"]
+
+[tool.ruff]
+ignore = ["E501"]
