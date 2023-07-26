@@ -266,9 +266,6 @@ class BoutDatasetAccessor:
 
         return ds
 
-    def add_cartesian_coordinates(self):
-        return _add_cartesian_coordinates(self.data)
-
     def integrate_midpoints(self, variable, *, dims=None, cumulative_t=False):
         """
         Integrate using the midpoint rule for spatial dimensions, and trapezium rule for
