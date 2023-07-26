@@ -17,4 +17,4 @@ or::
 
   ds.bout.create_restarts(savepath='.', nxpe=4, nype=4)
 
-.. _accessor: https://xarray.pydata.org/en/stable/internals.html#extending-xarray
+.. _accessor: https://docs.xarray.dev/en/stable/internals/extending-xarray.html
