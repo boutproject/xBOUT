@@ -11,10 +11,8 @@ from .plotting.utils import plot_separatrix
 
 from .fastoutput import open_fastoutput
 
-try:
-    from importlib.metadata import version, PackageNotFoundError
-except ModuleNotFoundError:
-    from importlib_metadata import version, PackageNotFoundError
+from importlib.metadata import version, PackageNotFoundError
+
 try:
     __version__ = version(__name__)
 except PackageNotFoundError:
