@@ -2,7 +2,7 @@ BoutDataset Accessor Methods
 ============================
 
 xBOUT defines a set of accessor_ methods on the loaded Datasets and
-DataArrays, which are called by `ds.bout.method`.
+DataArrays, which are called by ``ds.bout.method``.
 
 This is where BOUT-specific data manipulation, analysis and plotting
 functionality is stored, for example::

@@ -17,6 +17,14 @@ xbout.boutdataset module
     :undoc-members:
     :show-inheritance:
 
+xbout.geometries module
+-----------------------
+
+.. automodule:: xbout.geometries
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 xbout.load module
 -----------------
 

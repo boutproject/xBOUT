@@ -91,9 +91,9 @@ def open_boutdataset(
     file. Can also load from a grid file or from restart files.
 
     Note that when reloading a Dataset that was saved by xBOUT, the state of the saved
-    Dataset is restored, and the values of `keep_xboundaries`, `keep_yboundaries`, and
-    `run_name` are ignored. `geometry` is treated specially, and can be passed when
-    reloading a Dataset (along with `gridfilepath` if needed).
+    Dataset is restored, and the values of ``keep_xboundaries``, ``keep_yboundaries``, and
+    ``run_name`` are ignored. ``geometry`` is treated specially, and can be passed when
+    reloading a Dataset (along with ``gridfilepath`` if needed).
 
     Troubleshooting
     ---------------
@@ -101,14 +101,14 @@ def open_boutdataset(
     some variables may have conflicts (e.g. a source term was changed between some of
     the restarts, but the source term is saved as time-independent, without a
     t-dimension). In this case one workaround is to pass a list of variable names to the
-    keyword argument `drop_vars` to ignore the variables with conflicts, e.g. if `"S1"`
-    and `"S2"` have conflicts
-    ```
-    ds = open_boutdataset("data*/boutdata.nc", drop_variables=["S1", "S2"])
-    ```
-    will open a Dataset which is missing `"S1"` and `"S2"`.\
-    [`drop_variables` is an argument of `xarray.open_dataset()` that is passed down
-    through `kwargs`.]
+    keyword argument ``drop_vars`` to ignore the variables with conflicts, e.g. if ``"S1"``
+    and ``"S2"`` have conflicts::
+
+        ds = open_boutdataset("data*/boutdata.nc", drop_variables=["S1", "S2"])
+
+    will open a Dataset which is missing ``"S1"`` and ``"S2"``
+    (``drop_variables`` is an argument of `xarray.open_dataset` that is passed down
+    through ``kwargs``.)
 
     Parameters
     ----------
@@ -131,11 +131,12 @@ def open_boutdataset(
 
         If not specified then will attempt to read it from the file attrs.
         If still not found then a warning will be thrown, which can be
-        suppressed by passing `info`=False.
+        suppressed by passing ``info=False``.
 
         To define a new type of geometry you need to use the
-        `register_geometry` decorator. You are encouraged to do this for your
-        own BOUT++ physics module, to apply relevant normalisations.
+        `register_geometry` decorator. You are encouraged to do
+        this for your own BOUT++ physics module, to apply relevant
+        normalisations.
     gridfilepath : str, optional
         The path to a grid file, containing any variables needed to apply the geometry
         specified by the 'geometry' option, which are not contained in the dump files.
@@ -163,8 +164,8 @@ def open_boutdataset(
     is_restart : bool, optional
         Restart files require some special handling (e.g. working around variables that
         are not present in restart files). By default, this special handling is enabled
-        if the files do not have a time dimension and `restart` is present in the file
-        name in `datapath`. This option can be set to True or False to explicitly enable
+        if the files do not have a time dimension and ``restart`` is present in the file
+        name in ``datapath``. This option can be set to True or False to explicitly enable
         or disable the restart file handling.
     kwargs : optional
         Keyword arguments are passed down to `xarray.open_mfdataset`, which in

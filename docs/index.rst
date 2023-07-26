@@ -27,19 +27,19 @@ suggestions.
 Installation
 ------------
 
-With `pip`:
+With ``pip``:
 
 .. code-block:: bash
 
   pip install --user xbout
 
-or `conda`:
+or ``conda``:
 
 .. code-block:: bash
 
   conda install -c conda-forge xbout
 
-You can run the tests by running `pytest --pyargs xbout`.
+You can run the tests by running ``pytest --pyargs xbout``.
 
 xBOUT will install the required python packages when you run one of
 the above install commands if they are not already installed on your

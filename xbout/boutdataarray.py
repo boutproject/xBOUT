@@ -29,7 +29,7 @@ class BoutDataArrayAccessor:
     selecting a variable from a BOUT++ dataset.
 
     These BOUT-specific methods and attributes are accessed via the bout
-    accessor, e.g. `da.bout.options` returns a `BoutOptionsFile` instance.
+    accessor, e.g. ``da.bout.options`` returns a `BoutOptionsFile` instance.
     """
 
     def __init__(self, da):
@@ -698,6 +698,7 @@ class BoutDataArrayAccessor:
             If set to false, do not create the animation, just return the block or blocks
         axis_coords : None, str, dict
             Coordinates to use for axis labelling.
+
             - None: Use the dimension coordinate for each axis, if it exists.
             - "index": Use the integer index values.
             - dict: keys are dimension names, values set axis_coords for each axis
@@ -705,6 +706,7 @@ class BoutDataArrayAccessor:
               coordinate (which must have the dimension given by 'key'), or a 1d
               numpy array, dask array or DataArray whose length matches the length of
               the dimension given by 'key'.
+
             Only affects time coordinate for plots with poloidal_plot=True.
         fps : int, optional
             Frames per second of resulting gif
@@ -815,6 +817,7 @@ class BoutDataArrayAccessor:
             Dimension over which to animate, defaults to the time dimension
         axis_coords : None, str, dict
             Coordinates to use for axis labelling.
+
             - None: Use the dimension coordinate for each axis, if it exists.
             - "index": Use the integer index values.
             - dict: keys are dimension names, values set axis_coords for each axis
@@ -834,7 +837,7 @@ class BoutDataArrayAccessor:
             A matplotlib axes instance to plot to. If None, create a new
             figure and axes, and plot to that
         aspect : str or None, optional
-            Argument to set_aspect(), defaults to "auto"
+            Argument to ``ax.set_aspect()``, defaults to "auto"
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (animatplot.blocks.Line).
@@ -842,7 +845,7 @@ class BoutDataArrayAccessor:
         Returns
         -------
         animation or block
-            If animate==True, returns an animatplot.Animation object, otherwise
+            If ``animate==True``, returns an animatplot.Animation object, otherwise
             returns an animatplot.blocks.Line instance.
         """
 
@@ -1025,7 +1028,7 @@ class BoutDataArrayAccessor:
 
         This method is intended to be used to produce data for visualisation, which
         normally does not require double-precision values, so by default the data is
-        converted to `np.float32`. Pass `use_float32=False` to retain the original
+        converted to `numpy.float32`. Pass ``use_float32=False`` to retain the original
         precision.
 
         Parameters
@@ -1037,10 +1040,10 @@ class BoutDataArrayAccessor:
         nZ : int (default 100)
             Number of grid points in the Z direction
         use_float32 : bool (default True)
-            Downgrade precision to `np.float32`?
+            Downgrade precision to `numpy.float32`?
         fill_value : float (default np.nan)
             Value to use for points outside the interpolation domain (passed to
-            `scipy.RegularGridInterpolator`)
+            `scipy.interpolate.RegularGridInterpolator`)
 
         See Also
         --------
