@@ -20,9 +20,7 @@ jobs:
     if: always()
     strategy:
       matrix:
-        python-version: [3.8, 3.9, '3.10', 3.x]
-        pip-packages:
-          - "setuptools pip pytest pytest-cov coverage boutdata xarray numpy>=1.16.0"
+        python-version: ["3.8", "3.9", "3.10", "3.x"]
       fail-fast: false
 
     steps:
@@ -35,23 +33,24 @@ jobs:
       run: |
         sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
-        pip install --upgrade ${{ matrix.pip-packages }}
-        pip install -e .
+    - name: Install package
+      run: |
+        pip install -e .[calc,tests]
     - name: Test with pytest
       run: |
-        pip install pytest
-        pytest -v --long --cov
+        pytest -vv --long --cov
 
 
+  # test with oldest supported version of packages
   pytest-min-versions:
 
     runs-on: ubuntu-latest
     if: always()
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: ["3.8"]
         pip-packages:
-          - "setuptools pip pytest pytest-cov coverage boutdata==0.1.4 xarray==0.18.0 dask==2.10.0 numpy==1.18.0 natsort==5.5.0 matplotlib==3.1.1 animatplot==0.4.2 netcdf4==1.4.2 Pillow==7.2.0" # test with oldest supported version of packages. Note, using numpy==1.18.0 as a workaround because numpy==1.17.0 is not supported on Python-3.7, even though we should currently support numpy==1.17.0.
+          - "boutdata==0.1.4 xarray==0.18.0 dask==2.10.0 numpy==1.18.0 natsort==5.5.0 matplotlib==3.1.1 animatplot-ng==0.4.2 netcdf4==1.4.2 Pillow==6.1.0"
       fail-fast: false
 
     steps:
@@ -65,12 +64,12 @@ jobs:
         sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
         pip install --upgrade ${{ matrix.pip-packages }}
-        pip install -e .
+    - name: Install package
+      run: |
+        pip install -e .[tests]
     - name: Test with pytest
       run: |
-        pip install pytest
-        pytest -v --long --cov
-
+        pytest -vv --long --cov
 
   # Need to tidy up the things that flake8 finds before we activate this
   #flake8:
