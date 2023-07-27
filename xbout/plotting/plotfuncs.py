@@ -47,7 +47,7 @@ def plot_regions(da, ax=None, **kwargs):
     da_regions = _decompose_regions(da)
 
     colored_regions = [
-        xr.full_like(da_region, fill_value=num / len(regions))
+        xr.full_like(da_region, fill_value=num / len(da_regions))
         for num, da_region in enumerate(da_regions.values())
     ]
 

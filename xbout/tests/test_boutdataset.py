@@ -1927,6 +1927,8 @@ class TestLoadInputFile:
 
     @pytest.mark.skip
     def test_load_options_in_dataset(self, bout_xyt_example_files):
+        from boutdata.data import BoutOptions
+
         dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
         ds = open_boutdataset(
             datapath=dataset_list, inputfilepath=EXAMPLE_OPTIONS_FILE_PATH
