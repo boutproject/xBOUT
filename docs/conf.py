@@ -18,7 +18,7 @@ from importlib.metadata import version as get_version
 # -- Project information -----------------------------------------------------
 
 project = "xBOUT"
-copyright = "2018, Tom Nicholas"
+copyright = "2018-2023, Tom Nicholas, BOUT++ team"
 author = "Tom Nicholas"
 
 # The full version, including alpha/beta/rc tags
