@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 
 from xbout import open_boutdataset
-from .test_load import create_bout_ds_list
+from .utils_for_tests import create_bout_ds_list
 
 from animatplot.blocks import Pcolormesh, Line
 

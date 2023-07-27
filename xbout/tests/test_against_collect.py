@@ -3,7 +3,7 @@ import numpy.testing as npt
 
 from xbout import open_boutdataset, collect as new_collect
 
-from .test_load import create_bout_ds, create_bout_ds_list, METADATA_VARS
+from .utils_for_tests import create_bout_ds, create_bout_ds_list, METADATA_VARS
 
 boutdata = pytest.importorskip("boutdata", reason="boutdata is not available")
 old_collect = boutdata.collect
