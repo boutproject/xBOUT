@@ -55,7 +55,9 @@ calc = [
     "xhistogram",
 ]
 docs = [
-    "sphinx >= 1.4",
+    "sphinx >= 5.3",
+    "sphinx-book-theme >= 0.4.0rc1",
+    "sphinx_autodoc_typehints >= 1.19",
 ]
 3d_plot = [
     "k3d >= 2.8.0",

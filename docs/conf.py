@@ -12,27 +12,19 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
 
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-
-# Are we running on readthedocs?
-on_rtd = os.environ.get("READTHEDOCS") == "True"
+from importlib.metadata import version as get_version
 
 # -- Project information -----------------------------------------------------
 
-import xbout
-
 project = "xBOUT"
-copyright = "2018, Tom Nicholas"
+copyright = "2018-2023, Tom Nicholas, BOUT++ team"
 author = "Tom Nicholas"
 
-# The short X.Y version
-version = xbout.__version__
 # The full version, including alpha/beta/rc tags
-release = xbout.__version__
-
+release = get_version("xbout")
+# The short X.Y version
+version = ".".join(release.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
 
@@ -45,11 +37,25 @@ release = xbout.__version__
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "sphinx_autodoc_typehints",
 ]
+
+autosummary_generate = True
+autodoc_default_options = {"ignore-module-all": True}
+autodoc_typehints = "description"
+autodoc_class_signature = "mixed"
+
+# Numpy-doc config
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_attr_annotations = True
+napoleon_preprocess_types = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -68,7 +74,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -85,21 +91,26 @@ default_role = "any"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-if on_rtd:
-    html_theme = "default"
-else:
-    html_theme = "alabaster"
+html_theme = "sphinx_book_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    "repository_url": "https://github.com/boutproject/xBOUT",
+    "repository_branch": "master",
+    "path_to_docs": "docs",
+    "use_edit_page_button": True,
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "home_page_in_toc": False,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+html_static_path = ["images"]
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -169,3 +180,11 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "xarray": ("https://docs.xarray.dev/en/latest", None),
+    "mayavi": ("https://docs.enthought.com/mayavi/mayavi/", None),
+}

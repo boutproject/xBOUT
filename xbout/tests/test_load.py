@@ -1291,11 +1291,13 @@ class TestTrim:
         """
         Numbering scheme for nxpe=3, nype=4
 
-        y  9 10 11
-        ^  6 7  8
-        |  3 4  5
-        |  0 1  2
-         -----> x
+        .. code:: text
+
+            y  9 10 11
+            ^  6 7  8
+            |  3 4  5
+            |  0 1  2
+             -----> x
         """
 
         ds = create_test_data(0)
@@ -1320,11 +1322,13 @@ class TestTrim:
         """
         Numbering scheme for nxpe=3, nype=4
 
-        y  9 10 11
-        ^  6 7  8
-        |  3 4  5
-        |  0 1  2
-         -----> x
+        .. code:: text
+
+            y  9 10 11
+            ^  6 7  8
+            |  3 4  5
+            |  0 1  2
+             -----> x
         """
 
         ds = create_test_data(0)
@@ -1351,11 +1355,13 @@ class TestTrim:
         """
         Numbering scheme for nxpe=3, nype=4
 
-        y  9 10 11
-        ^  6 7  8
-        |  3 4  5
-        |  0 1  2
-         -----> x
+        .. code:: text
+
+            y  9 10 11
+            ^  6 7  8
+            |  3 4  5
+            |  0 1  2
+             -----> x
         """
 
         filenum = yproc * nxpe + xproc
@@ -1381,11 +1387,13 @@ class TestTrim:
         """
         Numbering scheme for nxpe=3, nype=4
 
-        y  9 10 11
-        ^  6 7  8
-        |  3 4  5
-        |  0 1  2
-         -----> x
+        .. code:: text
+
+            y  9 10 11
+            ^  6 7  8
+            |  3 4  5
+            |  0 1  2
+             -----> x
         """
 
         filenum = yproc * nxpe + xproc
