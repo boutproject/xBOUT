@@ -92,7 +92,7 @@ def make_fastoutput_set(path, n):
 def make_fastoutput(path, i, locations):
     """
     Create a single file in the format produced by
-    [`FastOutput`](https://github.com/johnomotani/BoutFastOutput)
+    `FastOutput <https://github.com/johnomotani/BoutFastOutput>`_
 
     Parameters
     ----------

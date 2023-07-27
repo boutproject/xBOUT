@@ -188,4 +188,5 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "xarray": ("https://docs.xarray.dev/en/latest", None),
+    "mayavi": ("https://docs.enthought.com/mayavi/mayavi/", None),
 }
