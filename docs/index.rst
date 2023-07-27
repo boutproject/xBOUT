@@ -22,7 +22,12 @@ suggestions.
    loading_data
    accessor_methods
    extending_xbout
-   xbout
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Reference
+
+   API Reference <api>
 
 Installation
 ------------

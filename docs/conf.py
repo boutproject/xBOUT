@@ -37,12 +37,27 @@ version = ".".join(release.split(".")[:2])
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
+    "sphinx_autodoc_typehints",
 ]
+
+autosummary_generate = True
+autodoc_default_options = {
+    'ignore-module-all': True
+}
+autodoc_typehints = "description"
+autodoc_class_signature = "mixed"
+
+# Numpy-doc config
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_attr_annotations = True
+napoleon_preprocess_types = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
