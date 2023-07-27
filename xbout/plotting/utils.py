@@ -253,5 +253,5 @@ def _k3d_plot_isel(da_region, isel, vmin, vmax, **kwargs):
         indices,
         attribute=data,
         color_range=[vmin, vmax],
-        **kwargs
+        **kwargs,
     )
