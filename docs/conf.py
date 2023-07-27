@@ -47,9 +47,7 @@ extensions = [
 ]
 
 autosummary_generate = True
-autodoc_default_options = {
-    'ignore-module-all': True
-}
+autodoc_default_options = {"ignore-module-all": True}
 autodoc_typehints = "description"
 autodoc_class_signature = "mixed"
 
