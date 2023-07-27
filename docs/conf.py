@@ -12,27 +12,19 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
 
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-
-# Are we running on readthedocs?
-on_rtd = os.environ.get("READTHEDOCS") == "True"
+from importlib.metadata import version as get_version
 
 # -- Project information -----------------------------------------------------
-
-import xbout
 
 project = "xBOUT"
 copyright = "2018, Tom Nicholas"
 author = "Tom Nicholas"
 
-# The short X.Y version
-version = xbout.__version__
 # The full version, including alpha/beta/rc tags
-release = xbout.__version__
-
+release = get_version("xbout")
+# The short X.Y version
+version = ".".join(release.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
 
