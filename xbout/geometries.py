@@ -196,7 +196,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         can_use_1d_z_coord = (nz == 1) or use_metric_3d
 
         if can_use_1d_z_coord:
-            if updated_ds.geometry == "fci":
+            if use_metric_3d:
                 # dz is varying. just set to a linspace
                 z = xr.DataArray(
                     np.linspace(start=0, stop=2 * np.pi, num=nz, endpoint=False),
