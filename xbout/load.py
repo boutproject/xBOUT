@@ -3,6 +3,8 @@ from warnings import warn
 from pathlib import Path
 from functools import partial
 from itertools import chain
+import re
+import itertools
 
 from boutdata.data import BoutOptionsFile
 import xarray as xr
@@ -797,8 +799,10 @@ def _expand_wildcards(path):
     # Find path relative to parent
     search_pattern = str(path.relative_to(base_dir))
 
+    search_patterns = _expand_braces(search_pattern)
+
     # Search this relative path from the parent directory for all files matching user input
-    filepaths = list(base_dir.glob(search_pattern))
+    filepaths = sum([list(base_dir.glob(pat)) for pat in search_patterns], [])
 
     # Sort by numbers in filepath before returning
     # Use "natural" sort to avoid lexicographic ordering of numbers
@@ -806,6 +810,16 @@ def _expand_wildcards(path):
     return natsorted(filepaths, key=lambda filepath: str(filepath))
 
 
+def _expand_braces(path):
+    match = re.findall("([^{]*)({[^}]*})", path)
+    remainder = path[sum([len(a) + len(b) for a, b in match]) :]
+    first = [a for a, _ in match]
+    second = [b[1:-1].split(",") for _, b in match]
+    outs = []
+    for secondi in itertools.product(*second):
+        outs.append("".join([a + b for a, b in zip(first, secondi)]) + remainder)
+        # outs.append(sum(list(zip(
+    return outs
 def _read_splitting(filepath, info, keep_yboundaries):
     ds = xr.open_dataset(str(filepath))
 
