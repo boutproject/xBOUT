@@ -9,6 +9,8 @@ import xarray as xr
 
 def _set_attrs_on_all_vars(ds, key, attr_data, copy=False):
     ds.attrs[key] = attr_data
+    if isinstance(ds, xr.DataArray):
+        return ds
     if copy:
         for v in chain(ds.data_vars, ds.coords):
             ds[v].attrs[key] = deepcopy(attr_data)
