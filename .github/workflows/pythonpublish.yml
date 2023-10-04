@@ -25,6 +25,6 @@ jobs:
         sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip build
     - name: Build package
-      runs: python -m build --sdist --wheel
+      run: python -m build --sdist --wheel
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
