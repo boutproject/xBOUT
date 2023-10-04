@@ -937,6 +937,25 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
     """
 
     nprocs = nxpe * nype
+
+    # Dimensions along which no concatenation is needed are still present as
+    # single-element lists, so need to concatenation along dim=None for those
+    def get_concat_dims():
+        concat_dims = [None, None, None]
+        if len(filepaths) > nprocs:
+            concat_dims[0] = "t"
+        if nype > 1:
+            concat_dims[1] = "y"
+        if nxpe > 1:
+            concat_dims[2] = "x"
+        return concat_dims
+
+    # Fast track for case of only one run
+    if nprocs == len(filepaths):
+        paths = iter(filepaths)
+        paths_grid = [[[next(paths) for x in range(nxpe)] for y in range(nype)]]
+        return paths_grid, get_concat_dims()
+
     n_runs = int(len(filepaths) / nprocs)
     runids = []
 
@@ -1012,17 +1031,7 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
 
             paths_grid.append([[next(paths) for x in range(nxpe)] for y in range(nype)])
 
-    # Dimensions along which no concatenation is needed are still present as
-    # single-element lists, so need to concatenation along dim=None for those
-    concat_dims = [None, None, None]
-    if len(filepaths) > nprocs:
-        concat_dims[0] = "t"
-    if nype > 1:
-        concat_dims[1] = "y"
-    if nxpe > 1:
-        concat_dims[2] = "x"
-
-    return paths_grid, concat_dims
+    return paths_grid, get_concat_dims()
 
 
 def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
