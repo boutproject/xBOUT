@@ -84,6 +84,7 @@ def open_boutdataset(
     run_name=None,
     info=True,
     is_restart=None,
+    grid_kw=None,
     **kwargs,
 ):
     """
@@ -268,7 +269,7 @@ def open_boutdataset(
         if len(matches):
             assert (
                 len(matches) == 1
-            ), f"More than module claim to be able to read the dataset: {[x.__file__ for x in matches]}"
+            ), f"More than module claim to be able to read the dataset: {[x.__path__ for x in matches]}"
             (match,) = matches
             ds = match.update(ds)
 
@@ -342,12 +343,14 @@ def open_boutdataset(
                     "gridfilepath set to a directory, but no grid used in simulation. Continuing without grid."
                 )
         if gridfilepath is not None:
+            grid_kw = grid_kw or dict()
             grid = _open_grid(
                 gridfilepath,
                 chunks=chunks,
                 keep_xboundaries=keep_xboundaries,
                 keep_yboundaries=keep_yboundaries,
                 mxg=ds.metadata["MXG"],
+                **grid_kw,
             )
         else:
             grid = None
@@ -392,7 +395,7 @@ but we did load {grididfile}."""
     if len(matches):
         assert (
             len(matches) == 1
-        ), f"More than module claim to be able to read the dataset: {[x.__file__ for x in matches]}"
+        ), f"More than module claim to be able to read the dataset: {[x.__path__ for x in matches]}"
         (match,) = matches
         ds = match.update(ds)
     if ("dump" in input_type or "restart" in input_type) and ds.metadata[
