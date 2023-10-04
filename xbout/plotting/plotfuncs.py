@@ -242,6 +242,10 @@ def plot2d_wrapper(
     else:
         # pass vmin and vmax through kwargs as they are not used for contourf or contour
         # plots
+        if vmin < -1e300:
+            vmin = -1e300
+        if vmax > 1e300:
+            vmax = 1e300
         kwargs["vmin"] = vmin
         kwargs["vmax"] = vmax
 
