@@ -1,11 +1,9 @@
 import pytest
 
-from pathlib import Path
 from matplotlib import pyplot as plt
 import numpy as np
 
 from xbout import open_boutdataset
-from xbout.tests.test_load import bout_xyt_example_files
 from xbout.tests.test_region import (
     params_guards,
     params_guards_values,

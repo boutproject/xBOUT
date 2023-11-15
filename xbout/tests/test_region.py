@@ -1,11 +1,9 @@
 import pytest
 
-from pathlib import Path
 
 import numpy.testing as npt
 import xarray.testing as xrt
 
-from xbout.tests.test_load import bout_xyt_example_files
 from xbout import open_boutdataset
 
 
@@ -141,8 +139,6 @@ class TestRegion:
             keep_yboundaries=keep_yboundaries,
         )
 
-        mxg = guards["x"]
-
         if keep_xboundaries:
             ixs = ds.metadata["ixseps1"]
         else:
@@ -239,7 +235,6 @@ class TestRegion:
         jys1 = ds.metadata["jyseps1_1"] + ybndry
         ny_inner = ds.metadata["ny_inner"] + 2 * ybndry
         jys2 = ds.metadata["jyseps2_2"] + 3 * ybndry
-        ny = ds.metadata["ny"] + 4 * ybndry
 
         n = ds["n"]
         n_noregions = n.copy(deep=True)
@@ -433,7 +428,6 @@ class TestRegion:
             ybndry = 0
         jys1 = ds.metadata["jyseps1_1"] + ybndry
         jys2 = ds.metadata["jyseps2_2"] + ybndry
-        ny = ds.metadata["ny"] + 2 * ybndry
 
         n = ds["n"]
         n_noregions = n.copy(deep=True)
@@ -606,7 +600,6 @@ class TestRegion:
         ny_inner = ds.metadata["ny_inner"] + 2 * ybndry
         jys12 = ds.metadata["jyseps1_2"] + 3 * ybndry
         jys22 = ds.metadata["jyseps2_2"] + 3 * ybndry
-        ny = ds.metadata["ny"] + 4 * ybndry
 
         n = ds["n"]
         n_noregions = n.copy(deep=True)
@@ -928,7 +921,6 @@ class TestRegion:
         ny_inner = ds.metadata["ny_inner"] + 2 * ybndry
         jys12 = ds.metadata["jyseps1_2"] + 3 * ybndry
         jys22 = ds.metadata["jyseps2_2"] + 3 * ybndry
-        ny = ds.metadata["ny"] + 4 * ybndry
 
         n = ds["n"]
         n_noregions = n.copy(deep=True)
@@ -1502,7 +1494,6 @@ class TestRegion:
         ny_inner = ds.metadata["ny_inner"] + 2 * ybndry
         jys12 = ds.metadata["jyseps1_2"] + 3 * ybndry
         jys22 = ds.metadata["jyseps2_2"] + 3 * ybndry
-        ny = ds.metadata["ny"] + 4 * ybndry
 
         if isinstance(with_guards, dict):
             xguards = with_guards.get("x", mxg)

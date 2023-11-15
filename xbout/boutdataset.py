@@ -266,9 +266,6 @@ class BoutDatasetAccessor:
 
         return ds
 
-    def add_cartesian_coordinates(self):
-        return _add_cartesian_coordinates(self.data)
-
     def integrate_midpoints(self, variable, *, dims=None, cumulative_t=False):
         """
         Integrate using the midpoint rule for spatial dimensions, and trapezium rule for
@@ -619,7 +616,6 @@ class BoutDatasetAccessor:
 
         from scipy.interpolate import (
             RegularGridInterpolator,
-            griddata,
         )
 
         # Create Cylindrical coordinates for intermediate grid
@@ -680,9 +676,6 @@ class BoutDatasetAccessor:
             # results in the loop to the last two dimensions, so put zeta first.  Can't
             # just use da.min().item() here (to get a scalar value instead of a
             # zero-size array) because .item() doesn't work for dask arrays (yet!).
-
-            datamin = float_type(da.min().values)
-            datamax = float_type(da.max().values)
 
             if tdim in da.dims:
                 data_cartesian = np.zeros((nt, nX, nY, nZ), dtype=float_type)

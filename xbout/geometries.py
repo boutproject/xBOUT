@@ -4,7 +4,7 @@ from textwrap import dedent
 import xarray as xr
 import numpy as np
 
-from .region import Region, _create_regions_toroidal, _create_single_region
+from .region import _create_regions_toroidal, _create_single_region
 from .utils import (
     _add_attrs_to_var,
     _set_attrs_on_all_vars,
@@ -156,7 +156,6 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         _add_attrs_to_var(updated_ds, xcoord)
 
     if ycoord not in updated_ds.coords:
-        ny = updated_ds.dims[ycoord]
         # dy should always be constant in x, so it is safe to convert to a 1d
         # coordinate.  [The y-coordinate has to be a 1d coordinate that labels x-z
         # slices of the grid (similarly x-coordinate is 1d coordinate that labels y-z
@@ -206,7 +205,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
             if bout_v5:
                 if not np.all(updated_ds["dz"].min() == updated_ds["dz"].max()):
                     raise ValueError(
-                        f"Spacing is not constant. Cannot create z coordinate"
+                        "Spacing is not constant. Cannot create z coordinate"
                     )
 
                 dz = updated_ds["dz"].min()
