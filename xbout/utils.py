@@ -492,21 +492,23 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
                     if isinstance(value, str):
                         # Write strings as byte-strings so BOUT++ can read them
                         value = value.encode()
+                    elif isinstance(value, int):
+                        value = np.intc(value)
 
                     restart_ds[v] = value
 
             # These variables need to be altered, because they depend on the number of
             # files and/or the rank of this file.
-            restart_ds["MXSUB"] = mxsub
-            restart_ds["MYSUB"] = mysub
-            restart_ds["NXPE"] = nxpe
-            restart_ds["NYPE"] = nype
-            restart_ds["PE_XIND"] = xproc
-            restart_ds["PE_YIND"] = yproc
-            restart_ds["hist_hi"] = hist_hi
-            restart_ds["PE_XIND"] = xproc
-            restart_ds["PE_YIND"] = yproc
-            restart_ds["MYPE"] = yproc * nxpe + xproc
+            restart_ds["MXSUB"] = np.intc(mxsub)
+            restart_ds["MYSUB"] = np.intc(mysub)
+            restart_ds["NXPE"] = np.intc(nxpe)
+            restart_ds["NYPE"] = np.intc(nype)
+            restart_ds["PE_XIND"] = np.intc(xproc)
+            restart_ds["PE_YIND"] = np.intc(yproc)
+            restart_ds["hist_hi"] = np.intc(hist_hi)
+            restart_ds["PE_XIND"] = np.intc(xproc)
+            restart_ds["PE_YIND"] = np.intc(yproc)
+            restart_ds["MYPE"] = np.intc(yproc * nxpe + xproc)
 
             # tt is the simulation time where the restart happens
             restart_ds["tt"] = tt
