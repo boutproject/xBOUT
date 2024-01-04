@@ -129,6 +129,20 @@ def _evalat(ds, r, phi, z, key, delta_phi, fill_value, progress, slow=True):
             out[k].values[..., missing] = _fill_value(fill_value, out[k].dtype)
             # raise NotImplementedError("Missing data")
     return add_dims(out)
+
+
+def _fill_value(fill_value, dtype):
+    if fill_value is None:
+        if isinstance(dtype.type, float):
+            return np.nan
+        return -1
+    return fill_value
+
+
+def _startswith(hay, needle):
+    if len(hay) < len(needle):
+        return False
+    return hay[: len(needle)] == needle
     return out
 
 
