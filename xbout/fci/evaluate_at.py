@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023,2024 David Bold <dave@ipp.mpg.de>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 import numpy as np
 from .tracing import setup_mesh, rz_to_ab, OutOfDomainError
 import xarray as xr
