@@ -37,7 +37,8 @@ def weights(rz, mesh):
     return weigth, ij
 
 
-def _evalat(ds, r, phi, z, key, delta_phi, fill_value, progress):
+def _evalat(ds, r, phi, z, key, delta_phi, fill_value, progress, slow=True):
+    r0, phi0, z0 = r, phi, z
     dims, shape, coords, (r, phi, z) = get_out_shape(r, phi, z)
     plus = tuple([f"delta_{x}" for x in "xyz"])
     dimsplus = *dims, *plus
@@ -60,23 +61,28 @@ def _evalat(ds, r, phi, z, key, delta_phi, fill_value, progress):
                 for jo in range(2):
                     for ko in range(2):
                         ids[(*ijk, io, jo, ko)] = i + jo, j, k + ko
-    # print(weights[0, :, :, 0], "\n", ids[0, :, :, 0, 1])
-    # print("fucking weights")
-    # # weights[...] = 0
-    # weights[..., 1, :, :] = 0
-    # weights /= np.sum(
-    #     weights, axis=tuple([len(weights.shape) - x for x in range(1, 4)])
-    # )[..., None, None, None]
-    # print(np.max(ids[..., 1]), len(ds.y))
-    ids[:, 1] %= len(ds.y)
+    for i, c in enumerate([len(ds[k]) for k in "xyz"]):
+        if i != 0:  # y and z is periodic
+            ids[..., i] %= c
+        ids[..., i][ids[..., i] == -1] = c - 1
+
+    def add_dims(out):
+        for k, v in zip(("R", "phi", "Z"), (r, phi, z)):
+            k = f"dim_{k}"
+            if k not in out:
+                out[k] = dims, v
+        return out
+
     if key is None:
-        return xr.Dataset(
-            dict(
-                x=(dimsplus, ids[..., 0]),
-                y=(dimsplus, ids[..., 1]),
-                z=(dimsplus, ids[..., 2]),
-                weights=(dimsplus, weights),
-                missing=(dims, missing),
+        return add_dims(
+            xr.Dataset(
+                dict(
+                    x=(dimsplus, ids[..., 0]),
+                    y=(dimsplus, ids[..., 1]),
+                    z=(dimsplus, ids[..., 2]),
+                    weights=(dimsplus, weights),
+                    missing=(dims, missing),
+                )
             )
         )
     if isinstance(key, str):
