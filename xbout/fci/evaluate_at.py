@@ -291,7 +291,7 @@ def evaluate_at_xyz(self, x, y, z, *args, **kwargs):
     """
     r = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
-    return self.evaluate_at_rpz(r, phi, z, *args, **kwargs)
+    return evaluate_at_rpz(self, r, phi, z, *args, **kwargs)
 
 
 def evaluate_at_rpz(
@@ -304,6 +304,7 @@ def evaluate_at_rpz(
     fill_value=np.nan,
     lazy=False,
     progress=False,
+    slow=False,
 ):
     """
     Evaluate the field key in the dataset at the positions given by
