@@ -143,6 +143,44 @@ def _startswith(hay, needle):
     if len(hay) < len(needle):
         return False
     return hay[: len(needle)] == needle
+
+
+def evaluate_at_keys(ds, keys, key, fill_value=np.nan, slow=False):
+    """
+    ds : xr.Dataset
+         the bout dataset to evaluate at certain spatial points
+    keys : xr.Dataset
+        the mapping returned by evaluate_at with key=None
+    key : tuple of str
+        the variables to return
+    """
+    if key is None:
+        return keys
+
+    if isinstance(key, str):
+        key = (key,)
+    slc = {x: keys[x] for x in "xyz"}
+    weights = keys["weights"]
+    missing = keys["missing"]
+    out = xr.Dataset()
+    for k in key:
+        if np.any(missing):
+            for x in "xyz":
+                _startswith(slc[x].dims, missing.dims)
+                slc[x].values[missing] = 0
+                print(x, np.min(slc[x]), np.max(slc[x]))
+        # Fix periodic indexing
+        for x in "yz":
+            slc[x] %= len(ds[x])
+        if slow:
+            theisel = ds[k].isel(**slc, missing_dims="ignore")
+        else:
+            slcp = [slc[d] if d in slc else slice(None) for d in ds[k].dims]
+            theisel = ds[k].values[tuple(slcp)]
+        out[k] = (theisel * weights).sum(dim=tuple([f"delta_{x}" for x in "xyz"]))
+        if np.any(missing):
+            outk = out[k].transpose(*missing.dims, ...)
+            outk.values[missing.values] = _fill_value(fill_value, outk.dtype)
     return out
 
 
