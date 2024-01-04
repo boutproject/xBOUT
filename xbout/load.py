@@ -821,7 +821,8 @@ def _expand_braces(path):
         # outs.append(sum(list(zip(
     return outs
 def _read_splitting(filepath, info, keep_yboundaries):
-    ds = xr.open_dataset(str(filepath))
+    with xr.open_dataset(str(filepath)) as ds:
+        pass
 
     # Account for case of no parallelisation, when nxpe etc won't be in dataset
     def get_nonnegative_scalar(ds, key, default=1, info=True):
@@ -1166,9 +1167,10 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
 
     if _is_path(datapath):
         gridfilepath = Path(datapath)
-        grid = xr.open_dataset(
+        with xr.open_dataset(
             gridfilepath, engine=_check_filetype(gridfilepath), **kwargs
-        )
+        ) as grid:
+            pass
     else:
         grid = datapath
 
