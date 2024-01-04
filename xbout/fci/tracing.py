@@ -67,6 +67,18 @@ class mymesh(eudist.PolyMesh):
         self.z = y
         self.grid = np.array([x, y]).transpose(1, 2, 0)
         self.shape = tuple([x - 1 for x in x.shape])
+        self.ij = -1
+
+    def find_cell(self, rz, guess=None):
+        if guess is None:
+            if self.tree:
+                _, guess = self.tree.query(rz)
+                guess //= self.tree_prec
+            else:
+                guess = self.ij
+
+        self.ij = super().find_cell(rz, guess=guess)
+        return self.ij
 
 
 class Tracer:
