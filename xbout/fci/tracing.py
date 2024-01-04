@@ -111,8 +111,9 @@ class mymesh(eudist.PolyMesh):
 
 class Tracer:
     def __init__(self, ds, direction="forward"):
+        self._sign = dict(forward=1, backward=-1)[direction]
         meshes = []
-        for yi in range(len(ds.y)):
+        for yi in range(len(ds.y))[:: self._sign]:
             dsi = ds.isel(y=yi)
             meshes.append(
                 [
@@ -121,30 +122,63 @@ class Tracer:
                 ]
                 + [yi]
             )
-        self.meshes = meshes
+        self._meshes = meshes
 
     def poincare(self, rz, yind=0, num=100, early_exit="warn"):
+        """
+        Wrapper for trace that returns the data for a poincare plot
+        """
+        return self.trace(rz, yind, num, early_exit, save_every=len(self._meshes))[1]
+
+    def trace(self, rz, yind=0, num=100, early_exit="warn", save_every=1):
+        """
+        Trace a field line and return up to num points.
+
+        'rz' is the r-z coordinates of the starting point.
+        `yind` is the index of the y slice where to start tracing.
+        `num` specifies the maximum number of points.
+        `save_every` how frequently points are stored.
+
+        If the field line leaves before points are found the behaviour is defined by early_exit.
+        'warn' raises a warning and return
+        'ignore' returns without a warning
+        'plot' shows a plot and returns
+        'raise' raises an OutOfDomainError.
+
+        Returns:
+        np.ndarray : (n, 2) array with the R-Z coordinates
+        np.ndarray : the y-index of the slices, length n
+        """
         rz = np.array(rz)
         assert rz.shape == (2,)
-        thismeshes = self.meshes[yind:] + self.meshes[:yind]
+        if self._sign == -1:
+            yind = len(self._meshes) - yind
+        thismeshes = self._meshes[yind:] + self._meshes[:yind]
         out = np.empty((num, 2))
+        out2 = np.empty((num), int)
         out[0] = rz
+        out2[0] = thismeshes[0][2]
         last = None
-        for i in range(1, num):
-            for d, meshes in enumerate(thismeshes):
+        count = 0
+        for _ in range(1, num * save_every):
+            for meshes in thismeshes:
+                count += 1
                 try:
                     abij = rz_to_ab(rz, meshes[0])
-                except AssertionError as e:
+                except OutOfDomainError as e:
                     if early_exit == "warn":
-                        warn(f"early exit in iteration {i} because `{e}`")
+                        print(count, e)
+                        warn(f"early exit in iteration {count} because `{e}`")
                     elif early_exit == "plot":
                         m = meshes[0]
                         import matplotlib.pyplot as plt
 
-                        plt.plot(m.r, m.z)
+                        plt.figure()
                         if last:
-                            plt.plot(last[1].r.T, last[1].z.T)
-
+                            plt.plot(last[1].r.T, last[1].z.T, alpha=0.5)
+                        else:
+                            print("No last")
+                        plt.plot(m.r, m.z, alpha=0.5)
                         plt.plot(*rz, "o")
                         plt.show()
                     elif early_exit == "raise":
@@ -153,8 +187,38 @@ class Tracer:
                         assert (
                             early_exit == "ignore"
                         ), f'early_exit needs to be one of ["warn", "plot", "raise", ignore"] but got `{early_exit}`'
-                    return out[:i]
+                    return out[: (count // save_every)], out2[: (count // save_every)]
                 rz = ab_to_rz(*abij, meshes[1])
                 last = meshes
-            out[i] = rz
-        return out
+                if count % save_every == 0:
+                    out[count // save_every] = rz
+                    out2[count // save_every] = meshes[2] + self._sign
+                    if count // save_every == num - 1:
+                        return out, out2
+
+    def to_index(self, out, out2, ignore_outside=False):
+        out3 = []
+        _out2 = out2.copy()
+        _out2 %= len(self._meshes)
+        if self._sign == -1:
+            out2 = len(self._meshes) - out2 - 1
+            out2 %= len(self._meshes)
+        _, nz = self._meshes[0][0].shape
+        for rz, ji, jj in zip(out, out2, _out2):
+            try:
+                ab, ij = rz_to_ab(rz, self._meshes[ji][0])
+            except OutOfDomainError:
+                if ignore_outside:
+                    continue
+                raise
+            j = self._meshes[ji][2]
+            assert j == jj, f"{j} != {jj}, nz={nz}"
+            i, k = ij // nz, ij % nz
+            a, b = ab
+            if a > 0.5:
+                i += 1
+            if b > 0.5:
+                k += 1
+            k %= nz
+            out3.append((i, j, k))
+        return out3
