@@ -187,7 +187,11 @@ def evaluate_at_keys(ds, keys, key, fill_value=np.nan, slow=False):
 # todo: caching
 def _evaluate_get_single(ds, r, phi, z, delta_phi):
     # def _evalat_single(ds, r, z, p):
-    period = ds.periodicity
+    try:
+        period = ds.periodicity
+    except AttributeError:
+        period = int(round(float(2 * np.pi / ds.dy[0, 0, 0].values / len(ds.y))))
+
     assert period
     phi %= 2 * np.pi / period
 
