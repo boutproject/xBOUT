@@ -4,6 +4,8 @@ import xarray as xr
 from itertools import product
 from ..boutdataset import BoutDatasetAccessor
 
+import time
+
 try:
     from tqdm import tqdm
 except ImportError:
@@ -20,6 +22,17 @@ except ImportError:
 
         def __exit__(self, *k):
             return self.arg.__exit__(*k)
+
+
+class timeit:
+    def __init__(self, info="%f"):
+        self.info = info
+
+    def __enter__(self):
+        self.t0 = time.time()
+
+    def __exit__(self, *args):
+        print(self.info % (time.time() - self.t0))
 
 
 def weights(rz, mesh):
