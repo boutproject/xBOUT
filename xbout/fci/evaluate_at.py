@@ -104,7 +104,23 @@ def _evalat(ds, r, phi, z, key, delta_phi, fill_value, progress, slow=True):
     weights = xr.DataArray(weights, dims=dimsplus)
     out = xr.Dataset()
     for k in key:
-        out[k] = (ds[k].isel(**slc, missing_dims="ignore") * weights).sum(dim=plus)
+        if slow:
+            theisel = ds[k].isel(**slc, missing_dims="ignore")
+            try:
+                theisel = theisel.compute()
+            except AttributeError:
+                pass
+        else:
+            slcp = [slc[d] if d in slc else slice(None) for d in ds[k].dims]
+            print(type(ds[k]))
+            thisdat = ds[k].data
+            print(type(thisdat))
+            if str(type(thisdat)).startswith("<class 'dask."):
+                with timeit(f"Loading data {k} took %f"):
+                    thisdat = thisdat.compute()
+            with timeit("selecting data took %f"):
+                theisel = thisdat[tuple(slcp)]
+        out[k] = (theisel * weights).sum(dim=plus)
         if np.any(missing):
             # out[k].isel(
             assert (
