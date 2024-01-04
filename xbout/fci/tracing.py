@@ -3,6 +3,12 @@ import eudist
 
 from warnings import warn
 
+try:
+    from scipy.spatial import KDTree
+except ImportError as e:
+    KDTreeReason = e.msg
+    KDTree = None
+
 
 class OutOfDomainError(ValueError):
     pass
@@ -61,13 +67,35 @@ def setup_mesh(x, y):
 
 
 class mymesh(eudist.PolyMesh):
-    def __init__(self, x, y):
+    def __init__(self, x, y, useTree=True):
         super().__init__()
         self.r = x
         self.z = y
         self.grid = np.array([x, y]).transpose(1, 2, 0)
         self.shape = tuple([x - 1 for x in x.shape])
         self.ij = -1
+        if useTree and KDTree:
+            nx = 1
+            ny = 2
+            A = self.grid[:-1, :-1]
+            a = self.grid[:-1, 1:] - A
+            b = self.grid[1:, :-1] - A
+            c = self.grid[1:, 1:] - A - a - b
+            dx, dy = [
+                np.linspace(0, 1, n, endpoint=False) + 1 / 2 / n for n in [nx, ny]
+            ]
+            A, a, b, c = [x[..., None, None] for x in [A, a, b, c]]
+            dx = dx[None, None, None, :, None]
+            dy = dy[None, None, None, None, :]
+            pos = A + a * dx + b * dy + c * dx * dy
+            pos = pos.transpose(0, 1, 3, 4, 2)
+            pos.shape = (-1, 2)
+            self.tree = KDTree(pos)
+            self.tree_prec = nx * ny
+        else:
+            if useTree:
+                warn(f"Cannot use KDTree, import failed with `{KDTreeReason}`.")
+            self.tree = None
 
     def find_cell(self, rz, guess=None):
         if guess is None:
