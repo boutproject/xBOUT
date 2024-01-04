@@ -94,7 +94,12 @@ def _evalat(ds, r, phi, z, key, delta_phi, fill_value, progress, slow=True):
         out[k] = (ds[k].isel(**slc, missing_dims="ignore") * weights).sum(dim=plus)
         if np.any(missing):
             # out[k].isel(
-            raise NotImplementedError("Missing data")
+            assert (
+                tuple(dims) == out[k].dims[-len(dims) :]
+            ), f"{tuple(dims)} != {out[k].dims}"
+            out[k].values[..., missing] = _fill_value(fill_value, out[k].dtype)
+            # raise NotImplementedError("Missing data")
+    return add_dims(out)
     return out
 
 
