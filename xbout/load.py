@@ -820,6 +820,8 @@ def _expand_braces(path):
         outs.append("".join([a + b for a, b in zip(first, secondi)]) + remainder)
         # outs.append(sum(list(zip(
     return outs
+
+
 def _read_splitting(filepath, info, keep_yboundaries):
     with xr.open_dataset(str(filepath)) as ds:
         pass
