@@ -54,7 +54,7 @@ def weights(rz, mesh):
     return weigth, ij
 
 
-def _evalat(ds, r, phi, z, key, delta_phi, fill_value, progress, slow=True):
+def _evalat(ds, r, phi, z, key, delta_phi, fill_value, progress):
     r0, phi0, z0 = r, phi, z
     dims, shape, coords, (r, phi, z) = get_out_shape(r, phi, z)
     plus = tuple([f"delta_{x}" for x in "xyz"])
@@ -297,7 +297,6 @@ def evaluate_at_rpz(
     fill_value=np.nan,
     lazy=False,
     progress=False,
-    slow=False,
 ):
     """
     Evaluate the field key in the dataset at the positions given by
