@@ -295,7 +295,6 @@ def evaluate_at_rpz(
     key=None,
     delta_phi: float = None,
     fill_value=np.nan,
-    lazy=False,
     progress=False,
 ):
     """
@@ -325,10 +324,6 @@ def evaluate_at_rpz(
         If fill_value is None, missing data is initialised as
         np.nan, or as -1 for non-float datatypes. Otherwise
         fill_value is used to set missing data.
-    lazy : bool
-        Force the loading of the data for key. Defaults to False.
-        Can significantly decrease performance, but can decrease
-        memory usage.
     progress : bool
         Show the progress of the mapping. Defaults to False.
     """
