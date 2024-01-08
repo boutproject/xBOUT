@@ -20,9 +20,9 @@ jobs:
       fail-fast: true
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -49,9 +49,9 @@ jobs:
       fail-fast: true
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -73,9 +73,9 @@ jobs:
   #  if: always()
 
   #  steps:
-  #  - uses: actions/checkout@v2
+  #  - uses: actions/checkout@v4
   #  - name: Set up Python
-  #    uses: actions/setup-python@v1
+  #    uses: actions/setup-python@v4
   #  - name: Install dependencies
   #    run: |
   #      python -m pip install --upgrade pip
@@ -91,9 +91,9 @@ jobs:
     if: always()
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -108,9 +108,9 @@ jobs:
     needs: [pytest, pytest-min-versions, black]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: '3.x'
     - name: Install dependencies
