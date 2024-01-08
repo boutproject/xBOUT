@@ -159,7 +159,6 @@ def evaluate_at_keys(ds, keys, key, fill_value=np.nan, slow=False):
         else:
             slcp = [slc[d] if d in slc else slice(None) for d in ds[k].dims]
             dat = np.asanyarray(ds[k].values)
-            ds[c] = ds[k].dims, dat
             theisel = dat[tuple(slcp)]
         assert theisel.shape[-3:] == (2, 2, 2)
         assert weights.shape[-3:] == (2, 2, 2)
