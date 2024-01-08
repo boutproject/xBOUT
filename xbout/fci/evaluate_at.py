@@ -175,10 +175,12 @@ def evaluate_at_keys(ds, keys, key, fill_value=np.nan, slow=False):
         except AttributeError:
             pass
         outd = []
+        havenew = False
         for d in ds[k].dims:
-            if d == "x":
-                outd += weights.dims[:-3]
             if d in "xyz":
+                if not havenew:
+                    havenew = True
+                    outd += weights.dims[:-3]
                 continue
             outd.append(d)
         tmp = np.einsum("...ijk,...ijk->...", theisel, weights)
