@@ -900,21 +900,79 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
 
     nprocs = nxpe * nype
     n_runs = int(len(filepaths) / nprocs)
-    if len(filepaths) % nprocs != 0:
-        raise ValueError(
-            "Each run directory does not contain an equal number "
-            "of output files. If the parallelization scheme of "
-            "your simulation changed partway-through, then please "
-            "load each directory separately and concatenate them "
-            "along the time dimension with xarray.concat()."
-        )
+    runids = []
 
-    # Create list of lists of filepaths, so that xarray knows how they should
-    # be concatenated by xarray.open_mfdataset()
-    paths = iter(filepaths)
-    paths_grid = [
-        [[next(paths) for x in range(nxpe)] for y in range(nype)] for t in range(n_runs)
-    ]
+    def getrunid(fp):
+        if _is_path(fp):
+            try:
+                with xr.open_dataset(fp) as tmp:
+                    return tmp.get("run_id", None)
+            except FileNotFoundError:
+                return None
+        return fp.get("run_id", None)
+
+    for fp in filepaths:
+        thisrunid = getrunid(fp)
+        if thisrunid is None:
+            runids = None
+            break
+        runids.append(thisrunid)
+    if not runids:
+        if len(filepaths) < nprocs:
+            if len(filepaths) == 1:
+                raise ValueError(
+                    "A parallel simulation was loaded, but only a single "
+                    "file was loaded. Please ensure to pass in all files "
+                    "by specifing e.g. `BOUT.dmp.*.nc` rather than "
+                    "`BOUT.dmp.0.nc`."
+                )
+            raise ValueError(
+                f"A parallel simulation was loaded, but only {len(filepathts)} "
+                "files were loaded. Please ensure to pass in all files "
+                "by specifing e.g. `BOUT.dmp.*.nc`"
+            )
+        if len(filepaths) % nprocs != 0:
+            raise ValueError(
+                "Each run directory does not contain an equal number "
+                "of output files. If the parallelization scheme of "
+                "your simulation changed partway-through, then please "
+                "load each directory separately and concatenate them "
+                "along the time dimension with xarray.concat()."
+            )
+        # Create list of lists of filepaths, so that xarray knows how they should
+        # be concatenated by xarray.open_mfdataset()
+        paths = iter(filepaths)
+        paths_grid = [
+            [[next(paths) for x in range(nxpe)] for y in range(nype)]
+            for t in range(n_runs)
+        ]
+
+    else:
+        paths_sorted = []
+        lastid = None
+        for path, gid in zip(filepaths, runids):
+            if lastid != gid:
+                lastid = gid
+                paths_sorted.append([])
+            paths_sorted[-1].append(path)
+        paths_grid = []
+        for paths in paths_sorted:
+            if len(paths) != nprocs:
+                with xr.open_dataset(paths[0]) as tmp:
+                    if tmp["PE_XIND"] != 0 or tmp["PE_YIND"] != 0:
+                        # The first file is missing.
+                        warn(
+                            f"Ignoring {len(paths)} files as the first seems to be missing: {paths}"
+                        )
+                        continue
+                    assert tmp["NXPE"] == nxpe
+                    assert tmp["NYPE"] == nype
+                raise ValueError(
+                    f"Something is wrong. We expected {nprocs} files but found {len(paths)} files."
+                )
+            paths = iter(paths)
+
+            paths_grid.append([[next(paths) for x in range(nxpe)] for y in range(nype)])
 
     # Dimensions along which no concatenation is needed are still present as
     # single-element lists, so need to concatenation along dim=None for those
