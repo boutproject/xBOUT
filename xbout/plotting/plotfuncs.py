@@ -864,6 +864,7 @@ def plot2d_polygon(
     add_colorbar = True,
     colorbar_label = None,
     separatrix = True,
+    separatrix_kwargs = {"color":"white", "linestyle":"-", "linewidth":1},
     targets = False,
     add_limiter_hatching=True,
     grid_only = False,
@@ -945,32 +946,7 @@ def plot2d_polygon(
     ax.set_title(da.name)
     
     if separatrix:
-        # plot_separatrices(da, ax, x = "R", y = "Z")
+        plot_separatrices(da, ax, x = "R", y = "Z", **separatrix_kwargs)
         
-        color = "white"
-        ls = "-"
-        lw = 2
-        
-        m = da.attrs["metadata"]
-        
-        
-        
-        if m["topology"] == "connected-double-null":
-            
-            # TODO: test this for single null
-            if m["MXG"] > 0 or m["MYG"] > 0:
-                lhs = (m["ixseps1"] + 1 - m["MXG"], slice(0,m["ny_inner"] + m["MYG"] * int(4/2)))
-                rhs = (m["ixseps1"] + 1 - m["MXG"], slice(m["ny_inner"]+m["MYG"]*(4 - 1), None))
-            else:
-                lhs = (m["ixseps1"]-m["MXG"]-1, slice(0,m["ny_inner"]))
-                rhs = (m["ixseps1"]-m["MXG"]-1, slice(m["ny_inner"], None))
-            ax.plot(da["Rxy_lower_right_corners"].data[lhs], da["Zxy_lower_right_corners"].data[lhs], c = color, lw = lw, ls = ls)
-            ax.plot(da["Rxy_lower_right_corners"].data[rhs], da["Zxy_lower_right_corners"].data[rhs], c = color, lw = lw, ls = ls)
-        
-        if m["topology"] == "single-null":
-            points = (m["ixseps1"]-m["MXG"]-1, slice(0,None))      
-            ax.plot(da["Rxy_lower_right_corners"].data[points], da["Zxy_lower_right_corners"].data[points], c = color, lw = lw, ls = ls)
-
-
     if targets:
         plot_targets(da, ax, x = "R", y = "Z", hatching = add_limiter_hatching)
