@@ -381,14 +381,14 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
             "total_poloidal_distance",
             "zShift",
             "zShift_ylow",
-            "Rxy_corners",   # Lower left corners
+            "Rxy_corners",  # Lower left corners
             "Rxy_lower_right_corners",
             "Rxy_upper_left_corners",
             "Rxy_upper_right_corners",
-            "Zxy_corners",   # Lower left corners
+            "Zxy_corners",  # Lower left corners
             "Zxy_lower_right_corners",
             "Zxy_upper_left_corners",
-            "Zxy_upper_right_corners"
+            "Zxy_upper_right_corners",
         ],
     )
 
@@ -427,23 +427,24 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         ds = ds.set_coords(("R", "Z"))
     else:
         ds = ds.set_coords(("Rxy", "Zxy"))
-    
+
     # Add cell corners as coordinates for polygon plotting
     if "Rxy_lower_right_corners" in ds:
         ds = ds.rename(
-            Rxy_corners = "Rxy_lower_left_corners",
-            Zxy_corners = "Zxy_lower_left_corners"
+            Rxy_corners="Rxy_lower_left_corners", Zxy_corners="Zxy_lower_left_corners"
+        )
+        ds = ds.set_coords(
+            (
+                "Rxy_lower_left_corners",
+                "Rxy_lower_right_corners",
+                "Rxy_upper_left_corners",
+                "Rxy_upper_right_corners",
+                "Zxy_lower_left_corners",
+                "Zxy_lower_right_corners",
+                "Zxy_upper_left_corners",
+                "Zxy_upper_right_corners",
             )
-        ds = ds.set_coords((
-            "Rxy_lower_left_corners",
-            "Rxy_lower_right_corners",
-            "Rxy_upper_left_corners",
-            "Rxy_upper_right_corners",
-            "Zxy_lower_left_corners",
-            "Zxy_lower_right_corners",
-            "Zxy_upper_left_corners",
-            "Zxy_upper_right_corners"
-             ))
+        )
 
     # Rename zShift_ylow if it was added from grid file, to be consistent with name if
     # it was added from dump file

@@ -220,5 +220,4 @@ class TestAccuracyAgainstOldCollect:
 
 
 @pytest.mark.skip
-class test_speed_against_old_collect:
-    ...
+class test_speed_against_old_collect: ...
