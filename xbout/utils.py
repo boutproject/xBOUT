@@ -128,27 +128,6 @@ def _update_metadata_increased_resolution(da, n):
     return da
 
 
-def _add_cartesian_coordinates(ds):
-    # Add Cartesian X and Y coordinates if they do not exist already
-    # Works on either BoutDataset or BoutDataArray
-
-    R = ds["R"]
-    Z = ds["Z"]
-    zeta = ds[ds.metadata["bout_zdim"]]
-    if "X_cartesian" not in ds.coords:
-        X = R * np.cos(zeta)
-        ds = ds.assign_coords(X_cartesian=X)
-    if "Y_cartesian" not in ds.coords:
-        Y = R * np.sin(zeta)
-        ds = ds.assign_coords(Y_cartesian=Y)
-    if "Z_cartesian" not in ds.coords:
-        zcoord = ds.metadata["bout_zdim"]
-        nz = len(ds[zcoord])
-        ds = ds.assign_coords(Z_cartesian=Z.expand_dims({zcoord: nz}, axis=-1))
-
-    return ds
-
-
 def _1d_coord_from_spacing(spacing, dim, ds=None, *, origin_at=None):
     """
     Create a 1d coordinate varying along the dimension 'dim' from the grid spacing
@@ -252,7 +231,6 @@ def _check_new_nxpe(ds, nxpe):
     # Check nxpe is valid
 
     nx = ds.metadata["nx"] - 2 * ds.metadata["MXG"]
-    mxsub = nx // nxpe
 
     if nx % nxpe != 0:
         raise ValueError(
@@ -514,21 +492,23 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
                     if isinstance(value, str):
                         # Write strings as byte-strings so BOUT++ can read them
                         value = value.encode()
+                    elif isinstance(value, int):
+                        value = np.intc(value)
 
                     restart_ds[v] = value
 
             # These variables need to be altered, because they depend on the number of
             # files and/or the rank of this file.
-            restart_ds["MXSUB"] = mxsub
-            restart_ds["MYSUB"] = mysub
-            restart_ds["NXPE"] = nxpe
-            restart_ds["NYPE"] = nype
-            restart_ds["PE_XIND"] = xproc
-            restart_ds["PE_YIND"] = yproc
-            restart_ds["hist_hi"] = hist_hi
-            restart_ds["PE_XIND"] = xproc
-            restart_ds["PE_YIND"] = yproc
-            restart_ds["MYPE"] = yproc * nxpe + xproc
+            restart_ds["MXSUB"] = np.intc(mxsub)
+            restart_ds["MYSUB"] = np.intc(mysub)
+            restart_ds["NXPE"] = np.intc(nxpe)
+            restart_ds["NYPE"] = np.intc(nype)
+            restart_ds["PE_XIND"] = np.intc(xproc)
+            restart_ds["PE_YIND"] = np.intc(yproc)
+            restart_ds["hist_hi"] = np.intc(hist_hi)
+            restart_ds["PE_XIND"] = np.intc(xproc)
+            restart_ds["PE_YIND"] = np.intc(yproc)
+            restart_ds["MYPE"] = np.intc(yproc * nxpe + xproc)
 
             # tt is the simulation time where the restart happens
             restart_ds["tt"] = tt
@@ -686,7 +666,6 @@ def _follow_boundary(ds, start_region, start_direction, xbndry, ybndry, Rcoord, 
         visited_regions.append(this_region)
 
         ds_region = ds.bout.from_region(this_region, with_guards=0)
-        region = ds.bout._regions[this_region]
 
         # Get all boundary points from this region, and decide which region to go to next
         this_region = None
@@ -748,9 +727,6 @@ def _get_bounding_surfaces(ds, coords):
         ybndry = ds.metadata["MYG"]
     else:
         ybndry = 0
-
-    xcoord = ds.metadata["bout_xdim"]
-    ycoord = ds.metadata["bout_ydim"]
 
     # First find the outer boundary
     start_region = None

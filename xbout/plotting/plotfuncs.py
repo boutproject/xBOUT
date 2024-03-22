@@ -13,7 +13,6 @@ from .utils import (
     _decompose_regions,
     _is_core_only,
     _k3d_plot_isel,
-    _make_structured_triangulation,
     plot_separatrices,
     plot_targets,
 )
@@ -48,7 +47,7 @@ def plot_regions(da, ax=None, **kwargs):
     da_regions = _decompose_regions(da)
 
     colored_regions = [
-        xr.full_like(da_region, fill_value=num / len(regions))
+        xr.full_like(da_region, fill_value=num / len(da_regions))
         for num, da_region in enumerate(da_regions.values())
     ]
 
@@ -102,7 +101,7 @@ def plot2d_wrapper(
     """
     Make a 2D plot using an xarray method, taking into account branch cuts (X-points).
 
-    Wraps `xarray.plot` methods, so automatically adds labels.
+    Wraps `xarray.DataArray.plot` methods, so automatically adds labels.
 
     Parameters
     ----------
@@ -311,11 +310,11 @@ def plot2d_wrapper(
 
         for x, y in zip(x_regions, y_regions):
             if (
-                not da.metadata["bout_xdim"] in x.dims
-                and not da.metadata["bout_ydim"] in x.dims
+                da.metadata["bout_xdim"] not in x.dims
+                and da.metadata["bout_ydim"] not in x.dims
             ) or (
-                not da.metadata["bout_xdim"] in y.dims
-                and not da.metadata["bout_ydim"] in y.dims
+                da.metadata["bout_xdim"] not in y.dims
+                and da.metadata["bout_ydim"] not in y.dims
             ):
                 # Small regions around X-point do not have segments in x- or y-directions,
                 # so skip
@@ -433,15 +432,16 @@ def plot3d(
     mayavi_figure : mayavi.core.scene.Scene, default None
         Existing Mayavi figure to add this plot to.
     mayavi_figure_args : dict, default None
-        Arguments to use when creating a new Mayavi figure. Ignored if `mayavi_figure`
+        Arguments to use when creating a new Mayavi figure. Ignored if ``mayavi_figure``
         is passed.
     mayavi_view : (float, float, float), default None
-        If set, arguments are passed to mlab.view() to set the view when engine="mayavi"
+        If set, arguments are passed to `mayavi.mlab.view` to set the
+        view when ``engine="mayavi"``
     vmin, vmax : float
         vmin and vmax are treated specially. If a float is passed, then it is used for
         vmin/vmax. If the arguments are not passed, then the minimum and maximum of the
         data are used. For an animation, to get minimum and/or maximum calculated
-        separately for each frame, pass `vmin=None` and/or `vmax=None` explicitly.
+        separately for each frame, pass ``vmin=None`` and/or ``vmax=None`` explicitly.
     **kwargs
         Extra keyword arguments are passed to the backend plotting function
     """
@@ -544,7 +544,6 @@ def plot3d(
                 from scipy.interpolate import (
                     RegularGridInterpolator,
                     griddata,
-                    LinearNDInterpolator,
                 )
 
                 print("start interpolating")
@@ -800,7 +799,7 @@ def plot3d(
                         # First create png files in the temporary directory
                         temp_path = Path(d)
                         temp_save_as = str(temp_path.joinpath("temp.png"))
-                        print(f"tind=0")
+                        print("tind=0")
                         plot_objects = create_or_update_plot(
                             tind=0, this_save_as=temp_save_as
                         )

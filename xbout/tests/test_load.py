@@ -1,16 +1,8 @@
-from collections import namedtuple
-from copy import deepcopy
-import inspect
 from pathlib import Path
-import re
-from functools import reduce
-import operator
 
 import pytest
 
-import numpy as np
-
-from xarray import DataArray, Dataset, concat
+from xarray import concat
 from xarray.tests.test_dataset import create_test_data
 import xarray.testing as xrt
 
@@ -28,7 +20,7 @@ from xbout.load import (
     _BOUT_TIME_DEPENDENT_META_VARS,
 )
 from xbout.utils import _separate_metadata
-from xbout.tests.utils_for_tests import _get_kwargs
+from xbout.tests.utils_for_tests import create_bout_ds, METADATA_VARS
 
 
 def test_check_extensions(tmp_path):
@@ -124,7 +116,7 @@ class TestPathHandling:
 
         with pytest.raises(IOError):
             path = files_dir.joinpath("run*/example.*.nc")
-            actual_filepaths = _expand_filepaths(path)
+            _expand_filepaths(path)
 
 
 @pytest.fixture()
@@ -262,554 +254,6 @@ class TestArrange:
         )
         assert expected_path_grid == actual_path_grid
         assert actual_concat_dims == ["t", "y", "x"]
-
-
-@pytest.fixture(scope="session")
-def bout_xyt_example_files(tmp_path_factory):
-    return _bout_xyt_example_files
-
-
-_bout_xyt_example_files_cache = {}
-
-
-def _bout_xyt_example_files(
-    tmp_path_factory,
-    prefix="BOUT.dmp",
-    lengths=(6, 2, 4, 7),
-    nxpe=4,
-    nype=2,
-    nt=1,
-    guards=None,
-    syn_data_type="random",
-    grid=None,
-    squashed=False,
-    topology="core",
-    write_to_disk=False,
-    bout_v5=False,
-    metric_3D=False,
-):
-    """
-    Mocks up a set of BOUT-like Datasets
-
-    Either returns list of Datasets (if write_to_disk=False)
-    or writes Datasets to netCDF files and returns the temporary test directory
-    containing them, deleting the temporary directory once that test is done (if
-    write_to_disk=True).
-    """
-    call_args = _get_kwargs(ignore="tmp_path_factory")
-
-    try:
-        # Has been called with the same signature before, just return the cached result
-        return deepcopy(_bout_xyt_example_files_cache[call_args])
-    except KeyError:
-        pass
-
-    if guards is None:
-        guards = {}
-
-    mxg = guards.get("x", 0)
-    myg = guards.get("y", 0)
-
-    if squashed:
-        # create a single data-file, but alter the 'nxpe' and 'nype' variables, as if the
-        # file had been created by combining a set of BOUT.dmp.*.nc files
-        this_lengths = (
-            lengths[0],
-            lengths[1] * nxpe,
-            lengths[2] * nype,
-            lengths[3],
-        )
-        ds_list, file_list = create_bout_ds_list(
-            prefix=prefix,
-            lengths=this_lengths,
-            nxpe=1,
-            nype=1,
-            nt=nt,
-            guards=guards,
-            topology=topology,
-            syn_data_type=syn_data_type,
-            squashed=True,
-            bout_v5=bout_v5,
-            metric_3D=metric_3D,
-        )
-        ds_list[0]["nxpe"] = nxpe
-        ds_list[0]["nype"] = nype
-    else:
-        ds_list, file_list = create_bout_ds_list(
-            prefix=prefix,
-            lengths=lengths,
-            nxpe=nxpe,
-            nype=nype,
-            nt=nt,
-            guards=guards,
-            topology=topology,
-            syn_data_type=syn_data_type,
-            bout_v5=bout_v5,
-            metric_3D=metric_3D,
-        )
-
-    if grid is not None:
-        xsize = lengths[1] * nxpe
-        ysize = lengths[2] * nype
-        grid_ds = create_bout_grid_ds(
-            xsize=xsize,
-            ysize=ysize,
-            guards=guards,
-            topology=topology,
-            ny_inner=3 * lengths[2],
-        )
-
-    if not write_to_disk:
-        if grid is None:
-            _bout_xyt_example_files_cache[call_args] = ds_list
-            return deepcopy(ds_list)
-        else:
-            _bout_xyt_example_files_cache[call_args] = ds_list, grid_ds
-            return deepcopy((ds_list, grid_ds))
-        raise ValueError("tmp_path_factory required when write_to_disk=True")
-
-    save_dir = tmp_path_factory.mktemp("data")
-
-    for ds, file_name in zip(ds_list, file_list):
-        ds.to_netcdf(save_dir.joinpath(file_name))
-
-    if grid is not None:
-        grid_ds.to_netcdf(save_dir.joinpath(grid + ".nc"))
-
-    # Return a glob-like path to all files created, which has all file numbers replaced
-    # with a single asterix
-    path = str(save_dir.joinpath(file_list[-1]))
-
-    count = 1
-    if nt > 1:
-        count += 1
-    # We have to reverse the path before limiting the number of numbers replaced so that the
-    # tests don't get confused by pytest's persistent temporary directories (which are also designated
-    # by different numbers)
-    glob_pattern = Path((re.sub(r"\d+", "*", path[::-1], count=count))[::-1])
-    _bout_xyt_example_files_cache[call_args] = glob_pattern
-    return glob_pattern
-
-
-def create_bout_ds_list(
-    prefix,
-    lengths=(6, 2, 4, 7),
-    nxpe=4,
-    nype=2,
-    nt=1,
-    guards={},
-    topology="core",
-    syn_data_type="random",
-    squashed=False,
-    bout_v5=False,
-    metric_3D=False,
-):
-    """
-    Mocks up a set of BOUT-like datasets.
-
-    Structured as though they were produced by a x-y parallelised run with multiple restarts.
-    """
-
-    if nt != 1:
-        raise ValueError(
-            "nt > 1 means the time dimension is split over several "
-            + "directories. This is not implemented yet."
-        )
-
-    file_list = []
-    ds_list = []
-    for j in range(nype):
-        for i in range(nxpe):
-            num = i + nxpe * j
-            filename = prefix + "." + str(num) + ".nc"
-            file_list.append(filename)
-
-            # Include guard cells
-            upper_bndry_cells = {dim: guards.get(dim) for dim in guards.keys()}
-            lower_bndry_cells = {dim: guards.get(dim) for dim in guards.keys()}
-
-            ds = create_bout_ds(
-                syn_data_type=syn_data_type,
-                num=num,
-                lengths=lengths,
-                nxpe=nxpe,
-                nype=nype,
-                xproc=i,
-                yproc=j,
-                guards=guards,
-                topology=topology,
-                squashed=squashed,
-                bout_v5=bout_v5,
-                metric_3D=metric_3D,
-            )
-            ds_list.append(ds)
-
-    return ds_list, file_list
-
-
-_create_bout_ds_cache = {}
-
-
-def create_bout_ds(
-    syn_data_type="random",
-    lengths=(6, 2, 4, 7),
-    num=0,
-    nxpe=1,
-    nype=1,
-    xproc=0,
-    yproc=0,
-    guards=None,
-    topology="core",
-    squashed=False,
-    bout_v5=False,
-    metric_3D=False,
-):
-    call_args = _get_kwargs()
-
-    try:
-        # Has been called with the same signature before, just return the cached result
-        return deepcopy(_create_bout_ds_cache[call_args])
-    except KeyError:
-        pass
-
-    if metric_3D and not bout_v5:
-        raise ValueError("3D metric requires BOUT++ v5")
-
-    if guards is None:
-        guards = {}
-
-    # Set the shape of the data in this dataset
-    t_length, x_length, y_length, z_length = lengths
-    mxg = guards.get("x", 0)
-    myg = guards.get("y", 0)
-    x_length += 2 * mxg
-    y_length += 2 * myg
-
-    # calculate global nx, ny and nz
-    nx = nxpe * lengths[1] + 2 * mxg
-    ny = nype * lengths[2]
-    nz = 1 * lengths[3]
-
-    if squashed and "double-null" in topology:
-        ny = ny + 2 * myg
-        y_length = y_length + 2 * myg
-    shape = (t_length, x_length, y_length, z_length)
-
-    # Fill with some kind of synthetic data
-    if syn_data_type == "random":
-        # Each dataset contains unique random noise
-        np.random.seed(seed=num)
-        data = np.random.randn(*shape)
-    elif syn_data_type == "linear":
-        # Variables increase linearly across entire domain
-        data = DataArray(-np.ones(shape), dims=("t", "x", "y", "z"))
-
-        t_array = DataArray(
-            (nx - 2 * mxg) * ny * nz * np.arange(t_length, dtype=float), dims="t"
-        )
-        x_array = DataArray(
-            ny * nz * (xproc * lengths[1] + np.arange(lengths[1], dtype=float)),
-            dims="x",
-        )
-        y_array = DataArray(
-            nz * (yproc * lengths[2] + np.arange(lengths[2], dtype=float)), dims="y"
-        )
-        z_array = DataArray(np.arange(z_length, dtype=float), dims="z")
-
-        data[:, mxg : x_length - mxg, myg : lengths[2] + myg, :] = (
-            t_array + x_array + y_array + z_array
-        )
-    elif syn_data_type == "stepped":
-        # Each dataset contains a different number depending on the filename
-        data = np.ones(shape) * num
-    elif isinstance(syn_data_type, int):
-        data = np.ones(shape) * syn_data_type
-    else:
-        raise ValueError("Not a recognised choice of type of synthetic bout data.")
-
-    T = DataArray(data, dims=["t", "x", "y", "z"])
-    n = DataArray(data, dims=["t", "x", "y", "z"])
-    S = DataArray(data[:, :, :, 0], dims=["t", "x", "y"])
-    for v in [n, T]:
-        v.attrs["direction_y"] = "Standard"
-        v.attrs["cell_location"] = "CELL_CENTRE"
-        v.attrs["direction_z"] = "Standard"
-    for v in [S]:
-        v.attrs["direction_y"] = "Standard"
-        v.attrs["cell_location"] = "CELL_CENTRE"
-        v.attrs["direction_z"] = "Average"
-    ds = Dataset({"n": n, "T": T, "S": S})
-
-    # BOUT_VERSION needed to deal with backwards incompatible changes:
-    #
-    # - v3 and earlier: number of points in z is MZ-1
-    # - v4 and later: number of points in z is MZ
-    # - v5 and later: metric components can be either 2D or 3D
-    # - v5 and later: dz changed to be a Field2D/3D
-    ds["BOUT_VERSION"] = 5.0 if bout_v5 else 4.3
-    ds["use_metric_3d"] = int(metric_3D)
-
-    # Include grid data
-    ds["NXPE"] = nxpe
-    ds["NYPE"] = nype
-    ds["NZPE"] = 1
-    ds["PE_XIND"] = xproc
-    ds["PE_YIND"] = yproc
-    ds["MYPE"] = num
-
-    ds["MXG"] = mxg
-    ds["MYG"] = myg
-    ds["MZG"] = 0
-    ds["nx"] = nx
-    ds["ny"] = ny
-    ds["nz"] = nz
-    ds["MZ"] = 1 * lengths[3]
-    if squashed:
-        ds["MXSUB"] = lengths[1] // nxpe
-        ds["MYSUB"] = lengths[2] // nype
-        ds["MZSUB"] = lengths[3]
-    else:
-        ds["MXSUB"] = lengths[1]
-        ds["MYSUB"] = lengths[2]
-        ds["MZSUB"] = lengths[3]
-
-    MYSUB = lengths[2]
-
-    extra_boundary_points = 0
-
-    if topology == "core":
-        ds["ixseps1"] = nx
-        ds["ixseps2"] = nx
-        ds["jyseps1_1"] = -1
-        ds["jyseps2_1"] = ny // 2 - 1
-        ds["jyseps1_2"] = ny // 2 - 1
-        ds["jyseps2_2"] = ny - 1
-        ds["ny_inner"] = ny // 2
-    elif topology == "sol":
-        ds["ixseps1"] = 0
-        ds["ixseps2"] = 0
-        ds["jyseps1_1"] = -1
-        ds["jyseps2_1"] = ny // 2 - 1
-        ds["jyseps1_2"] = ny // 2 - 1
-        ds["jyseps2_2"] = ny - 1
-        ds["ny_inner"] = ny // 2
-    elif topology == "limiter":
-        ds["ixseps1"] = nx // 2
-        ds["ixseps2"] = nx
-        ds["jyseps1_1"] = -1
-        ds["jyseps2_1"] = ny // 2 - 1
-        ds["jyseps1_2"] = ny // 2 - 1
-        ds["jyseps2_2"] = ny - 1
-        ds["ny_inner"] = ny // 2
-    elif topology == "xpoint":
-        if nype < 4 and not squashed:
-            raise ValueError(f"Not enough processors for xpoint topology: nype={nype}")
-        ds["ixseps1"] = nx // 2
-        ds["ixseps2"] = nx // 2
-        ds["jyseps1_1"] = MYSUB - 1
-        ny_inner = 2 * MYSUB
-        ds["ny_inner"] = ny_inner
-        ds["jyseps2_1"] = MYSUB - 1
-        ds["jyseps1_2"] = ny - MYSUB - 1
-        ds["jyseps2_2"] = ny - MYSUB - 1
-    elif topology == "single-null":
-        if nype < 3 and not squashed:
-            raise ValueError(f"Not enough processors for xpoint topology: nype={nype}")
-        ds["ixseps1"] = nx // 2
-        ds["ixseps2"] = nx
-        ds["jyseps1_1"] = MYSUB - 1
-        ds["jyseps2_1"] = ny // 2 - 1
-        ds["jyseps1_2"] = ny // 2 - 1
-        ds["jyseps2_2"] = ny - MYSUB - 1
-        ds["ny_inner"] = ny // 2
-    elif topology == "connected-double-null":
-        if nype < 6 and not squashed:
-            raise ValueError(
-                "Not enough processors for connected-double-null topology: "
-                f"nype={nype}"
-            )
-        ds["ixseps1"] = nx // 2
-        ds["ixseps2"] = nx // 2
-        ds["jyseps1_1"] = MYSUB - 1
-        ny_inner = 3 * MYSUB
-        ds["ny_inner"] = ny_inner
-        ds["jyseps2_1"] = ny_inner - MYSUB - 1
-        ds["jyseps1_2"] = ny_inner + MYSUB - 1
-        ds["jyseps2_2"] = ny - MYSUB - 1
-    elif topology == "lower-disconnected-double-null":
-        if nype < 6 and not squashed:
-            raise ValueError(
-                "Not enough processors for lower-disconnected-double-null "
-                f"topology: nype={nype}"
-            )
-        ds["ixseps1"] = nx // 2
-        ds["ixseps2"] = nx // 2 + 4
-        if ds["ixseps2"] >= nx:
-            raise ValueError(
-                "Not enough points in the x-direction. ixseps2="
-                f'{ds["ixseps2"]} > nx={nx}'
-            )
-        ds["jyseps1_1"] = MYSUB - 1
-        ny_inner = 3 * MYSUB
-        ds["ny_inner"] = ny_inner
-        ds["jyseps2_1"] = ny_inner - MYSUB - 1
-        ds["jyseps1_2"] = ny_inner + MYSUB - 1
-        ds["jyseps2_2"] = ny - MYSUB - 1
-    elif topology == "upper-disconnected-double-null":
-        if nype < 6 and not squashed:
-            raise ValueError(
-                "Not enough processors for upper-disconnected-double-null "
-                f"topology: nype={nype}"
-            )
-        ds["ixseps2"] = nx // 2
-        ds["ixseps1"] = nx // 2 + 4
-        if ds["ixseps2"] >= nx:
-            raise ValueError(
-                "Not enough points in the x-direction. ixseps2="
-                f'{ds["ixseps2"]} > nx={nx}'
-            )
-        ds["jyseps1_1"] = MYSUB - 1
-        ny_inner = 3 * MYSUB
-        ds["ny_inner"] = ny_inner
-        ds["jyseps2_1"] = ny_inner - MYSUB - 1
-        ds["jyseps1_2"] = ny_inner + MYSUB - 1
-        ds["jyseps2_2"] = ny - MYSUB - 1
-    else:
-        raise ValueError(f"Unrecognised topology={topology}")
-
-    if metric_3D:
-        one = DataArray(np.ones((x_length, y_length, z_length)), dims=["x", "y", "z"])
-        zero = DataArray(np.zeros((x_length, y_length, z_length)), dims=["x", "y", "z"])
-    else:
-        one = DataArray(np.ones((x_length, y_length)), dims=["x", "y"])
-        zero = DataArray(np.zeros((x_length, y_length)), dims=["x", "y"])
-
-    ds["zperiod"] = 1
-    ds["ZMIN"] = 0.0
-    ds["ZMAX"] = 1.0
-    ds["g11"] = one
-    ds["g22"] = one
-    ds["g33"] = one
-    ds["g12"] = zero
-    ds["g13"] = zero
-    ds["g23"] = zero
-    ds["g_11"] = one
-    ds["g_22"] = one
-    ds["g_33"] = one
-    ds["g_12"] = zero
-    ds["g_13"] = zero
-    ds["g_23"] = zero
-    ds["G1"] = zero
-    ds["G2"] = zero
-    ds["G3"] = zero
-    ds["J"] = one
-    ds["Bxy"] = one
-    ds["zShift"] = zero
-
-    ds["dx"] = 0.5 * one
-    ds["dy"] = 2.0 * one
-    if bout_v5:
-        ds["dz"] = 2.0 * one * np.pi / nz
-    else:
-        ds["dz"] = 2.0 * np.pi / nz
-
-    ds["iteration"] = t_length - 1
-    ds["hist_hi"] = t_length - 1
-    ds["t_array"] = DataArray(np.arange(t_length, dtype=float) * 10.0, dims="t")
-    ds["tt"] = ds["t_array"][-1]
-
-    # xarray adds this encoding when opening a file. Emulate here as it may be used to
-    # get the file number
-    ds.encoding["source"] = f"BOUT.dmp.{num}.nc"
-
-    _create_bout_ds_cache[call_args] = ds
-    return deepcopy(ds)
-
-
-_create_bout_grid_ds_cache = {}
-
-
-def create_bout_grid_ds(xsize=2, ysize=4, guards={}, topology="core", ny_inner=0):
-    call_args = _get_kwargs()
-
-    try:
-        # Has been called with the same signature before, just return the cached result
-        return deepcopy(_create_bout_grid_ds_cache[call_args])
-    except KeyError:
-        pass
-
-    # Set the shape of the data in this dataset
-    mxg = guards.get("x", 0)
-    myg = guards.get("y", 0)
-    xsize += 2 * mxg
-    ysize += 2 * myg
-
-    # jyseps* from grid file only ever used to check topology when loading the grid file,
-    # so do not need to be consistent with the main dataset
-    jyseps2_1 = ysize // 2
-    jyseps1_2 = jyseps2_1
-
-    if "double-null" in topology or "xpoint" in topology:
-        # Has upper target as well
-        ysize += 2 * myg
-
-        # make different from jyseps2_1 so double-null toplogy is recognised
-        jyseps1_2 += 1
-
-    shape = (xsize, ysize)
-
-    data = DataArray(np.ones(shape), dims=["x", "y"])
-
-    ds = Dataset(
-        {
-            "psixy": data,
-            "Rxy": data,
-            "Zxy": data,
-            "hthe": data,
-            "y_boundary_guards": myg,
-            "jyseps2_1": jyseps2_1,
-            "jyseps1_2": jyseps1_2,
-            "ny_inner": ny_inner,
-            "y_boundary_guards": myg,
-        }
-    )
-
-    _create_bout_grid_ds_cache[call_args] = ds
-    return deepcopy(ds)
-
-
-# Note, MYPE, PE_XIND and PE_YIND not included, since they are different for each
-# processor and so are dropped when loading datasets.
-METADATA_VARS = [
-    "BOUT_VERSION",
-    "NXPE",
-    "NYPE",
-    "NZPE",
-    "MXG",
-    "MYG",
-    "MZG",
-    "nx",
-    "ny",
-    "nz",
-    "MZ",
-    "MXSUB",
-    "MYSUB",
-    "MZSUB",
-    "hist_hi",
-    "iteration",
-    "ixseps1",
-    "ixseps2",
-    "jyseps1_1",
-    "jyseps1_2",
-    "jyseps2_1",
-    "jyseps2_2",
-    "ny_inner",
-    "tt",
-    "zperiod",
-    "ZMIN",
-    "ZMAX",
-    "use_metric_3d",
-]
 
 
 class TestStripMetadata:
@@ -1291,11 +735,13 @@ class TestTrim:
         """
         Numbering scheme for nxpe=3, nype=4
 
-        y  9 10 11
-        ^  6 7  8
-        |  3 4  5
-        |  0 1  2
-         -----> x
+        .. code:: text
+
+            y  9 10 11
+            ^  6 7  8
+            |  3 4  5
+            |  0 1  2
+             -----> x
         """
 
         ds = create_test_data(0)
@@ -1320,11 +766,13 @@ class TestTrim:
         """
         Numbering scheme for nxpe=3, nype=4
 
-        y  9 10 11
-        ^  6 7  8
-        |  3 4  5
-        |  0 1  2
-         -----> x
+        .. code:: text
+
+            y  9 10 11
+            ^  6 7  8
+            |  3 4  5
+            |  0 1  2
+             -----> x
         """
 
         ds = create_test_data(0)
@@ -1351,11 +799,13 @@ class TestTrim:
         """
         Numbering scheme for nxpe=3, nype=4
 
-        y  9 10 11
-        ^  6 7  8
-        |  3 4  5
-        |  0 1  2
-         -----> x
+        .. code:: text
+
+            y  9 10 11
+            ^  6 7  8
+            |  3 4  5
+            |  0 1  2
+             -----> x
         """
 
         filenum = yproc * nxpe + xproc
@@ -1381,11 +831,13 @@ class TestTrim:
         """
         Numbering scheme for nxpe=3, nype=4
 
-        y  9 10 11
-        ^  6 7  8
-        |  3 4  5
-        |  0 1  2
-         -----> x
+        .. code:: text
+
+            y  9 10 11
+            ^  6 7  8
+            |  3 4  5
+            |  0 1  2
+             -----> x
         """
 
         filenum = yproc * nxpe + xproc
@@ -1498,53 +950,3 @@ class TestTrim:
 
         expected = create_test_data(0)
         xrt.assert_equal(ds, expected)
-
-
-fci_shape = (2, 2, 3, 4)
-fci_guards = (2, 2, 0)
-
-
-@pytest.fixture
-def create_example_grid_file_fci(tmp_path_factory):
-    """
-    Mocks up a FCI-like netCDF file, and return the temporary test
-    directory containing them.
-
-    Deletes the temporary directory once that test is done.
-    """
-
-    # Create grid dataset
-    shape = (fci_shape[1] + 2 * fci_guards[0], *fci_shape[2:])
-    arr = np.arange(reduce(operator.mul, shape, 1)).reshape(shape)
-    grid = DataArray(data=arr, name="R", dims=["x", "y", "z"]).to_dataset()
-    grid["Z"] = DataArray(np.random.random(shape), dims=["x", "y", "z"])
-    grid["dy"] = DataArray(np.ones(shape), dims=["x", "y", "z"])
-    grid = grid.set_coords(["dy"])
-
-    # Create temporary directory
-    save_dir = tmp_path_factory.mktemp("griddata")
-
-    # Save
-    filepath = save_dir.joinpath("fci.nc")
-    grid.to_netcdf(filepath, engine="netcdf4")
-
-    return filepath
-
-
-@pytest.fixture
-def create_example_files_fci(tmp_path_factory):
-    return _bout_xyt_example_files(
-        tmp_path_factory,
-        lengths=fci_shape,
-        nxpe=1,
-        nype=1,
-        # nt=1,
-        guards={a: b for a, b in zip("xyz", fci_guards)},
-        syn_data_type="random",
-        grid=None,
-        squashed=False,
-        # topology="core",
-        write_to_disk=False,
-        bout_v5=True,
-        metric_3D=True,
-    )
