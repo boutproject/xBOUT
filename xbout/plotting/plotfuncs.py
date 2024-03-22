@@ -862,12 +862,13 @@ def plot2d_polygon(
     vmax = None,
     extend = None,
     add_colorbar = True,
+    colorbar_label = None,
     separatrix = True,
     targets = False,
     add_limiter_hatching=True,
+    grid_only = False,
     linewidth = 0,
     linecolor = "black",
-    alpha = 1,
     
 ):
     
@@ -880,10 +881,10 @@ def plot2d_polygon(
         cax = ax    
         
     if vmin is None:
-        vmin = da.min().values
+        vmin = np.nanmin(da.values)
         
     if vmax is None:
-        vmax = da.max().values
+        vmax = np.nanmax(da.max().values)
     
 
     if "Rxy_lower_right_corners" in da.coords:
@@ -909,6 +910,7 @@ def plot2d_polygon(
                 np.concatenate((cell_r[i][j][tuple(idx)], cell_z[i][j][tuple(idx)])).reshape(2, 5).T,
                 fill=False,
                 closed=True,
+                facecolor = None,
             )
             patches.append(p)
 
@@ -916,9 +918,11 @@ def plot2d_polygon(
     # create colorbar
     norm = _create_norm(logscale, norm, vmin, vmax)
 
+    if grid_only is True:
+        cmap = matplotlib.colors.ListedColormap(["white"])
     colors = da.data.flatten()
     polys = matplotlib.collections.PatchCollection(
-        patches, alpha = alpha, norm = norm, cmap = cmap, 
+        patches, alpha = 1, norm = norm, cmap = cmap, 
         antialiaseds = antialias,
         edgecolors = linecolor,
         linewidths = linewidth,
@@ -930,7 +934,7 @@ def plot2d_polygon(
     polys.set_array(colors)
 
     if add_colorbar:
-        fig.colorbar(polys, ax = cax)
+        fig.colorbar(polys, ax = cax, label = colorbar_label)
     ax.add_collection(polys)     
        
     ax.set_aspect("equal", adjustable="box")
@@ -945,9 +949,9 @@ def plot2d_polygon(
         
         color = "white"
         ls = "-"
-        lw = 1
+        lw = 2
         
-        m = da.metadata
+        m = da.attrs["metadata"]
         
         
         
