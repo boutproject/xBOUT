@@ -120,7 +120,9 @@ def plot_separatrices(da, ax, *, x="R", y="Z", **kwargs):
             )
             default_style = {"color": "black", "linestyle": "--"}
             if any(x for x in kwargs if x in ["c", "ls"]):
-                raise ValueError("When passing separatrix plot style kwargs, use 'color' and 'linestyle' instead lf 'c' and 'ls'")
+                raise ValueError(
+                    "When passing separatrix plot style kwargs, use 'color' and 'linestyle' instead lf 'c' and 'ls'"
+                )
             style = {**default_style, **kwargs}
             ax.plot(x_sep, y_sep, **style)
 

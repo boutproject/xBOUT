@@ -1071,7 +1071,7 @@ class BoutDataArrayAccessor:
         Colour-plot a radial-poloidal slice on the R-Z plane
         """
         return plotfuncs.plot2d_wrapper(self.data, xr.plot.pcolormesh, ax=ax, **kwargs)
-    
+
     def polygon(self, ax=None, **kwargs):
         """
         Colour-plot of a radial-poloidal slice on the R-Z plane using polygons
