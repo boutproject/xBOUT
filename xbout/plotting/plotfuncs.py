@@ -860,18 +860,63 @@ def plot2d_polygon(
     antialias = False,
     vmin = None,
     vmax = None,
-    extend = None,
+    extend = "neither",
     add_colorbar = True,
     colorbar_label = None,
     separatrix = True,
-    separatrix_kwargs = {"color":"white", "linestyle":"-", "linewidth":1},
-    targets = False,
+    separatrix_kwargs = {"color":"black", "linestyle":"--", "linewidth":2},
+    targets = True,
     add_limiter_hatching=True,
     grid_only = False,
     linewidth = 0,
     linecolor = "black",
     
 ):
+    """
+    Nice looking 2D plots which have no visual artifacts around the X-point.
+    
+    Parameters
+    ----------
+    da : xarray.DataArray
+        A 2D (x,y) DataArray of data to plot
+    ax :  Axes, optional
+        Axes to plot on. If not provided, will make its own.
+    cax : Axes, optional
+        Axes to plot colorbar on. If not provided, will plot on the same axes as the plot.
+    cmap : str or matplotlib.colors.Colormap, default "viridis"
+        Colormap to use for the plot
+    norm : matplotlib.colors.Normalize, optional
+        Normalization to use for the color scale
+    logscale : bool, default False
+        If True, use a symlog color scale
+    antialias : bool, default False
+        Enables antialiasing. Note: this also shows mesh cell edges - it's unclear how to disable this.
+    vmin : float, optional
+        Minimum value for the color scale
+    vmax : float, optional
+        Maximum value for the color scale
+    extend : str, optional, default "neither"
+        Extend the colorbar. Options are "neither", "both", "min", "max"
+    add_colorbar : bool, default True
+        Enable colorbar in figure?
+    colorbar_label : str, optional
+        Label for the colorbar
+    separatrix : bool, default True
+        Add lines showing separatrices
+    separatrix_kwargs : dict
+        Keyword arguments to pass custom style to the separatrices plot
+    targets : bool, default True
+        Draw solid lines at the target surfaces
+    add_limiter_hatching : bool, default True
+        Draw hatched areas at the targets
+    grid_only : bool, default False
+        Only plot the grid, not the data. This sets all the polygons to have a white face.
+    linewidth : float, default 0
+        Width of the gridlines on cell edges
+    linecolor : str, default "black"
+        Color of the gridlines on cell edges
+    """
+    
     
     if ax == None:
         fig, ax = plt.subplots(figsize=(3, 6), dpi = 120)
@@ -898,7 +943,6 @@ def plot2d_polygon(
 
     Nx = len(cell_r)
     Ny = len(cell_r[0])
-    edgecolor = "black"
     patches = []
 
     # https://matplotlib.org/2.0.2/examples/api/patch_collection.html
@@ -935,7 +979,7 @@ def plot2d_polygon(
     polys.set_array(colors)
 
     if add_colorbar:
-        fig.colorbar(polys, ax = cax, label = colorbar_label)
+        fig.colorbar(polys, ax = cax, label = colorbar_label, extend = extend)
     ax.add_collection(polys)     
        
     ax.set_aspect("equal", adjustable="box")
