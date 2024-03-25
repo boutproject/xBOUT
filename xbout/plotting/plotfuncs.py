@@ -917,12 +917,12 @@ def plot2d_polygon(
         Color of the gridlines on cell edges
     """
 
-    if ax == None:
+    if ax is None:
         fig, ax = plt.subplots(figsize=(3, 6), dpi=120)
     else:
         fig = ax.get_figure()
 
-    if cax == None:
+    if cax is None:
         cax = ax
 
     if vmin is None:
