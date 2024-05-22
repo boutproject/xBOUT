@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 import matplotlib
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -930,6 +931,16 @@ def plot2d_polygon(
 
     if vmax is None:
         vmax = np.nanmax(da.max().values)
+        
+    if colorbar_label is not None:
+        cbar_label = colorbar_label
+    else:
+        if "long_name" in da.attrs:
+            cbar_label = da.long_name
+        else:
+            cbar_label = da.name
+        if "units" in da.attrs:
+            cbar_label += f" [{da.units}]"
 
     if "Rxy_lower_right_corners" in da.coords:
         r_nodes = [
@@ -975,7 +986,6 @@ def plot2d_polygon(
             )
             patches.append(p)
 
-    # create colorbar
     norm = _create_norm(logscale, norm, vmin, vmax)
 
     if grid_only is True:
