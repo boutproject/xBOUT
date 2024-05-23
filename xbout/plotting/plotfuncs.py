@@ -931,7 +931,7 @@ def plot2d_polygon(
 
     if vmax is None:
         vmax = np.nanmax(da.max().values)
-        
+
     if colorbar_label is not None:
         cbar_label = colorbar_label
     else:
