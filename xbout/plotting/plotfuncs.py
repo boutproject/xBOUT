@@ -932,13 +932,16 @@ def plot2d_polygon(
     if vmax is None:
         vmax = np.nanmax(da.max().values)
 
-    if colorbar_label is None:
+    if colorbar_label == None:
         if "short_name" in da.attrs:
-            colorbar_label = da.short_name
-        else:
+            colorbar_label = da.attrs["short_name"]
+        elif da.name != None:
             colorbar_label = da.name
-        if "units" in da.attrs:
-            colorbar_label += f" [{da.units}]"
+        else:
+            colorbar_label = ""
+
+    if "units" in da.attrs:
+        colorbar_label += f" [{da.attrs['units']}]"
 
     if "Rxy_lower_right_corners" in da.coords:
         r_nodes = [
