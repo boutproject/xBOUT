@@ -932,15 +932,13 @@ def plot2d_polygon(
     if vmax is None:
         vmax = np.nanmax(da.max().values)
 
-    if colorbar_label is not None:
-        cbar_label = colorbar_label
-    else:
-        if "long_name" in da.attrs:
-            cbar_label = da.long_name
+    if colorbar_label is None:
+        if "short_name" in da.attrs:
+            colorbar_label = da.short_name
         else:
-            cbar_label = da.name
+            colorbar_label = da.name
         if "units" in da.attrs:
-            cbar_label += f" [{da.units}]"
+            colorbar_label += f" [{da.units}]"
 
     if "Rxy_lower_right_corners" in da.coords:
         r_nodes = [
@@ -1011,7 +1009,7 @@ def plot2d_polygon(
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
         fig.colorbar(polys, cax=cax, label=colorbar_label, extend=extend)
-        cax.grid(which = "both", visible=False)
+        cax.grid(which="both", visible=False)
 
     ax.add_collection(polys)
 
