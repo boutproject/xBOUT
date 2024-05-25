@@ -1005,7 +1005,14 @@ def plot2d_polygon(
     polys.set_array(colors)
 
     if add_colorbar:
-        fig.colorbar(polys, ax=cax, label=colorbar_label, extend=extend)
+        # This produces a "foolproof" colorbar which 
+        # is always the height of the plot
+        # From https://joseph-long.com/writing/colorbars/
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        fig.colorbar(polys, cax = cax, label=colorbar_label, extend=extend)
+        cax.grid(visible = False)
+
     ax.add_collection(polys)
 
     ax.set_aspect("equal", adjustable="box")
