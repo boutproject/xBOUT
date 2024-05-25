@@ -1011,7 +1011,7 @@ def plot2d_polygon(
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
         fig.colorbar(polys, cax=cax, label=colorbar_label, extend=extend)
-        cax.grid(which = "both", visible=False)
+        cax.grid(which="both", visible=False)
 
     ax.add_collection(polys)
 
