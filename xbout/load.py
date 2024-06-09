@@ -91,9 +91,9 @@ def open_boutdataset(
     file. Can also load from a grid file or from restart files.
 
     Note that when reloading a Dataset that was saved by xBOUT, the state of the saved
-    Dataset is restored, and the values of `keep_xboundaries`, `keep_yboundaries`, and
-    `run_name` are ignored. `geometry` is treated specially, and can be passed when
-    reloading a Dataset (along with `gridfilepath` if needed).
+    Dataset is restored, and the values of ``keep_xboundaries``, ``keep_yboundaries``, and
+    ``run_name`` are ignored. ``geometry`` is treated specially, and can be passed when
+    reloading a Dataset (along with ``gridfilepath`` if needed).
 
     Troubleshooting
     ---------------
@@ -101,14 +101,14 @@ def open_boutdataset(
     some variables may have conflicts (e.g. a source term was changed between some of
     the restarts, but the source term is saved as time-independent, without a
     t-dimension). In this case one workaround is to pass a list of variable names to the
-    keyword argument `drop_vars` to ignore the variables with conflicts, e.g. if `"S1"`
-    and `"S2"` have conflicts
-    ```
-    ds = open_boutdataset("data*/boutdata.nc", drop_variables=["S1", "S2"])
-    ```
-    will open a Dataset which is missing `"S1"` and `"S2"`.\
-    [`drop_variables` is an argument of `xarray.open_dataset()` that is passed down
-    through `kwargs`.]
+    keyword argument ``drop_vars`` to ignore the variables with conflicts, e.g. if ``"S1"``
+    and ``"S2"`` have conflicts::
+
+        ds = open_boutdataset("data*/boutdata.nc", drop_variables=["S1", "S2"])
+
+    will open a Dataset which is missing ``"S1"`` and ``"S2"``
+    (``drop_variables`` is an argument of `xarray.open_dataset` that is passed down
+    through ``kwargs``.)
 
     Parameters
     ----------
@@ -131,11 +131,12 @@ def open_boutdataset(
 
         If not specified then will attempt to read it from the file attrs.
         If still not found then a warning will be thrown, which can be
-        suppressed by passing `info`=False.
+        suppressed by passing ``info=False``.
 
         To define a new type of geometry you need to use the
-        `register_geometry` decorator. You are encouraged to do this for your
-        own BOUT++ physics module, to apply relevant normalisations.
+        `register_geometry` decorator. You are encouraged to do
+        this for your own BOUT++ physics module, to apply relevant
+        normalisations.
     gridfilepath : str, optional
         The path to a grid file, containing any variables needed to apply the geometry
         specified by the 'geometry' option, which are not contained in the dump files.
@@ -163,8 +164,8 @@ def open_boutdataset(
     is_restart : bool, optional
         Restart files require some special handling (e.g. working around variables that
         are not present in restart files). By default, this special handling is enabled
-        if the files do not have a time dimension and `restart` is present in the file
-        name in `datapath`. This option can be set to True or False to explicitly enable
+        if the files do not have a time dimension and ``restart`` is present in the file
+        name in ``datapath``. This option can be set to True or False to explicitly enable
         or disable the restart file handling.
     kwargs : optional
         Keyword arguments are passed down to `xarray.open_mfdataset`, which in
@@ -899,21 +900,79 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
 
     nprocs = nxpe * nype
     n_runs = int(len(filepaths) / nprocs)
-    if len(filepaths) % nprocs != 0:
-        raise ValueError(
-            "Each run directory does not contain an equal number "
-            "of output files. If the parallelization scheme of "
-            "your simulation changed partway-through, then please "
-            "load each directory separately and concatenate them "
-            "along the time dimension with xarray.concat()."
-        )
+    runids = []
 
-    # Create list of lists of filepaths, so that xarray knows how they should
-    # be concatenated by xarray.open_mfdataset()
-    paths = iter(filepaths)
-    paths_grid = [
-        [[next(paths) for x in range(nxpe)] for y in range(nype)] for t in range(n_runs)
-    ]
+    def getrunid(fp):
+        if _is_path(fp):
+            try:
+                with xr.open_dataset(fp) as tmp:
+                    return tmp.get("run_id", None)
+            except FileNotFoundError:
+                return None
+        return fp.get("run_id", None)
+
+    for fp in filepaths:
+        thisrunid = getrunid(fp)
+        if thisrunid is None:
+            runids = None
+            break
+        runids.append(thisrunid)
+    if not runids:
+        if len(filepaths) < nprocs:
+            if len(filepaths) == 1:
+                raise ValueError(
+                    "A parallel simulation was loaded, but only a single "
+                    "file was loaded. Please ensure to pass in all files "
+                    "by specifing e.g. `BOUT.dmp.*.nc` rather than "
+                    "`BOUT.dmp.0.nc`."
+                )
+            raise ValueError(
+                f"A parallel simulation was loaded, but only {len(filepathts)} "
+                "files were loaded. Please ensure to pass in all files "
+                "by specifing e.g. `BOUT.dmp.*.nc`"
+            )
+        if len(filepaths) % nprocs != 0:
+            raise ValueError(
+                "Each run directory does not contain an equal number "
+                "of output files. If the parallelization scheme of "
+                "your simulation changed partway-through, then please "
+                "load each directory separately and concatenate them "
+                "along the time dimension with xarray.concat()."
+            )
+        # Create list of lists of filepaths, so that xarray knows how they should
+        # be concatenated by xarray.open_mfdataset()
+        paths = iter(filepaths)
+        paths_grid = [
+            [[next(paths) for x in range(nxpe)] for y in range(nype)]
+            for t in range(n_runs)
+        ]
+
+    else:
+        paths_sorted = []
+        lastid = None
+        for path, gid in zip(filepaths, runids):
+            if lastid != gid:
+                lastid = gid
+                paths_sorted.append([])
+            paths_sorted[-1].append(path)
+        paths_grid = []
+        for paths in paths_sorted:
+            if len(paths) != nprocs:
+                with xr.open_dataset(paths[0]) as tmp:
+                    if tmp["PE_XIND"] != 0 or tmp["PE_YIND"] != 0:
+                        # The first file is missing.
+                        warn(
+                            f"Ignoring {len(paths)} files as the first seems to be missing: {paths}"
+                        )
+                        continue
+                    assert tmp["NXPE"] == nxpe
+                    assert tmp["NYPE"] == nype
+                raise ValueError(
+                    f"Something is wrong. We expected {nprocs} files but found {len(paths)} files."
+                )
+            paths = iter(paths)
+
+            paths_grid.append([[next(paths) for x in range(nxpe)] for y in range(nype)])
 
     # Dimensions along which no concatenation is needed are still present as
     # single-element lists, so need to concatenation along dim=None for those

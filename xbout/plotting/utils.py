@@ -129,7 +129,6 @@ def plot_targets(da, ax, *, x="R", y="Z", hatching=True):
 
     da0 = list(da_regions.values())[0]
 
-    xcoord = da0.metadata["bout_xdim"]
     ycoord = da0.metadata["bout_ydim"]
 
     if da0.metadata["keep_yboundaries"]:
@@ -253,5 +252,5 @@ def _k3d_plot_isel(da_region, isel, vmin, vmax, **kwargs):
         indices,
         attribute=data,
         color_range=[vmin, vmax],
-        **kwargs
+        **kwargs,
     )

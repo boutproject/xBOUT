@@ -138,6 +138,7 @@ def animate_poloidal(
         Colors to use for the plot
     axis_coords : None, str, dict
         Coordinates to use for axis labelling. Only affects time coordinate.
+
         - None: Use the dimension coordinate for each axis, if it exists.
         - "index": Use the integer index values.
         - dict: keys are dimension names, values set axis_coords for each axis
@@ -342,6 +343,7 @@ def animate_pcolormesh(
         If set to false, do not create the animation, just return the block
     axis_coords : None, str, dict
         Coordinates to use for axis labelling.
+
         - None: Use the dimension coordinate for each axis, if it exists.
         - "index": Use the integer index values.
         - dict: keys are dimension names, values set axis_coords for each axis
@@ -543,6 +545,7 @@ def animate_line(
         If set to false, do not create the animation, just return the block
     axis_coords : None, str, dict
         Coordinates to use for axis labelling.
+
         - None: Use the dimension coordinate for each axis, if it exists.
         - "index": Use the integer index values.
         - dict: keys are dimension names, values set axis_coords for each axis
