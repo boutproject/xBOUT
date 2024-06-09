@@ -752,9 +752,9 @@ def plot3d(
                                 X, Y, Z, scalars=data, vmin=vmin, vmax=vmax, **kwargs
                             )
                         else:
-                            plot_objects[
-                                region_name + str(i)
-                            ].mlab_source.scalars = data
+                            plot_objects[region_name + str(i)].mlab_source.scalars = (
+                                data
+                            )
 
                 if mayavi_view is not None:
                     mlab.view(*mayavi_view)
