@@ -167,12 +167,16 @@ def _1d_coord_from_spacing(spacing, dim, ds=None, *, origin_at=None):
             )
 
         point_to_use = {
-            spacing.metadata["bout_xdim"]: spacing.metadata.get("MXG", 0)
-            if spacing.metadata["keep_xboundaries"]
-            else 0,
-            spacing.metadata["bout_ydim"]: spacing.metadata.get("MYG", 0)
-            if spacing.metadata["keep_yboundaries"]
-            else 0,
+            spacing.metadata["bout_xdim"]: (
+                spacing.metadata.get("MXG", 0)
+                if spacing.metadata["keep_xboundaries"]
+                else 0
+            ),
+            spacing.metadata["bout_ydim"]: (
+                spacing.metadata.get("MYG", 0)
+                if spacing.metadata["keep_yboundaries"]
+                else 0
+            ),
             spacing.metadata["bout_zdim"]: spacing.metadata.get("MZG", 0),
         }
 

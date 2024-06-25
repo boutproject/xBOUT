@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 import matplotlib
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -752,9 +753,9 @@ def plot3d(
                                 X, Y, Z, scalars=data, vmin=vmin, vmax=vmax, **kwargs
                             )
                         else:
-                            plot_objects[
-                                region_name + str(i)
-                            ].mlab_source.scalars = data
+                            plot_objects[region_name + str(i)].mlab_source.scalars = (
+                                data
+                            )
 
                 if mayavi_view is not None:
                     mlab.view(*mayavi_view)
@@ -849,3 +850,181 @@ def plot3d(
         plt.show()
     else:
         raise ValueError(f"Unrecognised plot3d() 'engine' argument: {engine}")
+
+
+def plot2d_polygon(
+    da,
+    ax=None,
+    cax=None,
+    cmap="viridis",
+    norm=None,
+    logscale=False,
+    antialias=False,
+    vmin=None,
+    vmax=None,
+    extend="neither",
+    add_colorbar=True,
+    colorbar_label=None,
+    separatrix=True,
+    separatrix_kwargs={"color": "white", "linestyle": "-", "linewidth": 2},
+    targets=False,
+    add_limiter_hatching=False,
+    grid_only=False,
+    linewidth=0,
+    linecolor="black",
+):
+    """
+    Nice looking 2D plots which have no visual artifacts around the X-point.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        A 2D (x,y) DataArray of data to plot
+    ax :  Axes, optional
+        Axes to plot on. If not provided, will make its own.
+    cax : Axes, optional
+        Axes to plot colorbar on. If not provided, will plot on the same axes as the plot.
+    cmap : str or matplotlib.colors.Colormap, default "viridis"
+        Colormap to use for the plot
+    norm : matplotlib.colors.Normalize, optional
+        Normalization to use for the color scale
+    logscale : bool, default False
+        If True, use a symlog color scale
+    antialias : bool, default False
+        Enables antialiasing. Note: this also shows mesh cell edges - it's unclear how to disable this.
+    vmin : float, optional
+        Minimum value for the color scale
+    vmax : float, optional
+        Maximum value for the color scale
+    extend : str, optional, default "neither"
+        Extend the colorbar. Options are "neither", "both", "min", "max"
+    add_colorbar : bool, default True
+        Enable colorbar in figure?
+    colorbar_label : str, optional
+        Label for the colorbar
+    separatrix : bool, default True
+        Add lines showing separatrices
+    separatrix_kwargs : dict
+        Keyword arguments to pass custom style to the separatrices plot
+    targets : bool, default True
+        Draw solid lines at the target surfaces
+    add_limiter_hatching : bool, default True
+        Draw hatched areas at the targets
+    grid_only : bool, default False
+        Only plot the grid, not the data. This sets all the polygons to have a white face.
+    linewidth : float, default 0
+        Width of the gridlines on cell edges
+    linecolor : str, default "black"
+        Color of the gridlines on cell edges
+    """
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(3, 6), dpi=120)
+    else:
+        fig = ax.get_figure()
+
+    if cax is None:
+        cax = ax
+
+    if vmin is None:
+        vmin = np.nanmin(da.values)
+
+    if vmax is None:
+        vmax = np.nanmax(da.max().values)
+
+    if colorbar_label == None:
+        if "short_name" in da.attrs:
+            colorbar_label = da.attrs["short_name"]
+        elif da.name != None:
+            colorbar_label = da.name
+        else:
+            colorbar_label = ""
+
+    if "units" in da.attrs:
+        colorbar_label += f" [{da.attrs['units']}]"
+
+    if "Rxy_lower_right_corners" in da.coords:
+        r_nodes = [
+            "R",
+            "Rxy_lower_left_corners",
+            "Rxy_lower_right_corners",
+            "Rxy_upper_left_corners",
+            "Rxy_upper_right_corners",
+        ]
+        z_nodes = [
+            "Z",
+            "Zxy_lower_left_corners",
+            "Zxy_lower_right_corners",
+            "Zxy_upper_left_corners",
+            "Zxy_upper_right_corners",
+        ]
+        cell_r = np.concatenate(
+            [np.expand_dims(da[x], axis=2) for x in r_nodes], axis=2
+        )
+        cell_z = np.concatenate(
+            [np.expand_dims(da[x], axis=2) for x in z_nodes], axis=2
+        )
+    else:
+        raise Exception("Cell corners not present in mesh, cannot do polygon plot")
+
+    Nx = len(cell_r)
+    Ny = len(cell_r[0])
+    patches = []
+
+    # https://matplotlib.org/2.0.2/examples/api/patch_collection.html
+
+    idx = [np.array([1, 2, 4, 3, 1])]
+    patches = []
+    for i in range(Nx):
+        for j in range(Ny):
+            p = matplotlib.patches.Polygon(
+                np.concatenate((cell_r[i][j][tuple(idx)], cell_z[i][j][tuple(idx)]))
+                .reshape(2, 5)
+                .T,
+                fill=False,
+                closed=True,
+                facecolor=None,
+            )
+            patches.append(p)
+
+    norm = _create_norm(logscale, norm, vmin, vmax)
+
+    if grid_only is True:
+        cmap = matplotlib.colors.ListedColormap(["white"])
+    colors = da.data.flatten()
+    polys = matplotlib.collections.PatchCollection(
+        patches,
+        alpha=1,
+        norm=norm,
+        cmap=cmap,
+        antialiaseds=antialias,
+        edgecolors=linecolor,
+        linewidths=linewidth,
+        joinstyle="bevel",
+    )
+
+    polys.set_array(colors)
+
+    if add_colorbar:
+        # This produces a "foolproof" colorbar which
+        # is always the height of the plot
+        # From https://joseph-long.com/writing/colorbars/
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        fig.colorbar(polys, cax=cax, label=colorbar_label, extend=extend)
+        cax.grid(which="both", visible=False)
+
+    ax.add_collection(polys)
+
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlabel("R [m]")
+    ax.set_ylabel("Z [m]")
+    ax.set_ylim(cell_z.min(), cell_z.max())
+    ax.set_xlim(cell_r.min(), cell_r.max())
+    ax.set_title(da.name)
+
+    if separatrix:
+        plot_separatrices(da, ax, x="R", y="Z", **separatrix_kwargs)
+
+    if targets:
+        plot_targets(da, ax, x="R", y="Z", hatching=add_limiter_hatching)
