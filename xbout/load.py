@@ -338,12 +338,16 @@ def open_boutdataset(
             print("Applying {} geometry conventions".format(geometry))
 
         if _is_dir(gridfilepath):
-            if "grid" in ds.options:
-                gridfilepath += "/" + ds.options["grid"]
-            else:
-                warn(
-                    "gridfilepath set to a directory, but no grid used in simulation. Continuing without grid."
-                )
+            try:
+                gridfilepath += "/" + ds.options["mesh"]["file"]
+            except KeyError:
+                if "grid" in ds.options:
+                    gridfilepath += "/" + ds.options["grid"]
+                else:
+                    warn(
+                        "gridfilepath set to a directory, but no grid used in simulation. Continuing without grid."
+                    )
+                    gridfilepath = None
         if gridfilepath is not None:
             grid_kw = grid_kw or dict()
             grid = _open_grid(
