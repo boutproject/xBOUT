@@ -92,6 +92,7 @@ def plot2d_wrapper(
     vmax=None,
     aspect=None,
     extend=None,
+    hide_colorbar=False,
     **kwargs
 ):
     """
@@ -219,7 +220,8 @@ def plot2d_wrapper(
         # re-make sm with new cmap
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
-        fig.colorbar(sm, ticks=levels, ax=ax, extend=extend)
+        if hide_colorbar == False:
+            fig.colorbar(sm, ticks=levels, ax=ax, extend=extend)
     elif method is xr.plot.contour:
         # create colormap to be shared by all regions
         norm = matplotlib.colors.Normalize(vmin=levels[0], vmax=levels[-1])
@@ -238,7 +240,8 @@ def plot2d_wrapper(
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cmap = sm.get_cmap()
-        fig.colorbar(sm, ax=ax, extend=extend)
+        if hide_colorbar == False:
+            fig.colorbar(sm, ax=ax, extend=extend)
 
     if method is xr.plot.pcolormesh:
         if "infer_intervals" not in kwargs:
@@ -274,7 +277,8 @@ def plot2d_wrapper(
         ]
 
     if method is xr.plot.contour:
-        fig.colorbar(artists[0], ax=ax)
+        if hide_colorbar == False:
+            fig.colorbar(artists[0], ax=ax)
 
     if gridlines is not None:
         # convert gridlines to dict

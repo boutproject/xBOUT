@@ -394,13 +394,29 @@ class BoutDataArrayAccessor:
                 data, poloidal_distance_in, poloidal_distance_out, method=None
             ):
                 interp_func = interp1d(
-                    poloidal_distance_in, data, kind=method, assume_sorted=True
+                    poloidal_distance_in, data, kind=method, assume_sorted=True, fill_value="extrapolate"
                 )
                 return interp_func(poloidal_distance_out)
 
             # Need to give different name to output dimension to avoid clash
             new_ycoord = ycoord + "_interpolate_to_new_grid_new_ycoord"
             poloidal_distance = poloidal_distance.rename({ycoord: new_ycoord})
+            #poloidal_distance.values[:,-1] = da["poloidal_distance"][:,-1]*0.999
+            #print("data size:", da.shape)
+            #print("org_pol_dis size:", da["poloidal_distance"].shape)
+            #print("new_pol_dis size:", poloidal_distance.shape)
+            #SZxy = da["poloidal_distance"].shape
+            #for i in range(SZxy[0]):
+            #    #if poloidal_distance[i,0] < da["poloidal_distance"][i,0] :
+            #    #    print('found x_new! x, ybndry=',i, poloidal_distance[i,0].values, da["poloidal_distance"][i,0].values)
+            #    #if poloidal_distance[i,-1] > da["poloidal_distance"][i,-1]:
+            #    #    print('found x_new! x, ybndry=',i, poloidal_distance[i,-1].values, da["poloidal_distance"][i,-1].values)
+            #    a = all(x < y for x,y in zip(da["poloidal_distance"][i,:], da["poloidal_distance"][i,1:]))
+            #    if a == False:
+            #        print('not monotonic increasing!, i_a=',i)
+            #    b = all(x < y for x,y in zip(poloidal_distance[i,:], poloidal_distance[i,1:]))
+            #    if b == False:
+            #        print('not monotonic increasing!, i_b=',i)
             result = xr.apply_ufunc(
                 y_interp_func,
                 da,
