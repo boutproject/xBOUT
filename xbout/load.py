@@ -810,10 +810,10 @@ def _read_splitting(filepath, info, keep_yboundaries):
     mxg = get_nonnegative_scalar(ds, "MXG", default=2, info=info)
     myg = get_nonnegative_scalar(ds, "MYG", default=0, info=info)
     mxsub = get_nonnegative_scalar(
-        ds, "MXSUB", default=ds.dims["x"] - 2 * mxg, info=info
+        ds, "MXSUB", default=ds.sizes["x"] - 2 * mxg, info=info
     )
     mysub = get_nonnegative_scalar(
-        ds, "MYSUB", default=ds.dims["y"] - 2 * myg, info=info
+        ds, "MYSUB", default=ds.sizes["y"] - 2 * myg, info=info
     )
 
     # Check whether this is a single file squashed from the multiple output files of a
@@ -828,8 +828,8 @@ def _read_splitting(filepath, info, keep_yboundaries):
     else:
         # Workaround for older data files
         ny = ds["MYSUB"].values * ds["NYPE"].values
-    nx_file = ds.dims["x"]
-    ny_file = ds.dims["y"]
+    nx_file = ds.sizes["x"]
+    ny_file = ds.sizes["y"]
     is_squashed_doublenull = False
     if nxpe > 1 or nype > 1:
         # if nxpe = nype = 1, was only one process anyway, so no need to check for
