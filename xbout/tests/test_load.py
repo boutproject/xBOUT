@@ -24,12 +24,24 @@ from xbout.load import (
     _trim,
     _infer_contains_boundaries,
     open_boutdataset,
-    _BOUT_PER_PROC_VARIABLES,
-    _BOUT_TIME_DEPENDENT_META_VARS,
 )
 from xbout.utils import _separate_metadata
 from xbout.tests.utils_for_tests import _get_kwargs
 
+_BOUT_PER_PROC_VARIABLES = [
+    "wall_time",
+    "wtime",
+    "wtime_rhs",
+    "wtime_invert",
+    "wtime_comms",
+    "wtime_io",
+    "wtime_per_rhs",
+    "wtime_per_rhs_e",
+    "wtime_per_rhs_i",
+    "PE_XIND",
+    "PE_YIND",
+    "MYPE",
+]
 
 def test_check_extensions(tmp_path):
     files_dir = tmp_path.joinpath("data")
@@ -820,10 +832,13 @@ class TestStripMetadata:
 
         ds, metadata = _separate_metadata(original)
 
-        assert original.drop_vars(
-            METADATA_VARS + _BOUT_PER_PROC_VARIABLES + _BOUT_TIME_DEPENDENT_META_VARS,
-            errors="ignore",
-        ).equals(ds)
+        xrt.assert_equal(
+            original.drop_vars(
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                errors="ignore",
+            ),
+            ds
+        )
         assert metadata["NXPE"] == 1
 
 
@@ -842,9 +857,7 @@ class TestOpen:
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
-                METADATA_VARS
-                + _BOUT_PER_PROC_VARIABLES
-                + _BOUT_TIME_DEPENDENT_META_VARS,
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
                 errors="ignore",
             ),
         )
@@ -868,9 +881,7 @@ class TestOpen:
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
-                METADATA_VARS
-                + _BOUT_PER_PROC_VARIABLES
-                + _BOUT_TIME_DEPENDENT_META_VARS,
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
                 errors="ignore",
             ),
         )
@@ -982,7 +993,8 @@ class TestOpen:
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
-                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                errors="ignore"
             ),
         )
 
@@ -1016,7 +1028,8 @@ class TestOpen:
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
-                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
+                errors="ignore"
             ),
         )
 

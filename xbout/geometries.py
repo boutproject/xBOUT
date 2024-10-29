@@ -145,7 +145,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         # 'dx' may not be consistent between different regions (e.g. core and PFR).
         # For some geometries xcoord may have already been created by
         # add_geometry_coords, in which case we do not need this.
-        nx = updated_ds.dims[xcoord]
+        nx = updated_ds.sizes[xcoord]
 
         # can't use commented out version, uncommented one works around xarray bug
         # removing attrs
@@ -157,7 +157,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         _add_attrs_to_var(updated_ds, xcoord)
 
     if ycoord not in updated_ds.coords:
-        ny = updated_ds.dims[ycoord]
+        ny = updated_ds.sizes[ycoord]
         # dy should always be constant in x, so it is safe to convert to a 1d
         # coordinate.  [The y-coordinate has to be a 1d coordinate that labels x-z
         # slices of the grid (similarly x-coordinate is 1d coordinate that labels y-z
