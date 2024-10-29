@@ -19,22 +19,6 @@ from .utils import (
     _is_dir,
 )
 
-
-_BOUT_PER_PROC_VARIABLES = [
-    "wall_time",
-    "wtime",
-    "wtime_rhs",
-    "wtime_invert",
-    "wtime_comms",
-    "wtime_io",
-    "wtime_per_rhs",
-    "wtime_per_rhs_e",
-    "wtime_per_rhs_i",
-    "PE_XIND",
-    "PE_YIND",
-    "MYPE",
-]
-_BOUT_TIME_DEPENDENT_META_VARS = ["iteration", "hist_hi", "tt"]
 _BOUT_GEOMETRY_VARS = [
     "ixseps1",
     "ixseps2",
@@ -67,9 +51,6 @@ except ValueError:
         " to be using the development version of xarray - found"
         " at https://github.com/pydata/xarray/"
     )
-
-
-# TODO somehow check that we have access to the latest version of auto_combine
 
 
 def open_boutdataset(
@@ -294,15 +275,6 @@ def open_boutdataset(
         )
     else:
         raise ValueError(f"internal error: unexpected input_type={input_type}")
-
-    if not is_restart:
-        for var in _BOUT_TIME_DEPENDENT_META_VARS:
-            if var in ds:
-                # Assume different processors in x & y have same iteration etc.
-                latest_top_left = {dim: 0 for dim in ds[var].dims}
-                if "t" in ds[var].dims:
-                    latest_top_left["t"] = -1
-                ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
 
     ds, metadata = _separate_metadata(ds)
     # Store as ints because netCDF doesn't support bools, so we can't save
@@ -616,11 +588,6 @@ def _auto_open_mfboutdataset(
     if chunks is None:
         chunks = {}
 
-    if is_restart:
-        data_vars = "minimal"
-    else:
-        data_vars = _BOUT_TIME_DEPENDENT_META_VARS
-
     if _is_path(datapath):
         filepaths, filetype = _expand_filepaths(datapath)
 
@@ -640,6 +607,9 @@ def _auto_open_mfboutdataset(
         else:
             remove_yboundaries = False
 
+        # Create a partial application of _trim
+        # Calls to _preprocess will call _trim to trim guard / boundary cells
+        # from datasets before merging.
         _preprocess = partial(
             _trim,
             guards={"x": mxg, "y": myg},
@@ -651,40 +621,11 @@ def _auto_open_mfboutdataset(
 
         paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
-        try:
-            ds = xr.open_mfdataset(
-                paths_grid,
-                concat_dim=concat_dims,
-                combine="nested",
-                data_vars=data_vars,
-                preprocess=_preprocess,
-                engine=filetype,
-                chunks=chunks,
-                join="exact",
-                **kwargs,
-            )
-        except ValueError as e:
-            message_to_catch = (
-                "some variables in data_vars are not data variables on the first "
-                "dataset:"
-            )
-            if str(e)[: len(message_to_catch)] == message_to_catch:
-                # Open concatenating any variables that are different in
-                # different files as a work around to support opening older
-                # data.
-                ds = xr.open_mfdataset(
-                    paths_grid,
-                    concat_dim=concat_dims,
-                    combine="nested",
-                    data_vars="different",
-                    preprocess=_preprocess,
-                    engine=filetype,
-                    chunks=chunks,
-                    join="exact",
-                    **kwargs,
-                )
-            else:
-                raise
+        # Call custom implementation of open_mfdataset
+        # avoiding some of the performance issues.
+        from .mfdataset import mfdataset
+
+        ds = mfdataset(paths_grid, concat_dim=concat_dims, preprocess=_preprocess)
     else:
         # datapath was nested list of Datasets
 
@@ -730,11 +671,6 @@ def _auto_open_mfboutdataset(
             join="exact",
             combine_attrs="no_conflicts",
         )
-
-    if not is_restart:
-        # Remove any duplicate time values from concatenation
-        _, unique_indices = unique(ds["t_array"], return_index=True)
-        ds = ds.isel(t=unique_indices)
 
     return ds, remove_yboundaries
 
@@ -933,8 +869,10 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
     """
     Trims all guard (and optionally boundary) cells off a single dataset read from a
     single BOUT dump file, to prepare for concatenation.
-    Also drops some variables that store timing information, which are different for each
-    process and so cannot be concatenated.
+
+    Variables that store timing information, which are different for each
+    process, are not trimmed but are taken from the first processor during
+    concatenation.
 
     Parameters
     ----------
@@ -973,9 +911,7 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
         ):
             trimmed_ds = trimmed_ds.drop_vars(name)
 
-    to_drop = _BOUT_PER_PROC_VARIABLES
-
-    return trimmed_ds.drop_vars(to_drop, errors="ignore")
+    return trimmed_ds
 
 
 def _infer_contains_boundaries(ds, nxpe, nype):
