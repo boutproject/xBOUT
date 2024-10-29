@@ -621,11 +621,20 @@ def _auto_open_mfboutdataset(
 
         paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
-        # Call custom implementation of open_mfdataset
-        # avoiding some of the performance issues.
-        from .mfdataset import mfdataset
-
-        ds = mfdataset(paths_grid, concat_dim=concat_dims, preprocess=_preprocess)
+        ds = xr.open_mfdataset(
+            paths_grid,
+            concat_dim=concat_dims,
+            combine="nested",
+            data_vars="minimal", # Only data variables in which the dimension already appears are concatenated.
+            coords = "minimal", # Only coordinates in which the dimension already appears are concatenated.
+            compat = "override", # Duplicate data taken from first dataset
+            combine_attrs="override",  # Duplicate attributes taken from first dataset
+            preprocess=_preprocess,
+            engine=filetype,
+            chunks=chunks,
+            join="exact", # Don't align. Raise ValueError when indexes to be aligned are not equal
+            **kwargs,
+        )
     else:
         # datapath was nested list of Datasets
 
@@ -669,7 +678,10 @@ def _auto_open_mfboutdataset(
             concat_dim=concat_dims,
             data_vars=data_vars,
             join="exact",
-            combine_attrs="no_conflicts",
+            data_vars="minimal", # Only data variables in which the dimension already appears are concatenated.
+            coords = "minimal", # Only coordinates in which the dimension already appears are concatenated.
+            compat = "override", # Duplicate data taken from first dataset
+            combine_attrs="override",  # Duplicate attributes taken from first dataset
         )
 
     return ds, remove_yboundaries
