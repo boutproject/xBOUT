@@ -693,12 +693,7 @@ def _follow_boundary(ds, start_region, start_direction, xbndry, ybndry, Rcoord, 
 
         for boundary in check_order[direction]:
             result = _bounding_surface_checks[boundary](
-                ds_region,
-                boundary_points,
-                xbndry,
-                ybndry,
-                Rcoord,
-                Zcoord,
+                ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord
             )
             if result is not None:
                 boundary_points, this_region, direction = result
@@ -782,13 +777,7 @@ def _get_bounding_surfaces(ds, coords):
         start_direction = "upper_y"
 
     boundary, checked_regions = _follow_boundary(
-        ds,
-        start_region,
-        start_direction,
-        xbndry,
-        ybndry,
-        Rcoord,
-        Zcoord,
+        ds, start_region, start_direction, xbndry, ybndry, Rcoord, Zcoord
     )
     boundaries = [boundary]
 
@@ -852,9 +841,7 @@ def _get_bounding_surfaces(ds, coords):
     # Pack the result into a DataArray
     result = [
         xr.DataArray(
-            boundary,
-            dims=("boundary", "coord"),
-            coords={"coord": [Rcoord, Zcoord]},
+            boundary, dims=("boundary", "coord"), coords={"coord": [Rcoord, Zcoord]}
         )
         for boundary in boundaries
     ]

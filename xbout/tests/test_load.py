@@ -43,6 +43,7 @@ _BOUT_PER_PROC_VARIABLES = [
     "MYPE",
 ]
 
+
 def test_check_extensions(tmp_path):
     files_dir = tmp_path.joinpath("data")
     files_dir.mkdir()
@@ -325,12 +326,7 @@ def _bout_xyt_example_files(
     if squashed:
         # create a single data-file, but alter the 'nxpe' and 'nype' variables, as if the
         # file had been created by combining a set of BOUT.dmp.*.nc files
-        this_lengths = (
-            lengths[0],
-            lengths[1] * nxpe,
-            lengths[2] * nype,
-            lengths[3],
-        )
+        this_lengths = (lengths[0], lengths[1] * nxpe, lengths[2] * nype, lengths[3])
         ds_list, file_list = create_bout_ds_list(
             prefix=prefix,
             lengths=this_lengths,
@@ -834,10 +830,9 @@ class TestStripMetadata:
 
         xrt.assert_equal(
             original.drop_vars(
-                METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
-                errors="ignore",
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
             ),
-            ds
+            ds,
         )
         assert metadata["NXPE"] == 1
 
@@ -857,8 +852,7 @@ class TestOpen:
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
-                METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
-                errors="ignore",
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
             ),
         )
 
@@ -881,8 +875,7 @@ class TestOpen:
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
-                METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
-                errors="ignore",
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
             ),
         )
 
@@ -993,8 +986,7 @@ class TestOpen:
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
-                METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
-                errors="ignore"
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
             ),
         )
 
@@ -1028,8 +1020,7 @@ class TestOpen:
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
-                METADATA_VARS + _BOUT_PER_PROC_VARIABLES,
-                errors="ignore"
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
             ),
         )
 
@@ -1134,12 +1125,7 @@ class TestOpen:
 
         # check creation without writing to disk gives identical result
         fake_ds_list, fake_grid_ds = bout_xyt_example_files(
-            None,
-            nxpe=3,
-            nype=3,
-            nt=1,
-            syn_data_type="stepped",
-            grid="grid",
+            None, nxpe=3, nype=3, nt=1, syn_data_type="stepped", grid="grid"
         )
         fake = open_boutdataset(
             datapath=fake_ds_list, geometry="toroidal", gridfilepath=fake_grid_ds
@@ -1494,6 +1480,7 @@ class TestTrim:
         if not upper:
             expected = expected.isel(y=slice(None, -2, None))
         xrt.assert_equal(expected, actual)
+
 
 fci_shape = (2, 2, 3, 4)
 fci_guards = (2, 2, 0)

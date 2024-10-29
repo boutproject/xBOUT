@@ -530,7 +530,7 @@ def plot3d(
                 newZ = xr.DataArray(
                     np.linspace(Zmin, Zmax, zpoints), dims="z"
                 ).expand_dims({"x": xpoints, "y": ypoints}, axis=[2, 1])
-                newR = np.sqrt(newX**2 + newY**2)
+                newR = np.sqrt(newX ** 2 + newY ** 2)
                 newzeta = np.arctan2(newY, newX)  # .values
 
                 from scipy.interpolate import (
@@ -576,10 +576,7 @@ def plot3d(
                     fill_value=datamin - 2.0 * (datamax - datamin),
                 )
                 print("do 3d interpolation")
-                grid = interp(
-                    (newzeta, newR, newZ),
-                    method="linear",
-                )
+                grid = interp((newzeta, newR, newZ), method="linear")
                 print("done interpolating")
 
             if style == "isosurface":
