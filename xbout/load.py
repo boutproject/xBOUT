@@ -6,7 +6,6 @@ from itertools import chain
 
 from boutdata.data import BoutOptionsFile
 import xarray as xr
-from numpy import unique
 
 from natsort import natsorted
 
@@ -625,14 +624,14 @@ def _auto_open_mfboutdataset(
             paths_grid,
             concat_dim=concat_dims,
             combine="nested",
-            data_vars="minimal", # Only data variables in which the dimension already appears are concatenated.
-            coords = "minimal", # Only coordinates in which the dimension already appears are concatenated.
-            compat = "override", # Duplicate data taken from first dataset
+            data_vars="minimal",  # Only data variables in which the dimension already appears are concatenated.
+            coords="minimal",  # Only coordinates in which the dimension already appears are concatenated.
+            compat="override",  # Duplicate data taken from first dataset
             combine_attrs="override",  # Duplicate attributes taken from first dataset
             preprocess=_preprocess,
             engine=filetype,
             chunks=chunks,
-            join="exact", # Don't align. Raise ValueError when indexes to be aligned are not equal
+            join="exact",  # Don't align. Raise ValueError when indexes to be aligned are not equal
             **kwargs,
         )
     else:
@@ -676,11 +675,10 @@ def _auto_open_mfboutdataset(
         ds = xr.combine_nested(
             ds_grid,
             concat_dim=concat_dims,
-            data_vars=data_vars,
             join="exact",
-            data_vars="minimal", # Only data variables in which the dimension already appears are concatenated.
-            coords = "minimal", # Only coordinates in which the dimension already appears are concatenated.
-            compat = "override", # Duplicate data taken from first dataset
+            data_vars="minimal",  # Only data variables in which the dimension already appears are concatenated.
+            coords="minimal",  # Only coordinates in which the dimension already appears are concatenated.
+            compat="override",  # Duplicate data taken from first dataset
             combine_attrs="override",  # Duplicate attributes taken from first dataset
         )
 
