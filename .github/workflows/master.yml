@@ -61,7 +61,7 @@ jobs:
       run: |
         sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
-        pip install xarray~=0.18.0 pandas~=1.4.0
+        pip install xarray~=2023.1.0 pandas~=1.4.0
     - name: Install package
       run: |
         pip install -e .[tests]
