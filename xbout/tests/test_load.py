@@ -481,8 +481,7 @@ class TestOpen:
         xrt.assert_identical(actual, fake)
 
     @pytest.mark.skip
-    def test_combine_along_t(self):
-        ...
+    def test_combine_along_t(self): ...
 
     @pytest.mark.parametrize(
         "bout_v5,metric_3D", [(False, False), (True, False), (True, True)]
@@ -627,8 +626,7 @@ class TestOpen:
         assert "n" in ds.keys()
 
     @pytest.mark.skip
-    def test_combine_along_tx(self):
-        ...
+    def test_combine_along_tx(self): ...
 
     def test_restarts(self):
         datapath = Path(__file__).parent.joinpath(
