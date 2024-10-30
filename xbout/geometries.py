@@ -182,7 +182,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     if zcoord in updated_ds.dims and zcoord not in updated_ds.coords:
         # Generates a coordinate whose value is 0 on the first grid point, not dz/2, to
         # match how BOUT++ generates fields from input file expressions.
-        nz = updated_ds.dims[zcoord]
+        nz = updated_ds.sizes[zcoord]
 
         # In BOUT++ v5, dz is either a Field2D or Field3D.
         # We can use it as a 1D coordinate if it's a Field3D, _or_ if nz == 1
