@@ -20,7 +20,7 @@ jobs:
     if: always()
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.x"]
+        python-version: ["3.8", "3.9", "3.10", "3.x"]
       fail-fast: false
 
     steps:
@@ -48,7 +48,7 @@ jobs:
     if: always()
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.8"]
       fail-fast: false
 
     steps:
