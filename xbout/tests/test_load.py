@@ -934,4 +934,3 @@ class TestTrim:
         if not upper:
             expected = expected.isel(y=slice(None, -2, None))
         xrt.assert_equal(expected, actual)
-
