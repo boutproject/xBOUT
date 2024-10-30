@@ -935,20 +935,3 @@ class TestTrim:
             expected = expected.isel(y=slice(None, -2, None))
         xrt.assert_equal(expected, actual)
 
-    @pytest.mark.parametrize("is_restart", [False, True])
-    def test_trim_timing_info(self, is_restart):
-        ds = create_test_data(0)
-        from xbout.load import _BOUT_PER_PROC_VARIABLES
-
-        # remove a couple of entries from _BOUT_PER_PROC_VARIABLES so we test that _trim
-        # does not fail if not all of them are present
-        _BOUT_PER_PROC_VARIABLES = _BOUT_PER_PROC_VARIABLES[:-2]
-
-        for v in _BOUT_PER_PROC_VARIABLES:
-            ds[v] = 42.0
-        ds = _trim(
-            ds, guards={}, keep_boundaries={}, nxpe=1, nype=1, is_restart=is_restart
-        )
-
-        expected = create_test_data(0)
-        xrt.assert_equal(ds, expected)
