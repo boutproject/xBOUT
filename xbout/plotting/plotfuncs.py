@@ -929,10 +929,10 @@ def plot2d_polygon(
     if vmax is None:
         vmax = np.nanmax(da.max().values)
 
-    if colorbar_label == None:
+    if colorbar_label is None:
         if "short_name" in da.attrs:
             colorbar_label = da.attrs["short_name"]
-        elif da.name != None:
+        elif da.name is not None:
             colorbar_label = da.name
         else:
             colorbar_label = ""
