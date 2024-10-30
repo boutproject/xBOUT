@@ -97,6 +97,7 @@ def animate_poloidal(
     cax=None,
     animate_over=None,
     separatrix=True,
+    separatrix_kwargs=dict(),
     targets=True,
     add_limiter_hatching=True,
     cmap=None,
@@ -130,6 +131,8 @@ def animate_poloidal(
         Dimension over which to animate, defaults to the time dimension
     separatrix : bool, optional
         Add dashed lines showing separatrices
+    separatrix_kwargs : dict, optional
+        Options to pass to the separatrix plotter (e.g. line color)
     targets : bool, optional
         Draw solid lines at the target surfaces
     add_limiter_hatching : bool, optional
@@ -138,6 +141,7 @@ def animate_poloidal(
         Colors to use for the plot
     axis_coords : None, str, dict
         Coordinates to use for axis labelling. Only affects time coordinate.
+
         - None: Use the dimension coordinate for each axis, if it exists.
         - "index": Use the integer index values.
         - dict: keys are dimension names, values set axis_coords for each axis
@@ -276,7 +280,7 @@ def animate_poloidal(
         targets = False
 
     if separatrix:
-        plot_separatrices(da_regions, ax, x=x, y=y)
+        plot_separatrices(da_regions, ax, x=x, y=y, **separatrix_kwargs)
 
     if targets:
         plot_targets(da_regions, ax, x=x, y=y, hatching=add_limiter_hatching)
@@ -342,6 +346,7 @@ def animate_pcolormesh(
         If set to false, do not create the animation, just return the block
     axis_coords : None, str, dict
         Coordinates to use for axis labelling.
+
         - None: Use the dimension coordinate for each axis, if it exists.
         - "index": Use the integer index values.
         - dict: keys are dimension names, values set axis_coords for each axis
@@ -543,6 +548,7 @@ def animate_line(
         If set to false, do not create the animation, just return the block
     axis_coords : None, str, dict
         Coordinates to use for axis labelling.
+
         - None: Use the dimension coordinate for each axis, if it exists.
         - "index": Use the integer index values.
         - dict: keys are dimension names, values set axis_coords for each axis

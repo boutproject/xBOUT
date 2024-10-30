@@ -3,7 +3,7 @@ import numpy.testing as npt
 
 from xbout import open_boutdataset, collect as new_collect
 
-from .test_load import create_bout_ds, create_bout_ds_list, METADATA_VARS
+from .utils_for_tests import create_bout_ds, create_bout_ds_list, METADATA_VARS
 
 boutdata = pytest.importorskip("boutdata", reason="boutdata is not available")
 old_collect = boutdata.collect
@@ -11,7 +11,6 @@ old_collect = boutdata.collect
 
 class TestAccuracyAgainstOldCollect:
     def test_single_file(self, tmp_path_factory):
-
         # Create temp directory for files
         test_dir = tmp_path_factory.mktemp("test_data")
 
@@ -37,7 +36,6 @@ class TestAccuracyAgainstOldCollect:
         npt.assert_equal(actual, expected)
 
     def test_multiple_files_along_x(self, tmp_path_factory):
-
         # Create temp directory for files
         test_dir = tmp_path_factory.mktemp("test_data")
 
@@ -66,7 +64,6 @@ class TestAccuracyAgainstOldCollect:
         npt.assert_equal(actual, expected)
 
     def test_multiple_files_along_y(self, tmp_path_factory):
-
         # Create temp directory for files
         test_dir = tmp_path_factory.mktemp("test_data")
 
@@ -95,7 +92,6 @@ class TestAccuracyAgainstOldCollect:
         npt.assert_equal(actual, expected)
 
     def test_multiple_files_along_xy(self, tmp_path_factory):
-
         # Create temp directory for files
         test_dir = tmp_path_factory.mktemp("test_data")
 
@@ -224,5 +220,4 @@ class TestAccuracyAgainstOldCollect:
 
 
 @pytest.mark.skip
-class test_speed_against_old_collect:
-    ...
+class test_speed_against_old_collect: ...

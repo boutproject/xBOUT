@@ -3,13 +3,11 @@ import pytest
 import dask.array
 import numpy as np
 import numpy.testing as npt
-from pathlib import Path
 
 import xarray as xr
 import xarray.testing as xrt
 from xarray.core.utils import dict_equiv
 
-from xbout.tests.test_load import bout_xyt_example_files, create_bout_ds
 from xbout import open_boutdataset
 from xbout.geometries import apply_geometry
 from xbout.utils import _1d_coord_from_spacing
@@ -209,7 +207,6 @@ class TestBoutDataArrayMethods:
         "permute_dims", [False, pytest.param(True, marks=pytest.mark.long)]
     )
     def test_to_field_aligned_dask(self, bout_xyt_example_files, permute_dims):
-
         nz = 6
 
         dataset_list = bout_xyt_example_files(
@@ -1034,7 +1031,6 @@ class TestBoutDataArrayMethods:
         )
 
     def test_ddx(self, bout_xyt_example_files):
-
         nx = 64
 
         dataset_list = bout_xyt_example_files(
@@ -1069,7 +1065,6 @@ class TestBoutDataArrayMethods:
         )
 
     def test_ddy(self, bout_xyt_example_files):
-
         ny = 64
 
         dataset_list, gridfilepath = bout_xyt_example_files(
@@ -1150,6 +1145,6 @@ class TestBoutDataArrayMethods:
             keep_yboundaries=True,
         )
 
-        test_ddx = ds["n"].bout.ddx()
-        test_ddy = ds["n"].bout.ddy()
-        test_ddz = ds["n"].bout.ddz()
+        ds["n"].bout.ddx()
+        ds["n"].bout.ddy()
+        ds["n"].bout.ddz()

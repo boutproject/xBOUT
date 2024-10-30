@@ -42,7 +42,6 @@ def plot_separatrix(da, sep_pos, ax, radial_coord="x"):
     # 2D domain needs to intersect the separatrix plane to be able to plot it
     dims = da.dims
     if radial_coord not in dims:
-
         warnings.warn(
             "Cannot plot separatrix as domain does not cross "
             "separatrix, as it does not have a radial dimension",
@@ -63,7 +62,6 @@ def plot_separatrix(da, sep_pos, ax, radial_coord="x"):
 
 
 def _decompose_regions(da):
-
     if da.geometry == "fci":
         return {region: da for region in da.bout._regions}
     return {
@@ -73,7 +71,6 @@ def _decompose_regions(da):
 
 
 def _is_core_only(da):
-
     nx = da.metadata["nx"]
     ix1 = da.metadata["ixseps1"]
     ix2 = da.metadata["ixseps2"]
@@ -81,8 +78,10 @@ def _is_core_only(da):
     return ix1 >= nx and ix2 >= nx
 
 
-def plot_separatrices(da, ax, *, x="R", y="Z"):
-    """Plot separatrices"""
+def plot_separatrices(da, ax, *, x="R", y="Z", **kwargs):
+    """
+    Plot separatrices. Kwargs are passed to ax.plot().
+    """
 
     if not isinstance(da, dict):
         da_regions = _decompose_regions(da)
@@ -119,7 +118,13 @@ def plot_separatrices(da, ax, *, x="R", y="Z"):
             y_sep = 0.5 * (
                 da_region[y].isel(**{xcoord: 0}) + da_inner[y].isel(**{xcoord: -1})
             )
-            ax.plot(x_sep, y_sep, "k--")
+            default_style = {"color": "black", "linestyle": "--"}
+            if any(x for x in kwargs if x in ["c", "ls"]):
+                raise ValueError(
+                    "When passing separatrix plot style kwargs, use 'color' and 'linestyle' instead lf 'c' and 'ls'"
+                )
+            style = {**default_style, **kwargs}
+            ax.plot(x_sep, y_sep, **style)
 
 
 def plot_targets(da, ax, *, x="R", y="Z", hatching=True):
@@ -132,7 +137,6 @@ def plot_targets(da, ax, *, x="R", y="Z", hatching=True):
 
     da0 = list(da_regions.values())[0]
 
-    xcoord = da0.metadata["bout_xdim"]
     ycoord = da0.metadata["bout_ydim"]
 
     if da0.metadata["keep_yboundaries"]:
@@ -256,5 +260,5 @@ def _k3d_plot_isel(da_region, isel, vmin, vmax, **kwargs):
         indices,
         attribute=data,
         color_range=[vmin, vmax],
-        **kwargs
+        **kwargs,
     )

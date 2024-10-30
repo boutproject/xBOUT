@@ -1,4 +1,4 @@
-from xarray import Dataset, DataArray, open_dataset, merge
+from xarray import DataArray, open_dataset, merge
 from xarray.testing import assert_equal
 import pytest
 import numpy as np

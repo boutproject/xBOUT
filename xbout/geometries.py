@@ -4,7 +4,7 @@ from textwrap import dedent
 import xarray as xr
 import numpy as np
 
-from .region import Region, _create_regions_toroidal, _create_single_region
+from .region import _create_regions_toroidal, _create_single_region
 from .utils import (
     _add_attrs_to_var,
     _set_attrs_on_all_vars,
@@ -157,7 +157,6 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         _add_attrs_to_var(updated_ds, xcoord)
 
     if ycoord not in updated_ds.coords:
-        ny = updated_ds.sizes[ycoord]
         # dy should always be constant in x, so it is safe to convert to a 1d
         # coordinate.  [The y-coordinate has to be a 1d coordinate that labels x-z
         # slices of the grid (similarly x-coordinate is 1d coordinate that labels y-z
@@ -207,7 +206,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
             if bout_v5:
                 if not np.all(updated_ds["dz"].min() == updated_ds["dz"].max()):
                     raise ValueError(
-                        f"Spacing is not constant. Cannot create z coordinate"
+                        "Spacing is not constant. Cannot create z coordinate"
                     )
 
                 dz = updated_ds["dz"].min()
@@ -350,7 +349,6 @@ def _add_vars_from_grid(ds, grid, variables, *, optional_variables=None):
 
 @register_geometry("toroidal")
 def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
-
     coordinates = _set_default_toroidal_coordinates(coordinates, ds)
 
     if ds.attrs.get("geometry", None) == "toroidal":
@@ -384,6 +382,14 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
             "total_poloidal_distance",
             "zShift",
             "zShift_ylow",
+            "Rxy_corners",  # Lower left corners
+            "Rxy_lower_right_corners",
+            "Rxy_upper_left_corners",
+            "Rxy_upper_right_corners",
+            "Zxy_corners",  # Lower left corners
+            "Zxy_lower_right_corners",
+            "Zxy_upper_left_corners",
+            "Zxy_upper_right_corners",
         ],
     )
 
@@ -423,6 +429,24 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     else:
         ds = ds.set_coords(("Rxy", "Zxy"))
 
+    # Add cell corners as coordinates for polygon plotting
+    if "Rxy_lower_right_corners" in ds:
+        ds = ds.rename(
+            Rxy_corners="Rxy_lower_left_corners", Zxy_corners="Zxy_lower_left_corners"
+        )
+        ds = ds.set_coords(
+            (
+                "Rxy_lower_left_corners",
+                "Rxy_lower_right_corners",
+                "Rxy_upper_left_corners",
+                "Rxy_upper_right_corners",
+                "Zxy_lower_left_corners",
+                "Zxy_lower_right_corners",
+                "Zxy_upper_left_corners",
+                "Zxy_upper_right_corners",
+            )
+        )
+
     # Rename zShift_ylow if it was added from grid file, to be consistent with name if
     # it was added from dump file
     if "zShift_CELL_YLOW" in ds and "zShift_ylow" in ds:
@@ -448,7 +472,6 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
 @register_geometry("s-alpha")
 def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
-
     coordinates = _set_default_toroidal_coordinates(coordinates, ds)
 
     if set(coordinates.values()).issubset(set(ds.coords).union(ds.dims)):
