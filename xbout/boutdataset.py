@@ -250,6 +250,8 @@ class BoutDatasetAccessor:
         ds = self.data[first_var].bout.interpolate_parallel(
             return_dataset=True, **kwargs
         )
+        if str(type(ds)) != "<class 'xarray.core.dataset.Dataset'>":
+            ds = ds.bout.to_dataset()
         xcoord = ds.metadata.get("bout_xdim", "x")
         ycoord = ds.metadata.get("bout_ydim", "y")
         for var in variables:
