@@ -609,7 +609,7 @@ class BoutDatasetAccessor:
         newY = newY_1d.expand_dims({"X": nX, "Z": nZ}, axis=[0, 2])
         newZ_1d = xr.DataArray(np.linspace(Zmin, Zmax, nZ), dims="Z")
         newZ = newZ_1d.expand_dims({"X": nX, "Y": nY}, axis=[0, 1])
-        newR = np.sqrt(newX ** 2 + newY ** 2)
+        newR = np.sqrt(newX**2 + newY**2)
         newzeta = np.arctan2(newY, newX)
         # Define newzeta in range 0->2*pi
         newzeta = np.where(newzeta < 0.0, newzeta + 2.0 * np.pi, newzeta)

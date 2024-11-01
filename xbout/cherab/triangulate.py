@@ -41,7 +41,7 @@ class TriangularData:
         Returns a 3D Cherab emitter, by rotating the 2D mesh about the Z axis
 
         step: Volume integration step length [m]
-        
+
         """
         from raysect.core import translate
         from raysect.primitive import Cylinder, Subtract
@@ -105,7 +105,7 @@ class TriangularData:
 class Triangulate:
     """
     Represents a set of triangles for a 2D mesh in R-Z
-    
+
     """
 
     def __init__(self, rm, zm):

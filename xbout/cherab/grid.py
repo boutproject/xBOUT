@@ -8,7 +8,7 @@ def da_with_cherab_grid(da):
     """
     Convert an BOUT++ DataArray to a format that Cherab can use:
     - A 'cell_number' coordinate
-    - A 'cherab_grid` attribute 
+    - A 'cherab_grid` attribute
 
     The cell_number coordinate enables the DataArray to be sliced
     before input to Cherab.
