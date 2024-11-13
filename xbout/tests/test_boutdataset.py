@@ -1136,6 +1136,7 @@ class TestBoutDatasetMethods:
                 "G3",
                 "J",
                 "Bxy",
+                "psixy",
             )
         )
 

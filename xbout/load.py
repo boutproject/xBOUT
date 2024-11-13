@@ -367,7 +367,12 @@ but we did load {grididfile}."""
                 ds.metadata[v] = grid[v].values
 
     # Update coordinates to match particular geometry of grid
-    ds = geometries.apply_geometry(ds, geometry, grid=grid)
+    if input_type == "grid":
+        # Specify coordinate names to avoid name clash
+        coordinates = {"x": "psi_poloidal", "y": "y", "z": "zeta"}
+    else:
+        coordinates = None
+    ds = geometries.apply_geometry(ds, geometry, grid=grid, coordinates=coordinates)
 
     if remove_yboundaries:
         ds = ds.bout.remove_yboundaries()
