@@ -1101,3 +1101,71 @@ class BoutDataArrayAccessor:
         See plotfuncs.plot3d()
         """
         return plotfuncs.plot3d(self.data, **kwargs)
+
+    def with_cherab_grid(self):
+        """
+        Returns a new DataArray with a 'cherab_grid' attribute.
+
+        If called then the `cherab` package must be available.
+        """
+        # Import here so Cherab is required only if this method is called
+        from .cherab import grid
+
+        return grid.da_with_cherab_grid(self.data)
+
+    def as_cherab_data(self):
+        """
+        Returns a new cherab.TriangularData object.
+
+        If a Cherab grid has not been calculated then it will be created.
+        It is more efficient to first compute a Cherab grid for a whole
+        DataSet (using `with_cherab_grid`) and then call this function
+        on individual DataArrays.
+        """
+        if "cherab_grid" not in self.data.attrs:
+            # Calculate the Cherab triangulation
+            da = self.with_cherab_grid()
+        else:
+            da = self.data
+
+        return da.attrs["cherab_grid"].with_data(da)
+
+    def as_cherab_emitter(
+        self,
+        parent=None,
+        cylinder_zmin=None,
+        cylinder_zmax=None,
+        cylinder_rmin=None,
+        cylinder_rmax=None,
+        step: float = 0.01,
+    ):
+        """
+        Make a Cherab emitter (RadiationFunction), rotating a 2D mesh about the Z axis
+
+        Cherab (https://www.cherab.info/) is a python library for forward
+        modelling diagnostics based on spectroscopic plasma emission.
+        It is based on the Raysect (http://www.raysect.org/) scientific
+        ray-tracing framework.
+
+        Parameters
+        ----------
+        parent : Cherab scene (default None)
+            The Cherab scene to attach the emitter to
+        step : float (default 0.01 meters)
+            Volume integration step length [m]
+
+        Returns
+        -------
+
+        A cherab.tools.emitters.RadiationFunction
+
+        """
+
+        return self.as_cherab_data().to_emitter(
+            parent=parent,
+            cylinder_zmin=cylinder_zmin,
+            cylinder_zmax=cylinder_zmax,
+            cylinder_rmin=cyliner_rmin,
+            cylinder_rmax=cyliner_rmax,
+            step=step,
+        )
