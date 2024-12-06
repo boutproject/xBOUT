@@ -84,6 +84,7 @@ def open_boutdataset(
     run_name=None,
     info=True,
     is_restart=None,
+    is_mms_dump=False,
     **kwargs,
 ):
     """
@@ -180,12 +181,12 @@ def open_boutdataset(
         chunks = {}
 
     input_type = _check_dataset_type(datapath)
-
     if is_restart is None:
         is_restart = input_type == "restart"
     elif is_restart is True:
         input_type = "restart"
-
+    if is_mms_dump:
+        input_type = "dump"
     if "reload" in input_type:
         if input_type == "reload":
             if isinstance(datapath, Path):
@@ -633,7 +634,6 @@ def _auto_open_mfboutdataset(
         nxpe, nype, mxg, myg, mxsub, mysub, is_squashed_doublenull = _read_splitting(
             filepaths[0], info, keep_yboundaries
         )
-
         if is_squashed_doublenull:
             # Need to remove y-boundaries after loading: (i) in case we are loading a
             # squashed data-set, in which case we cannot easily remove the upper
@@ -737,9 +737,10 @@ def _auto_open_mfboutdataset(
         )
 
     if not is_restart:
-        # Remove any duplicate time values from concatenation
-        _, unique_indices = unique(ds["t_array"], return_index=True)
-        ds = ds.isel(t=unique_indices)
+        if "t_array" in ds.keys():
+            # Remove any duplicate time values from concatenation
+            _, unique_indices = unique(ds["t_array"], return_index=True)
+            ds = ds.isel(t=unique_indices)
 
     return ds, remove_yboundaries
 
