@@ -6,7 +6,6 @@ from itertools import chain
 
 from boutdata.data import BoutOptionsFile
 import xarray as xr
-from numpy import unique
 
 from natsort import natsorted
 
@@ -19,22 +18,6 @@ from .utils import (
     _is_dir,
 )
 
-
-_BOUT_PER_PROC_VARIABLES = [
-    "wall_time",
-    "wtime",
-    "wtime_rhs",
-    "wtime_invert",
-    "wtime_comms",
-    "wtime_io",
-    "wtime_per_rhs",
-    "wtime_per_rhs_e",
-    "wtime_per_rhs_i",
-    "PE_XIND",
-    "PE_YIND",
-    "MYPE",
-]
-_BOUT_TIME_DEPENDENT_META_VARS = ["iteration", "hist_hi", "tt"]
 _BOUT_GEOMETRY_VARS = [
     "ixseps1",
     "ixseps2",
@@ -69,15 +52,12 @@ except ValueError:
     )
 
 
-# TODO somehow check that we have access to the latest version of auto_combine
-
-
 def open_boutdataset(
     datapath="./BOUT.dmp.*.nc",
     inputfilepath=None,
     geometry=None,
     gridfilepath=None,
-    grid_mismatch="raise",  #: Union[Literal["raise"], Literal["warn"], Literal["ignore"]]
+    grid_mismatch="raise",
     chunks=None,
     keep_xboundaries=True,
     keep_yboundaries=False,
@@ -86,48 +66,55 @@ def open_boutdataset(
     is_restart=None,
     **kwargs,
 ):
-    """
-    Load a dataset from a set of BOUT output files, including the input options
-    file. Can also load from a grid file or from restart files.
+    """Load a dataset from a set of BOUT output files, including the
+    input options file. Can also load from a grid file or from restart
+    files.
 
-    Note that when reloading a Dataset that was saved by xBOUT, the state of the saved
-    Dataset is restored, and the values of ``keep_xboundaries``, ``keep_yboundaries``, and
-    ``run_name`` are ignored. ``geometry`` is treated specially, and can be passed when
+    Note that when reloading a Dataset that was saved by xBOUT, the
+    state of the saved Dataset is restored, and the values of
+    ``keep_xboundaries``, ``keep_yboundaries``, and ``run_name`` are
+    ignored. ``geometry`` is treated specially, and can be passed when
     reloading a Dataset (along with ``gridfilepath`` if needed).
 
     Troubleshooting
     ---------------
-    Variable conflicts: sometimes, for example when loading data from multiple restarts,
-    some variables may have conflicts (e.g. a source term was changed between some of
-    the restarts, but the source term is saved as time-independent, without a
-    t-dimension). In this case one workaround is to pass a list of variable names to the
-    keyword argument ``drop_vars`` to ignore the variables with conflicts, e.g. if ``"S1"``
-    and ``"S2"`` have conflicts::
+    Variable conflicts: sometimes, for example when loading data from
+    multiple restarts, some variables may have conflicts (e.g. a
+    source term was changed between some of the restarts, but the
+    source term is saved as time-independent, without a
+    t-dimension). In this case one workaround is to pass a list of
+    variable names to the keyword argument ``drop_vars`` to ignore the
+    variables with conflicts, e.g. if ``"S1"`` and ``"S2"`` have
+    conflicts::
 
         ds = open_boutdataset("data*/boutdata.nc", drop_variables=["S1", "S2"])
 
     will open a Dataset which is missing ``"S1"`` and ``"S2"``
-    (``drop_variables`` is an argument of `xarray.open_dataset` that is passed down
-    through ``kwargs``.)
+    (``drop_variables`` is an argument of `xarray.open_dataset` that
+    is passed down through ``kwargs``.)
 
     Parameters
     ----------
-    datapath : str or (list or tuple of xr.Dataset), optional
-        Path to the data to open. Can point to either a set of one or more dump
-        files, or a single grid file.
 
-        To specify multiple dump files you must enter the path to them as a
-        single glob, e.g. './BOUT.dmp.*.nc', or for multiple consecutive runs
-        in different directories (in order) then './run*/BOUT.dmp.*.nc'.
+    datapath : str or (list or tuple of xr.Dataset), optional Path to
+        the data to open. Can point to either a set of one or more
+        dump files, or a single grid file.
 
-        If a list or tuple of xr.Dataset is passed, they will be combined with
-        xr.combine_nested() instead of loading data from disk (intended for unit
-        testing).
+        To specify multiple dump files you must enter the path to them
+        as a single glob, e.g. './BOUT.dmp.*.nc', or for multiple
+        consecutive runs in different directories (in order) then
+        './run*/BOUT.dmp.*.nc'.
+
+        If a list or tuple of xr.Dataset is passed, they will be
+        combined with xr.combine_nested() instead of loading data from
+        disk (intended for unit testing).
+
     chunks : dict, optional
     inputfilepath : str, optional
     geometry : str, optional
-        The geometry type of the grid data. This will specify what type of
-        coordinates to add to the dataset, e.g. 'toroidal' or 'cylindrical'.
+        The geometry type of the grid data. This will specify what
+        type of coordinates to add to the dataset, e.g. 'toroidal' or
+        'cylindrical'.
 
         If not specified then will attempt to read it from the file attrs.
         If still not found then a warning will be thrown, which can be
@@ -137,43 +124,55 @@ def open_boutdataset(
         `register_geometry` decorator. You are encouraged to do
         this for your own BOUT++ physics module, to apply relevant
         normalisations.
+
     gridfilepath : str, optional
-        The path to a grid file, containing any variables needed to apply the geometry
-        specified by the 'geometry' option, which are not contained in the dump files.
-        This may either be the path of the grid file itself, or the directory
-        relative to which the grid from the settings file can be found.
+        The path to a grid file, containing any variables needed to
+        apply the geometry specified by the 'geometry' option, which
+        are not contained in the dump files.  This may either be the
+        path of the grid file itself, or the directory relative to
+        which the grid from the settings file can be found.
+
     grid_mismatch : str, optional
-        How to handle if the grid is not the grid that has been used for the
-        simulation. Can be "raise" to raise a RuntimeError, "warn" to raise a
-        warning, or ignore to ignore the mismatch silently.
+        How to handle if the grid is not the grid that has been used
+        for the simulation. Can be "raise" to raise a RuntimeError,
+        "warn" to raise a warning, or ignore to ignore the mismatch
+        silently.
+
     keep_xboundaries : bool, optional
-        If true, keep x-direction boundary cells (the cells past the physical
-        edges of the grid, where boundary conditions are set); increases the
-        size of the x dimension in the returned data-set. If false, trim these
-        cells.
+        If true, keep x-direction boundary cells (the cells past the
+        physical edges of the grid, where boundary conditions are
+        set); increases the size of the x dimension in the returned
+        data-set. If false, trim these cells.
+
     keep_yboundaries : bool, optional
-        If true, keep y-direction boundary cells (the cells past the physical
-        edges of the grid, where boundary conditions are set); increases the
-        size of the y dimension in the returned data-set. If false, trim these
-        cells.
+        If true, keep y-direction boundary cells (the cells past the
+        physical edges of the grid, where boundary conditions are
+        set); increases the size of the y dimension in the returned
+        data-set. If false, trim these cells.
+
     run_name : str, optional
-        Name to give to the whole dataset, e.g. 'JET_ELM_high_resolution'.
-        Useful if you are going to open multiple simulations and compare the
-        results.
+        Name to give to the whole dataset,
+        e.g. 'JET_ELM_high_resolution'.  Useful if you are going to
+        open multiple simulations and compare the results.
+
     info : bool or "terse", optional
     is_restart : bool, optional
-        Restart files require some special handling (e.g. working around variables that
-        are not present in restart files). By default, this special handling is enabled
-        if the files do not have a time dimension and ``restart`` is present in the file
-        name in ``datapath``. This option can be set to True or False to explicitly enable
-        or disable the restart file handling.
+        Restart files require some special handling (e.g. working
+        around variables that are not present in restart files). By
+        default, this special handling is enabled if the files do not
+        have a time dimension and ``restart`` is present in the file
+        name in ``datapath``. This option can be set to True or False
+        to explicitly enable or disable the restart file handling.
+
     kwargs : optional
-        Keyword arguments are passed down to `xarray.open_mfdataset`, which in
-        turn passes extra kwargs down to `xarray.open_dataset`.
+        Keyword arguments are passed down to `xarray.open_mfdataset`,
+        which in turn passes extra kwargs down to
+        `xarray.open_dataset`.
 
     Returns
     -------
     ds : xarray.Dataset
+
     """
 
     if chunks is None:
@@ -189,8 +188,8 @@ def open_boutdataset(
     if "reload" in input_type:
         if input_type == "reload":
             if isinstance(datapath, Path):
-                # xr.open_mfdataset only accepts glob patterns as strings, not Path
-                # objects
+                # xr.open_mfdataset only accepts glob patterns as
+                # strings, not Path objects
                 datapath = str(datapath)
             ds = xr.open_mfdataset(
                 datapath,
@@ -296,15 +295,6 @@ def open_boutdataset(
     else:
         raise ValueError(f"internal error: unexpected input_type={input_type}")
 
-    if not is_restart:
-        for var in _BOUT_TIME_DEPENDENT_META_VARS:
-            if var in ds:
-                # Assume different processors in x & y have same iteration etc.
-                latest_top_left = {dim: 0 for dim in ds[var].dims}
-                if "t" in ds[var].dims:
-                    latest_top_left["t"] = -1
-                ds[var] = ds[var].isel(latest_top_left).squeeze(drop=True)
-
     ds, metadata = _separate_metadata(ds)
     # Store as ints because netCDF doesn't support bools, so we can't save
     # bool attributes
@@ -332,7 +322,8 @@ def open_boutdataset(
                 gridfilepath += "/" + ds.options["grid"]
             else:
                 warn(
-                    "gridfilepath set to a directory, but no grid used in simulation. Continuing without grid."
+                    "gridfilepath set to a directory, but no grid used "
+                    "in simulation. Continuing without grid."
                 )
         if gridfilepath is not None:
             grid = _open_grid(
@@ -377,15 +368,15 @@ but we did load {grididfile}."""
     if run_name:
         ds.name = run_name
 
-    # Set some default settings that are only used in post-processing by xBOUT, not by
-    # BOUT++
+    # Set some default settings that are only used in post-processing
+    # by xBOUT, not by BOUT++
     ds.bout.fine_interpolation_factor = 8
 
     if ("dump" in input_type or "restart" in input_type) and ds.metadata[
         "BOUT_VERSION"
     ] < 4.0:
-        # Add workarounds for missing information or different conventions in data saved
-        # by BOUT++ v3.x.
+        # Add workarounds for missing information or different
+        # conventions in data saved by BOUT++ v3.x.
         for v in ds:
             if ds.metadata["bout_zdim"] in ds[v].dims:
                 # All fields saved on aligned grid for BOUT-3
@@ -400,21 +391,22 @@ but we did load {grididfile}."""
                     ds.metadata["bout_zdim"],
                 )
             ):
-                # zShift, etc. did not support staggered grids in BOUT++ v3 anyway, so
-                # just treat all variables as if they were at CELL_CENTRE
+                # zShift, etc. did not support staggered grids in
+                # BOUT++ v3 anyway, so just treat all variables as if
+                # they were at CELL_CENTRE
                 ds[v].attrs["cell_location"] = "CELL_CENTRE"
                 added_location = True
             if added_location:
                 warn(
-                    "Detected data from BOUT++ v3.x. Treating all variables as being "
-                    "at `CELL_CENTRE`. Should be similar to what BOUT++ v3.x did, but "
-                    "if your code uses staggered grids, this may produce unexpected "
-                    "effects in some places."
+                    "Detected data from BOUT++ v3.x. Treating all variables"
+                    " as being at `CELL_CENTRE`. Should be similar to what"
+                    " BOUT++ v3.x did, but if your code uses staggered grids,"
+                    " this may produce unexpected effects in some places."
                 )
 
         if "nz" not in ds.metadata:
-            # `nz` used to be stored as `MZ` and `MZ` used to include an extra buffer
-            # point that was not used for data.
+            # `nz` used to be stored as `MZ` and `MZ` used to include
+            # an extra buffer point that was not used for data.
             ds.metadata["nz"] = ds.metadata["MZ"] - 1
 
     if info == "terse":
@@ -452,9 +444,7 @@ def collect(
     info=True,
     prefix="BOUT.dmp",
 ):
-    """
-
-    Extract the data pertaining to a specified variable in a BOUT++ data set
+    """Extract the data pertaining to a specified variable in a BOUT++ data set
 
 
     Parameters
@@ -480,11 +470,14 @@ def collect(
 
     Notes
     ----------
-    strict : This option found in boutdata.collect() is not present in this function
-             it is assumed that the varname given is correct, if variable does not exist
-             the function will fail
-    tind_auto : This option is not required when using _auto_open_mfboutdataset as an
-             automatic failure if datasets are different lengths is included
+    strict : This option found in boutdata.collect() is not present in
+             this function it is assumed that the varname given is
+             correct, if variable does not exist the function will
+             fail
+
+    tind_auto : This option is not required when using
+             _auto_open_mfboutdataset as an automatic failure if
+             datasets are different lengths is included
 
     Returns
     ----------
@@ -616,11 +609,6 @@ def _auto_open_mfboutdataset(
     if chunks is None:
         chunks = {}
 
-    if is_restart:
-        data_vars = "minimal"
-    else:
-        data_vars = _BOUT_TIME_DEPENDENT_META_VARS
-
     if _is_path(datapath):
         filepaths, filetype = _expand_filepaths(datapath)
 
@@ -630,16 +618,20 @@ def _auto_open_mfboutdataset(
         )
 
         if is_squashed_doublenull:
-            # Need to remove y-boundaries after loading: (i) in case we are loading a
-            # squashed data-set, in which case we cannot easily remove the upper
-            # boundary cells in _trim(); (ii) because using the remove_yboundaries()
-            # method for non-squashed data-sets is simpler than replicating that logic
-            # in _trim().
+            # Need to remove y-boundaries after loading: (i) in case
+            # we are loading a squashed data-set, in which case we
+            # cannot easily remove the upper boundary cells in
+            # _trim(); (ii) because using the remove_yboundaries()
+            # method for non-squashed data-sets is simpler than
+            # replicating that logic in _trim().
             remove_yboundaries = not keep_yboundaries
             keep_yboundaries = True
         else:
             remove_yboundaries = False
 
+        # Create a partial application of _trim
+        # Calls to _preprocess will call _trim to trim guard / boundary cells
+        # from datasets before merging.
         _preprocess = partial(
             _trim,
             guards={"x": mxg, "y": myg},
@@ -651,40 +643,28 @@ def _auto_open_mfboutdataset(
 
         paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
-        try:
-            ds = xr.open_mfdataset(
-                paths_grid,
-                concat_dim=concat_dims,
-                combine="nested",
-                data_vars=data_vars,
-                preprocess=_preprocess,
-                engine=filetype,
-                chunks=chunks,
-                join="exact",
-                **kwargs,
-            )
-        except ValueError as e:
-            message_to_catch = (
-                "some variables in data_vars are not data variables on the first "
-                "dataset:"
-            )
-            if str(e)[: len(message_to_catch)] == message_to_catch:
-                # Open concatenating any variables that are different in
-                # different files as a work around to support opening older
-                # data.
-                ds = xr.open_mfdataset(
-                    paths_grid,
-                    concat_dim=concat_dims,
-                    combine="nested",
-                    data_vars="different",
-                    preprocess=_preprocess,
-                    engine=filetype,
-                    chunks=chunks,
-                    join="exact",
-                    **kwargs,
-                )
-            else:
-                raise
+        ds = xr.open_mfdataset(
+            paths_grid,
+            concat_dim=concat_dims,
+            combine="nested",
+            preprocess=_preprocess,
+            engine=filetype,
+            chunks=chunks,
+            # Only data variables in which the dimension already
+            # appears are concatenated.
+            data_vars="minimal",
+            # Only coordinates in which the dimension already appears
+            # are concatenated.
+            coords="minimal",
+            # Duplicate data taken from first dataset
+            compat="override",
+            # Duplicate attributes taken from first dataset
+            combine_attrs="override",
+            # Don't align. Raise ValueError when indexes to be aligned
+            # are not equal
+            join="exact",
+            **kwargs,
+        )
     else:
         # datapath was nested list of Datasets
 
@@ -702,9 +682,9 @@ def _auto_open_mfboutdataset(
         )
 
         if is_squashed_doublenull:
-            # Need to remove y-boundaries after loading when loading a squashed
-            # data-set, in which case we cannot easily remove the upper boundary cells
-            # in _trim().
+            # Need to remove y-boundaries after loading when loading a
+            # squashed data-set, in which case we cannot easily remove
+            # the upper boundary cells in _trim().
             remove_yboundaries = not keep_yboundaries
             keep_yboundaries = True
         else:
@@ -726,15 +706,18 @@ def _auto_open_mfboutdataset(
         ds = xr.combine_nested(
             ds_grid,
             concat_dim=concat_dims,
-            data_vars=data_vars,
             join="exact",
-            combine_attrs="no_conflicts",
+            # Only data variables in which the dimension already
+            # appears are concatenated.
+            data_vars="minimal",
+            # Only coordinates in which the dimension already appears
+            # are concatenated.
+            coords="minimal",
+            # Duplicate data taken from first dataset
+            compat="override",
+            # Duplicate attributes taken from first dataset
+            combine_attrs="override",
         )
-
-    if not is_restart:
-        # Remove any duplicate time values from concatenation
-        _, unique_indices = unique(ds["t_array"], return_index=True)
-        ds = ds.isel(t=unique_indices)
 
     return ds, remove_yboundaries
 
@@ -773,7 +756,8 @@ def _expand_wildcards(path):
     # Find path relative to parent
     search_pattern = str(path.relative_to(base_dir))
 
-    # Search this relative path from the parent directory for all files matching user input
+    # Search this relative path from the parent directory
+    # for all files matching user input
     filepaths = list(base_dir.glob(search_pattern))
 
     # Sort by numbers in filepath before returning
@@ -801,7 +785,7 @@ def _read_splitting(filepath, info, keep_yboundaries):
                 print(f"{key} not found, setting to {default}")
             if default < 0:
                 raise ValueError(
-                    f"Default for {key} is {val}, but negative values are not valid"
+                    f"Default for {key} is {val}," f" but negative values are not valid"
                 )
             return default
 
@@ -810,14 +794,15 @@ def _read_splitting(filepath, info, keep_yboundaries):
     mxg = get_nonnegative_scalar(ds, "MXG", default=2, info=info)
     myg = get_nonnegative_scalar(ds, "MYG", default=0, info=info)
     mxsub = get_nonnegative_scalar(
-        ds, "MXSUB", default=ds.dims["x"] - 2 * mxg, info=info
+        ds, "MXSUB", default=ds.sizes["x"] - 2 * mxg, info=info
     )
     mysub = get_nonnegative_scalar(
-        ds, "MYSUB", default=ds.dims["y"] - 2 * myg, info=info
+        ds, "MYSUB", default=ds.sizes["y"] - 2 * myg, info=info
     )
 
-    # Check whether this is a single file squashed from the multiple output files of a
-    # parallel run (i.e. NXPE*NYPE > 1 even though there is only a single file to read).
+    # Check whether this is a single file squashed from the multiple
+    # output files of a parallel run (i.e. NXPE*NYPE > 1 even though
+    # there is only a single file to read).
     if "nx" in ds:
         nx = ds["nx"].values
     else:
@@ -828,12 +813,12 @@ def _read_splitting(filepath, info, keep_yboundaries):
     else:
         # Workaround for older data files
         ny = ds["MYSUB"].values * ds["NYPE"].values
-    nx_file = ds.dims["x"]
-    ny_file = ds.dims["y"]
+    nx_file = ds.sizes["x"]
+    ny_file = ds.sizes["y"]
     is_squashed_doublenull = False
     if nxpe > 1 or nype > 1:
-        # if nxpe = nype = 1, was only one process anyway, so no need to check for
-        # squashing
+        # if nxpe = nype = 1, was only one process anyway, so no need
+        # to check for squashing
         if nx_file == nx or nx_file == nx - 2 * mxg:
             has_xboundaries = nx_file == nx
             if not has_xboundaries:
@@ -848,7 +833,8 @@ def _read_splitting(filepath, info, keep_yboundaries):
             else:
                 upper_target_cells = 0
             if ny_file == ny or ny_file == ny + 2 * myg + 2 * upper_target_cells:
-                # This file contains all the points, possibly including guard cells
+                # This file contains all the points, possibly
+                # including guard cells
 
                 has_yboundaries = not (ny_file == ny)
                 if not has_yboundaries:
@@ -864,8 +850,8 @@ def _read_splitting(filepath, info, keep_yboundaries):
                     # squashed with upper target points.
                     is_squashed_doublenull = False
             elif ny_file == ny + 2 * myg:
-                # Older squashed file from double-null grid but containing only lower
-                # target boundary cells.
+                # Older squashed file from double-null grid but
+                # containing only lower target boundary cells.
                 if keep_yboundaries:
                     raise ValueError(
                         "Cannot keep y-boundary points: squashed file is missing upper "
@@ -877,8 +863,9 @@ def _read_splitting(filepath, info, keep_yboundaries):
 
                 nxpe = 1
                 nype = 1
-                # For this case, do not need the special handling enabled by
-                # is_squashed_doublenull=True, as keeping y-boundaries is not allowed
+                # For this case, do not need the special handling
+                # enabled by is_squashed_doublenull=True, as keeping
+                # y-boundaries is not allowed
                 is_squashed_doublenull = False
 
     # Avoid trying to open this file twice
@@ -927,7 +914,7 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
                     "`BOUT.dmp.0.nc`."
                 )
             raise ValueError(
-                f"A parallel simulation was loaded, but only {len(filepathts)} "
+                f"A parallel simulation was loaded, but only {len(filepaths)} "
                 "files were loaded. Please ensure to pass in all files "
                 "by specifing e.g. `BOUT.dmp.*.nc`"
             )
@@ -939,8 +926,8 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
                 "load each directory separately and concatenate them "
                 "along the time dimension with xarray.concat()."
             )
-        # Create list of lists of filepaths, so that xarray knows how they should
-        # be concatenated by xarray.open_mfdataset()
+        # Create list of lists of filepaths, so that xarray knows how
+        # they should be concatenated by xarray.open_mfdataset()
         paths = iter(filepaths)
         paths_grid = [
             [[next(paths) for x in range(nxpe)] for y in range(nype)]
@@ -962,13 +949,15 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
                     if tmp["PE_XIND"] != 0 or tmp["PE_YIND"] != 0:
                         # The first file is missing.
                         warn(
-                            f"Ignoring {len(paths)} files as the first seems to be missing: {paths}"
+                            f"Ignoring {len(paths)} files as the first"
+                            f" seems to be missing: {paths}"
                         )
                         continue
                     assert tmp["NXPE"] == nxpe
                     assert tmp["NYPE"] == nype
                 raise ValueError(
-                    f"Something is wrong. We expected {nprocs} files but found {len(paths)} files."
+                    f"Something is wrong. We expected {nprocs} files"
+                    f" but found {len(paths)} files."
                 )
             paths = iter(paths)
 
@@ -988,11 +977,13 @@ def _arrange_for_concatenation(filepaths, nxpe=1, nype=1):
 
 
 def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
-    """
-    Trims all guard (and optionally boundary) cells off a single dataset read from a
-    single BOUT dump file, to prepare for concatenation.
-    Also drops some variables that store timing information, which are different for each
-    process and so cannot be concatenated.
+    """Trims all guard (and optionally boundary) cells off a single
+    dataset read from a single BOUT dump file, to prepare for
+    concatenation.
+
+    Variables that store timing information, which are different for
+    each process, are not trimmed but are taken from the first
+    processor during concatenation.
 
     Parameters
     ----------
@@ -1007,6 +998,7 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
         Number of processors in y direction
     is_restart : bool
         Is data being loaded from restart files?
+
     """
 
     if any(keep_boundaries.values()):
@@ -1031,15 +1023,14 @@ def _trim(ds, *, guards, keep_boundaries, nxpe, nype, is_restart):
         ):
             trimmed_ds = trimmed_ds.drop_vars(name)
 
-    to_drop = _BOUT_PER_PROC_VARIABLES
-
-    return trimmed_ds.drop_vars(to_drop, errors="ignore")
+    return trimmed_ds
 
 
 def _infer_contains_boundaries(ds, nxpe, nype):
-    """
-    Uses the processor indices and BOUT++'s topology indices to work out whether this
-    dataset contains boundary cells, and on which side.
+    """Uses the processor indices and BOUT++'s topology indices to
+    work out whether this dataset contains boundary cells, and on
+    which side.
+
     """
 
     if nxpe * nype == 1:
@@ -1051,8 +1042,8 @@ def _infer_contains_boundaries(ds, nxpe, nype):
         yproc = int(ds["PE_YIND"])
     except KeyError:
         # output file from BOUT++ earlier than 4.3
-        # Use knowledge that BOUT names its output files as /folder/prefix.num.nc, with a
-        # numbering scheme
+        # Use knowledge that BOUT names its output files as
+        # /folder/prefix.num.nc, with a numbering scheme
         # num = nxpe*i + j, where i={0, ..., nype}, j={0, ..., nxpe}
         filename = ds.encoding["source"]
         *prefix, filenum, extension = Path(filename).suffixes
@@ -1109,9 +1100,10 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
 
     acceptable_dims = ["x", "y", "z"]
 
-    # Passing 'chunks' with dimensions that are not present in the dataset causes an
-    # error. A gridfile will be missing 't' and may be missing 'z' dimensions that dump
-    # files have, so we must remove them from 'chunks'.
+    # Passing 'chunks' with dimensions that are not present in the
+    # dataset causes an error. A gridfile will be missing 't' and may
+    # be missing 'z' dimensions that dump files have, so we must
+    # remove them from 'chunks'.
     grid_chunks = copy(chunks)
     unrecognised_chunk_dims = list(set(grid_chunks.keys()) - set(acceptable_dims))
     for dim in unrecognised_chunk_dims:
@@ -1125,8 +1117,6 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
     else:
         grid = datapath
 
-    # TODO find out what 'yup_xsplit' etc are in the doublenull storm file John gave me
-    # For now drop any variables with extra dimensions
     unrecognised_dims = list(set(grid.dims) - set(acceptable_dims))
     if len(unrecognised_dims) > 0:
         # Weird string formatting is a workaround to deal with possible bug in
@@ -1138,15 +1128,15 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
         grid = grid.drop_dims(unrecognised_dims)
 
     if keep_xboundaries:
-        # Set MXG so that it is picked up in metadata - needed for applying geometry,
-        # etc.
+        # Set MXG so that it is picked up in metadata - needed for
+        # applying geometry, etc.
         grid["MXG"] = mxg
     else:
         xboundaries = mxg
         if xboundaries > 0:
             grid = grid.isel(x=slice(xboundaries, -xboundaries, None))
-        # Set MXG so that it is picked up in metadata - needed for applying geometry,
-        # etc.
+        # Set MXG so that it is picked up in metadata - needed for
+        # applying geometry, etc.
         grid["MXG"] = 0
     try:
         yboundaries = int(grid["y_boundary_guards"])
@@ -1155,16 +1145,16 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
         # never had y-boundary cells
         yboundaries = 0
     if keep_yboundaries:
-        # Set MYG so that it is picked up in metadata - needed for applying geometry,
-        # etc.
+        # Set MYG so that it is picked up in metadata
+        # - needed for applying geometry, etc.
         grid["MYG"] = yboundaries
     else:
         if yboundaries > 0:
             # Remove y-boundary cells from first divertor target
             grid = grid.isel(y=slice(yboundaries, -yboundaries, None))
             if grid["jyseps1_2"] > grid["jyseps2_1"]:
-                # There is a second divertor target, remove y-boundary cells
-                # there too
+                # There is a second divertor target, remove y-boundary
+                # cells there too
                 nin = int(grid["ny_inner"])
                 grid_lower = grid.isel(y=slice(None, nin, None))
                 grid_upper = grid.isel(y=slice(nin + 2 * yboundaries, None, None))
@@ -1175,8 +1165,8 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
                     compat="identical",
                     join="exact",
                 )
-        # Set MYG so that it is picked up in metadata - needed for applying geometry,
-        # etc.
+        # Set MYG so that it is picked up in metadata
+        # - needed for applying geometry, etc.
         grid["MYG"] = 0
 
     if "z" in grid_chunks and "z" not in grid.dims:

@@ -597,12 +597,12 @@ class BoutDatasetAccessor:
         n_toroidal = ds.sizes[zdim]
 
         # Create Cartesian grid to interpolate to
-        Xmin = ds["X_cartesian"].min()
-        Xmax = ds["X_cartesian"].max()
-        Ymin = ds["Y_cartesian"].min()
-        Ymax = ds["Y_cartesian"].max()
-        Zmin = ds["Z_cartesian"].min()
-        Zmax = ds["Z_cartesian"].max()
+        Xmin = ds["X_cartesian"].min().data[()]
+        Xmax = ds["X_cartesian"].max().data[()]
+        Ymin = ds["Y_cartesian"].min().data[()]
+        Ymax = ds["Y_cartesian"].max().data[()]
+        Zmin = ds["Z_cartesian"].min().data[()]
+        Zmax = ds["Z_cartesian"].max().data[()]
         newX_1d = xr.DataArray(np.linspace(Xmin, Xmax, nX), dims="X")
         newX = newX_1d.expand_dims({"Y": nY, "Z": nZ}, axis=[1, 2])
         newY_1d = xr.DataArray(np.linspace(Ymin, Ymax, nY), dims="Y")

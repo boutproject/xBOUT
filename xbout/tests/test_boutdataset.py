@@ -42,7 +42,7 @@ class TestBoutDatasetIsXarrayDataset:
                 datapath=dataset_list2, inputfilepath=None, keep_xboundaries=False
             )
         result = concat([bd1, bd2], dim="run")
-        assert result.dims == {**bd1.dims, "run": 2}
+        assert result.sizes == {**bd1.sizes, "run": 2}
 
     def test_isel(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
