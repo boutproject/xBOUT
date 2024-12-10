@@ -945,14 +945,14 @@ def plot2d_polygon(
 
     if "Rxy_lower_right_corners" in da.coords:
         r_nodes = [
-            "Rxy",
+            "R",
             "Rxy_lower_left_corners",
             "Rxy_lower_right_corners",
             "Rxy_upper_left_corners",
             "Rxy_upper_right_corners",
         ]
         z_nodes = [
-            "Zxy",
+            "Z",
             "Zxy_lower_left_corners",
             "Zxy_lower_right_corners",
             "Zxy_upper_left_corners",
