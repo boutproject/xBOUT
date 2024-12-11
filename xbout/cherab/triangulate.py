@@ -7,7 +7,6 @@ suitable for input to Cherab ray-tracing analysis.
 """
 
 import numpy as np
-import xarray as xr
 
 
 class TriangularData:
@@ -74,7 +73,7 @@ class TriangularData:
             material=emitting_material,
         )
 
-    def plot_2d(self, ax=None, nr: int = 150, nz: int = 150):
+    def plot_2d(self, ax=None, nr: int = 150, nz: int = 150, colorbar: bool = True):
         """
         Make a 2D plot of the data
 
@@ -95,11 +94,135 @@ class TriangularData:
         image = ax.imshow(
             emiss_sampled.T, origin="lower", extent=(r.min(), r.max(), z.min(), z.max())
         )
-        fig.colorbar(image)
+        if colorbar:
+            fig.colorbar(image)
         ax.set_xlabel("r")
         ax.set_ylabel("z")
 
         return ax
+
+    def wall_flux(
+        self,
+        wall,
+        pixel_samples: int = 2000,
+        wall_detector_offset: float = 0.001,
+        toroidal_width: float = 0.01,
+        step: float = 0.01,
+    ):
+        """
+        Calculate power onto segments of an axisymmetric wall
+
+        Based on the Cherab manual here:
+        https://www.cherab.info/demonstrations/radiation_loads/symmetric_power_load.html#symmetric-power-load
+        
+        Parameters
+        ----------
+
+        wall : AxisymmetricWall
+            Defines a closed loop in R-Z, that defines an axisymmetric wall.
+
+        pixel_samples : The number of samples per wall segment
+
+        wall_detector_offset
+            Distance of detector pixels from wall [meters].
+            Slightly displaced to avoid numerical overlap (ray trapping)
+
+        toroidal_width
+            toroidal width of the detectors [meters]
+
+        step
+            Ray path step length [meters]
+
+        """
+        from raysect.core import Point3D, Vector3D, translate, rotate_basis
+        from raysect.optical import World
+        from raysect.optical.observer import PowerPipeline0D
+        from raysect.optical.material import AbsorbingSurface
+        from raysect.optical.observer.nonimaging.pixel import Pixel
+        from cherab.tools.primitives import axisymmetric_mesh_from_polygon
+
+        world = World()
+
+        # Create a plasma emitter
+        emitter = self.to_emitter(parent=world, step=step)
+
+        # Create the walls around the plasma
+        wall_polygon = wall.to_polygon()  # [npoints, 2] array
+
+        # create a 3D mesh from the 2D polygon outline using symmetry
+        wall_mesh = axisymmetric_mesh_from_polygon(wall_polygon)
+        wall_mesh.parent = world
+        wall_mesh.material = AbsorbingSurface()
+
+        result = []
+        for rz1, rz2 in wall:
+            p1 = Point3D(rz1[0], 0, rz1[1])
+            p2 = Point3D(rz2[0], 0, rz2[1])
+
+            # evaluate y_vector
+            y_vector_full = p1.vector_to(p2)
+
+            if y_vector_full.length < 1e-5:
+                continue  # Skip; points p1, p2 are the same
+
+            y_vector = y_vector_full.normalise()
+            y_width = y_vector_full.length
+
+            # evaluate normal_vector (inward pointing)
+            normal_vector = y_vector.cross(Vector3D(0, 1, 0)).normalise()
+
+            # evaluate the central point of the detector
+            # Note: Displaced in the normal direction by wall_detector_offset
+            detector_center = (
+                p1 + y_vector_full * 0.5 + wall_detector_offset * normal_vector
+            )
+
+            # Use the power pipeline to record total power arriving at the surface
+            power_data = PowerPipeline0D()
+
+            # Note: Displace the pixel location
+            pixel_transform = translate(
+                detector_center.x, detector_center.y, detector_center.z
+            ) * rotate_basis(normal_vector, y_vector)
+
+            # Use pixel_samples argument to increase amount of sampling and reduce noise
+            pixel = Pixel(
+                [power_data],
+                x_width=toroidal_width,
+                y_width=y_width,
+                name=f"wall-{rz1}-{rz2}",
+                spectral_bins=1,
+                transform=pixel_transform,
+                parent=world,
+                pixel_samples=pixel_samples,
+            )
+
+            pixel_area = toroidal_width * y_width
+
+            # Start collecting samples
+            pixel.observe()
+
+            # Estimate power density
+            power_density = power_data.value.mean / pixel_area
+
+            # For checking energy conservation.
+            # Revolve this tile around the CYLINDRICAL z-axis to get total power collected by these tiles.
+            # Add up all the tile contributions to get total power collected.
+            detector_radius = np.sqrt(detector_center.x ** 2 + detector_center.y ** 2)
+            observed_total_power = power_density * (
+                y_width * 2 * np.pi * detector_radius
+            )
+
+            result.append(
+                {
+                    "rz1": rz1,
+                    "rz2": rz2,
+                    "power_density": power_density,
+                    "total_power": observed_total_power,
+                }
+            )
+
+        return result
 
 
 class Triangulate:
