@@ -114,7 +114,7 @@ class TriangularData:
 
         Based on the Cherab manual here:
         https://www.cherab.info/demonstrations/radiation_loads/symmetric_power_load.html#symmetric-power-load
-        
+
         Parameters
         ----------
 
@@ -208,7 +208,7 @@ class TriangularData:
             # For checking energy conservation.
             # Revolve this tile around the CYLINDRICAL z-axis to get total power collected by these tiles.
             # Add up all the tile contributions to get total power collected.
-            detector_radius = np.sqrt(detector_center.x ** 2 + detector_center.y ** 2)
+            detector_radius = np.sqrt(detector_center.x**2 + detector_center.y**2)
             observed_total_power = power_density * (
                 y_width * 2 * np.pi * detector_radius
             )

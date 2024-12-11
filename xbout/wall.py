@@ -4,6 +4,7 @@ Routines to read and represent wall geometries
 
 import numpy as np
 
+
 class AxisymmetricWall:
     def __init__(self, Rs, Zs):
         """
@@ -34,8 +35,9 @@ class AxisymmetricWall:
 
         These pairs define wall segment.
         """
-        return iter(zip(zip(self.Rs, self.Zs),
-                        zip(np.roll(self.Rs, -1), np.roll(self.Zs, -1))))
+        return iter(
+            zip(zip(self.Rs, self.Zs), zip(np.roll(self.Rs, -1), np.roll(self.Zs, -1)))
+        )
 
     def to_polygon(self):
         """
@@ -45,7 +47,7 @@ class AxisymmetricWall:
         """
         return np.stack((self.Rs, self.Zs), axis=-1)
 
-    def plot(self, linestyle='k-', ax = None):
+    def plot(self, linestyle="k-", ax=None):
         """
         Plot the wall on given axis. If no axis
         is given then a new figure is created.
@@ -63,6 +65,7 @@ class AxisymmetricWall:
 
         ax.plot(self.Rs, self.Zs, linestyle)
         return ax
+
 
 def read_geqdsk(filehandle):
     """
@@ -86,31 +89,31 @@ def read_geqdsk(filehandle):
     return AxisymmetricWall(data["rlim"], data["zlim"])
 
 
-def read_csv(filehandle, delimiter=','):
+def read_csv(filehandle, delimiter=","):
     """
     Parameters
     ----------
 
     filehandle: File handle
         Must contain two columns, for R and Z coordinates [meters]
-    
+
     delimier : character
         A single character that separates fields
 
     Notes:
-    - Uses the python `csv` module 
+    - Uses the python `csv` module
     """
     import csv
+
     reader = csv.reader(filehandle, delimiter=delimiter)
     Rs = []
     Zs = []
     for row in reader:
         if len(row) == 0:
-            continue # Skip empty rows
+            continue  # Skip empty rows
         if len(row) != 2:
             raise ValueError(f"CSV row should contain two columns: {row}")
         Rs.append(float(row[0]))
         Zs.append(float(row[1]))
 
     return AxisymmetricWall(Rs, Zs)
-        
