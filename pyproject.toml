@@ -33,7 +33,7 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "xarray>=0.18.0,<2022.9.0",
+    "xarray>=2023.01.0",
     "boutdata>=0.1.4",
     "dask[array]>=2.10.0",
     "gelidum>=0.5.3",
@@ -52,6 +52,9 @@ calc = [
     "statsmodels >= 0.10.1",
     "xrft",
     "xhistogram",
+]
+cherab = [
+    "cherab",
 ]
 docs = [
     "sphinx >= 5.3",
@@ -79,5 +82,5 @@ write_to = "xbout/_version.py"
 [tool.setuptools]
 packages = ["xbout"]
 
-[tool.ruff]
+[tool.ruff.lint]
 ignore = ["E501"]

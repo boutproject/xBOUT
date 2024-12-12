@@ -676,12 +676,7 @@ def _follow_boundary(ds, start_region, start_direction, xbndry, ybndry, Rcoord, 
 
         for boundary in check_order[direction]:
             result = _bounding_surface_checks[boundary](
-                ds_region,
-                boundary_points,
-                xbndry,
-                ybndry,
-                Rcoord,
-                Zcoord,
+                ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord
             )
             if result is not None:
                 boundary_points, this_region, direction = result
@@ -762,13 +757,7 @@ def _get_bounding_surfaces(ds, coords):
         start_direction = "upper_y"
 
     boundary, checked_regions = _follow_boundary(
-        ds,
-        start_region,
-        start_direction,
-        xbndry,
-        ybndry,
-        Rcoord,
-        Zcoord,
+        ds, start_region, start_direction, xbndry, ybndry, Rcoord, Zcoord
     )
     boundaries = [boundary]
 
@@ -832,9 +821,7 @@ def _get_bounding_surfaces(ds, coords):
     # Pack the result into a DataArray
     result = [
         xr.DataArray(
-            boundary,
-            dims=("boundary", "coord"),
-            coords={"coord": [Rcoord, Zcoord]},
+            boundary, dims=("boundary", "coord"), coords={"coord": [Rcoord, Zcoord]}
         )
         for boundary in boundaries
     ]
@@ -859,4 +846,15 @@ def _set_as_coord(ds, name):
         ds = ds.set_coords(f"{name}_CELL_ZLOW")
     except ValueError:
         pass
+    return ds
+
+
+def _maybe_rename_dimension(ds, old_name, new_name):
+    if old_name in ds.dims and new_name != old_name:
+        # Rename dimension
+        ds = ds.swap_dims({old_name: new_name})
+        if old_name in ds:
+            # Rename coordinate if it exists
+            ds = ds.rename({old_name: new_name})
+
     return ds

@@ -31,7 +31,6 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
     - name: Install package
       run: |
@@ -59,9 +58,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
-        pip install xarray~=0.18.0 pandas~=1.4.0
+        pip install xarray~=2023.1.0 pandas~=1.4.0
     - name: Install package
       run: |
         pip install -e .[tests]

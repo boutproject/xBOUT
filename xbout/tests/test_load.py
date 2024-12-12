@@ -16,11 +16,24 @@ from xbout.load import (
     _trim,
     _infer_contains_boundaries,
     open_boutdataset,
-    _BOUT_PER_PROC_VARIABLES,
-    _BOUT_TIME_DEPENDENT_META_VARS,
 )
 from xbout.utils import _separate_metadata
 from xbout.tests.utils_for_tests import create_bout_ds, METADATA_VARS
+
+_BOUT_PER_PROC_VARIABLES = [
+    "wall_time",
+    "wtime",
+    "wtime_rhs",
+    "wtime_invert",
+    "wtime_comms",
+    "wtime_io",
+    "wtime_per_rhs",
+    "wtime_per_rhs_e",
+    "wtime_per_rhs_i",
+    "PE_XIND",
+    "PE_YIND",
+    "MYPE",
+]
 
 
 def test_check_extensions(tmp_path):
@@ -263,10 +276,12 @@ class TestStripMetadata:
 
         ds, metadata = _separate_metadata(original)
 
-        assert original.drop_vars(
-            METADATA_VARS + _BOUT_PER_PROC_VARIABLES + _BOUT_TIME_DEPENDENT_META_VARS,
-            errors="ignore",
-        ).equals(ds)
+        xrt.assert_equal(
+            original.drop_vars(
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
+            ),
+            ds,
+        )
         assert metadata["NXPE"] == 1
 
 
@@ -285,10 +300,7 @@ class TestOpen:
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
-                METADATA_VARS
-                + _BOUT_PER_PROC_VARIABLES
-                + _BOUT_TIME_DEPENDENT_META_VARS,
-                errors="ignore",
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
             ),
         )
 
@@ -311,10 +323,7 @@ class TestOpen:
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
-                METADATA_VARS
-                + _BOUT_PER_PROC_VARIABLES
-                + _BOUT_TIME_DEPENDENT_META_VARS,
-                errors="ignore",
+                METADATA_VARS + _BOUT_PER_PROC_VARIABLES, errors="ignore"
             ),
         )
 
@@ -563,12 +572,7 @@ class TestOpen:
 
         # check creation without writing to disk gives identical result
         fake_ds_list, fake_grid_ds = bout_xyt_example_files(
-            None,
-            nxpe=3,
-            nype=3,
-            nt=1,
-            syn_data_type="stepped",
-            grid="grid",
+            None, nxpe=3, nype=3, nt=1, syn_data_type="stepped", grid="grid"
         )
         fake = open_boutdataset(
             datapath=fake_ds_list, geometry="toroidal", gridfilepath=fake_grid_ds
@@ -930,21 +934,3 @@ class TestTrim:
         if not upper:
             expected = expected.isel(y=slice(None, -2, None))
         xrt.assert_equal(expected, actual)
-
-    @pytest.mark.parametrize("is_restart", [False, True])
-    def test_trim_timing_info(self, is_restart):
-        ds = create_test_data(0)
-        from xbout.load import _BOUT_PER_PROC_VARIABLES
-
-        # remove a couple of entries from _BOUT_PER_PROC_VARIABLES so we test that _trim
-        # does not fail if not all of them are present
-        _BOUT_PER_PROC_VARIABLES = _BOUT_PER_PROC_VARIABLES[:-2]
-
-        for v in _BOUT_PER_PROC_VARIABLES:
-            ds[v] = 42.0
-        ds = _trim(
-            ds, guards={}, keep_boundaries={}, nxpe=1, nype=1, is_restart=is_restart
-        )
-
-        expected = create_test_data(0)
-        xrt.assert_equal(ds, expected)

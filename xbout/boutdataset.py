@@ -597,12 +597,12 @@ class BoutDatasetAccessor:
         n_toroidal = ds.sizes[zdim]
 
         # Create Cartesian grid to interpolate to
-        Xmin = ds["X_cartesian"].min()
-        Xmax = ds["X_cartesian"].max()
-        Ymin = ds["Y_cartesian"].min()
-        Ymax = ds["Y_cartesian"].max()
-        Zmin = ds["Z_cartesian"].min()
-        Zmax = ds["Z_cartesian"].max()
+        Xmin = ds["X_cartesian"].min().data[()]
+        Xmax = ds["X_cartesian"].max().data[()]
+        Ymin = ds["Y_cartesian"].min().data[()]
+        Ymax = ds["Y_cartesian"].max().data[()]
+        Zmin = ds["Z_cartesian"].min().data[()]
+        Zmax = ds["Z_cartesian"].max().data[()]
         newX_1d = xr.DataArray(np.linspace(Xmin, Xmax, nX), dims="X")
         newX = newX_1d.expand_dims({"Y": nY, "Z": nZ}, axis=[1, 2])
         newY_1d = xr.DataArray(np.linspace(Ymin, Ymax, nY), dims="Y")
@@ -614,9 +614,7 @@ class BoutDatasetAccessor:
         # Define newzeta in range 0->2*pi
         newzeta = np.where(newzeta < 0.0, newzeta + 2.0 * np.pi, newzeta)
 
-        from scipy.interpolate import (
-            RegularGridInterpolator,
-        )
+        from scipy.interpolate import RegularGridInterpolator
 
         # Create Cylindrical coordinates for intermediate grid
         Rcyl_min = float_type(ds["R"].min())
@@ -664,10 +662,7 @@ class BoutDatasetAccessor:
             )
 
             print("    do 3d interpolation")
-            return interp(
-                (newR, newZ, newzeta),
-                method="linear",
-            )
+            return interp((newR, newZ, newzeta), method="linear")
 
         for name, da in ds.data_vars.items():
             print(f"\ninterpolating {name}")
@@ -993,14 +988,7 @@ class BoutDatasetAccessor:
         # Is this even possible without saving the guard cells?
         # Can they be recreated?
         restart_datasets, paths = _split_into_restarts(
-            self.data,
-            variables,
-            savepath,
-            nxpe,
-            nype,
-            tind,
-            prefix,
-            overwrite,
+            self.data, variables, savepath, nxpe, nype, tind, prefix, overwrite
         )
 
         with ProgressBar():
@@ -1356,6 +1344,17 @@ class BoutDatasetAccessor:
             plt.show()
 
         return anim
+
+    def with_cherab_grid(self):
+        """
+        Returns a new DataSet with a 'cherab_grid' attribute.
+
+        If called then the `cherab` package must be available.
+        """
+        # Import here so Cherab is required only if this method is called
+        from .cherab import grid
+
+        return grid.ds_with_cherab_grid(self.data)
 
 
 def _find_major_vars(data):
