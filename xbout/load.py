@@ -724,12 +724,6 @@ def _auto_open_mfboutdataset(
             combine_attrs="override",
         )
 
-    if not is_restart:
-        if "t_array" in ds.keys():
-            # Remove any duplicate time values from concatenation
-            _, unique_indices = unique(ds["t_array"], return_index=True)
-            ds = ds.isel(t=unique_indices)
-
     return ds, remove_yboundaries
 
 
