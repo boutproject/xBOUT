@@ -401,7 +401,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
     ds = _maybe_rename_dimension(ds, "y", coordinates["y"])
 
     # TODO automatically make this coordinate 1D in simplified cases?
-    ds = ds.rename(psixy=coordinates["x"])
+    ds[coordinates["x"]] = ds["psixy"]
     ds = ds.set_coords(coordinates["x"])
     ds[coordinates["x"]].attrs["units"] = "Wb"
 
