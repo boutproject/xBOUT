@@ -214,7 +214,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
                 dz = updated_ds["dz"]
 
             z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
-            z1 = z0 + nz * dz.data[0, 0]
+            z1 = z0 + nz * dz.data.flatten()[0]
             if not np.all(
                 np.isclose(
                     z1,
