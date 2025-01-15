@@ -372,9 +372,7 @@ but we did load {grididfile}."""
     # by xBOUT, not by BOUT++
     ds.bout.fine_interpolation_factor = 8
 
-    if ("dump" in input_type or "restart" in input_type) and ds.metadata[
-        "BOUT_VERSION"
-    ] < 4.0:
+    if ("dump" in input_type or "restart" in input_type) and ("BOUT_VERSION" in ds.metadata and ds.metadata["BOUT_VERSION"] < 4.0):
         # Add workarounds for missing information or different
         # conventions in data saved by BOUT++ v3.x.
         for v in ds:
