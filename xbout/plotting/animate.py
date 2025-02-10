@@ -833,19 +833,12 @@ def animate_polygon(
     colors = da.data[0,:,:].flatten()
     polys.set_array(colors)
     ax.add_collection(polys)
-
-    #def update(frame):
-    #    # for each frame, update the data stored on each artist.
-    #    colors = da.data[frame,:,:].flatten()
-    #    polys.set_array(colors)
-    #    return polys
+    # function to update the data plotted
+    # assuming data in shape (t,x,y)
     def update(frame):
         colors = da.data[frame,:,:].flatten()
         polys.set_array(colors)
-        print(da.data[0,0,0].compute())
-        print(frame)
-    #update(0)
-
+        
     if add_colorbar:
         # This produces a "foolproof" colorbar which
         # is always the height of the plot
@@ -869,13 +862,8 @@ def animate_polygon(
 
     if targets:
         plot_targets(da, ax, x="R", y="Z", hatching=add_limiter_hatching)
-    
-    #print(np.shape(da.data))
-    #colors = da.data[0,:,:].flatten()
-    #polys.set_array(colors)
-    #ax.add_collection(polys)
-    
-    
-    ani = matplotlib.animation.FuncAnimation(fig=fig, func=update, frames=np.shape(da.data)[0], interval=3000)
+
+    # make the animation by using FuncAnimation and update() to generate frames    
+    ani = matplotlib.animation.FuncAnimation(fig=fig, func=update, frames=np.shape(da.data)[0], interval=30)
     return ani
 
