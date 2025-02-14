@@ -868,9 +868,6 @@ def animate_polygon(
         ani = matplotlib.animation.FuncAnimation(fig=fig, func=update, frames=np.shape(da.data)[0], interval=30)
         return ani
     else:
-        # return function and data for making the animation
-        def update_out(frame,polys,da):
-            colors = da.data[frame,:,:].flatten()
-            polys.set_array(colors)
-        return polys, da, update_out
+        # return function for making the animation
+        return update
 

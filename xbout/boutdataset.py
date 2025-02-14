@@ -1542,7 +1542,7 @@ class BoutDatasetAccessor:
 
             if ndims == 3:
                 if this_poloidal_plot:
-                    polys, da, update_func = animate_polygon(
+                    update_func = animate_polygon(
                         data,
                         ax=ax,
                         cax=cax,
@@ -1552,7 +1552,7 @@ class BoutDatasetAccessor:
                         animate=False,
                         **this_kwargs,
                     )
-                    animate_data.append([polys,da,update_func])
+                    animate_data.append(update_func)
                 else:
                     raise ValueError(
                     "Unsupported option "
@@ -1572,15 +1572,14 @@ class BoutDatasetAccessor:
                 ax.set_title(this_title)
         
         def update(frame):
-            for list in animate_data:
-                (polys, da, update_func) = list
+            for update_func in animate_data:
                 # call update function for each axes
-                update_func(frame,polys,da)
+                update_func(frame)
         
         # make the animation for all the subplots simultaneously
-        # use the last data array da to choose the number of frames
+        # use time data array "t" to choose the number of frames
         # assumes time dimension same length for all variables
-        anim = FuncAnimation(fig=fig, func=update, frames=np.shape(da.data)[0], interval=30)
+        anim = FuncAnimation(fig=fig, func=update, frames=self.data["t"].data.size, interval=30)
         if tight_layout:
             if subplots_adjust is not None:
                 warnings.warn(
