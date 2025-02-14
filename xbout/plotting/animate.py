@@ -700,6 +700,7 @@ def animate_polygon(
     grid_only=False,
     linewidth=0,
     linecolor="black",
+    animate=True, 
 ):
     """
     Nice looking 2D plots which have no visual artifacts around the X-point.
@@ -862,8 +863,14 @@ def animate_polygon(
 
     if targets:
         plot_targets(da, ax, x="R", y="Z", hatching=add_limiter_hatching)
-
-    # make the animation by using FuncAnimation and update() to generate frames    
-    ani = matplotlib.animation.FuncAnimation(fig=fig, func=update, frames=np.shape(da.data)[0], interval=30)
-    return ani
+    if animate:
+        # make the animation by using FuncAnimation and update() to generate frames    
+        ani = matplotlib.animation.FuncAnimation(fig=fig, func=update, frames=np.shape(da.data)[0], interval=30)
+        return ani
+    else:
+        # return function and data for making the animation
+        def update_out(frame,polys,da):
+            colors = da.data[frame,:,:].flatten()
+            polys.set_array(colors)
+        return polys, da, update_out
 
