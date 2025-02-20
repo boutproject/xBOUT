@@ -1365,7 +1365,7 @@ class BoutDatasetAccessor:
         titles=None,
         aspect=None,
         extend=None,
-        #controls="both",
+        # controls="both",
         tight_layout=True,
         **kwargs,
     ):
@@ -1555,10 +1555,10 @@ class BoutDatasetAccessor:
                     animate_data.append(update_func)
                 else:
                     raise ValueError(
-                    "Unsupported option "
-                    + ". this_poloidal_plot "
-                    + str(this_poloidal_plot)
-                )
+                        "Unsupported option "
+                        + ". this_poloidal_plot "
+                        + str(this_poloidal_plot)
+                    )
             else:
                 raise ValueError(
                     "Unsupported number of dimensions "
@@ -1570,16 +1570,18 @@ class BoutDatasetAccessor:
             if this_title is not None:
                 # Replace default title with user-specified one
                 ax.set_title(this_title)
-        
+
         def update(frame):
             for update_func in animate_data:
                 # call update function for each axes
                 update_func(frame)
-        
+
         # make the animation for all the subplots simultaneously
         # use time data array "t" to choose the number of frames
         # assumes time dimension same length for all variables
-        anim = FuncAnimation(fig=fig, func=update, frames=self.data["t"].data.size, interval=30)
+        anim = FuncAnimation(
+            fig=fig, func=update, frames=self.data["t"].data.size, interval=30
+        )
         if tight_layout:
             if subplots_adjust is not None:
                 warnings.warn(
@@ -1598,7 +1600,7 @@ class BoutDatasetAccessor:
             plt.show()
 
         return anim
-    
+
     def with_cherab_grid(self):
         """
         Returns a new DataSet with a 'cherab_grid' attribute.

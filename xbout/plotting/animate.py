@@ -680,6 +680,7 @@ def animate_line(
 
     return line_block
 
+
 def animate_polygon(
     da,
     ax=None,
@@ -700,7 +701,7 @@ def animate_polygon(
     grid_only=False,
     linewidth=0,
     linecolor="black",
-    animate=True, 
+    animate=True,
 ):
     """
     Nice looking 2D plots which have no visual artifacts around the X-point.
@@ -830,16 +831,17 @@ def animate_polygon(
         linewidths=linewidth,
         joinstyle="bevel",
     )
-    
-    colors = da.data[0,:,:].flatten()
+
+    colors = da.data[0, :, :].flatten()
     polys.set_array(colors)
     ax.add_collection(polys)
+
     # function to update the data plotted
     # assuming data in shape (t,x,y)
     def update(frame):
-        colors = da.data[frame,:,:].flatten()
+        colors = da.data[frame, :, :].flatten()
         polys.set_array(colors)
-        
+
     if add_colorbar:
         # This produces a "foolproof" colorbar which
         # is always the height of the plot
@@ -848,8 +850,6 @@ def animate_polygon(
         cax = divider.append_axes("right", size="5%", pad=0.05)
         fig.colorbar(polys, cax=cax, label=colorbar_label, extend=extend)
         cax.grid(which="both", visible=False)
-
-    
 
     ax.set_aspect("equal", adjustable="box")
     ax.set_xlabel("R [m]")
@@ -864,10 +864,11 @@ def animate_polygon(
     if targets:
         plot_targets(da, ax, x="R", y="Z", hatching=add_limiter_hatching)
     if animate:
-        # make the animation by using FuncAnimation and update() to generate frames    
-        ani = matplotlib.animation.FuncAnimation(fig=fig, func=update, frames=np.shape(da.data)[0], interval=30)
+        # make the animation by using FuncAnimation and update() to generate frames
+        ani = matplotlib.animation.FuncAnimation(
+            fig=fig, func=update, frames=np.shape(da.data)[0], interval=30
+        )
         return ani
     else:
         # return function for making the animation
         return update
-
