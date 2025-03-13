@@ -1165,7 +1165,7 @@ class BoutDataArrayAccessor:
             parent=parent,
             cylinder_zmin=cylinder_zmin,
             cylinder_zmax=cylinder_zmax,
-            cylinder_rmin=cyliner_rmin,
-            cylinder_rmax=cyliner_rmax,
+            cylinder_rmin=cylinder_rmin,
+            cylinder_rmax=cylinder_rmax,
             step=step,
         )
