@@ -83,7 +83,7 @@ def read_geqdsk(filehandle):
     data = geqdsk.read(filehandle)
     # rlim and zlim should be 1D arrays of wall coordinates
 
-    if not (hasattr(data, "rlim") and hasattr(data, "zlim")):
+    if not (("rlim" in data) and ("zlim" in data)):
         raise ValueError(f"Wall coordinates not found in GEQDSK file")
 
     return AxisymmetricWall(data["rlim"], data["zlim"])
