@@ -76,6 +76,9 @@ Source = "https://github.com/boutproject/xBOUT"
 Tracker = "https://github.com/boutproject/xBOUT/issues"
 Documentation = "https://xbout.readthedocs.io/en/latest/"
 
+[project.entry-points."xarray.backends"]
+bout_adios2 = "xbout.xarraybackend:BoutAdiosBackendEntrypoint"
+
 [tool.setuptools_scm]
 write_to = "xbout/_version.py"
 
