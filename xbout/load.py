@@ -64,6 +64,7 @@ def open_boutdataset(
     run_name=None,
     info=True,
     is_restart=None,
+    is_mms_dump=False,
     **kwargs,
 ):
     """Load a dataset from a set of BOUT output files, including the
@@ -179,12 +180,12 @@ def open_boutdataset(
         chunks = {}
 
     input_type = _check_dataset_type(datapath)
-
     if is_restart is None:
         is_restart = input_type == "restart"
     elif is_restart is True:
         input_type = "restart"
-
+    if is_mms_dump:
+        input_type = "dump"
     if "reload" in input_type:
         if input_type == "reload":
             if isinstance(datapath, Path):
@@ -358,7 +359,12 @@ but we did load {grididfile}."""
                 ds.metadata[v] = grid[v].values
 
     # Update coordinates to match particular geometry of grid
-    ds = geometries.apply_geometry(ds, geometry, grid=grid)
+    if input_type == "grid":
+        # Specify coordinate names to avoid name clash
+        coordinates = {"x": "psi_poloidal", "y": "y", "z": "zeta"}
+    else:
+        coordinates = None
+    ds = geometries.apply_geometry(ds, geometry, grid=grid, coordinates=coordinates)
 
     if remove_yboundaries:
         ds = ds.bout.remove_yboundaries()
@@ -616,7 +622,6 @@ def _auto_open_mfboutdataset(
         nxpe, nype, mxg, myg, mxsub, mysub, is_squashed_doublenull = _read_splitting(
             filepaths[0], info, keep_yboundaries
         )
-
         if is_squashed_doublenull:
             # Need to remove y-boundaries after loading: (i) in case
             # we are loading a squashed data-set, in which case we
