@@ -21,6 +21,7 @@ suggestions.
 
    loading_data
    accessor_methods
+   cherab
    extending_xbout
 
 .. toctree::
