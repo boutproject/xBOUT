@@ -15,30 +15,14 @@ from typing import TYPE_CHECKING, Any, ItemsView
 import numpy as np
 from adios2 import FileReader
 
-# from xarray.core.dataset import Dataset
 from xarray import Dataset, Variable
-from xarray import coding, conventions
 from xarray.backends.common import (
-    BACKEND_ENTRYPOINTS,
-    AbstractWritableDataStore,
     BackendArray,
     BackendEntrypoint,
-    _encode_variable_name,
     _normalize_path,
 )
 
-# from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
-
-# from xarray.core.indexing import LazilyIndexedArray
-
-# from xarray.core.parallelcompat import guess_chunkmanager
-# from xarray.core.pycompat import integer_types
-# from xarray.core.utils import (
-#     FrozenDict,
-#    HiddenKeyDict,
-#     close_on_error,
-# )
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
@@ -69,7 +53,9 @@ adios_to_numpy_type = {
 class BoutADIOSBackendArray(BackendArray):
     """ADIOS2 backend for lazily indexed arrays"""
 
-    def __init__(self, shape: list, dtype: np.dtype, lock, adiosfile: FileReader, varname: str):
+    def __init__(
+        self, shape: list, dtype: np.dtype, lock, adiosfile: FileReader, varname: str
+    ):
         self.shape = shape
         self.dtype = dtype
         self.lock = lock
@@ -94,7 +80,7 @@ class BoutADIOSBackendArray(BackendArray):
         #      f"key = {key} steps = {self.steps}")
         # print(f"    data shape {data.shape}")
 
-        # thread safe method that access to data on disk needed because 
+        # thread safe method that access to data on disk needed because
         # adios is not thread safe even for reading
         # with self.lock:
         start = []
@@ -103,17 +89,17 @@ class BoutADIOSBackendArray(BackendArray):
         first_sl = True
         for sl in key:
             if isinstance(sl, slice):
-                if sl.start == None:
+                if sl.start is None:
                     st = 0
                 else:
                     st = sl.start
 
-                if sl.stop == None:
+                if sl.stop is None:
                     ct = self.shape[dimid] - st
                 else:
                     ct = sl.stop - st
 
-                if sl.step != 1 and sl.step != None:
+                if sl.step != 1 and sl.step is not None:
                     msg = (
                         "The indexing operation with step != 1 you are attempting to perform "
                         "is not valid on ADIOS2.Variable object. "
@@ -284,7 +270,9 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
                     avar.set_step_selection([0, avar.steps()])
                     data = self._fh.read(avar)
                     # print(f"\tCreate timed scalar variable {varname}")
-                    xvar = Variable("t", data, attrs=xattrs, encoding={"dtype": data.dtype})
+                    xvar = Variable(
+                        "t", data, attrs=xattrs, encoding={"dtype": data.dtype}
+                    )
                 else:
                     data = self._fh.read(varname)
                     if varinfo["Type"] == "string":
