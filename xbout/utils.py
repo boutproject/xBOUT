@@ -34,6 +34,9 @@ def _check_filetype(path):
         filetype = "netcdf4"
     elif path.suffix == ".h5netcdf":
         filetype = "h5netcdf"
+    elif path.suffix == ".bp":
+        filetype = "bout_adios2"
+
     else:
         raise IOError("Do not know how to read file extension {}".format(path.suffix))
     return filetype
