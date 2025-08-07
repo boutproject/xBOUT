@@ -1169,7 +1169,7 @@ class BoutDataArrayAccessor:
             cylinder_rmax=cyliner_rmax,
             step=step,
         )
-        
+
     def final_time(self):
         """
         Returns the final time in the Dataset whether
