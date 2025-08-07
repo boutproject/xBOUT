@@ -1169,3 +1169,13 @@ class BoutDataArrayAccessor:
             cylinder_rmax=cyliner_rmax,
             step=step,
         )
+        
+    def final_time(self):
+        """
+        Returns the final time in the Dataset whether
+        it contains a time dimension or not.
+        """
+        if "t" in self.data.sizes:
+            return self.data.isel(t=-1)
+        else:
+            return self.data

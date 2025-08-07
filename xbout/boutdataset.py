@@ -33,7 +33,6 @@ from .utils import (
     _split_into_restarts,
 )
 
-
 @xr.register_dataset_accessor("bout")
 class BoutDatasetAccessor:
     """
@@ -1355,7 +1354,16 @@ class BoutDatasetAccessor:
         from .cherab import grid
 
         return grid.ds_with_cherab_grid(self.data)
-
+    
+    def final_time(self):
+        """
+        Returns the final time in the Dataset whether
+        it contains a time dimension or not.
+        """
+        if "t" in self.data.sizes:
+            return self.data.isel(t=-1)
+        else:
+            return self.data
 
 def _find_major_vars(data):
     """
