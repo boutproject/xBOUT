@@ -39,6 +39,22 @@ class AxisymmetricWall:
             zip(zip(self.Rs, self.Zs), zip(np.roll(self.Rs, -1), np.roll(self.Zs, -1)))
         )
 
+    def refine(self, factor: int):
+        """
+        Split wall elements into factor elements
+
+        Returns a new AxisymmetricWall
+        """
+
+        # Wall is a closed loop
+        xold = np.linspace(0, 1, len(self.Rs), endpoint=False)
+        xnew = np.linspace(0, 1, len(self.Rs) * factor, endpoint=False)
+
+        Rs = np.interp(xnew, xold, self.Rs, period=1.0)
+        Zs = np.interp(xnew, xold, self.Zs, period=1.0)
+
+        return AxisymmetricWall(Rs, Zs)
+
     def to_polygon(self):
         """
         Returns a 2D Numpy array [npoints, 2]
