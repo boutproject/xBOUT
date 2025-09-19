@@ -31,7 +31,7 @@ def _add_attrs_to_var(ds, varname, copy=False):
 
 def _check_filetype(path):
     if path.suffix == ".nc":
-        filetype = "netcdf4"
+        filetype = "h5netcdf"
     elif path.suffix == ".h5netcdf":
         filetype = "h5netcdf"
     elif path.suffix == ".bp":
