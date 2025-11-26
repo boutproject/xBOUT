@@ -1363,8 +1363,7 @@ class BoutDatasetAccessor:
         """
         if "t" in self.data.sizes:
             return self.data.isel(t=-1)
-        else:
-            return self.data
+        return self.data
 
 
 def _find_major_vars(data):
