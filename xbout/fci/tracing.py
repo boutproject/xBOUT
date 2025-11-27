@@ -65,8 +65,11 @@ def setup_mesh(x, y):
 
     assert x.dims == y.dims
     assert x.dims == ("x", "z")
-    x = per(x.data)
-    y = per(y.data)
+
+    assert np.all(np.isfinite(x.data))
+    assert np.all(np.isfinite(y.data))
+    x = per(x.values)
+    y = per(y.values)
     return mymesh(x, y)
 
 
