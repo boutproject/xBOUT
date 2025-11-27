@@ -31,9 +31,6 @@ def da_with_cherab_grid(da):
     if da.sizes["zeta"] != 1:
         raise ValueError("xhermes.plotting.cherab: Zeta index must have size 1")
 
-    nx = da.sizes["x"]
-    ny = da.sizes["theta"]
-
     # Cell corners
     rm = np.stack(
         (
