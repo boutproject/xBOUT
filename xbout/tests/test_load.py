@@ -43,7 +43,7 @@ def test_check_extensions(tmp_path):
     example_nc_file.write_text("content_nc")
 
     filetype = _check_filetype(example_nc_file)
-    assert filetype == "netcdf4"
+    assert filetype == "h5netcdf"
 
     example_hdf5_file = files_dir.joinpath("example.h5netcdf")
     example_hdf5_file.write_text("content_hdf5")
