@@ -11,7 +11,7 @@ from ..boutdataset import BoutDatasetAccessor
 import time
 
 try:
-    from tqdm import tqdm
+    from tqdm.auto import tqdm
 except ImportError:
 
     class tqdm:
