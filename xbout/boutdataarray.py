@@ -29,7 +29,7 @@ class BoutDataArrayAccessor:
     selecting a variable from a BOUT++ dataset.
 
     These BOUT-specific methods and attributes are accessed via the bout
-    accessor, e.g. `da.bout.options` returns a `BoutOptionsFile` instance.
+    accessor, e.g. ``da.bout.options`` returns a `BoutOptionsFile` instance.
     """
 
     def __init__(self, da):
@@ -306,7 +306,6 @@ class BoutDataArrayAccessor:
         # Select a particular 'region' and interpolate to higher parallel resolution
         da = self.data
         region = da.bout._regions[region]
-        tcoord = da.metadata["bout_tdim"]
         xcoord = da.metadata["bout_xdim"]
         ycoord = da.metadata["bout_ydim"]
         zcoord = da.metadata["bout_zdim"]
@@ -373,6 +372,7 @@ class BoutDataArrayAccessor:
 
         if not aligned_input:
             # Want output in non-aligned coordinates
+            da = da.chunk({"zeta": -1})  # One chunk in zeta for FFTs
             da = da.bout.from_field_aligned()
 
         if toroidal_points is not None and zcoord in da.sizes:
@@ -384,9 +384,6 @@ class BoutDataArrayAccessor:
                 da = da.isel(**{zcoord: toroidal_points})
 
         return da
-
-    def add_cartesian_coordinates(self):
-        return _add_cartesian_coordinates(self.data)
 
     def add_cartesian_coordinates(self):
         """
@@ -698,6 +695,7 @@ class BoutDataArrayAccessor:
             If set to false, do not create the animation, just return the block or blocks
         axis_coords : None, str, dict
             Coordinates to use for axis labelling.
+
             - None: Use the dimension coordinate for each axis, if it exists.
             - "index": Use the integer index values.
             - dict: keys are dimension names, values set axis_coords for each axis
@@ -705,6 +703,7 @@ class BoutDataArrayAccessor:
               coordinate (which must have the dimension given by 'key'), or a 1d
               numpy array, dask array or DataArray whose length matches the length of
               the dimension given by 'key'.
+
             Only affects time coordinate for plots with poloidal_plot=True.
         fps : int, optional
             Frames per second of resulting gif
@@ -815,6 +814,7 @@ class BoutDataArrayAccessor:
             Dimension over which to animate, defaults to the time dimension
         axis_coords : None, str, dict
             Coordinates to use for axis labelling.
+
             - None: Use the dimension coordinate for each axis, if it exists.
             - "index": Use the integer index values.
             - dict: keys are dimension names, values set axis_coords for each axis
@@ -834,7 +834,7 @@ class BoutDataArrayAccessor:
             A matplotlib axes instance to plot to. If None, create a new
             figure and axes, and plot to that
         aspect : str or None, optional
-            Argument to set_aspect(), defaults to "auto"
+            Argument to ``ax.set_aspect()``, defaults to "auto"
         kwargs : dict, optional
             Additional keyword arguments are passed on to the plotting function
             (animatplot.blocks.Line).
@@ -842,7 +842,7 @@ class BoutDataArrayAccessor:
         Returns
         -------
         animation or block
-            If animate==True, returns an animatplot.Animation object, otherwise
+            If ``animate==True``, returns an animatplot.Animation object, otherwise
             returns an animatplot.blocks.Line instance.
         """
 
@@ -947,7 +947,6 @@ class BoutDataArrayAccessor:
             method = "linear"
 
         # extend input coordinates to cover all dims, so we can flatten them
-        input_coords = []
         for coord in kwargs:
             data = da[coord]
             missing_dims = tuple(set(dims) - set(data.dims))
@@ -1025,7 +1024,7 @@ class BoutDataArrayAccessor:
 
         This method is intended to be used to produce data for visualisation, which
         normally does not require double-precision values, so by default the data is
-        converted to `np.float32`. Pass `use_float32=False` to retain the original
+        converted to `numpy.float32`. Pass ``use_float32=False`` to retain the original
         precision.
 
         Parameters
@@ -1037,10 +1036,10 @@ class BoutDataArrayAccessor:
         nZ : int (default 100)
             Number of grid points in the Z direction
         use_float32 : bool (default True)
-            Downgrade precision to `np.float32`?
+            Downgrade precision to `numpy.float32`?
         fill_value : float (default np.nan)
             Value to use for points outside the interpolation domain (passed to
-            `scipy.RegularGridInterpolator`)
+            `scipy.interpolate.RegularGridInterpolator`)
 
         See Also
         --------
@@ -1074,6 +1073,12 @@ class BoutDataArrayAccessor:
         """
         return plotfuncs.plot2d_wrapper(self.data, xr.plot.pcolormesh, ax=ax, **kwargs)
 
+    def polygon(self, ax=None, **kwargs):
+        """
+        Colour-plot of a radial-poloidal slice on the R-Z plane using polygons
+        """
+        return plotfuncs.plot2d_polygon(self.data, ax=ax, **kwargs)
+
     def plot_regions(self, ax=None, **kwargs):
         """
         Plot the regions into which xBOUT splits radial-poloidal arrays to handle
@@ -1097,3 +1102,80 @@ class BoutDataArrayAccessor:
         See plotfuncs.plot3d()
         """
         return plotfuncs.plot3d(self.data, **kwargs)
+
+    def with_cherab_grid(self):
+        """
+        Returns a new DataArray with a 'cherab_grid' attribute.
+
+        If called then the `cherab` package must be available.
+        """
+        # Import here so Cherab is required only if this method is called
+        from .cherab import grid
+
+        return grid.da_with_cherab_grid(self.data)
+
+    def as_cherab_data(self):
+        """
+        Returns a new cherab.TriangularData object.
+
+        If a Cherab grid has not been calculated then it will be created.
+        It is more efficient to first compute a Cherab grid for a whole
+        DataSet (using `with_cherab_grid`) and then call this function
+        on individual DataArrays.
+        """
+        if "cherab_grid" not in self.data.attrs:
+            # Calculate the Cherab triangulation
+            da = self.with_cherab_grid()
+        else:
+            da = self.data
+
+        return da.attrs["cherab_grid"].with_data(da)
+
+    def as_cherab_emitter(
+        self,
+        parent=None,
+        cylinder_zmin=None,
+        cylinder_zmax=None,
+        cylinder_rmin=None,
+        cylinder_rmax=None,
+        step: float = 0.01,
+    ):
+        """
+        Make a Cherab emitter (RadiationFunction), rotating a 2D mesh about the Z axis
+
+        Cherab (https://www.cherab.info/) is a python library for forward
+        modelling diagnostics based on spectroscopic plasma emission.
+        It is based on the Raysect (http://www.raysect.org/) scientific
+        ray-tracing framework.
+
+        Parameters
+        ----------
+        parent : Cherab scene (default None)
+            The Cherab scene to attach the emitter to
+        step : float (default 0.01 meters)
+            Volume integration step length [m]
+
+        Returns
+        -------
+
+        A cherab.tools.emitters.RadiationFunction
+
+        """
+
+        return self.as_cherab_data().to_emitter(
+            parent=parent,
+            cylinder_zmin=cylinder_zmin,
+            cylinder_zmax=cylinder_zmax,
+            cylinder_rmin=cylinder_rmin,
+            cylinder_rmax=cylinder_rmax,
+            step=step,
+        )
+
+    def final_time(self):
+        """
+        Returns the final time in the Dataset whether
+        it contains a time dimension or not.
+        """
+        if "t" in self.data.sizes:
+            return self.data.isel(t=-1)
+        return self.data

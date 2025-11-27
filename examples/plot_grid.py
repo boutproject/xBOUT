@@ -13,6 +13,6 @@ grid["psi_poloidal"].bout.contour()
 grid["psi_poloidal"].bout.pcolormesh()
 grid["psi_poloidal"].bout.pcolormesh(shading="gouraud")
 
-grid["psi_poloidal"].bout.regions()
+grid["psi_poloidal"].bout.plot_regions()
 
 plt.show()

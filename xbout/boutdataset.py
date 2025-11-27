@@ -41,7 +41,7 @@ class BoutDatasetAccessor:
     `open_boutdataset()`.
 
     These BOUT-specific methods and attributes are accessed via the bout
-    accessor, e.g. `ds.bout.options` returns a `BoutOptionsFile` instance.
+    accessor, e.g. ``ds.bout.options`` returns a `BoutOptionsFile` instance.
     """
 
     def __init__(self, ds):
@@ -266,9 +266,6 @@ class BoutDatasetAccessor:
 
         return ds
 
-    def add_cartesian_coordinates(self):
-        return _add_cartesian_coordinates(self.data)
-
     def integrate_midpoints(self, variable, *, dims=None, cumulative_t=False):
         """
         Integrate using the midpoint rule for spatial dimensions, and trapezium rule for
@@ -277,18 +274,18 @@ class BoutDatasetAccessor:
         The quantity being integrated is assumed to be a scalar variable.
 
         When doing a 1d integral in the 'y' dimension, the integral is calculated as a
-        poloidal integral if the variable is on the standard grid ('direction_y'
+        poloidal integral if the variable is on the standard grid (``direction_y``
         attribute is "Standard"), or as a parallel-to-B integral if the variable is on
-        the field-aligned grid ('direction_y' attribute is "Aligned").
+        the field-aligned grid (``direction_y`` attribute is "Aligned").
 
         When doing a 2d integral over 'x' and 'y' dimensions, the integral will be over
-        poloidal cross-sections if the variable is not field-aligned (direction_y ==
-        "Standard") and over field-aligned surfaces if the variable is field-aligned
-        (direction_ == "Aligned"). The latter seems unlikely to be useful as the
+        poloidal cross-sections if the variable is not field-aligned (``direction_y ==
+        "Standard"``) and over field-aligned surfaces if the variable is field-aligned
+        (``direction_ == "Aligned"``). The latter seems unlikely to be useful as the
         surfaces depend on the arbitrary origin used for zShift.
 
         Is a method of BoutDataset accessor rather than of BoutDataArray so we can use
-        other variables like `J`, `g11`, `g_22` for the integration.
+        other variables like :math:`J`, :math:`g^{11}`, :math:`g_{22}` for the integration.
 
         Note the xarray.DataArray.integrate() method uses the trapezium rule, which is
         not consistent with the way BOUT++ defines grid spacings as cell widths. Also,
@@ -557,7 +554,7 @@ class BoutDatasetAccessor:
 
         This method is intended to be used to produce data for visualisation, which
         normally does not require double-precision values, so by default the data is
-        converted to `np.float32`. Pass `use_float32=False` to retain the original
+        converted to `numpy.float32`. Pass ``use_float32=False`` to retain the original
         precision.
 
         Parameters
@@ -569,10 +566,10 @@ class BoutDatasetAccessor:
         nZ : int (default 100)
             Number of grid points in the Z direction
         use_float32 : bool (default True)
-            Downgrade precision to `np.float32`?
+            Downgrade precision to `numpy.float32`?
         fill_value : float (default np.nan)
             Value to use for points outside the interpolation domain (passed to
-            `scipy.RegularGridInterpolator`)
+            `scipy.interpolate.RegularGridInterpolator`)
 
         See Also
         --------
@@ -600,12 +597,12 @@ class BoutDatasetAccessor:
         n_toroidal = ds.sizes[zdim]
 
         # Create Cartesian grid to interpolate to
-        Xmin = ds["X_cartesian"].min()
-        Xmax = ds["X_cartesian"].max()
-        Ymin = ds["Y_cartesian"].min()
-        Ymax = ds["Y_cartesian"].max()
-        Zmin = ds["Z_cartesian"].min()
-        Zmax = ds["Z_cartesian"].max()
+        Xmin = ds["X_cartesian"].min().data[()]
+        Xmax = ds["X_cartesian"].max().data[()]
+        Ymin = ds["Y_cartesian"].min().data[()]
+        Ymax = ds["Y_cartesian"].max().data[()]
+        Zmin = ds["Z_cartesian"].min().data[()]
+        Zmax = ds["Z_cartesian"].max().data[()]
         newX_1d = xr.DataArray(np.linspace(Xmin, Xmax, nX), dims="X")
         newX = newX_1d.expand_dims({"Y": nY, "Z": nZ}, axis=[1, 2])
         newY_1d = xr.DataArray(np.linspace(Ymin, Ymax, nY), dims="Y")
@@ -617,10 +614,7 @@ class BoutDatasetAccessor:
         # Define newzeta in range 0->2*pi
         newzeta = np.where(newzeta < 0.0, newzeta + 2.0 * np.pi, newzeta)
 
-        from scipy.interpolate import (
-            RegularGridInterpolator,
-            griddata,
-        )
+        from scipy.interpolate import RegularGridInterpolator
 
         # Create Cylindrical coordinates for intermediate grid
         Rcyl_min = float_type(ds["R"].min())
@@ -668,10 +662,7 @@ class BoutDatasetAccessor:
             )
 
             print("    do 3d interpolation")
-            return interp(
-                (newR, newZ, newzeta),
-                method="linear",
-            )
+            return interp((newR, newZ, newzeta), method="linear")
 
         for name, da in ds.data_vars.items():
             print(f"\ninterpolating {name}")
@@ -680,9 +671,6 @@ class BoutDatasetAccessor:
             # results in the loop to the last two dimensions, so put zeta first.  Can't
             # just use da.min().item() here (to get a scalar value instead of a
             # zero-size array) because .item() doesn't work for dask arrays (yet!).
-
-            datamin = float_type(da.min().values)
-            datamax = float_type(da.max().values)
 
             if tdim in da.dims:
                 data_cartesian = np.zeros((nt, nX, nY, nZ), dtype=float_type)
@@ -813,10 +801,10 @@ class BoutDatasetAccessor:
 
         Examples
         --------
-        If `separate_vars=True`, then multiple files will be created. These can
-        all be opened and merged in one go using a call of the form:
+        If ``separate_vars=True``, then multiple files will be created. These can
+        all be opened and merged in one go using a call of the form::
 
-        ds = xr.open_mfdataset('boutdata_*.nc', combine='nested', concat_dim=None)
+            ds = xr.open_mfdataset('boutdata_*.nc', combine='nested', concat_dim=None)
         """
 
         if variables is None:
@@ -976,10 +964,10 @@ class BoutDatasetAccessor:
         tind : int, default -1
             Time-index of the slice to write to the restart files. Note, when creating
             restart files from 'dump' files it is recommended to open the Dataset using
-            the full time range and use the `tind` argument here, rather than selecting
-            a time point manually, so that the calculation of `hist_hi` in the output
-            can be correct (which requires knowing the existing value of `hist_hi`
-            (output step count at the end of the simulation), `tind` and the total
+            the full time range and use the ``tind`` argument here, rather than selecting
+            a time point manually, so that the calculation of ``hist_hi`` in the output
+            can be correct (which requires knowing the existing value of ``hist_hi``
+            (output step count at the end of the simulation), ``tind`` and the total
             number of time points in the current output data).
         prefix : str, default "BOUT.restart"
             Prefix to use for names of restart files
@@ -1000,14 +988,7 @@ class BoutDatasetAccessor:
         # Is this even possible without saving the guard cells?
         # Can they be recreated?
         restart_datasets, paths = _split_into_restarts(
-            self.data,
-            variables,
-            savepath,
-            nxpe,
-            nype,
-            tind,
-            prefix,
-            overwrite,
+            self.data, variables, savepath, nxpe, nype, tind, prefix, overwrite
         )
 
         with ProgressBar():
@@ -1061,6 +1042,7 @@ class BoutDatasetAccessor:
             grid coordinates, per variable if sequence is given
         axis_coords : None, str, dict or list of None, str or dict
             Coordinates to use for axis labelling.
+
             - None: Use the dimension coordinate for each axis, if it exists.
             - "index": Use the integer index values.
             - dict: keys are dimension names, values set axis_coords for each axis
@@ -1068,6 +1050,7 @@ class BoutDatasetAccessor:
               coordinate (which must have the dimension given by 'key'), or a 1d
               numpy array, dask array or DataArray whose length matches the length of
               the dimension given by 'key'.
+
             Only affects time coordinate for plots with poloidal_plot=True.
             If a list is passed, it must have the same length as 'variables' and gives
             the axis_coords setting for each plot individually.
@@ -1361,6 +1344,26 @@ class BoutDatasetAccessor:
             plt.show()
 
         return anim
+
+    def with_cherab_grid(self):
+        """
+        Returns a new DataSet with a 'cherab_grid' attribute.
+
+        If called then the `cherab` package must be available.
+        """
+        # Import here so Cherab is required only if this method is called
+        from .cherab import grid
+
+        return grid.ds_with_cherab_grid(self.data)
+
+    def final_time(self):
+        """
+        Returns the final time in the Dataset whether
+        it contains a time dimension or not.
+        """
+        if "t" in self.data.sizes:
+            return self.data.isel(t=-1)
+        return self.data
 
 
 def _find_major_vars(data):

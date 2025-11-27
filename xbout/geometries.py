@@ -4,12 +4,13 @@ from textwrap import dedent
 import xarray as xr
 import numpy as np
 
-from .region import Region, _create_regions_toroidal, _create_single_region
+from .region import _create_regions_toroidal, _create_single_region
 from .utils import (
     _add_attrs_to_var,
     _set_attrs_on_all_vars,
     _set_as_coord,
     _1d_coord_from_spacing,
+    _maybe_rename_dimension,
 )
 
 REGISTERED_GEOMETRIES = {}
@@ -145,7 +146,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         # 'dx' may not be consistent between different regions (e.g. core and PFR).
         # For some geometries xcoord may have already been created by
         # add_geometry_coords, in which case we do not need this.
-        nx = updated_ds.dims[xcoord]
+        nx = updated_ds.sizes[xcoord]
 
         # can't use commented out version, uncommented one works around xarray bug
         # removing attrs
@@ -157,7 +158,6 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         _add_attrs_to_var(updated_ds, xcoord)
 
     if ycoord not in updated_ds.coords:
-        ny = updated_ds.dims[ycoord]
         # dy should always be constant in x, so it is safe to convert to a 1d
         # coordinate.  [The y-coordinate has to be a 1d coordinate that labels x-z
         # slices of the grid (similarly x-coordinate is 1d coordinate that labels y-z
@@ -183,7 +183,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     if zcoord in updated_ds.dims and zcoord not in updated_ds.coords:
         # Generates a coordinate whose value is 0 on the first grid point, not dz/2, to
         # match how BOUT++ generates fields from input file expressions.
-        nz = updated_ds.dims[zcoord]
+        nz = updated_ds.sizes[zcoord]
 
         # In BOUT++ v5, dz is either a Field2D or Field3D.
         # We can use it as a 1D coordinate if it's a Field3D, _or_ if nz == 1
@@ -209,7 +209,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
             if bout_v5:
                 if not np.all(updated_ds["dz"].min() == updated_ds["dz"].max()):
                     raise ValueError(
-                        f"Spacing is not constant. Cannot create z coordinate"
+                        "Spacing is not constant. Cannot create z coordinate"
                     )
 
                 dz = updated_ds["dz"].min()
@@ -217,7 +217,7 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
                 dz = updated_ds["dz"]
 
             z0 = 2 * np.pi * updated_ds.metadata["ZMIN"]
-            z1 = z0 + nz * dz
+            z1 = z0 + nz * dz.data.flatten()[0]
             if not np.all(
                 np.isclose(
                     z1,
@@ -385,18 +385,26 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
             "total_poloidal_distance",
             "zShift",
             "zShift_ylow",
+            "Rxy_corners",  # Lower left corners
+            "Rxy_lower_right_corners",
+            "Rxy_upper_left_corners",
+            "Rxy_upper_right_corners",
+            "Zxy_corners",  # Lower left corners
+            "Zxy_lower_right_corners",
+            "Zxy_upper_left_corners",
+            "Zxy_upper_right_corners",
         ],
     )
 
-    if "t" in ds.dims:
+    if coordinates["t"] != "t":
         # Rename 't' if user requested it
-        ds = ds.rename(t=coordinates["t"])
+        ds = _maybe_rename_dimension(ds, "t", coordinates["t"])
 
     # Change names of dimensions to Orthogonal Toroidal ones
-    ds = ds.rename(y=coordinates["y"])
+    ds = _maybe_rename_dimension(ds, "y", coordinates["y"])
 
     # TODO automatically make this coordinate 1D in simplified cases?
-    ds = ds.rename(psixy=coordinates["x"])
+    ds[coordinates["x"]] = ds["psixy"]
     ds = ds.set_coords(coordinates["x"])
     ds[coordinates["x"]].attrs["units"] = "Wb"
 
@@ -409,7 +417,7 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
 
     # If full data (not just grid file) then toroidal dim will be present
     if "z" in ds.dims:
-        ds = ds.rename(z=coordinates["z"])
+        ds = _maybe_rename_dimension(ds, "z", coordinates["z"])
 
         # Record which dimension 'z' was renamed to.
         ds.metadata["bout_zdim"] = coordinates["z"]
@@ -423,6 +431,24 @@ def add_toroidal_geometry_coords(ds, *, coordinates=None, grid=None):
         ds = ds.set_coords(("R", "Z"))
     else:
         ds = ds.set_coords(("Rxy", "Zxy"))
+
+    # Add cell corners as coordinates for polygon plotting
+    if "Rxy_lower_right_corners" in ds:
+        ds = ds.rename(
+            Rxy_corners="Rxy_lower_left_corners", Zxy_corners="Zxy_lower_left_corners"
+        )
+        ds = ds.set_coords(
+            (
+                "Rxy_lower_left_corners",
+                "Rxy_lower_right_corners",
+                "Rxy_upper_left_corners",
+                "Rxy_upper_right_corners",
+                "Zxy_lower_left_corners",
+                "Zxy_lower_right_corners",
+                "Zxy_upper_left_corners",
+                "Zxy_upper_right_corners",
+            )
+        )
 
     # Rename zShift_ylow if it was added from grid file, to be consistent with name if
     # it was added from dump file
@@ -483,7 +509,7 @@ def add_s_alpha_geometry_coords(ds, *, coordinates=None, grid=None):
     ds["r"] = ds["hthe"].isel({ycoord: 0}).squeeze(drop=True)
     ds["r"].attrs["units"] = "m"
     ds = ds.set_coords("r")
-    ds = ds.rename(x="r")
+    ds = ds.swap_dims(x="r")
     ds.metadata["bout_xdim"] = "r"
 
     if hthe_from_grid:

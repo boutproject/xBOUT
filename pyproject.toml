@@ -1,6 +1,89 @@
 [build-system]
-requires = ["setuptools >= 42", "wheel", "setuptools_scm[toml]>=3.4", "setuptools_scm_git_archive"]
+requires = [
+    "setuptools >= 65",
+    "setuptools_scm[toml] >= 7",
+    "wheel >= 0.29.0",
+]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "xbout"
+description = "Collect data from BOUT++ runs in python using xarray"
+readme = "README.md"
+authors = [
+    {name = "Thomas Nicholas", email = "thomas.nicholas@york.ac.uk"},
+    {name = "John Omotani"},
+]
+license = {file = "LICENSE"}
+dynamic = ["version"]
+keywords = ["gyrokinetics", "analysis", "plasma", "research"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "xarray>=2023.01.0",
+    "boutdata>=0.1.4",
+    "dask[array]>=2.10.0",
+    "gelidum>=0.5.3",
+    "natsort>=5.5.0",
+    "matplotlib>=3.1.1,!=3.3.0,!=3.3.1,!=3.3.2",
+    "animatplot-ng>=0.4.2",
+    "netcdf4>=1.4.0",
+    "Pillow>=6.1.0",
+]
+
+[project.optional-dependencies]
+calc = [
+    "numpy >= 1.18.0",
+    "scipy >= 1.3.0",
+    "dask >= 2.2.0",
+    "statsmodels >= 0.10.1",
+    "xrft",
+    "xhistogram",
+]
+cherab = [
+    "cherab",
+]
+docs = [
+    "sphinx >= 5.3",
+    "sphinx-book-theme >= 0.4.0rc1",
+    "sphinx_autodoc_typehints >= 1.19",
+]
+3d_plot = [
+    "k3d >= 2.8.0",
+    "mayavi >= 4.7.2",
+    "wand",
+]
+tests = [
+    "pytest >= 3.3.0",
+    "pytest-cov",
+]
+
+[project.urls]
+Source = "https://github.com/boutproject/xBOUT"
+Tracker = "https://github.com/boutproject/xBOUT/issues"
+Documentation = "https://xbout.readthedocs.io/en/latest/"
+
+[project.entry-points."xarray.backends"]
+bout_adios2 = "xbout.xarraybackend:BoutAdiosBackendEntrypoint"
 
 [tool.setuptools_scm]
 write_to = "xbout/_version.py"
+
+[tool.setuptools]
+packages = ["xbout"]
+
+[tool.ruff.lint]
+ignore = ["E501"]

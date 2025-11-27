@@ -1,12 +1,10 @@
 import pytest
-import matplotlib
 from matplotlib import pyplot as plt
 import numpy as np
 import xarray as xr
 
 from xbout import open_boutdataset
-from xbout.boutdataarray import BoutDataArrayAccessor
-from .test_load import create_bout_ds_list
+from .utils_for_tests import create_bout_ds_list
 
 from animatplot.blocks import Pcolormesh, Line
 
@@ -195,16 +193,7 @@ class TestAnimate:
         assert isinstance(animation.blocks[3], Line)
 
         # check there were actually 3 subplots
-        assert (
-            len(
-                [
-                    x
-                    for x in plt.gcf().get_axes()
-                    if isinstance(x, matplotlib.axes.Subplot)
-                ]
-            )
-            == 3
-        )
+        assert len([x for x in plt.gcf().get_axes() if x.get_xlabel() != ""]) == 3
 
         plt.close()
 
@@ -284,7 +273,7 @@ class TestAnimate:
         save_dir, ds = create_test_file
 
         with pytest.raises(ValueError):
-            animation = ds.isel(z=3).bout.animate_list(
+            ds.isel(z=3).bout.animate_list(
                 ["n", ds["T"].isel(x=2), ds["n"].isel(y=1, z=2)], nrows=2, ncols=1
             )
 
