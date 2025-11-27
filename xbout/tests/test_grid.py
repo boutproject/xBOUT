@@ -27,7 +27,7 @@ def create_example_grid_file(tmp_path_factory):
 
     # Save
     filepath = save_dir.joinpath("grid.nc")
-    grid.to_netcdf(filepath, engine="netcdf4")
+    grid.to_netcdf(filepath, engine="h5netcdf")
 
     return filepath
 
@@ -52,7 +52,7 @@ class TestOpenGrid:
 
         dodgy_grid_directory = tmp_path_factory.mktemp("dodgy_grid")
         dodgy_grid_path = dodgy_grid_directory.joinpath("dodgy_grid.nc")
-        merge([example_grid, new_var]).to_netcdf(dodgy_grid_path, engine="netcdf4")
+        merge([example_grid, new_var]).to_netcdf(dodgy_grid_path, engine="h5netcdf")
 
         with pytest.warns(
             UserWarning, match="drop all variables containing " "the dimensions 'w'"
