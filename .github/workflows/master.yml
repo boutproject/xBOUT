@@ -20,18 +20,17 @@ jobs:
     if: always()
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.12", "3.13", "3.14", "3.x"]
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
     - name: Install package
       run: |
@@ -49,7 +48,7 @@ jobs:
     if: always()
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.12"]
       fail-fast: false
 
     steps:
@@ -60,9 +59,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get update && sudo apt-get install libhdf5-dev libnetcdf-dev
         python -m pip install --upgrade pip
-        pip install xarray~=2023.1.0 pandas~=1.4.0
+        pip install xarray~=2023.12.0 pandas~=2.2.0
     - name: Install package
       run: |
         pip install -e .[tests]

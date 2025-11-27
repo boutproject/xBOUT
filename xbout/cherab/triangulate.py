@@ -7,7 +7,6 @@ suitable for input to Cherab ray-tracing analysis.
 """
 
 import numpy as np
-import xarray as xr
 
 
 class TriangularData:
