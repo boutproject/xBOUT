@@ -14,7 +14,7 @@ authors = [
     {name = "Thomas Nicholas", email = "thomas.nicholas@york.ac.uk"},
     {name = "John Omotani"},
 ]
-license = {file = "LICENSE"}
+license = "Apache-2.0"
 dynamic = ["version"]
 keywords = ["gyrokinetics", "analysis", "plasma", "research"]
 classifiers = [
@@ -22,13 +22,15 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Intended Audience :: Education",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
     "Natural Language :: English",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 requires-python = ">=3.8"
