@@ -372,6 +372,7 @@ class BoutDataArrayAccessor:
 
         if not aligned_input:
             # Want output in non-aligned coordinates
+            da = da.chunk({"zeta": -1})  # One chunk in zeta for FFTs
             da = da.bout.from_field_aligned()
 
         if toroidal_points is not None and zcoord in da.sizes:
@@ -1169,3 +1170,12 @@ class BoutDataArrayAccessor:
             cylinder_rmax=cyliner_rmax,
             step=step,
         )
+
+    def final_time(self):
+        """
+        Returns the final time in the Dataset whether
+        it contains a time dimension or not.
+        """
+        if "t" in self.data.sizes:
+            return self.data.isel(t=-1)
+        return self.data
