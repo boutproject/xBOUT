@@ -230,7 +230,9 @@ def _evaluate_get_single(ds, r, phi, z, delta_phi):
         dsn = ds.isel(y=nexti)
         dy = float(dsl.dy[0, 0].data)
         cdy = dsn.y - dsl.y if lasti >= 0 else dsn.y - dsl.y + 2 * np.pi / period
-        assert np.isclose(cdy, dy), f"{float(cdy)} is not close to {dy}"
+        assert np.isclose(
+            cdy, dy
+        ), f"{float(cdy)} is not close to {dy}; Δ = {float(cdy) - dy} ; dy does not match spacing in y"
         f1 = float(dsn.y.data - phi) / dy
         f2 = float(phi - dsl.y.data) / dy
         if f1 < 0:
