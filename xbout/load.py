@@ -242,7 +242,7 @@ def open_boutdataset(
 
         # If geometry was set, apply geometry again
         if geometry is not None:
-            if "geometry" != ds.attrs.get("geometry", None):
+            if geometry != ds.attrs.get("geometry", None):
                 warn(
                     f'open_boutdataset() called with geometry="{geometry}", but we are '
                     f"reloading a Dataset that was saved after being loaded with "
