@@ -739,14 +739,6 @@ def _expand_filepaths(datapath):
         raise IOError("No datafiles found matching datapath={}".format(datapath))
 
     if len(filepaths) > xr.get_options().get("file_cache_maxsize", 128):
-        warn(
-            "Trying to open a large number of files - setting xarray's"
-            " `file_cache_maxsize` global option to {} to accommodate this. "
-            "Recommend using `xr.set_options(file_cache_maxsize=NUM)`"
-            " to explicitly set this to a large enough value.".format(
-                str(len(filepaths))
-            )
-        )
         xr.set_options(file_cache_maxsize=len(filepaths))
 
     return filepaths, filetype
