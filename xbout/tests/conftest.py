@@ -165,7 +165,7 @@ def create_example_grid_file_fci(tmp_path_factory):
 
     # Save
     filepath = save_dir.joinpath("fci.nc")
-    grid.to_netcdf(filepath, engine="netcdf4")
+    grid.to_netcdf(filepath, engine="h5netcdf")
 
     return filepath
 
