@@ -33,9 +33,12 @@ def _add_attrs_to_var(ds, varname, copy=False):
 
 def _check_filetype(path):
     if path.suffix == ".nc":
-        filetype = "netcdf4"
+        filetype = "h5netcdf"
     elif path.suffix == ".h5netcdf":
         filetype = "h5netcdf"
+    elif path.suffix == ".bp":
+        filetype = "bout_adios2"
+
     else:
         raise IOError("Do not know how to read file extension {}".format(path.suffix))
     return filetype
@@ -198,27 +201,6 @@ def _update_metadata_increased_y_resolution(
     return da
 
 
-def _add_cartesian_coordinates(ds):
-    # Add Cartesian X and Y coordinates if they do not exist already
-    # Works on either BoutDataset or BoutDataArray
-
-    R = ds["R"]
-    Z = ds["Z"]
-    zeta = ds[ds.metadata["bout_zdim"]]
-    if "X_cartesian" not in ds.coords:
-        X = R * np.cos(zeta)
-        ds = ds.assign_coords(X_cartesian=X)
-    if "Y_cartesian" not in ds.coords:
-        Y = R * np.sin(zeta)
-        ds = ds.assign_coords(Y_cartesian=Y)
-    if "Z_cartesian" not in ds.coords:
-        zcoord = ds.metadata["bout_zdim"]
-        nz = len(ds[zcoord])
-        ds = ds.assign_coords(Z_cartesian=Z.expand_dims({zcoord: nz}, axis=-1))
-
-    return ds
-
-
 def _1d_coord_from_spacing(spacing, dim, ds=None, *, origin_at=None):
     """
     Create a 1d coordinate varying along the dimension 'dim' from the grid spacing
@@ -258,12 +240,16 @@ def _1d_coord_from_spacing(spacing, dim, ds=None, *, origin_at=None):
             )
 
         point_to_use = {
-            spacing.metadata["bout_xdim"]: spacing.metadata.get("MXG", 0)
-            if spacing.metadata["keep_xboundaries"]
-            else 0,
-            spacing.metadata["bout_ydim"]: spacing.metadata.get("MYG", 0)
-            if spacing.metadata["keep_yboundaries"]
-            else 0,
+            spacing.metadata["bout_xdim"]: (
+                spacing.metadata.get("MXG", 0)
+                if spacing.metadata["keep_xboundaries"]
+                else 0
+            ),
+            spacing.metadata["bout_ydim"]: (
+                spacing.metadata.get("MYG", 0)
+                if spacing.metadata["keep_yboundaries"]
+                else 0
+            ),
             spacing.metadata["bout_zdim"]: spacing.metadata.get("MZG", 0),
         }
 
@@ -341,7 +327,6 @@ def _check_new_nxpe(ds, nxpe):
     # Check nxpe is valid
 
     nx = ds.metadata["nx"] - 2 * ds.metadata["MXG"]
-    mxsub = nx // nxpe
 
     if nx % nxpe != 0:
         raise ValueError(
@@ -608,21 +593,23 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
                     if isinstance(value, str):
                         # Write strings as byte-strings so BOUT++ can read them
                         value = value.encode()
+                    elif isinstance(value, int):
+                        value = np.intc(value)
 
                     restart_ds[v] = value
 
             # These variables need to be altered, because they depend on the number of
             # files and/or the rank of this file.
-            restart_ds["MXSUB"] = mxsub
-            restart_ds["MYSUB"] = mysub
-            restart_ds["NXPE"] = nxpe
-            restart_ds["NYPE"] = nype
-            restart_ds["PE_XIND"] = xproc
-            restart_ds["PE_YIND"] = yproc
-            restart_ds["hist_hi"] = hist_hi
-            restart_ds["PE_XIND"] = xproc
-            restart_ds["PE_YIND"] = yproc
-            restart_ds["MYPE"] = yproc * nxpe + xproc
+            restart_ds["MXSUB"] = np.intc(mxsub)
+            restart_ds["MYSUB"] = np.intc(mysub)
+            restart_ds["NXPE"] = np.intc(nxpe)
+            restart_ds["NYPE"] = np.intc(nype)
+            restart_ds["PE_XIND"] = np.intc(xproc)
+            restart_ds["PE_YIND"] = np.intc(yproc)
+            restart_ds["hist_hi"] = np.intc(hist_hi)
+            restart_ds["PE_XIND"] = np.intc(xproc)
+            restart_ds["PE_YIND"] = np.intc(yproc)
+            restart_ds["MYPE"] = np.intc(yproc * nxpe + xproc)
 
             # tt is the simulation time where the restart happens
             restart_ds["tt"] = tt
@@ -780,19 +767,13 @@ def _follow_boundary(ds, start_region, start_direction, xbndry, ybndry, Rcoord, 
         visited_regions.append(this_region)
 
         ds_region = ds.bout.from_region(this_region, with_guards=0)
-        region = ds.bout._regions[this_region]
 
         # Get all boundary points from this region, and decide which region to go to next
         this_region = None
 
         for boundary in check_order[direction]:
             result = _bounding_surface_checks[boundary](
-                ds_region,
-                boundary_points,
-                xbndry,
-                ybndry,
-                Rcoord,
-                Zcoord,
+                ds_region, boundary_points, xbndry, ybndry, Rcoord, Zcoord
             )
             if result is not None:
                 boundary_points, this_region, direction = result
@@ -843,9 +824,6 @@ def _get_bounding_surfaces(ds, coords):
     else:
         ybndry = 0
 
-    xcoord = ds.metadata["bout_xdim"]
-    ycoord = ds.metadata["bout_ydim"]
-
     # First find the outer boundary
     start_region = None
     for name, region in ds.bout._regions.items():
@@ -876,13 +854,7 @@ def _get_bounding_surfaces(ds, coords):
         start_direction = "upper_y"
 
     boundary, checked_regions = _follow_boundary(
-        ds,
-        start_region,
-        start_direction,
-        xbndry,
-        ybndry,
-        Rcoord,
-        Zcoord,
+        ds, start_region, start_direction, xbndry, ybndry, Rcoord, Zcoord
     )
     boundaries = [boundary]
 
@@ -946,9 +918,7 @@ def _get_bounding_surfaces(ds, coords):
     # Pack the result into a DataArray
     result = [
         xr.DataArray(
-            boundary,
-            dims=("boundary", "coord"),
-            coords={"coord": [Rcoord, Zcoord]},
+            boundary, dims=("boundary", "coord"), coords={"coord": [Rcoord, Zcoord]}
         )
         for boundary in boundaries
     ]
@@ -973,4 +943,15 @@ def _set_as_coord(ds, name):
         ds = ds.set_coords(f"{name}_CELL_ZLOW")
     except ValueError:
         pass
+    return ds
+
+
+def _maybe_rename_dimension(ds, old_name, new_name):
+    if old_name in ds.dims and new_name != old_name:
+        # Rename dimension
+        ds = ds.swap_dims({old_name: new_name})
+        if old_name in ds:
+            # Rename coordinate if it exists
+            ds = ds.rename({old_name: new_name})
+
     return ds
