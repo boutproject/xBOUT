@@ -1346,7 +1346,7 @@ def _concat_inner_guards(da, da_global, mxg):
         # xarray coordinates are read-only by design, must use assign_coords()
         xcoord_attrs = da_inner[xcoord].attrs.copy()
         ycoord_attrs = da_inner[ycoord].attrs.copy()
-        
+
         # Assign new coordinate values
         new_xcoord.attrs = xcoord_attrs
         new_ycoord.attrs = ycoord_attrs
@@ -1459,7 +1459,7 @@ def _concat_outer_guards(da, da_global, mxg):
         # xarray coordinates are read-only by design, must use assign_coords()
         xcoord_attrs = da_outer[xcoord].attrs.copy()
         ycoord_attrs = da_outer[ycoord].attrs.copy()
-        
+
         # Assign new coordinate values
         new_xcoord.attrs = xcoord_attrs
         new_ycoord.attrs = ycoord_attrs
@@ -1561,7 +1561,7 @@ def _concat_lower_guards(da, da_global, mxg, myg):
         # xarray coordinates are read-only by design, must use assign_coords()
         xcoord_attrs = da_lower[xcoord].attrs.copy()
         ycoord_attrs = da_lower[ycoord].attrs.copy()
-        
+
         # Assign new coordinate values
         new_xcoord.attrs = xcoord_attrs
         new_ycoord.attrs = ycoord_attrs
@@ -1679,7 +1679,7 @@ def _concat_upper_guards(da, da_global, mxg, myg):
         # xarray coordinates are read-only by design, must use assign_coords()
         xcoord_attrs = da_upper[xcoord].attrs.copy()
         ycoord_attrs = da_upper[ycoord].attrs.copy()
-        
+
         # Assign new coordinate values
         new_xcoord.attrs = xcoord_attrs
         new_ycoord.attrs = ycoord_attrs
