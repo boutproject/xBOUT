@@ -20,7 +20,6 @@ from xbout.geometries import apply_geometry
 from xbout.utils import _set_attrs_on_all_vars, _1d_coord_from_spacing
 from xbout.tests.utils_for_tests import set_geometry_from_input_file
 
-
 EXAMPLE_OPTIONS_FILE_PATH = "./xbout/tests/data/options/BOUT.inp"
 
 

@@ -1,6 +1,5 @@
 import pytest
 
-
 configure_is_imported = False
 
 
