@@ -1342,15 +1342,15 @@ def _concat_inner_guards(da, da_global, mxg):
         new_xcoord = da_global[xcoord].isel(**{xcoord: slices[xcoord]})
         new_ycoord = da_global[ycoord].isel(**{ycoord: slices[ycoord]})
 
-        # can't use commented out version, uncommented one works around xarray bug
-        # removing attrs
-        # https://github.com/pydata/xarray/issues/4415
-        # https://github.com/pydata/xarray/issues/4393
-        # da_inner = da_inner.assign_coords(**{xcoord: new_xcoord, ycoord: new_ycoord})
-        da_inner[xcoord].data[...] = new_xcoord.data
-        da_inner = da_inner.reset_index(xcoord).set_xindex(xcoord)
-        da_inner[ycoord].data[...] = new_ycoord.data
-        da_inner = da_inner.reset_index(ycoord).set_xindex(ycoord)
+        # Preserve attributes when updating coordinates
+        # xarray coordinates are read-only by design, must use assign_coords()
+        xcoord_attrs = da_inner[xcoord].attrs.copy()
+        ycoord_attrs = da_inner[ycoord].attrs.copy()
+        
+        # Assign new coordinate values
+        new_xcoord.attrs = xcoord_attrs
+        new_ycoord.attrs = ycoord_attrs
+        da_inner = da_inner.assign_coords(**{xcoord: new_xcoord, ycoord: new_ycoord})
 
     save_regions = da.bout._regions
     da = xr.concat((da_inner, da), xcoord, join="exact")
@@ -1455,15 +1455,15 @@ def _concat_outer_guards(da, da_global, mxg):
         new_xcoord = da_global[xcoord].isel(**{xcoord: slices[xcoord]})
         new_ycoord = da_global[ycoord].isel(**{ycoord: slices[ycoord]})
 
-        # can't use commented out version, uncommented one works around xarray bug
-        # removing attrs
-        # https://github.com/pydata/xarray/issues/4415
-        # https://github.com/pydata/xarray/issues/4393
-        # da_outer = da_outer.assign_coords(**{xcoord: new_xcoord, ycoord: new_ycoord})
-        da_outer[xcoord].data[...] = new_xcoord.data
-        da_outer = da_outer.reset_index(xcoord).set_xindex(xcoord)
-        da_outer[ycoord].data[...] = new_ycoord.data
-        da_outer = da_outer.reset_index(ycoord).set_xindex(ycoord)
+        # Preserve attributes when updating coordinates
+        # xarray coordinates are read-only by design, must use assign_coords()
+        xcoord_attrs = da_outer[xcoord].attrs.copy()
+        ycoord_attrs = da_outer[ycoord].attrs.copy()
+        
+        # Assign new coordinate values
+        new_xcoord.attrs = xcoord_attrs
+        new_ycoord.attrs = ycoord_attrs
+        da_outer = da_outer.assign_coords(**{xcoord: new_xcoord, ycoord: new_ycoord})
 
     save_regions = da.bout._regions
     da = xr.concat((da, da_outer), xcoord, join="exact")
@@ -1557,15 +1557,15 @@ def _concat_lower_guards(da, da_global, mxg, myg):
             )
             new_ycoord = new_ycoord + offset
 
-        # can't use commented out version, uncommented one works around xarray bug
-        # removing attrs
-        # https://github.com/pydata/xarray/issues/4415
-        # https://github.com/pydata/xarray/issues/4393
-        # da_lower = da_lower.assign_coords(**{xcoord: new_xcoord, ycoord: new_ycoord})
-        da_lower[xcoord].data[...] = new_xcoord.data
-        da_lower = da_lower.reset_index(xcoord).set_xindex(xcoord)
-        da_lower[ycoord].data[...] = new_ycoord.data
-        da_lower = da_lower.reset_index(ycoord).set_xindex(ycoord)
+        # Preserve attributes when updating coordinates
+        # xarray coordinates are read-only by design, must use assign_coords()
+        xcoord_attrs = da_lower[xcoord].attrs.copy()
+        ycoord_attrs = da_lower[ycoord].attrs.copy()
+        
+        # Assign new coordinate values
+        new_xcoord.attrs = xcoord_attrs
+        new_ycoord.attrs = ycoord_attrs
+        da_lower = da_lower.assign_coords(**{xcoord: new_xcoord, ycoord: new_ycoord})
 
     if "poloidal_distance" in da.coords and myg > 0:
         # Special handling for core regions to deal with branch cut
@@ -1675,15 +1675,15 @@ def _concat_upper_guards(da, da_global, mxg, myg):
             )
             new_ycoord = new_ycoord + offset
 
-        # can't use commented out version, uncommented one works around xarray bug
-        # removing attrs
-        # https://github.com/pydata/xarray/issues/4415
-        # https://github.com/pydata/xarray/issues/4393
-        # da_upper = da_upper.assign_coords(**{xcoord: new_xcoord, ycoord: new_ycoord})
-        da_upper[xcoord].data[...] = new_xcoord.data
-        da_upper = da_upper.reset_index(xcoord).set_xindex(xcoord)
-        da_upper[ycoord].data[...] = new_ycoord.data
-        da_upper = da_upper.reset_index(ycoord).set_xindex(ycoord)
+        # Preserve attributes when updating coordinates
+        # xarray coordinates are read-only by design, must use assign_coords()
+        xcoord_attrs = da_upper[xcoord].attrs.copy()
+        ycoord_attrs = da_upper[ycoord].attrs.copy()
+        
+        # Assign new coordinate values
+        new_xcoord.attrs = xcoord_attrs
+        new_ycoord.attrs = ycoord_attrs
+        da_upper = da_upper.assign_coords(**{xcoord: new_xcoord, ycoord: new_ycoord})
 
     if "poloidal_distance" in da.coords and myg > 0:
         # Special handling for core regions to deal with branch cut
