@@ -324,7 +324,11 @@ def _pad_y_boundaries(ds):
     ycoord = ds.metadata.get("bout_ydim", "y")
     has_second_divertor = ds.metadata["jyseps2_1"] != ds.metadata["jyseps1_2"]
 
-    if not ds.metadata["keep_yboundaries"] and myg > 0 and ds.metadata['ny'] == ds.dims['y']:
+    if (
+        not ds.metadata["keep_yboundaries"]
+        and myg > 0
+        and ds.metadata["ny"] == ds.dims["y"]
+    ):
         boundary_pad = ds.isel({ycoord: slice(myg)}).copy(deep=True).load()
         for v in boundary_pad:
             if ycoord in boundary_pad[v].dims:

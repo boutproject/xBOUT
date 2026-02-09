@@ -6,7 +6,6 @@ import xarray.testing as xrt
 
 from xbout import open_boutdataset
 
-
 params_guards = "guards"
 params_guards_values = [
     pytest.param({"x": 0, "y": 0}, marks=pytest.mark.long),

@@ -18,7 +18,6 @@ from .utils import (
     plot_targets,
 )
 
-
 if (
     "pcolor.shading" in matplotlib.rcParams
     and matplotlib.rcParams["pcolor.shading"] == "flat"
