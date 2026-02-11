@@ -60,13 +60,9 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
         try:
             add_geometry_coords = REGISTERED_GEOMETRIES[geometry_name]
         except KeyError:
-            message = dedent(
-                """{} is not a registered geometry. Inspect the global
+            message = dedent("""{} is not a registered geometry. Inspect the global
                              variable REGISTERED_GEOMETRIES to see which geometries
-                             have been registered.""".format(
-                    geometry_name
-                )
-            )
+                             have been registered.""".format(geometry_name))
             raise UnregisteredGeometryError(message)
 
         # User-registered functions may accept 'coordinates' and 'grid' arguments, but
