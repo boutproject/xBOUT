@@ -166,6 +166,9 @@ def open_boutdataset(
         name in ``datapath``. This option can be set to True or False
         to explicitly enable or disable the restart file handling.
 
+    force_netcdf4 : bool, optional
+        Force netCDF4 backend in case HDF5 causes errors? (default: False)
+
     kwargs : optional
         Keyword arguments are passed down to `xarray.open_mfdataset`,
         which in turn passes extra kwargs down to
@@ -451,6 +454,7 @@ def collect(
     xguards=True,
     info=True,
     prefix="BOUT.dmp",
+    force_netcdf4=False,
 ):
     """Extract the data pertaining to a specified variable in a BOUT++ data set
 
@@ -475,7 +479,7 @@ def collect(
         (Set to True to be consistent with the definition of nx)
     info : bool, optional
         Print information about collect? (default: True)
-    force_netcdf : bool, optional
+    force_netcdf4 : bool, optional
         Force netCDF4 backend in case HDF5 causes errors? (default: False)
 
     Notes
@@ -809,7 +813,7 @@ def _read_splitting(filepath, info, keep_yboundaries):
                 print(f"{key} not found, setting to {default}")
             if default < 0:
                 raise ValueError(
-                    f"Default for {key} is {val}," f" but negative values are not valid"
+                    f"Default for {key} is {val}, but negative values are not valid"
                 )
             return default
 
@@ -831,12 +835,12 @@ def _read_splitting(filepath, info, keep_yboundaries):
         nx = ds["nx"].values
     else:
         # Workaround for older data files
-        nx = ds["MXSUB"].values * ds["NXPE"].values + 2 * ds["MXG"].values
+        nx = mxsub * nxpe + 2 * mxg
     if "ny" in ds:
         ny = ds["ny"].values
     else:
         # Workaround for older data files
-        ny = ds["MYSUB"].values * ds["NYPE"].values
+        ny = mysub * nype
     nx_file = ds.sizes["x"]
     ny_file = ds.sizes["y"]
     is_squashed_doublenull = False
