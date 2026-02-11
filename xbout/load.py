@@ -65,6 +65,7 @@ def open_boutdataset(
     info=True,
     is_restart=None,
     is_mms_dump=False,
+    force_netcdf4=False,
     **kwargs,
 ):
     """Load a dataset from a set of BOUT output files, including the
@@ -179,7 +180,7 @@ def open_boutdataset(
     if chunks is None:
         chunks = {}
 
-    input_type = _check_dataset_type(datapath)
+    input_type = _check_dataset_type(datapath, force_netcdf4)
     if is_restart is None:
         is_restart = input_type == "restart"
     elif is_restart is True:
@@ -282,6 +283,7 @@ def open_boutdataset(
             keep_xboundaries=keep_xboundaries,
             keep_yboundaries=keep_yboundaries,
             is_restart=is_restart,
+            force_netcdf4=force_netcdf4,
             **kwargs,
         )
     elif "grid" in input_type:
@@ -473,6 +475,8 @@ def collect(
         (Set to True to be consistent with the definition of nx)
     info : bool, optional
         Print information about collect? (default: True)
+    force_netcdf : bool, optional
+        Force netCDF4 backend in case HDF5 causes errors? (default: False)
 
     Notes
     ----------
@@ -495,7 +499,11 @@ def collect(
     datapath = join(path, prefix + "*.nc")
 
     ds, _ = _auto_open_mfboutdataset(
-        datapath, keep_xboundaries=xguards, keep_yboundaries=yguards, info=info
+        datapath,
+        keep_xboundaries=xguards,
+        keep_yboundaries=yguards,
+        info=info,
+        force_netcdf4=force_netcdf4,
     )
 
     if varname not in ds:
@@ -544,7 +552,7 @@ def collect(
     return result
 
 
-def _check_dataset_type(datapath):
+def _check_dataset_type(datapath, force_netcdf4):
     """
     Check what type of files we have. Could be:
     (i) produced by xBOUT
@@ -580,11 +588,16 @@ def _check_dataset_type(datapath):
                 return "dump_fake"
         else:
             # Single element list of Datasets, or nested list of Datasets
-            return _check_dataset_type(datapath[0])
+            return _check_dataset_type(datapath[0], force_netcdf4)
 
     filepaths, filetype = _expand_filepaths(datapath)
 
-    ds = xr.open_dataset(filepaths[0], engine=filetype)
+    if force_netcdf4:
+        engine = "netcdf4"
+    else:
+        engine = filetype
+
+    ds = xr.open_dataset(filepaths[0], engine=engine)
     ds.close()
     if "metadata:keep_yboundaries" in ds.attrs:
         # (i)
@@ -610,6 +623,7 @@ def _auto_open_mfboutdataset(
     keep_xboundaries=False,
     keep_yboundaries=False,
     is_restart=False,
+    force_netcdf4=False,
     **kwargs,
 ):
     if chunks is None:
@@ -648,12 +662,17 @@ def _auto_open_mfboutdataset(
 
         paths_grid, concat_dims = _arrange_for_concatenation(filepaths, nxpe, nype)
 
+        if force_netcdf4:
+            engine = "netcdf4"
+        else:
+            engine = filetype
+
         ds = xr.open_mfdataset(
             paths_grid,
             concat_dim=concat_dims,
             combine="nested",
             preprocess=_preprocess,
-            engine=filetype,
+            engine=engine,
             chunks=chunks,
             # Only data variables in which the dimension already
             # appears are concatenated.
