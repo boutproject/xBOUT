@@ -260,6 +260,7 @@ def open_boutdataset(
                     keep_xboundaries=ds.metadata["keep_xboundaries"],
                     keep_yboundaries=ds.metadata["keep_yboundaries"],
                     mxg=ds.metadata["MXG"],
+                    force_netcdf4=force_netcdf4,
                 )
             else:
                 grid = None
@@ -296,6 +297,7 @@ def open_boutdataset(
             chunks=chunks,
             keep_xboundaries=keep_xboundaries,
             keep_yboundaries=keep_yboundaries,
+            force_netcdf4=force_netcdf4,
             **kwargs,
         )
     else:
@@ -338,6 +340,7 @@ def open_boutdataset(
                 keep_xboundaries=keep_xboundaries,
                 keep_yboundaries=keep_yboundaries,
                 mxg=ds.metadata["MXG"],
+                force_netcdf4=force_netcdf4,
             )
         else:
             grid = None
@@ -1120,7 +1123,15 @@ def _get_limit(side, dim, keep_boundaries, boundaries, guards):
     return limit
 
 
-def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kwargs):
+def _open_grid(
+    datapath,
+    chunks,
+    keep_xboundaries,
+    keep_yboundaries,
+    mxg=2,
+    force_netcdf4=False,
+    **kwargs,
+):
     """
     Opens a single grid file. Implements slightly different logic for
     boundaries to deal with different conventions in a BOUT grid file.
@@ -1139,9 +1150,12 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
 
     if _is_path(datapath):
         gridfilepath = Path(datapath)
-        grid = xr.open_dataset(
-            gridfilepath, engine=_check_filetype(gridfilepath), **kwargs
-        )
+        if force_netcdf4:
+            engine = "netcdf4"
+        else:
+            engine = _check_filetype(gridfilepath)
+
+        grid = xr.open_dataset(gridfilepath, engine=engine, **kwargs)
     else:
         grid = datapath
 
