@@ -1195,11 +1195,14 @@ class TestBoutDatasetMethods:
         x = np.linspace(0.05, 9.95, 100)[np.newaxis, :, np.newaxis, np.newaxis]
         y = np.linspace(0.1, 21.9, 110)[np.newaxis, np.newaxis, :, np.newaxis]
         z = np.linspace(0.15, 35.85, 120)[np.newaxis, np.newaxis, np.newaxis, :]
-        dx = ds["dx"].copy()
-        dx.data[...] = 0.1
-        dy = ds["dy"].copy()
-        dy.data[...] = 0.2
-        ds.assign_coords(t=t.squeeze(), dx=dx, dy=dy, dz=0.3)
+        ds["dx"][...] = 0.1
+        ds["dy"][...] = 0.2
+        ds = ds.assign_coords(
+            t=t.squeeze(),
+            dx=ds.dx,
+            dy=ds.dy,
+            dz=0.3,
+        )
         tfunc = 1.5 * t
         xfunc = x**2
         yfunc = 10.0 * y - y**2
