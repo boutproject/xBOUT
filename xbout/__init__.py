@@ -23,6 +23,7 @@ except PackageNotFoundError:
 
 __all__ = [
     "open_boutdataset",
+    "lazy_open_boutdataset",
     "collect",
     "geometries",
     "register_geometry",

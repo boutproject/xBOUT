@@ -52,9 +52,10 @@ Usage
 
 import xarray as xr
 import dask
-import numpy as np
+from dask.array.core import getter
 import os
 import h5py
+import warnings
 
 
 class LazyFileArray:
@@ -93,9 +94,6 @@ class LazyFileArray:
             print(f"Reading {self.filepath}:{self.varname}:{slices}")
         with h5py.File(self.filepath, "r") as f:
             return f[self.varname][slices]
-
-
-from dask.array.core import getter
 
 
 def make_chunkinfo(
