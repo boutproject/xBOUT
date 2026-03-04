@@ -589,10 +589,31 @@ def _check_dataset_type(datapath):
 
     filepaths, filetype = _expand_filepaths(datapath)
 
-    ds = xr.open_dataset(
-        filepaths[0], engine=file_engine if file_engine is not None else filetype
-    )
-    ds.close()
+    try:
+        ds = xr.open_dataset(
+            filepaths[0], engine=file_engine if file_engine is not None else filetype
+        )
+        ds.close()
+    except RuntimeError as e:
+        if "H5DSget_num_scales" in str(e):
+            msg = (
+                "\n\nFailed to open dataset due to an HDF5 compatibility error between\n"
+                "h5py and h5netcdf, likely because both were installed with pip.\n"
+                "See: https://github.com/boutproject/xBOUT/issues/329\n"
+                "Also see: https://github.com/HDFGroup/hdf5/issues/6268\n\n"
+                "There are three possible fixes:\n"
+                "  1. Install both from source against a single shared HDF5:\n"
+                "       sudo apt install libhdf5-dev libnetcdf-dev\n"
+                "       pip install --no-binary netCDF4,h5py netCDF4 h5py\n\n"
+                "  2. Install both from your distribution package manager,\n"
+                "     e.g. apt, conda or Spack\n\n"
+                "  3. Switch to the netcdf4 engine:\n"
+                "       import xbout\n"
+                "       xbout.load.file_engine = 'netcdf4'\n\n"
+                f"Original error: {e}"
+            )
+            raise RuntimeError(msg) from e
+        raise
     if "metadata:keep_yboundaries" in ds.attrs:
         # (i)
         return "reload"
