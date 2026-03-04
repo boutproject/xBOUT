@@ -284,23 +284,27 @@ def open_boutdataset(
 
         def is_netcdf_collection(datapath):
             if not isinstance(datapath, str):
-                return False
+                return None
             # Expand globs into a list of files
             filepaths = list(Path(".").glob(datapath))
             if len(filepaths) == 0:
                 raise ValueError(f"File not found: {datapath}")
-            return all(
+            if all(
                 [
                     filepath.parent == filepaths[0].parent and filepath.suffix == ".nc"
                     for filepath in filepaths
                 ]
-            )
+            ):
+                return filepaths[0].parent
+            return None
 
-        if lazy_load and is_netcdf_collection(datapath):
+        # The directory containing the files or None if not a collection
+        dataset_dir = is_netcdf_collection(datapath)
+
+        if lazy_load and dataset_dir:
             # All files are NetCDF and all in the same directory
             # Lazyload only opens one file and infers file layout from that
 
-            dataset_dir = filepaths[0].parent  # The directory containing the files
             print(f"Lazily opening dataset at {dataset_dir}")
             ds = lazyload.lazy_open_boutdataset(
                 dataset_dir,
