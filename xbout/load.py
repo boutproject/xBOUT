@@ -282,16 +282,21 @@ def open_boutdataset(
     remove_yboundaries = False
     if "dump" in input_type or "restart" in input_type:
 
-        # Expand globs into a list of files
-        filepaths = list(Path(".").glob(datapath))
-        if len(filepaths) == 0:
-            raise ValueError(f"File not found: {datapath}")
-        if lazy_load and all(
-            [
-                filepath.parent == filepaths[0].parent and filepath.suffix == ".nc"
-                for filepath in filepaths
-            ]
-        ):
+        def is_netcdf_collection(datapath):
+            if not isinstance(datapath, str):
+                return False
+            # Expand globs into a list of files
+            filepaths = list(Path(".").glob(datapath))
+            if len(filepaths) == 0:
+                raise ValueError(f"File not found: {datapath}")
+            return all(
+                [
+                    filepath.parent == filepaths[0].parent and filepath.suffix == ".nc"
+                    for filepath in filepaths
+                ]
+            )
+
+        if lazy_load and is_netcdf_collection(datapath):
             # All files are NetCDF and all in the same directory
             # Lazyload only opens one file and infers file layout from that
 
