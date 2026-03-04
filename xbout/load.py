@@ -1146,9 +1146,11 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
         gridfilepath = Path(datapath)
         grid = xr.open_dataset(
             gridfilepath,
-            engine=file_engine
-            if file_engine is not None
-            else _check_filetype(gridfilepath),
+            engine=(
+                file_engine
+                if file_engine is not None
+                else _check_filetype(gridfilepath)
+            ),
             **kwargs,
         )
     else:
