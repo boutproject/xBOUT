@@ -18,6 +18,11 @@ from .utils import (
     _is_dir,
 )
 
+# Override file reading engine.
+# Use: xbout.load.file_engine = "netcdf4" or "h5netcdf"
+file_engine = None
+
+
 _BOUT_GEOMETRY_VARS = [
     "ixseps1",
     "ixseps2",
@@ -584,7 +589,9 @@ def _check_dataset_type(datapath):
 
     filepaths, filetype = _expand_filepaths(datapath)
 
-    ds = xr.open_dataset(filepaths[0], engine=filetype)
+    ds = xr.open_dataset(
+        filepaths[0], engine=file_engine if file_engine is not None else filetype
+    )
     ds.close()
     if "metadata:keep_yboundaries" in ds.attrs:
         # (i)
@@ -653,7 +660,7 @@ def _auto_open_mfboutdataset(
             concat_dim=concat_dims,
             combine="nested",
             preprocess=_preprocess,
-            engine=filetype,
+            engine=file_engine if file_engine is not None else filetype,
             chunks=chunks,
             # Only data variables in which the dimension already
             # appears are concatenated.
@@ -790,7 +797,7 @@ def _read_splitting(filepath, info, keep_yboundaries):
                 print(f"{key} not found, setting to {default}")
             if default < 0:
                 raise ValueError(
-                    f"Default for {key} is {val}," f" but negative values are not valid"
+                    f"Default for {key} is {val}, but negative values are not valid"
                 )
             return default
 
@@ -1117,7 +1124,11 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
     if _is_path(datapath):
         gridfilepath = Path(datapath)
         grid = xr.open_dataset(
-            gridfilepath, engine=_check_filetype(gridfilepath), **kwargs
+            gridfilepath,
+            engine=file_engine
+            if file_engine is not None
+            else _check_filetype(gridfilepath),
+            **kwargs,
         )
     else:
         grid = datapath
