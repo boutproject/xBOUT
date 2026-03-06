@@ -965,40 +965,29 @@ def plot2d_polygon(
 
     Nx = len(cell_r)
     Ny = len(cell_r[0])
-    patches = []
 
-    # https://matplotlib.org/2.0.2/examples/api/patch_collection.html
-
-    idx = [np.array([1, 2, 4, 3, 1])]
-    patches = []
-    for i in range(Nx):
-        for j in range(Ny):
-            p = matplotlib.patches.Polygon(
-                np.concatenate((cell_r[i][j][tuple(idx)], cell_z[i][j][tuple(idx)]))
-                .reshape(2, 5)
-                .T,
-                fill=False,
-                closed=True,
-                facecolor=None,
-            )
-            patches.append(p)
+    # Build polygon vertices vectorized instead of looping over each cell.
+    # idx selects corners in order: lower-left, lower-right, upper-right, upper-left.
+    # PolyCollection closes the polygon automatically.
+    idx = np.array([1, 2, 4, 3])
+    # verts shape: (Nx, Ny, 4, 2)
+    verts = np.stack([cell_r[:, :, idx], cell_z[:, :, idx]], axis=-1).reshape(-1, 4, 2)
 
     norm = _create_norm(logscale, norm, vmin, vmax)
 
     if grid_only is True:
         cmap = matplotlib.colors.ListedColormap(["white"])
-    colors = da.data.flatten()
-    polys = matplotlib.collections.PatchCollection(
-        patches,
-        alpha=1,
+    colors = np.asarray(da.values).flatten()
+    polys = matplotlib.collections.PolyCollection(
+        verts,
         norm=norm,
         cmap=cmap,
+        alpha=1,
         antialiaseds=antialias,
         edgecolors=linecolor,
         linewidths=linewidth,
         joinstyle="bevel",
     )
-
     polys.set_array(colors)
 
     if add_colorbar:
