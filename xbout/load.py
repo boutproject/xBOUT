@@ -590,9 +590,7 @@ def _check_dataset_type(datapath):
     filepaths, filetype = _expand_filepaths(datapath)
 
     try:
-        ds = xr.open_dataset(
-            filepaths[0], engine=file_engine or filetype
-        )
+        ds = xr.open_dataset(filepaths[0], engine=file_engine or filetype)
         ds.close()
     except RuntimeError as e:
         if "H5DSget_num_scales" in str(e):
@@ -1147,10 +1145,7 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
         gridfilepath = Path(datapath)
         grid = xr.open_dataset(
             gridfilepath,
-            engine=(
-                file_engine
-                or _check_filetype(gridfilepath)
-            ),
+            engine=(file_engine or _check_filetype(gridfilepath)),
             **kwargs,
         )
     else:
