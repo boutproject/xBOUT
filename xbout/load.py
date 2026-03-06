@@ -286,7 +286,8 @@ def open_boutdataset(
             if not isinstance(datapath, str):
                 return None
             # Expand globs into a list of files
-            filepaths = list(Path(".").glob(datapath))
+            p = Path(datapath)
+            filepaths = list(p.parent.glob(p.name))
             if len(filepaths) == 0:
                 raise ValueError(f"File not found: {datapath}")
             if all(
