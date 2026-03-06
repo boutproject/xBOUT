@@ -963,8 +963,6 @@ def plot2d_polygon(
     else:
         raise Exception("Cell corners not present in mesh, cannot do polygon plot")
 
-    Nx = len(cell_r)
-    Ny = len(cell_r[0])
 
     # Build polygon vertices vectorized instead of looping over each cell.
     # idx selects corners in order: lower-left, lower-right, upper-right, upper-left.
