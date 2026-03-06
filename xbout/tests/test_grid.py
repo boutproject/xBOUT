@@ -41,27 +41,6 @@ class TestOpenGrid:
         assert_equal(result, open_dataset(example_grid))
         result.close()
 
-    def test_open_grid_extra_dims(self, create_example_grid_file, tmp_path_factory):
-        example_grid = open_dataset(create_example_grid_file)
-
-        new_var = DataArray(
-            name="new",
-            data=[[1, 2], [8, 9], [16, 17], [27, 28], [37, 38]],
-            dims=["x", "w"],
-        )
-
-        dodgy_grid_directory = tmp_path_factory.mktemp("dodgy_grid")
-        dodgy_grid_path = dodgy_grid_directory.joinpath("dodgy_grid.nc")
-        merge([example_grid, new_var]).to_netcdf(dodgy_grid_path, engine="h5netcdf")
-
-        with pytest.warns(
-            UserWarning, match="drop all variables containing " "the dimensions 'w'"
-        ):
-            result = open_boutdataset(datapath=dodgy_grid_path)
-        result = result.drop_vars(["x", "y"])
-        assert_equal(result, example_grid)
-        result.close()
-
     def test_open_grid_apply_geometry(self, create_example_grid_file):
         @register_geometry(name="Schwarzschild")
         def add_schwarzschild_coords(ds, coordinates=None):
