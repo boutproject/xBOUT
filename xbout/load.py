@@ -243,7 +243,7 @@ def open_boutdataset(
             if attrs_remove_section(da, "metadata"):
                 da.attrs["metadata"] = metadata
 
-        ds = _add_options(ds, inputfilepath)
+        ds = _add_options(ds, inputfilepath, gridfilepath)
 
         # If geometry was set, apply geometry again
         if geometry is not None:
@@ -314,7 +314,7 @@ def open_boutdataset(
         # grid file, as they will be removed from the full Dataset below
         keep_yboundaries = True
 
-    ds = _add_options(ds, inputfilepath)
+    ds = _add_options(ds, inputfilepath, gridfilepath)
 
     if geometry is None:
         if geometry in ds.attrs:
@@ -428,15 +428,26 @@ but we did load {grididfile}."""
     return ds
 
 
-def _add_options(ds, inputfilepath):
+def _add_options(ds, inputfilepath, gridfilepath):
+    """
+    Add BoutOptionsFile as ds.options, if input filepath available.
+    BoutOptionsFile needs grid dimensions to reconstruct coordinates.
+    Prefer using grid if provided. Otherwise, use dataset dimensions.
+    """
+
     if inputfilepath:
-        # Use Ben's options class to store all input file options
-        options = BoutOptionsFile(
-            inputfilepath,
-            nx=ds.metadata["nx"],
-            ny=ds.metadata["ny"],
-            nz=ds.metadata["nz"],
-        )
+        if gridfilepath:
+            options = BoutOptionsFile(
+                inputfilepath,
+                gridfilename=gridfilepath,
+            )
+        else:
+            options = BoutOptionsFile(
+                inputfilepath,
+                nx=ds.metadata["nx"],
+                ny=ds.metadata["ny"],
+                nz=ds.metadata["nz"],
+            )
     else:
         options = None
     ds = _set_attrs_on_all_vars(ds, "options", options)
