@@ -1008,8 +1008,16 @@ def plot2d_polygon(
     ax.set_xlim(cell_r.min(), cell_r.max())
     ax.set_title(da.name)
 
+    if separatrix or targets:
+        # Drop the cell-corner coordinates (needed only for polygon construction)
+        # before decomposing regions to avoid deep-copying large arrays unnecessarily.
+        corner_coords = [
+            c for c in da.coords if c.startswith("Rxy_") or c.startswith("Zxy_")
+        ]
+        da_minimal = da.drop_vars(corner_coords) if corner_coords else da
+
     if separatrix:
-        plot_separatrices(da, ax, x="R", y="Z", **separatrix_kwargs)
+        plot_separatrices(da_minimal, ax, x="R", y="Z", **separatrix_kwargs)
 
     if targets:
-        plot_targets(da, ax, x="R", y="Z", hatching=add_limiter_hatching)
+        plot_targets(da_minimal, ax, x="R", y="Z", hatching=add_limiter_hatching)
