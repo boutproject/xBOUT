@@ -115,21 +115,21 @@ def plot_separatrices(da, ax, *, x="R", y="Z", **kwargs):
                 # or duplicated coordinate values on a self-connected region).
                 # Fall back to xr.align to find the common coordinate intersection.
                 try:
-                    da_r_al, da_i_al = xr.align(da_region, da_inner)
+                    da_region_aligned, da_inner_aligned = xr.align(da_region, da_inner)
                 except ValueError:
                     # Duplicated coordinate values: deduplicate first, then align.
                     _, unique_yinds = np.unique(
                         da_inner[ycoord].values, return_index=True
                     )
                     da_inner = da_inner.isel(**{ycoord: unique_yinds})
-                    da_r_al, da_i_al = xr.align(da_region, da_inner)
+                    da_region_aligned, da_inner_aligned = xr.align(da_region, da_inner)
                 x_sep = 0.5 * (
-                    da_r_al[x].isel(**{xcoord: 0}).values
-                    + da_i_al[x].isel(**{xcoord: -1}).values
+                    da_region_aligned[x].isel(**{xcoord: 0}).values
+                    + da_inner_aligned[x].isel(**{xcoord: -1}).values
                 )
                 y_sep = 0.5 * (
-                    da_r_al[y].isel(**{xcoord: 0}).values
-                    + da_i_al[y].isel(**{xcoord: -1}).values
+                    da_region_aligned[y].isel(**{xcoord: 0}).values
+                    + da_inner_aligned[y].isel(**{xcoord: -1}).values
                 )
 
             default_style = {"color": "black", "linestyle": "--"}
