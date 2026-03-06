@@ -590,9 +590,7 @@ def _check_dataset_type(datapath):
     filepaths, filetype = _expand_filepaths(datapath)
 
     try:
-        ds = xr.open_dataset(
-            filepaths[0], engine=file_engine if file_engine is not None else filetype
-        )
+        ds = xr.open_dataset(filepaths[0], engine=file_engine or filetype)
         ds.close()
     except RuntimeError as e:
         if "H5DSget_num_scales" in str(e):
@@ -606,11 +604,12 @@ def _check_dataset_type(datapath):
                 "       sudo apt install libhdf5-dev libnetcdf-dev\n"
                 "       pip install --no-binary netCDF4,h5py netCDF4 h5py\n\n"
                 "  2. Install both from your distribution package manager,\n"
-                "     e.g. apt, conda or Spack\n\n"
+                "     like apt or dnf or install with conda or Spack\n\n"
                 "  3. Switch to the netcdf4 engine:\n"
                 "       import xbout\n"
-                "       xbout.load.file_engine = 'netcdf4'\n\n"
-                f"Original error: {e}"
+                "       xbout.load.file_engine = 'netcdf4'\n"
+                "     netcdf4 may however cause segfaults on file closure\n\n"
+                f"Original error:\n\t{e}"
             )
             raise RuntimeError(msg) from e
         raise
@@ -681,7 +680,7 @@ def _auto_open_mfboutdataset(
             concat_dim=concat_dims,
             combine="nested",
             preprocess=_preprocess,
-            engine=file_engine if file_engine is not None else filetype,
+            engine=file_engine or filetype,
             chunks=chunks,
             # Only data variables in which the dimension already
             # appears are concatenated.
@@ -1146,11 +1145,7 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
         gridfilepath = Path(datapath)
         grid = xr.open_dataset(
             gridfilepath,
-            engine=(
-                file_engine
-                if file_engine is not None
-                else _check_filetype(gridfilepath)
-            ),
+            engine=(file_engine or _check_filetype(gridfilepath)),
             **kwargs,
         )
     else:
