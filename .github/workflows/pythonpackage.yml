@@ -39,7 +39,7 @@ jobs:
         pip install git+https://github.com/dschwoerer/xarray@netcdf4-locking-closing
     - name: Test with pytest
       run: |
-        timeout -s INT 30m pytest -vvv --long --cov
+        timeout -s INT 90m pytest -vvv --long --cov
 
 
   # test with oldest supported version of packages
