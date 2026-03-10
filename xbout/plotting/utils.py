@@ -98,26 +98,40 @@ def plot_separatrices(da, ax, *, x="R", y="Z", **kwargs):
         if inner in da_regions:
             da_inner = da_regions[inner]
 
-            try:
-                da_region, da_inner = xr.align(da_region, da_inner)
-            except ValueError:
-                # For geometries with a limiter, the closed field-line region may have
-                # guard cells while the open field line region does not. Also the
-                # closed-field line guard cells may (if the region is connected to
-                # itself) have duplicated coordinate values, which xr.align() cannot
-                # handle. Use np.unique() to remove the duplicated coordinate values
-                _, unique_yinds = np.unique(da_inner[ycoord], return_index=True)
-                da_inner = da_inner.isel(**{ycoord: unique_yinds})
+            # Extract boundary columns as numpy arrays to avoid expensive xarray
+            # coordinate-alignment (xr.align compares every coordinate, triggering
+            # dask computation of lazy arrays).
+            r_region = da_region[x].isel(**{xcoord: 0})
+            r_inner = da_inner[x].isel(**{xcoord: -1})
+            z_region = da_region[y].isel(**{xcoord: 0})
+            z_inner = da_inner[y].isel(**{xcoord: -1})
 
-            # Put da_inner second as the unique_yinds selection may mess up the order of
-            # points. xarray will align the coordinates with the first argument (to the
-            # addition here).
-            x_sep = 0.5 * (
-                da_region[x].isel(**{xcoord: 0}) + da_inner[x].isel(**{xcoord: -1})
-            )
-            y_sep = 0.5 * (
-                da_region[y].isel(**{xcoord: 0}) + da_inner[y].isel(**{xcoord: -1})
-            )
+            try:
+                x_sep = 0.5 * (r_region.values + r_inner.values)
+                y_sep = 0.5 * (z_region.values + z_inner.values)
+            except ValueError:
+                # Arrays have different y-extents (e.g. limiter geometry where the
+                # closed field-line region has more guard cells than the open region,
+                # or duplicated coordinate values on a self-connected region).
+                # Fall back to xr.align to find the common coordinate intersection.
+                try:
+                    da_region_aligned, da_inner_aligned = xr.align(da_region, da_inner)
+                except ValueError:
+                    # Duplicated coordinate values: deduplicate first, then align.
+                    _, unique_yinds = np.unique(
+                        da_inner[ycoord].values, return_index=True
+                    )
+                    da_inner = da_inner.isel(**{ycoord: unique_yinds})
+                    da_region_aligned, da_inner_aligned = xr.align(da_region, da_inner)
+                x_sep = 0.5 * (
+                    da_region_aligned[x].isel(**{xcoord: 0}).values
+                    + da_inner_aligned[x].isel(**{xcoord: -1}).values
+                )
+                y_sep = 0.5 * (
+                    da_region_aligned[y].isel(**{xcoord: 0}).values
+                    + da_inner_aligned[y].isel(**{xcoord: -1}).values
+                )
+
             default_style = {"color": "black", "linestyle": "--"}
             if any(x for x in kwargs if x in ["c", "ls"]):
                 raise ValueError(
