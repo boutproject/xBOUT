@@ -10,6 +10,7 @@ import xarray as xr
 from natsort import natsorted
 
 from . import geometries
+from . import lazyload
 from .utils import (
     _set_attrs_on_all_vars,
     _separate_metadata,
@@ -64,12 +65,13 @@ def open_boutdataset(
     gridfilepath=None,
     grid_mismatch="raise",
     chunks=None,
-    keep_xboundaries=True,
-    keep_yboundaries=False,
+    keep_xboundaries: bool = True,
+    keep_yboundaries: bool = False,
     run_name=None,
-    info=True,
-    is_restart=None,
-    is_mms_dump=False,
+    info: bool = True,
+    is_restart: bool = None,
+    is_mms_dump: bool = False,
+    lazy_load: bool = True,
     **kwargs,
 ):
     """Load a dataset from a set of BOUT output files, including the
@@ -155,6 +157,10 @@ def open_boutdataset(
         physical edges of the grid, where boundary conditions are
         set); increases the size of the y dimension in the returned
         data-set. If false, trim these cells.
+
+    lazy_load : bool, optional
+        If true, lazy load the dataset when possible. In a multi-file
+        dataset this avoids opening more files than necessary.
 
     run_name : str, optional
         Name to give to the whole dataset,
@@ -280,15 +286,53 @@ def open_boutdataset(
     # Determine if file is a grid file or data dump files
     remove_yboundaries = False
     if "dump" in input_type or "restart" in input_type:
-        # Gather pointers to all numerical data from BOUT++ output files
-        ds, remove_yboundaries = _auto_open_mfboutdataset(
-            datapath=datapath,
-            chunks=chunks,
-            keep_xboundaries=keep_xboundaries,
-            keep_yboundaries=keep_yboundaries,
-            is_restart=is_restart,
-            **kwargs,
-        )
+
+        def is_netcdf_collection(datapath):
+            if not isinstance(datapath, str):
+                return None
+            # Expand globs into a list of files
+            p = Path(datapath)
+            filepaths = list(p.parent.glob(p.name))
+            if len(filepaths) == 0:
+                raise ValueError(f"File not found: {datapath}")
+            if all(
+                [
+                    filepath.parent == filepaths[0].parent and filepath.suffix == ".nc"
+                    for filepath in filepaths
+                ]
+            ):
+                return filepaths[0].parent
+            return None
+
+        # The directory containing the files or None if not a collection
+        dataset_dir = is_netcdf_collection(datapath)
+
+        if lazy_load and dataset_dir:
+            # All files are NetCDF and all in the same directory
+            # Lazyload only opens one file and infers file layout from that
+
+            print(f"Lazily opening dataset at {dataset_dir}")
+            ds = lazyload.lazy_open_boutdataset(
+                dataset_dir,
+                keep_xboundaries=keep_xboundaries,
+                keep_yboundaries=keep_yboundaries,
+                is_restart=is_restart,
+                info=info,
+                **kwargs,
+            )
+            remove_yboundaries = False
+        else:
+            # Gather pointers to all numerical data from BOUT++ output files
+            # This opens all files then concatenates
+            ds, remove_yboundaries = _auto_open_mfboutdataset(
+                datapath=datapath,
+                chunks=chunks,
+                keep_xboundaries=keep_xboundaries,
+                keep_yboundaries=keep_yboundaries,
+                is_restart=is_restart,
+                **kwargs,
+            )
+
     elif "grid" in input_type:
         # Its a grid file
         ds = _open_grid(
@@ -302,6 +346,7 @@ def open_boutdataset(
         raise ValueError(f"internal error: unexpected input_type={input_type}")
 
     ds, metadata = _separate_metadata(ds)
+
     # Store as ints because netCDF doesn't support bools, so we can't save
     # bool attributes
     metadata["keep_xboundaries"] = int(keep_xboundaries)
@@ -495,24 +540,59 @@ def collect(
     ds : numpy.ndarray
 
     """
-    from os.path import join
+    from pathlib import Path as _Path
 
-    datapath = join(path, prefix + "*.nc")
+    datapath_glob = str(_Path(path) / (prefix + "*.nc"))
 
-    ds, _ = _auto_open_mfboutdataset(
-        datapath, keep_xboundaries=xguards, keep_yboundaries=yguards, info=info
-    )
+    # Fast path: use lazy loader which only opens one file for metadata.
+    # Falls back to open_mfdataset if the directory cannot be detected or
+    # the variable is not supported by the lazy loader.
+    try:
+        path_obj = _Path(path)
+        if path_obj.is_dir():
+            ds = lazyload.lazy_open_boutdataset(
+                path,
+                keep_xboundaries=xguards,
+                keep_yboundaries=yguards,
+                info=info,
+                prefix=prefix,
+            )
+        else:
+            raise ValueError("path is not a directory")
 
-    if varname not in ds:
-        raise KeyError("No variable, {} was found in {}.".format(varname, datapath))
+        if varname not in ds:
+            raise KeyError(
+                "No variable, {} was found in {}.".format(varname, datapath_glob)
+            )
 
-    dims = list(ds.dims)
-    inds = [tind, xind, yind, zind]
+        da = ds[varname]
+        dims = list(da.dims)
+
+    except Exception:
+        # Fall back to the slow multi-file open
+        ds, _ = _auto_open_mfboutdataset(
+            datapath_glob,
+            keep_xboundaries=xguards,
+            keep_yboundaries=yguards,
+            info=info,
+        )
+
+        if varname not in ds:
+            raise KeyError(
+                "No variable, {} was found in {}.".format(varname, datapath_glob)
+            )
+
+        da = ds[varname]
+        dims = list(ds.dims)
+
+    all_dims = list(ds.dims)
+    inds = {"t": tind, "x": xind, "y": yind, "z": zind}
 
     selection = {}
 
     # Convert indexing values to an isel suitable format
-    for dim, ind in zip(dims, inds):
+    for dim in dims:
+        ind = inds.get(dim)
         if isinstance(ind, int):
             indexer = [ind]
         elif isinstance(ind, list):
@@ -523,25 +603,26 @@ def collect(
         else:
             indexer = None
 
-        if indexer:
+        if indexer is not None:
             selection[dim] = indexer
 
     try:
-        version = ds["BOUT_VERSION"]
-    except KeyError:
-        # If BOUT Version is not saved in the dataset
+        version = ds.attrs.get("metadata", {}).get("BOUT_VERSION", 0)
+        if version == 0 and "BOUT_VERSION" in ds:
+            version = float(ds["BOUT_VERSION"].values)
+    except Exception:
         version = 0
 
     # Subtraction of z-dimensional data occurs in boutdata.collect
     # if BOUT++ version is old - same feature added here
     if (version < 3.5) and ("z" in dims):
-        zsize = int(ds["nz"]) - 1
-        ds = ds.isel(z=slice(zsize))
+        zsize = int(ds.attrs.get("metadata", {}).get("nz", da.sizes["z"]))
+        da = da.isel(z=slice(zsize))
 
     if selection:
-        ds = ds.isel(selection)
+        da = da.isel(selection)
 
-    result = ds[varname].values
+    result = da.values
 
     # Close netCDF files to ensure they are not locked if collect is called again
     ds.close()
