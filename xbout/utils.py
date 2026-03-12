@@ -6,6 +6,8 @@ import os
 import numpy as np
 import xarray as xr
 
+from .bout_info import _BOUT_VARIABLE_ATTRIBUTES
+
 
 def _set_attrs_on_all_vars(ds, key, attr_data, copy=False):
     ds.attrs[key] = attr_data
@@ -90,7 +92,56 @@ def _separate_metadata(ds):
     return ds.drop_vars(scalar_vars), metadata
 
 
-def _update_metadata_increased_resolution(da, n):
+def _update_metadata_increased_x_resolution(da, *, ixseps1=None, ixseps2=None, nx=None):
+    """
+    Update the metadata variables to account for a change in x-direction resolution.
+
+    Parameters
+    ----------
+    da : DataArray
+        The variable to update
+    ixseps1 : int
+        The value to give to ixseps1
+    ixseps2 : int
+        The value to give to ixseps2
+    nx : int
+        The value to give to nx
+    """
+
+    # Take deepcopy to ensure we do not alter metadata of other variables
+    da.attrs["metadata"] = deepcopy(da.metadata)
+
+    def set_var(var, value):
+        if value is None:
+            da.metadata[var] = -1
+        else:
+            da.metadata[var] = value
+
+    set_var("ixseps1", ixseps1)
+    set_var("ixseps2", ixseps2)
+    set_var("nx", nx)
+    if nx is not None:
+        da.metadata["MXSUB"] = nx - 2 * da.metadata["MXG"]
+
+    # Update attrs of coordinates to be consistent with da
+    for coord in da.coords:
+        da[coord].attrs = {}
+        _add_attrs_to_var(da, coord)
+
+    return da
+
+
+def _update_metadata_increased_y_resolution(
+    da,
+    *,
+    n=None,
+    jyseps1_1=None,
+    jyseps2_1=None,
+    jyseps1_2=None,
+    jyseps2_2=None,
+    ny_inner=None,
+    ny=None,
+):
     """
     Update the metadata variables to account for a y-direction resolution increased by a
     factor n.
@@ -99,29 +150,48 @@ def _update_metadata_increased_resolution(da, n):
     ----------
     da : DataArray
         The variable to update
-    n : int
-        The factor to increase the y-resolution by
+    n : int, optional
+        The factor to increase the y-resolution by. If n is not given, y-dependent
+        metadata variables are set to -1, assuming they will be corrected later.
+    jyseps1_1, jyseps2_1, jyseps1_2, jyseps2_2, ny_inner, ny : int
+        Metadata variables for y-grid. Should not be passed if `n` is passed.
     """
 
     # Take deepcopy to ensure we do not alter metadata of other variables
     da.attrs["metadata"] = deepcopy(da.metadata)
 
-    def update_jyseps(name):
+    def update_jyseps(name, value):
         # If any jyseps<=0, need to leave as is
         if da.metadata[name] > 0:
-            da.metadata[name] = n * (da.metadata[name] + 1) - 1
+            if n is None:
+                if value is None:
+                    da.metadata[name] = -1
+                else:
+                    da.metadata[name] = value
+            else:
+                if value is not None:
+                    raise ValueError(f"n set, but value also passed to {name}")
+                da.metadata[name] = n * (da.metadata[name] + 1) - 1
 
-    update_jyseps("jyseps1_1")
-    update_jyseps("jyseps2_1")
-    update_jyseps("jyseps1_2")
-    update_jyseps("jyseps2_2")
+    update_jyseps("jyseps1_1", jyseps1_1)
+    update_jyseps("jyseps2_1", jyseps2_1)
+    update_jyseps("jyseps1_2", jyseps1_2)
+    update_jyseps("jyseps2_2", jyseps2_2)
 
-    def update_ny(name):
-        da.metadata[name] = n * da.metadata[name]
+    def update_ny(name, value):
+        if n is None:
+            if value is None:
+                da.metadata[name] = -1
+            else:
+                da.metadata[name] = value
+        else:
+            if value is not None:
+                raise ValueError(f"n set, but value also passed to {name}")
+            da.metadata[name] = n * da.metadata[name]
 
-    update_ny("ny")
-    update_ny("ny_inner")
-    update_ny("MYSUB")
+    update_ny("ny", ny)
+    update_ny("ny_inner", ny_inner)
+    update_ny("MYSUB", None)
 
     # Update attrs of coordinates to be consistent with da
     for coord in da.coords:
@@ -206,6 +276,25 @@ def _1d_coord_from_spacing(spacing, dim, ds=None, *, origin_at=None):
         raise ValueError(f"Unrecognised argument origin_at={origin_at}")
 
     return xr.Variable(dim, coord_values)
+
+
+def _make_1d_xcoord(ds_or_da):
+    # Make index 'x' a coordinate, useful for handling global indexing
+    # Note we have to use the index value, not the value calculated from 'dx' because
+    # 'dx' may not be consistent between different regions (e.g. core and PFR).
+    # For some geometries xcoord may have already been created by
+    # add_geometry_coords, in which case we do not need this.
+    xcoord = ds_or_da.metadata["bout_xdim"]
+    nx = ds_or_da.dims[xcoord]
+
+    # can't use commented out version, uncommented one works around xarray bug
+    # removing attrs
+    # https://github.com/pydata/xarray/issues/4415
+    # https://github.com/pydata/xarray/issues/4393
+    # updated_ds = updated_ds.assign_coords(**{xcoord: np.arange(nx)})
+    ds_or_da[xcoord] = (xcoord, np.arange(nx))
+
+    _add_attrs_to_var(ds_or_da, xcoord)
 
 
 def _add_cartesian_coordinates(ds):
@@ -488,8 +577,13 @@ def _split_into_restarts(ds, variables, savepath, nxpe, nype, tind, prefix, over
             for v in variables:
                 data_variable = ds_slice[v].variable
 
-                # delete attrs so we don't try to save metadata dict to restart files
-                data_variable.attrs = {}
+                # delete attrs, except for those that were created by BOUT++,  so we
+                # don't try to save metadata dict to restart files
+                data_variable.attrs = {
+                    k: v
+                    for k, v in data_variable.attrs.items()
+                    if k in _BOUT_VARIABLE_ATTRIBUTES
+                }
 
                 restart_ds[v] = data_variable
             for v in ds.metadata:

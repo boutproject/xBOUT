@@ -11,13 +11,16 @@ import xarray as xr
 from xarray import register_dataarray_accessor
 
 from .geometries import apply_geometry
+from .load import open_boutdataset
 from .plotting.animate import animate_poloidal, animate_pcolormesh, animate_line
 from .plotting import plotfuncs
 from .plotting.utils import _create_norm
 from .region import _from_region
 from .utils import (
     _add_cartesian_coordinates,
-    _update_metadata_increased_resolution,
+    _make_1d_xcoord,
+    _update_metadata_increased_x_resolution,
+    _update_metadata_increased_y_resolution,
     _get_bounding_surfaces,
 )
 
@@ -156,7 +159,11 @@ class BoutDataArrayAccessor:
                 f"argument to open_boutdataset()?"
             )
 
-        result = self._shift_z(self.data[zShift_coord])
+        # zShift may have NaNs in the corners. These should not affect any useful
+        # results, but may cause parts or all of arrays to be filled with NaN, even
+        # where the entries should not depend on the NaN values. Replace NaN with 0 to
+        # avoid this.
+        result = self._shift_z(self.data[zShift_coord].fillna(0.0))
         result.attrs["direction_y"] = "Aligned"
         return result
 
@@ -188,7 +195,11 @@ class BoutDataArrayAccessor:
                 f"argument to open_boutdataset()?"
             )
 
-        result = self._shift_z(-self.data[zShift_coord])
+        # zShift may have NaNs in the corners. These should not affect any useful
+        # results, but may cause parts or all of arrays to be filled with NaN, even
+        # where the entries should not depend on the NaN values. Replace NaN with 0 to
+        # avoid this.
+        result = self._shift_z(-self.data[zShift_coord].fillna(0.0))
         result.attrs["direction_y"] = "Standard"
         return result
 
@@ -240,6 +251,8 @@ class BoutDataArrayAccessor:
         self,
         region=None,
         *,
+        poloidal_distance=None,
+        dy=None,
         n=None,
         toroidal_points=None,
         method="cubic",
@@ -249,15 +262,29 @@ class BoutDataArrayAccessor:
         Interpolate in the parallel direction to get a higher resolution version of the
         variable.
 
+        Note: when using poloidal_distance for interpolation, have to convert to numpy
+        arrays for calculation. This means that dask cannot be used to parallelise this
+        calculation, so may be slow for large Datasets.
+
         Parameters
         ----------
         region : str, optional
             By default, return a result with all regions interpolated separately and then
             combined. If an explicit region argument is passed, then return the variable
-            from only that region.
+            from only that region. If the DataArray has already been restricted to a
+            single region, pass `region=False` to skip calling `from_region()` again.
+        poloidal_distance : 2d array, optional
+            Poloidal distance values to interpolate to - interpolation is calculated as
+            a function of poloidal distance along psi contours. Should have the same
+            radial grid size as the input. If not given, `n` is used instead.
+        dy : 2d array, optional
+            New values of `dy`, corresponding to the values of `poloidal_distance`.
+            Required if `poloidal_distance` is passed.
         n : int, optional
             The factor to increase the resolution by. Defaults to the value set by
             BoutDataset.setupParallelInterp(), or 10 if that has not been called.
+            If `n` is used, interpolation is onto a linearly spaced grid in grid-index
+            space.
         toroidal_points : int or sequence of int, optional
             If int, number of toroidal points to output, applies a stride to toroidal
             direction to save memory usage. If sequence of int, the indexes of toroidal
@@ -276,14 +303,39 @@ class BoutDataArrayAccessor:
         return_dataset=True, instead returns a Dataset containing the DataArray.)
         """
 
+        xcoord = self.data.metadata["bout_xdim"]
+        ycoord = self.data.metadata["bout_ydim"]
+        zcoord = self.data.metadata["bout_zdim"]
+
         if region is None:
             # Call the single-region version of this method for each region, and combine
             # the results together
+
+            # apply_unfunc of scipy.interp1d() fails if data is a dask array
+            self.data.load()
+            if poloidal_distance is None:
+                poloidal_distance_parts = [None for _ in self._regions]
+            else:
+                poloidal_distance.load()
+                poloidal_distance_parts = [
+                    poloidal_distance.from_region(
+                        region, with_guards={xcoord: 2, ycoord: 0}
+                    )
+                    .isel({ycoord: 0}, drop=True)
+                    .data
+                    for region in self._regions
+                ]
             parts = [
                 self.interpolate_parallel(
-                    region, n=n, toroidal_points=toroidal_points, method=method
+                    region,
+                    poloidal_distance=this_poloidal_distance,
+                    n=n,
+                    toroidal_points=toroidal_points,
+                    method=method,
                 ).bout.to_dataset()
-                for region in self._regions
+                for (region, this_poloidal_distance) in zip(
+                    self._regions, poloidal_distance_parts
+                )
             ]
 
             # 'region' is not the same for all parts, and should not exist in the result,
@@ -303,14 +355,12 @@ class BoutDataArrayAccessor:
                 result = apply_geometry(result, self.data.geometry)
                 return result[self.data.name]
 
-        # Select a particular 'region' and interpolate to higher parallel resolution
-        da = self.data
-        region = da.bout._regions[region]
-        xcoord = da.metadata["bout_xdim"]
-        ycoord = da.metadata["bout_ydim"]
-        zcoord = da.metadata["bout_zdim"]
+        da = self.data.copy()
 
-        da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
+        if region is not False:
+            # Select a particular 'region' and interpolate to higher parallel resolution
+            region = da.bout._regions[region]
+            da = da.bout.from_region(region.name, with_guards={xcoord: 0, ycoord: 2})
 
         if zcoord in da.dims and da.direction_y != "Aligned":
             aligned_input = False
@@ -318,57 +368,123 @@ class BoutDataArrayAccessor:
         else:
             aligned_input = True
 
-        if n is None:
-            n = self.fine_interpolation_factor
+        if poloidal_distance is not None:
+            # apply_unfunc of scipy.interp1d() fails if data is a dask array
+            da.load()
+            poloidal_distance.load()
 
-        da = da.chunk({ycoord: None})
+            poloidal_distance = poloidal_distance.copy()
+            # Need to delete xcoord 'indexer', because it is not present on 'result', so
+            # would cause an error in apply_ufunc() if it was present.
+            del poloidal_distance[xcoord]
+            # Need to delete ycoord to avoid a clash below
+            del poloidal_distance[ycoord]
 
-        ny_fine = n * region.ny
-        dy = (region.yupper - region.ylower) / ny_fine
+            if n is not None:
+                raise ValueError(
+                    f"poloidal_distance and n cannot both be passed, got "
+                    f"poloidal_distance={poloidal_distance} and n={n}"
+                )
+            if dy is None:
+                raise ValueError()
 
-        myg = da.metadata["MYG"]
-        if da.metadata["keep_yboundaries"] and region.connection_lower_y is None:
-            ybndry_lower = myg
+            from scipy.interpolate import interp1d
+
+            def y_interp_func(
+                data, poloidal_distance_in, poloidal_distance_out, method=None
+            ):
+                interp_func = interp1d(
+                    poloidal_distance_in, data, kind=method, assume_sorted=True
+                )
+                return interp_func(poloidal_distance_out)
+
+            # Need to give different name to output dimension to avoid clash
+            new_ycoord = ycoord + "_interpolate_to_new_grid_new_ycoord"
+            poloidal_distance = poloidal_distance.rename({ycoord: new_ycoord})
+            result = xr.apply_ufunc(
+                y_interp_func,
+                da,
+                da["poloidal_distance"],
+                poloidal_distance,
+                method,
+                input_core_dims=[[ycoord], [ycoord], [new_ycoord], []],
+                output_core_dims=[[new_ycoord]],
+                exclude_dims=set([ycoord]),
+                vectorize=True,
+                dask="parallelized",
+                dask_gufunc_kwargs={
+                    "output_sizes": {new_ycoord: poloidal_distance.sizes[new_ycoord]}
+                },
+            )
+            # Rename new_ycoord back to ycoord for output
+            result = result.rename({new_ycoord: ycoord})
+
+            # Transpose to original dimension order
+            result = result.transpose(*da.dims)
+
+            result.attrs = da.attrs.copy()
+            da = result
+
+            if dy is None:
+                raise ValueError(
+                    "It is required to pass dy if poloidal_distance is passed"
+                )
+
+            da = _update_metadata_increased_y_resolution(da)
+
+            da["dy"] = dy
         else:
-            ybndry_lower = 0
-        if da.metadata["keep_yboundaries"] and region.connection_upper_y is None:
-            ybndry_upper = myg
-        else:
-            ybndry_upper = 0
+            if n is None:
+                n = self.fine_interpolation_factor
 
-        y_fine = np.linspace(
-            region.ylower - (ybndry_lower - 0.5) * dy,
-            region.yupper + (ybndry_upper - 0.5) * dy,
-            ny_fine + ybndry_lower + ybndry_upper,
-        )
+            da = da.chunk({ycoord: None})
 
-        # This prevents da.interp() from being very slow.
-        # Apparently large attrs (i.e. regions) on a coordinate which is passed as an
-        # argument to dask.array.map_blocks() slow things down, maybe because coordinates
-        # are numpy arrays, not dask arrays?
-        # Slow-down was introduced in d062fa9e75c02fbfdd46e5d1104b9b12f034448f when
-        # _add_attrs_to_var(updated_ds, ycoord) was added in geometries.py
-        da[ycoord].attrs = {}
+            ny_fine = n * region.ny
+            dy = (region.yupper - region.ylower) / ny_fine
 
-        da = da.interp(
-            {ycoord: y_fine},
-            assume_sorted=True,
-            method=method,
-            kwargs={"fill_value": "extrapolate"},
-        )
+            myg = da.metadata["MYG"]
+            if da.metadata["keep_yboundaries"] and region.connection_lower_y is None:
+                ybndry_lower = myg
+            else:
+                ybndry_lower = 0
+            if da.metadata["keep_yboundaries"] and region.connection_upper_y is None:
+                ybndry_upper = myg
+            else:
+                ybndry_upper = 0
 
-        da = _update_metadata_increased_resolution(da, n)
+            y_fine = np.linspace(
+                region.ylower - (ybndry_lower - 0.5) * dy,
+                region.yupper + (ybndry_upper - 0.5) * dy,
+                ny_fine + ybndry_lower + ybndry_upper,
+            )
 
-        # Modify dy to be consistent with the higher resolution grid
-        dy_array = xr.DataArray(
-            np.full([da.sizes[xcoord], da.sizes[ycoord]], dy), dims=[xcoord, ycoord]
-        )
-        da["dy"] = da["dy"].copy(data=dy_array)
+            # This prevents da.interp() from being very slow.
+            # Apparently large attrs (i.e. regions) on a coordinate which is passed as
+            # an argument to dask.array.map_blocks() slow things down, maybe because
+            # coordinates are numpy arrays, not dask arrays?
+            # Slow-down was introduced in d062fa9e75c02fbfdd46e5d1104b9b12f034448f when
+            # _add_attrs_to_var(updated_ds, ycoord) was added in geometries.py
+            da[ycoord].attrs = {}
 
-        # Remove regions which have incorrect information for the high-resolution grid.
-        # New regions will be generated when creating a new Dataset in
-        # BoutDataset.getHighParallelResVars
-        del da.attrs["regions"]
+            da = da.interp(
+                {ycoord: y_fine.data},
+                assume_sorted=True,
+                method=method,
+                kwargs={"fill_value": "extrapolate"},
+            )
+
+            da = _update_metadata_increased_y_resolution(da, n=n)
+
+            # Modify dy to be consistent with the higher resolution grid
+            dy_array = xr.DataArray(
+                np.full([da.sizes[xcoord], da.sizes[ycoord]], dy), dims=[xcoord, ycoord]
+            )
+            da["dy"] = da["dy"].copy(data=dy_array)
+
+            # Remove regions which have incorrect information for the high-resolution
+            # grid.  New regions will be generated when creating a new Dataset in
+            # BoutDataset.getHighParallelResVars
+            del da.attrs["regions"]
 
         if not aligned_input:
             # Want output in non-aligned coordinates
@@ -384,6 +500,326 @@ class BoutDataArrayAccessor:
                 da = da.isel(**{zcoord: toroidal_points})
 
         return da
+
+    def interpolate_radial(
+        self,
+        region=None,
+        *,
+        psi=None,
+        dx=None,
+        n=None,
+        method="cubic",
+        return_dataset=False,
+    ):
+        """
+        Interpolate in the parallel direction to get a higher resolution version of the
+        variable.
+
+        Parameters
+        ----------
+        region : str, optional
+            By default, return a result with all regions interpolated separately and
+            then combined. If an explicit region argument is passed, then return the
+            variable from only that region. If the DataArray has already been restricted
+            to a single region, pass `region=False` to skip calling `from_region()`
+            again.
+        psi : 1d or 2d array, optional
+            Values of `psixy` to interpolate data to. If not given use `n` instead. If
+            `psi` is given, it must be a 1d array with psi values for the region if
+            `region` is passed and otherwise must be a 2d {x,y} array.
+        dx : 1d array, optional
+            New values of `dx`, corresponding to the values of `psi`. Required if `psi`
+            is passed.
+        n : int, optional
+            The factor to increase the resolution by. Defaults to the value set by
+            BoutDataset.setupParallelInterp(), or 10 if that has not been called.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataArray.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+        return_dataset : bool, optional
+            If this is set to True, return a Dataset containing this variable as a
+            member (by default returns a DataArray). Only used when region=None.
+
+        Returns
+        -------
+        A new DataArray containing a high-resolution version of the variable. (If
+        return_dataset=True, instead returns a Dataset containing the DataArray.)
+        """
+
+        if psi is not None and n is not None:
+            raise ValueError(f"Cannot pass both psi and n, got psi={psi}, n={n}")
+
+        xcoord = self.data.metadata["bout_xdim"]
+        ycoord = self.data.metadata["bout_ydim"]
+
+        if region is None:
+            # Call the single-region version of this method for each region, and combine
+            # the results together
+            if psi is None:
+                psi_parts = [None for _ in self._regions]
+            else:
+                psi_parts = [
+                    psi.bout.from_region(region, with_guards={xcoord: 2, ycoord: 0})
+                    .isel({ycoord: 0}, drop=True)
+                    .data
+                    for region in self._regions
+                ]
+            parts = [
+                self.interpolate_radial(
+                    region, psi=this_psi, n=n, method=method
+                ).bout.to_dataset()
+                for (region, this_psi) in zip(self._regions, psi_parts)
+            ]
+
+            # 'region' is not the same for all parts, and should not exist in the
+            # result, so delete before merging
+            for part in parts:
+                if "region" in part.attrs:
+                    del part.attrs["region"]
+                if "region" in part[self.data.name].attrs:
+                    del part[self.data.name].attrs["region"]
+
+            result = xr.combine_by_coords(parts, combine_attrs="drop_conflicts")
+
+            _make_1d_xcoord(result)
+
+            if return_dataset:
+                return result
+            else:
+                # Extract the DataArray to return
+                # Cannot call apply_geometry here, because we have not set ixseps1,
+                # ixseps2, which are needed to create the 'regions'.
+                return result[self.data.name]
+
+        da = self.data.copy()
+
+        if region is not False:
+            # Select a particular 'region' and interpolate to higher parallel resolution
+            region = da.bout._regions[region]
+            da = da.bout.from_region(region.name, with_guards={xcoord: 2, ycoord: 0})
+
+        da = da.chunk({xcoord: None})
+
+        old_psi = da["psi_poloidal"].isel({ycoord: 0}, drop=True).values
+
+        if psi is not None:
+            if dx is None:
+                raise ValueError("It is required to pass dx if psi is passed")
+        else:
+            # Do a rough approximation to the boundary values - expect accurate
+            # interpolations to be done by passing psi from a new grid file
+            if n is None:
+                n = self.fine_interpolation_factor
+            mxg = da.metadata["MXG"]
+            if da.metadata["keep_xboundaries"] and region.connection_inner_x is None:
+                xbndry_lower = mxg
+            else:
+                xbndry_lower = 0
+            if da.metadata["keep_xboundaries"] and region.connection_outer_x is None:
+                xbndry_upper = mxg
+            else:
+                xbndry_upper = 0
+
+            nx_fine = n * region.nx
+            dx = (region.xouter - region.xinner) / nx_fine
+
+            psi = np.linspace(
+                region.xinner - (xbndry_lower - 0.5) * dx,
+                region.xouter + (xbndry_upper - 0.5) * dx,
+                nx_fine + xbndry_lower + xbndry_upper,
+            )
+
+        # Use psi as a 1d x-coordinate for this interpolation. psixy depends only on x
+        # in each region (although it may be a different function of x in different
+        # regions).
+        del da[xcoord]
+        da[xcoord] = old_psi
+
+        # This prevents da.interp() from being very slow.
+        # Apparently large attrs (i.e. regions) on a coordinate which is passed as an
+        # argument to dask.array.map_blocks() slow things down, maybe because coordinates
+        # are numpy arrays, not dask arrays?
+        # Slow-down was introduced in d062fa9e75c02fbfdd46e5d1104b9b12f034448f when
+        # _add_attrs_to_var(updated_ds, ycoord) was added in geometries.py
+        da[xcoord].attrs = {}
+
+        da = da.interp(
+            {xcoord: psi},
+            assume_sorted=True,
+            method=method,
+            kwargs={"fill_value": "extrapolate"},
+        )
+
+        da = _update_metadata_increased_x_resolution(da)
+
+        da["dx"][:] = dx.broadcast_like(da["dx"]).data
+
+        # Remove regions which have incorrect information for the high-resolution grid.
+        # New regions will be generated when creating a new Dataset in
+        # BoutDataset.getHighParallelResVars
+        del da.attrs["regions"]
+
+        # Remove x-coordinate, will recreate x-coordinate for combined DataArray
+        del da[xcoord]
+
+        return da
+
+    def interpolate_to_new_grid(
+        self,
+        new_gridfile,
+        *,
+        field_aligned_radial_interpolation=False,
+        method="cubic",
+        return_dataset=False,
+    ):
+        """
+        Interpolate the DataArray onto a new set of grid points, given by a grid file.
+
+        The grid file is asssumed to represent the same equilibrium as the one
+        associated by the original DataArray, so that psi-values and poloidal distances
+        along psi-contours of the equilibrium are the same.
+
+        Note: poloidal_distance is used for parallel interpolation inside this method.
+        For this, have to convert to numpy arrays for calculation. Means that dask
+        cannot be used to parallelise that part of the calculation, so this method may
+        be slow for large Datasets.
+
+        Parameters
+        ----------
+        new_gridfile : str, pathlib.Path or Dataset
+            Path to a new grid file, or grid file opened as a Dataset.
+        field_aligned_radial_interpolation : bool, default False
+            If set to True, transform to field-aligned grid for radial interpolation
+            (parallel interpolation is always on field-aligned grid). Probably less
+            accurate, at least in some parts of the grid where integrated shear is high,
+            but may (especially if most of the turbulence is at the outboard midplane)
+            produce a result that is better field-aligned and so creates less of an
+            initial transient when restarting.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataArray.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+        return_dataset : bool, default False
+            Return the result as a Dataset containing the new DataArray.
+        """
+
+        da = self.data
+
+        if not isinstance(new_gridfile, xr.Dataset):
+            new_gridfile = open_boutdataset(
+                new_gridfile,
+                keep_xboundaries=da.metadata["keep_xboundaries"],
+                keep_yboundaries=da.metadata["keep_yboundaries"],
+                drop_variables=["theta"],
+                info=False,
+                geometry=self.data.geometry,
+            )
+
+        xcoord = da.metadata["bout_xdim"]
+        ycoord = da.metadata["bout_ydim"]
+        zcoord = da.metadata["bout_zdim"]
+
+        # apply_unfunc() of scipy.interp1d() fails with dask arrays, so load
+        da.load()
+        new_gridfile["poloidal_distance"].load()
+
+        parts = []
+        for region in self._regions:
+            # Note, need to set 0 x-guards here. If we include x-guards in the radial
+            # interpolation, poloidal_distance gets messed up at the edges for the
+            # parallel interpolation because poloidal_distance does not have to be
+            # consistent between different regions.
+            part = da.bout.from_region(region, with_guards={xcoord: 0, ycoord: 2})
+
+            # Radial interpolation first, because the psi coordinate is 1d (in each
+            # region), so does not need to be interpolated in y-direction, whereas
+            # poloidal_distance would need to be interpolated to the original
+            # DataArray's radial grid points.
+            psi_part = (
+                new_gridfile["psi_poloidal"]
+                .bout.from_region(region, with_guards={xcoord: 0, ycoord: 0})
+                .isel({ycoord: 0}, drop=True)
+            )
+            dx_part = (
+                new_gridfile["dx"]
+                .bout.from_region(region, with_guards={xcoord: 0, ycoord: 0})
+                .isel({ycoord: 0}, drop=True)
+            )
+
+            if field_aligned_radial_interpolation and zcoord in part.dims:
+                part = part.bout.to_field_aligned()
+
+            part = part.bout.interpolate_radial(
+                False,
+                psi=psi_part,
+                dx=dx_part,
+                method=method,
+                return_dataset=return_dataset,
+            )
+
+            poloidal_distance_part = new_gridfile["poloidal_distance"].bout.from_region(
+                region, with_guards={xcoord: 0, ycoord: 0}
+            )
+            dy_part = new_gridfile["dy"].bout.from_region(
+                region, with_guards={xcoord: 0, ycoord: 0}
+            )
+
+            # apply_unfunc() of scipy.interp1d() fails with dask arrays, so load
+            part.load()
+            poloidal_distance_part.load()
+
+            part = part.bout.interpolate_parallel(
+                False,
+                poloidal_distance=poloidal_distance_part,
+                dy=dy_part,
+                method=method,
+                return_dataset=return_dataset,
+            )
+
+            if field_aligned_radial_interpolation and zcoord in part.dims:
+                part = part.bout.from_field_aligned()
+
+            # Get theta coordinate from new_gridfile, as interpolated versions may not
+            # be consistent between different regions.
+            part["theta"] = poloidal_distance_part["theta"]
+
+            # 'region' is not the same for all parts, and should not exist in the
+            # result, so delete
+            if "region" in part.attrs:
+                del part.attrs["region"]
+
+            parts.append(part.to_dataset(name=self.data.name))
+
+        result = xr.combine_by_coords(parts, combine_attrs="drop_conflicts")
+
+        # Get attributes from original DataArray, then update for increased resolution
+        result.attrs = self.data.attrs
+
+        result = _update_metadata_increased_x_resolution(
+            result,
+            ixseps1=new_gridfile.metadata["ixseps1"],
+            ixseps2=new_gridfile.metadata["ixseps2"],
+            nx=new_gridfile.metadata["nx"],
+        )
+        result = _update_metadata_increased_y_resolution(
+            result,
+            jyseps1_1=new_gridfile.metadata["jyseps1_1"],
+            jyseps2_1=new_gridfile.metadata["jyseps2_1"],
+            jyseps1_2=new_gridfile.metadata["jyseps1_2"],
+            jyseps2_2=new_gridfile.metadata["jyseps2_2"],
+            ny_inner=new_gridfile.metadata["ny_inner"],
+            ny=new_gridfile.metadata["ny"],
+        )
+
+        _make_1d_xcoord(result)
+
+        if return_dataset:
+            return result
+        else:
+            # Extract the DataArray to return
+            result = apply_geometry(result, self.data.geometry)
+            return result[self.data.name]
 
     def add_cartesian_coordinates(self):
         """

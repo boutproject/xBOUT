@@ -18,6 +18,7 @@ import numpy as np
 from dask.diagnostics import ProgressBar
 
 from .geometries import apply_geometry
+from .load import open_boutdataset
 from .plotting.animate import (
     animate_poloidal,
     animate_pcolormesh,
@@ -260,6 +261,209 @@ class BoutDatasetAccessor:
             elif ycoord not in da.dims:
                 ds[var] = da
             # Can't interpolate a variable that depends on y but not x, so just skip
+
+        # Apply geometry
+        ds = apply_geometry(ds, ds.geometry)
+
+        return ds
+
+    def interpolate_radial(self, variables, **kwargs):
+        """
+        Interpolate in the parallel direction to get a higher resolution version of the
+        variable.
+
+        Note that the high-resolution variables are all loaded into memory, so most
+        likely it is necessary to select only a small number. The toroidal_points
+        argument can also be used to reduce the memory demand.
+
+        Parameters
+        ----------
+        variables : str or sequence of str or ...
+            The names of the variables to interpolate. If 'variables=...' is passed
+            explicitly, then interpolate all variables in the Dataset.
+        psi : 1d array, optional
+            Values of `psixy` to interpolate data to. If not given use `n` instead. If
+            `psi` is given, it must be a 1d array with psi values for the region if
+            `region` is passed and otherwise must be a 2d {x,y} array.
+        dx : 1d array, optional
+            New values of `dx`, corresponding to the values of `psi`. Required if `psi`
+            is passed.
+        n : int, optional
+            The factor to increase the resolution by. Defaults to the value set by
+            BoutDataset.setupParallelInterp(), or 10 if that has not been called.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataArray.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+
+        Returns
+        -------
+        A new Dataset containing a high-resolution versions of the variables. The new
+        Dataset is a valid BoutDataset, although containing only the specified
+        variables.
+        """
+
+        if variables is ...:
+            variables = [v for v in self.data]
+
+        if isinstance(variables, str):
+            variables = [variables]
+        if isinstance(variables, tuple):
+            variables = list(variables)
+
+        # Need to start with a Dataset with attrs as merge() drops the attrs of the
+        # passed-in argument.
+        # Make sure the first variable has all dimensions so we don't lose any
+        # coordinates
+        def find_with_dims(first_var, dims):
+            if first_var is None:
+                dims = set(dims)
+                for v in variables:
+                    if set(self.data[v].dims) == dims:
+                        first_var = v
+                        break
+            return first_var
+
+        tcoord = self.data.metadata.get("bout_tdim", "t")
+        zcoord = self.data.metadata.get("bout_zdim", "z")
+        first_var = find_with_dims(None, self.data.dims)
+        first_var = find_with_dims(first_var, set(self.data.dims) - set(tcoord))
+        first_var = find_with_dims(first_var, set(self.data.dims) - set(zcoord))
+        first_var = find_with_dims(
+            first_var, set(self.data.dims) - set([tcoord, zcoord])
+        )
+        if first_var is None:
+            raise ValueError(
+                f"Could not find variable to interpolate with both "
+                f"{self.data.metadata.get('bout_xdim', 'x')} and "
+                f"{self.data.metadata.get('bout_ydim', 'y')} dimensions"
+            )
+        variables.remove(first_var)
+        ds = self.data[first_var].bout.interpolate_radial(return_dataset=True, **kwargs)
+        xcoord = ds.metadata.get("bout_xdim", "x")
+        ycoord = ds.metadata.get("bout_ydim", "y")
+        for var in variables:
+            da = self.data[var]
+            if xcoord in da.dims and ycoord in da.dims:
+                ds = ds.merge(da.bout.interpolate_radial(return_dataset=True, **kwargs))
+            elif xcoord not in da.dims:
+                ds[var] = da
+            # Can't interpolate a variable that depends on x but not y, so just skip
+
+        # Apply geometry
+        ds = apply_geometry(ds, ds.geometry)
+
+        return ds
+
+    def interpolate_to_new_grid(self, variables, new_gridfile, **kwargs):
+        """
+        Interpolate the DataSet onto a new set of grid points, given by a grid file.
+
+        The grid file is asssumed to represent the same equilibrium as the one
+        associated by the original DataSet, so that psi-values and poloidal distances
+        along psi-contours of the equilibrium are the same.
+
+        Parameters
+        ----------
+        variables : str or sequence of str or ...
+            The names of the variables to interpolate. If 'variables=...' is passed
+            explicitly, then interpolate all variables in the Dataset.
+        new_gridfile : str, pathlib.Path or Dataset
+            Path to a new grid file, or grid file opened as a Dataset.
+        field_aligned_radial_interpolation : bool, default False
+            If set to True, transform to field-aligned grid for radial interpolation
+            (parallel interpolation is always on field-aligned grid). Probably less
+            accurate, at least in some parts of the grid where integrated shear is high,
+            but may (especially if most of the turbulence is at the outboard midplane)
+            produce a result that is better field-aligned and so creates less of an
+            initial transient when restarting.
+        method : str, optional
+            The interpolation method to use. Options from xarray.DataSet.interp(),
+            currently: linear, nearest, zero, slinear, quadratic, cubic. Default is
+            'cubic'.
+
+        Returns
+        -------
+        A new Dataset containing the variables interpolated to the new grid. The new
+        Dataset is a valid BoutDataset, although containing only the specified
+        variables.
+        """
+
+        print("Interpolating to new grid:")
+
+        if variables is ...:
+            variables = [v for v in self.data]
+
+        if not isinstance(new_gridfile, xr.Dataset):
+            new_gridfile = open_boutdataset(
+                new_gridfile,
+                keep_xboundaries=self.data.metadata["keep_xboundaries"],
+                keep_yboundaries=self.data.metadata["keep_yboundaries"],
+                drop_variables=["theta"],
+                info=False,
+                geometry=self.data.geometry,
+            )
+
+        if isinstance(variables, str):
+            variables = [variables]
+        if isinstance(variables, tuple):
+            variables = list(variables)
+
+        # Need to start with a Dataset with attrs as merge() drops the attrs of the
+        # passed-in argument.
+        # Make sure the first variable has all dimensions so we don't lose any
+        # coordinates
+        def find_with_dims(first_var, dims):
+            if first_var is None:
+                dims = set(dims)
+                for v in variables:
+                    if set(self.data[v].dims) == dims:
+                        first_var = v
+                        break
+            return first_var
+
+        tcoord = self.data.metadata.get("bout_tdim", "t")
+        zcoord = self.data.metadata.get("bout_zdim", "z")
+        first_var = find_with_dims(None, self.data.dims)
+        first_var = find_with_dims(first_var, set(self.data.dims) - set(tcoord))
+        first_var = find_with_dims(first_var, set(self.data.dims) - set(zcoord))
+        first_var = find_with_dims(
+            first_var, set(self.data.dims) - set([tcoord, zcoord])
+        )
+        if first_var is None:
+            raise ValueError(
+                f"Could not find variable to interpolate with both "
+                f"{self.data.metadata.get('bout_xdim', 'x')} and "
+                f"{self.data.metadata.get('bout_ydim', 'y')} dimensions"
+            )
+        variables.remove(first_var)
+        print(first_var)
+        ds = self.data[first_var].bout.interpolate_to_new_grid(
+            new_gridfile, return_dataset=True, **kwargs
+        )
+        xcoord = ds.metadata.get("bout_xdim", "x")
+        ycoord = ds.metadata.get("bout_ydim", "y")
+        for var in variables:
+            print(var)
+            da = self.data[var]
+            if xcoord in da.dims and ycoord in da.dims:
+                ds = ds.merge(
+                    da.bout.interpolate_to_new_grid(
+                        new_gridfile, return_dataset=True, **kwargs
+                    )
+                )
+            elif xcoord in da.dims:
+                print(
+                    f"{var} depends on x but not y, so do not know how to interpolate "
+                    f"to new grid"
+                )
+            elif ycoord in da.dims:
+                print(
+                    f"{var} depends on y but not x, so do not know how to interpolate "
+                    f"to new grid"
+                )
+            else:
+                ds[var] = da
 
         # Apply geometry
         ds = apply_geometry(ds, ds.geometry)
