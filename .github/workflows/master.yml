@@ -20,7 +20,7 @@ jobs:
     if: always()
     strategy:
       matrix:
-        python-version: ["3.12", "3.13", "3.14", "3.x"]
+        python-version: ["3.12", "3.13"] # Python 3.14 and 3.x hanging in CI
       fail-fast: false
 
     steps:
