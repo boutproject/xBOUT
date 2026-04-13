@@ -2224,16 +2224,10 @@ class TestSaveRestart:
             for proc_xind in range(nxpe):
                 num = nxpe * proc_yind + proc_xind
 
-                restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
-
                 if tind is None:
                     t = -1
                 else:
                     t = tind
-
-                # ignore guard cells - they are filled with NaN in the created restart
-                # files
-                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
 
                 check_ds = ds.isel(
                     t=t,
@@ -2249,6 +2243,13 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
+                with open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc")) as restart_file:
+                    restart_ds = restart_file.load()
+
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2299,12 +2300,6 @@ class TestSaveRestart:
             for proc_xind in range(nxpe):
                 num = nxpe * proc_yind + proc_xind
 
-                restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
-
-                # ignore guard cells - they are filled with NaN in the created restart
-                # files
-                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
-
                 check_ds = ds.isel(
                     t=-1,
                     x=slice(2 + proc_xind * mxsub, 2 + (proc_xind + 1) * mxsub),
@@ -2319,6 +2314,13 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
+                with open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc")) as restart_file:
+                    restart_ds = restart_file.load()
+
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2372,12 +2374,6 @@ class TestSaveRestart:
             for proc_xind in range(nxpe):
                 num = nxpe * proc_yind + proc_xind
 
-                restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
-
-                # ignore guard cells - they are filled with NaN in the created restart
-                # files
-                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
-
                 check_ds = ds.isel(
                     t=-1,
                     x=slice(2 + proc_xind * mxsub, 2 + (proc_xind + 1) * mxsub),
@@ -2392,6 +2388,13 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
+                with open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc")) as restart_file:
+                    restart_ds = restart_file.load()
+
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
