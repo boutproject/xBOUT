@@ -42,6 +42,8 @@ class TestBoutDatasetIsXarrayDataset:
             )
         result = concat([bd1, bd2], dim="run")
         assert result.sizes == {**bd1.sizes, "run": 2}
+        bd1.close()
+        bd2.close()
 
     def test_isel(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
@@ -52,6 +54,7 @@ class TestBoutDatasetIsXarrayDataset:
         actual = bd.isel(x=slice(None, None, 2))
         expected = bd.bout.data.isel(x=slice(None, None, 2))
         xrt.assert_equal(actual, expected)
+        bd.close()
 
 
 class TestBoutDatasetMethods:
@@ -83,6 +86,7 @@ class TestBoutDatasetMethods:
         ds["n_aligned"] = ds["T"]
         ds["n_aligned"].attrs["direction_y"] = "Aligned"
         xrt.assert_allclose(ds.bout.get_field_aligned("n"), ds["T"])
+        ds.close()
 
     @pytest.mark.parametrize("mxg", [0, pytest.param(2, marks=pytest.mark.long)])
     @pytest.mark.parametrize("myg", [pytest.param(0, marks=pytest.mark.long), 2])
@@ -144,6 +148,8 @@ class TestBoutDatasetMethods:
             # don't need to delete MYG again
 
         xrt.assert_equal(ds, ds_no_yboundaries)
+        ds.close()
+        ds_no_yboundaries.close()
 
     @pytest.mark.parametrize(
         "nz",
@@ -257,6 +263,7 @@ class TestBoutDatasetMethods:
                     rtol=1.0e-15,
                     atol=0.0,
                 )  # noqa: E501
+        ds.close()
 
     def test_to_field_aligned_dask(self, bout_xyt_example_files):
         nz = 6
@@ -370,6 +377,7 @@ class TestBoutDatasetMethods:
                     rtol=1.0e-15,
                     atol=0.0,
                 )  # noqa: E501
+        ds.close()
 
     @pytest.mark.parametrize(
         "nz",
@@ -484,6 +492,8 @@ class TestBoutDatasetMethods:
                     atol=0.0,
                 )  # noqa: E501
 
+        ds.close()
+
     @pytest.mark.parametrize("stag_location", ["CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"])
     def test_to_field_aligned_staggered(self, bout_xyt_example_files, stag_location):
         dataset_list = bout_xyt_example_files(
@@ -542,6 +552,7 @@ class TestBoutDatasetMethods:
         assert n_stag_al.direction_y == "Aligned"
 
         npt.assert_equal(n_stag_al.values, n_al.values)
+        ds.close()
 
     @pytest.mark.parametrize("stag_location", ["CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"])
     def test_from_field_aligned_staggered(self, bout_xyt_example_files, stag_location):
@@ -615,6 +626,7 @@ class TestBoutDatasetMethods:
 
         assert ds.metadata["fine_interpolation_factor"] == 42
         assert ds["a"].metadata["fine_interpolation_factor"] == 42
+        ds.close()
 
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
@@ -1090,6 +1102,7 @@ class TestBoutDatasetMethods:
                     ).values,
                     v_lower_outer_SOL.isel(theta=slice(myg)).values,
                 )
+        ds.close()
 
     def test_interpolate_parallel_all_variables_arg(self, bout_xyt_example_files):
         # Check that passing 'variables=...' to interpolate_parallel() does actually
@@ -1138,6 +1151,7 @@ class TestBoutDatasetMethods:
                 "psixy",
             )
         )
+        ds.close()
 
     def test_interpolate_parallel_limiter(
         self,
@@ -1184,6 +1198,7 @@ class TestBoutDatasetMethods:
             # Remove attributes that are expected to be different
             del v_sol.attrs["regions"]
             xrt.assert_identical(v_noregions.isel(x=slice(ixs1 - mxg, None)), v_sol)
+        ds.close()
 
     def test_integrate_midpoints_slab(self, bout_xyt_example_files):
         # Create data
@@ -1370,6 +1385,7 @@ class TestBoutDatasetMethods:
             (tintegral * xintegral * yintegral * zintegral),
             rtol=1.4e-4,
         )
+        ds.close()
 
     @pytest.mark.parametrize(
         "location", ["CELL_CENTRE", "CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"]
@@ -1722,6 +1738,7 @@ class TestBoutDatasetMethods:
             rtol=1.0e-5,
             atol=0.0,
         )
+        ds.close()
 
     def test_interpolate_from_unstructured(self, bout_xyt_example_files):
         dataset_list, grid_ds = bout_xyt_example_files(
@@ -1771,6 +1788,7 @@ class TestBoutDatasetMethods:
 
         # Check there were non-nan values to compare in the previous assert_allclose
         assert int((~np.isnan(n_rect)).count()) == 851
+        ds.close()
 
     def test_interpolate_from_unstructured_unstructured_output(
         self, bout_xyt_example_files
@@ -1837,6 +1855,7 @@ class TestBoutDatasetMethods:
         n_check = R_unstruct + Z_unstruct
         n_unstruct = n_unstruct.isel(t=0, zeta=0)
         npt.assert_allclose(n_unstruct.values, n_check, atol=1.0e-7)
+        ds.close()
 
     def test_interpolate_to_cartesian(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(
@@ -1880,6 +1899,7 @@ class TestBoutDatasetMethods:
         assert np.isnan(ds_cartesian["n"].isel(t=0, X=0, Y=0, Z=0).item())
         # Check output is float32
         assert ds_cartesian["n"].dtype == np.float32
+        ds.close()
 
     def test_add_cartesian_coordinates(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
@@ -1918,6 +1938,7 @@ class TestBoutDatasetMethods:
             ds["Z_cartesian"],
             Z[:, :, np.newaxis] * np.ones(ds.metadata["nz"])[np.newaxis, np.newaxis, :],
         )
+        ds.close()
 
 
 class TestLoadInputFile:
@@ -1938,6 +1959,7 @@ class TestLoadInputFile:
             datapath=dataset_list, inputfilepath=EXAMPLE_OPTIONS_FILE_PATH
         )
         assert isinstance(ds.options, BoutOptions)
+        ds.close()
 
 
 @pytest.mark.skip(reason="Not yet implemented")
@@ -1966,6 +1988,7 @@ class TestSave:
 
         # Compare equal (not identical because attributes are changed when saving)
         xrt.assert_equal(original, recovered)
+        original.close()
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_all(self, tmp_path_factory, bout_xyt_example_files, geometry):
@@ -2021,6 +2044,8 @@ class TestSave:
                     )
                 # Datasets won't be exactly the same because different geometry was
                 # applied
+        recovered.close()
+        original.close()
 
     @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
     @pytest.mark.parametrize(
@@ -2056,6 +2081,7 @@ class TestSave:
 
             for v in original:
                 assert recovered[v].values.dtype == np.dtype(save_dtype)
+        original.close()
 
     def test_save_separate_variables(self, tmp_path_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(
@@ -2083,6 +2109,8 @@ class TestSave:
         savepath = savedir.joinpath("temp_boutdata_*.nc")
         recovered = open_boutdataset(savepath)
         xrt.assert_identical(original, recovered)
+        original.close()
+        recovered.close()
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables(
@@ -2130,6 +2158,8 @@ class TestSave:
 
         # Compare
         xrt.assert_identical(recovered, original)
+        original.close()
+        recovered.close()
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables_time_split(
@@ -2184,6 +2214,8 @@ class TestSave:
 
         # Compare
         xrt.assert_identical(recovered, original)
+        original.close()
+        recovered.close()
 
 
 class TestSaveRestart:
@@ -2265,6 +2297,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
+        ds.close()
 
     def test_to_restart_change_npe(self, tmp_path_factory, bout_xyt_example_files):
         nxpe_in = 3
@@ -2337,6 +2370,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
+        ds.close()
 
     @pytest.mark.long
     def test_to_restart_change_npe_doublenull(
@@ -2413,6 +2447,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
+        ds.close()
 
     @pytest.mark.long
     @pytest.mark.parametrize("npes", [(2, 6), (3, 4)])
@@ -2445,6 +2480,7 @@ class TestSaveRestart:
         )
         with pytest.raises(ValueError):
             ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
+        ds.close()
 
     def test_from_restart_to_restart(self, tmp_path):
         datapath = Path(__file__).parent.joinpath(
@@ -2453,3 +2489,4 @@ class TestSaveRestart:
         ds = open_boutdataset(datapath, keep_xboundaries=True, keep_yboundaries=True)
 
         ds.bout.to_restart(savepath=tmp_path, nxpe=1, nype=4)
+        ds.close()
