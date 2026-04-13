@@ -2002,19 +2002,21 @@ class TestSave:
         # Load it as a boutdataset
         if geometry is None:
             with pytest.warns(UserWarning):
-                original = open_boutdataset(
+                with open_boutdataset(
                     datapath=path,
                     inputfilepath=None,
                     geometry=geometry,
                     gridfilepath=None if geometry is None else gridpath,
-                )
+                ) as original_file:
+                    original = original_file.load()
         else:
-            original = open_boutdataset(
+            with open_boutdataset(
                 datapath=path,
                 inputfilepath=None,
                 geometry=geometry,
                 gridfilepath=None if geometry is None else gridpath,
-            )
+            ) as original_file:
+                original = original_file.load()
 
         # Save it to a netCDF file
         savedir = tmp_path_factory.mktemp("test_reload_all")
