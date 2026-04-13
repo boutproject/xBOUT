@@ -2243,7 +2243,9 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
-                with open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc")) as restart_file:
+                with open_dataset(
+                    savepath.joinpath(f"BOUT.restart.{num}.nc")
+                ) as restart_file:
                     restart_ds = restart_file.load()
 
                 # ignore guard cells - they are filled with NaN in the created restart
@@ -2314,7 +2316,9 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
-                with open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc")) as restart_file:
+                with open_dataset(
+                    savepath.joinpath(f"BOUT.restart.{num}.nc")
+                ) as restart_file:
                     restart_ds = restart_file.load()
 
                 # ignore guard cells - they are filled with NaN in the created restart
@@ -2388,7 +2392,9 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
-                with open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc")) as restart_file:
+                with open_dataset(
+                    savepath.joinpath(f"BOUT.restart.{num}.nc")
+                ) as restart_file:
                     restart_ds = restart_file.load()
 
                 # ignore guard cells - they are filled with NaN in the created restart
