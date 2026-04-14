@@ -29,6 +29,7 @@ from .plotting.animate import (
 from .region import _from_region
 from .utils import (
     _add_cartesian_coordinates,
+    _check_filetype,
     _get_bounding_surfaces,
     _split_into_restarts,
 )
@@ -775,7 +776,7 @@ class BoutDatasetAccessor:
     def save(
         self,
         savepath="./boutdata.nc",
-        filetype="NETCDF4",
+        filetype="h5netcdf",
         variables=None,
         save_dtype=None,
         separate_vars=False,
@@ -992,7 +993,12 @@ class BoutDatasetAccessor:
         )
 
         with ProgressBar():
-            xr.save_mfdataset(restart_datasets, paths, compute=True)
+            xr.save_mfdataset(
+                restart_datasets,
+                paths,
+                compute=True,
+                engine=_check_filetype(paths[0]),
+            )
 
     def animate_list(
         self,
