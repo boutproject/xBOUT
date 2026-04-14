@@ -720,8 +720,7 @@ class BoutDatasetAccessor:
                 new_metadata = variables[-1].metadata
             elif ycoord in self.data[v].dims:
                 raise ValueError(
-                    f"{v} only has a {ycoord}-dimension so cannot split "
-                    f"into regions."
+                    f"{v} only has a {ycoord}-dimension so cannot split into regions."
                 )
             else:
                 variable = self.data[v]
@@ -790,7 +789,7 @@ class BoutDatasetAccessor:
         savepath : str, optional
         filetype : str, optional
             netCDF format passed to xarray. NOT THE SAME as "engine", which
-            defaults to h5netcdf via ``_check_filetype()``. 
+            defaults to h5netcdf via ``_check_filetype()``.
             See https://docs.xarray.dev/en/latest/generated/xarray.Dataset.to_netcdf.html
         variables : list of str, optional
             Variables from the dataset to save. Default is to save all of them.
