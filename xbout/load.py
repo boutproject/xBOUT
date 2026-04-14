@@ -197,12 +197,15 @@ def open_boutdataset(
                 # xr.open_mfdataset only accepts glob patterns as
                 # strings, not Path objects
                 datapath = str(datapath)
+            _, filetype = _expand_filepaths(datapath)
+            reload_kwargs = dict(kwargs)
+            reload_kwargs.setdefault("engine", file_engine or filetype)
             ds = xr.open_mfdataset(
                 datapath,
                 chunks=chunks,
                 combine="by_coords",
                 data_vars="minimal",
-                **kwargs,
+                **reload_kwargs,
             )
         elif input_type == "reload_fake":
             ds = xr.combine_by_coords(datapath, data_vars="minimal").chunk(chunks)
