@@ -1976,7 +1976,8 @@ class TestSave:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            original = open_boutdataset(datapath=path, inputfilepath=None)
+            with open_boutdataset(datapath=path, inputfilepath=None) as original_file:
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savedir = tmp_path_factory.mktemp("test_save_all")
@@ -1984,10 +1985,9 @@ class TestSave:
         original.bout.save(savepath=savepath)
 
         # Load it again using bare xarray
-        recovered = open_dataset(savepath)
-
-        # Compare equal (not identical because attributes are changed when saving)
-        xrt.assert_equal(original, recovered)
+        with open_dataset(savepath) as recovered:
+            # Compare equal (not identical because attributes are changed when saving)
+            xrt.assert_equal(original, recovered)
         original.close()
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
@@ -2008,7 +2008,7 @@ class TestSave:
                     geometry=geometry,
                     gridfilepath=None if geometry is None else gridpath,
                 ) as original_file:
-                    original = original_file.load()
+                    original = original_file.load().copy(deep=True)
         else:
             with open_boutdataset(
                 datapath=path,
@@ -2016,7 +2016,7 @@ class TestSave:
                 geometry=geometry,
                 gridfilepath=None if geometry is None else gridpath,
             ) as original_file:
-                original = original_file.load()
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savedir = tmp_path_factory.mktemp("test_reload_all")
@@ -2024,29 +2024,28 @@ class TestSave:
         original.bout.save(savepath=savepath)
 
         # Load it again
-        recovered = open_boutdataset(savepath)
-
-        xrt.assert_identical(original.load(), recovered.load())
+        with open_boutdataset(savepath) as recovered:
+            xrt.assert_identical(original.load(), recovered.load())
 
         # Check if we can load with a different geometry argument
         for reload_geometry in [None, "toroidal"]:
             if reload_geometry is None or geometry == reload_geometry:
-                recovered = open_boutdataset(
+                with open_boutdataset(
                     savepath,
                     geometry=reload_geometry,
                     gridfilepath=None if reload_geometry is None else gridpath,
-                )
-                xrt.assert_identical(original.load(), recovered.load())
+                ) as recovered:
+                    xrt.assert_identical(original.load(), recovered.load())
             else:
                 # Expect a warning because we change the geometry
                 print("here", gridpath)
                 with pytest.warns(UserWarning):
-                    recovered = open_boutdataset(
+                    with open_boutdataset(
                         savepath, geometry=reload_geometry, gridfilepath=gridpath
-                    )
+                    ):
+                        pass
                 # Datasets won't be exactly the same because different geometry was
                 # applied
-        recovered.close()
         original.close()
 
     @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
@@ -2063,7 +2062,8 @@ class TestSave:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            original = open_boutdataset(datapath=path, inputfilepath=None)
+            with open_boutdataset(datapath=path, inputfilepath=None) as original_file:
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savedir = tmp_path_factory.mktemp("test_save_dtype")
@@ -2076,13 +2076,12 @@ class TestSave:
         if separate_vars:
             for v in ["n", "T"]:
                 savepath = savedir.joinpath(f"temp_boutdata_{v}.nc")
-                recovered = open_dataset(savepath)
-                assert recovered[v].values.dtype == np.dtype(save_dtype)
+                with open_dataset(savepath) as recovered:
+                    assert recovered[v].values.dtype == np.dtype(save_dtype)
         else:
-            recovered = open_dataset(savepath)
-
-            for v in original:
-                assert recovered[v].values.dtype == np.dtype(save_dtype)
+            with open_dataset(savepath) as recovered:
+                for v in original:
+                    assert recovered[v].values.dtype == np.dtype(save_dtype)
         original.close()
 
     def test_save_separate_variables(self, tmp_path_factory, bout_xyt_example_files):
@@ -2092,7 +2091,8 @@ class TestSave:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            original = open_boutdataset(datapath=path, inputfilepath=None)
+            with open_boutdataset(datapath=path, inputfilepath=None) as original_file:
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savedir = tmp_path_factory.mktemp("test_save_separate_variables")
@@ -2102,17 +2102,15 @@ class TestSave:
         for var in ["n", "T"]:
             # Load it again using bare xarray
             savepath = savedir.joinpath(f"temp_boutdata_{var}.nc")
-            recovered = open_dataset(savepath)
-
-            # Compare equal (not identical because attributes are changed when saving)
-            xrt.assert_equal(recovered[var], original[var])
+            with open_dataset(savepath) as recovered:
+                # Compare equal (not identical because attributes are changed when saving)
+                xrt.assert_equal(recovered[var], original[var])
 
         # test open_boutdataset() on dataset saved with separate_vars=True
         savepath = savedir.joinpath("temp_boutdata_*.nc")
-        recovered = open_boutdataset(savepath)
-        xrt.assert_identical(original, recovered)
+        with open_boutdataset(savepath) as recovered:
+            xrt.assert_identical(original, recovered)
         original.close()
-        recovered.close()
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables(
@@ -2135,19 +2133,21 @@ class TestSave:
         # Load it as a boutdataset
         if geometry is None:
             with pytest.warns(UserWarning):
-                original = open_boutdataset(
+                with open_boutdataset(
                     datapath=path,
                     inputfilepath=None,
                     geometry=geometry,
                     gridfilepath=gridpath,
-                )
+                ) as original_file:
+                    original = original_file.load().copy(deep=True)
         else:
-            original = open_boutdataset(
+            with open_boutdataset(
                 datapath=path,
                 inputfilepath=None,
                 geometry=geometry,
                 gridfilepath=gridpath,
-            )
+            ) as original_file:
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savedir = tmp_path_factory.mktemp("test_reload_separate_variables")
@@ -2156,12 +2156,10 @@ class TestSave:
 
         # Load it again
         savepath = savedir.joinpath("temp_boutdata_*.nc")
-        recovered = open_boutdataset(savepath)
-
-        # Compare
-        xrt.assert_identical(recovered, original)
+        with open_boutdataset(savepath) as recovered:
+            # Compare
+            xrt.assert_identical(recovered, original)
         original.close()
-        recovered.close()
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables_time_split(
@@ -2184,19 +2182,21 @@ class TestSave:
         # Load it as a boutdataset
         if geometry is None:
             with pytest.warns(UserWarning):
-                original = open_boutdataset(
+                with open_boutdataset(
                     datapath=path,
                     inputfilepath=None,
                     geometry=geometry,
                     gridfilepath=gridpath,
-                )
+                ) as original_file:
+                    original = original_file.load().copy(deep=True)
         else:
-            original = open_boutdataset(
+            with open_boutdataset(
                 datapath=path,
                 inputfilepath=None,
                 geometry=geometry,
                 gridfilepath=gridpath,
-            )
+            ) as original_file:
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         tcoord = original.metadata.get("bout_tdim", "t")
@@ -2212,12 +2212,10 @@ class TestSave:
 
         # Load it again
         savepath = savedir.joinpath("temp_boutdata_*.nc")
-        recovered = open_boutdataset(savepath)
-
-        # Compare
-        xrt.assert_identical(recovered, original)
+        with open_boutdataset(savepath) as recovered:
+            # Compare
+            xrt.assert_identical(recovered, original)
         original.close()
-        recovered.close()
 
 
 class TestSaveRestart:
@@ -2240,7 +2238,8 @@ class TestSaveRestart:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            ds = open_boutdataset(datapath=path)
+            with open_boutdataset(datapath=path) as ds_file:
+                ds = ds_file.load().copy(deep=True)
 
         nx = ds.metadata["nx"]
         ny = ds.metadata["ny"]
@@ -2322,7 +2321,8 @@ class TestSaveRestart:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            ds = open_boutdataset(datapath=path)
+            with open_boutdataset(datapath=path) as ds_file:
+                ds = ds_file.load().copy(deep=True)
 
         nx = ds.metadata["nx"]
         ny = ds.metadata["ny"]
@@ -2399,7 +2399,8 @@ class TestSaveRestart:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            ds = open_boutdataset(datapath=path)
+            with open_boutdataset(datapath=path) as ds_file:
+                ds = ds_file.load().copy(deep=True)
 
         nx = ds.metadata["nx"]
         ny = ds.metadata["ny"]
@@ -2474,7 +2475,8 @@ class TestSaveRestart:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            ds = open_boutdataset(datapath=path)
+            with open_boutdataset(datapath=path) as ds_file:
+                ds = ds_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savepath = tmp_path_factory.mktemp(
@@ -2488,7 +2490,10 @@ class TestSaveRestart:
         datapath = Path(__file__).parent.joinpath(
             "data", "restart", "BOUT.restart.*.nc"
         )
-        ds = open_boutdataset(datapath, keep_xboundaries=True, keep_yboundaries=True)
+        with open_boutdataset(
+            datapath, keep_xboundaries=True, keep_yboundaries=True
+        ) as ds_file:
+            ds = ds_file.load().copy(deep=True)
 
         ds.bout.to_restart(savepath=tmp_path, nxpe=1, nype=4)
         ds.close()
