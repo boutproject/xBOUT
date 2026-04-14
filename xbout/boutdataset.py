@@ -776,7 +776,7 @@ class BoutDatasetAccessor:
     def save(
         self,
         savepath="./boutdata.nc",
-        filetype="h5netcdf",
+        filetype="NETCDF4",
         variables=None,
         save_dtype=None,
         separate_vars=False,
@@ -789,6 +789,9 @@ class BoutDatasetAccessor:
         ----------
         savepath : str, optional
         filetype : str, optional
+            netCDF format passed to xarray. NOT THE SAME as "engine", which
+            defaults to h5netcdf via ``_check_filetype()``. 
+            See https://docs.xarray.dev/en/latest/generated/xarray.Dataset.to_netcdf.html
         variables : list of str, optional
             Variables from the dataset to save. Default is to save all of them.
         separate_vars: bool, optional
@@ -911,6 +914,7 @@ class BoutDatasetAccessor:
                     single_var_ds.to_netcdf(
                         path=str(var_savepath),
                         format=filetype,
+                        engine=_check_filetype(Path(var_savepath)),
                         compute=True,
                         encoding=var_encoding,
                     )
@@ -924,7 +928,11 @@ class BoutDatasetAccessor:
             print("Saving data...")
             with ProgressBar():
                 to_save.to_netcdf(
-                    path=savepath, format=filetype, compute=True, encoding=encoding
+                    path=savepath,
+                    engine=_check_filetype(Path(savepath)),
+                    format=filetype,
+                    compute=True,
+                    encoding=encoding,
                 )
 
         return
