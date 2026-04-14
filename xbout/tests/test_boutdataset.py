@@ -17,7 +17,7 @@ from xbout.tests.test_region import (
 )
 from xbout import open_boutdataset
 from xbout.geometries import apply_geometry
-from xbout.utils import _set_attrs_on_all_vars, _1d_coord_from_spacing
+from xbout.utils import _check_filetype, _set_attrs_on_all_vars, _1d_coord_from_spacing
 from xbout.tests.utils_for_tests import set_geometry_from_input_file
 
 EXAMPLE_OPTIONS_FILE_PATH = "./xbout/tests/data/options/BOUT.inp"
@@ -2276,8 +2276,10 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
+                restart_path = savepath.joinpath(f"BOUT.restart.{num}.nc")
                 with open_dataset(
-                    savepath.joinpath(f"BOUT.restart.{num}.nc")
+                    restart_path,
+                    engine=_check_filetype(restart_path),
                 ) as restart_file:
                     restart_ds = restart_file.load()
 
@@ -2351,8 +2353,10 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
+                restart_path = savepath.joinpath(f"BOUT.restart.{num}.nc")
                 with open_dataset(
-                    savepath.joinpath(f"BOUT.restart.{num}.nc")
+                    restart_path,
+                    engine=_check_filetype(restart_path),
                 ) as restart_file:
                     restart_ds = restart_file.load()
 
@@ -2429,8 +2433,10 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
+                restart_path = savepath.joinpath(f"BOUT.restart.{num}.nc")
                 with open_dataset(
-                    savepath.joinpath(f"BOUT.restart.{num}.nc")
+                    restart_path,
+                    engine=_check_filetype(restart_path),
                 ) as restart_file:
                     restart_ds = restart_file.load()
 
