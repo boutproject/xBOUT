@@ -314,7 +314,6 @@ def open_boutdataset(
             # All files are NetCDF and all in the same directory
             # Lazyload only opens one file and infers file layout from that
 
-            print(f"Lazily opening dataset at {dataset_dir}")
             ds = lazyload.lazy_open_boutdataset(
                 dataset_dir,
                 keep_xboundaries=keep_xboundaries,
