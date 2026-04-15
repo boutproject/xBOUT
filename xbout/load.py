@@ -371,8 +371,11 @@ def open_boutdataset(
             print("Applying {} geometry conventions".format(geometry))
 
         if _is_dir(gridfilepath):
-            if "grid" in ds.options:
-                gridfilepath += "/" + ds.options["grid"]
+            resolved_gridfilepath = _resolve_gridfilepath_from_options(
+                gridfilepath, ds.options
+            )
+            if resolved_gridfilepath is not None:
+                gridfilepath = resolved_gridfilepath
             else:
                 warn(
                     "gridfilepath set to a directory, but no grid used "
@@ -475,6 +478,26 @@ but we did load {grididfile}."""
     return ds
 
 
+def _resolve_gridfilepath_from_options(gridfilepath, options):
+    if options is None:
+        return None
+
+    gridfilename = None
+    if "mesh" in options and "file" in options["mesh"]:
+        gridfilename = options["mesh"]["file"]
+    elif "grid" in options:
+        gridfilename = options["grid"]
+
+    if gridfilename is None:
+        return None
+
+    gridpath = Path(gridfilename)
+    if gridpath.is_absolute():
+        return gridpath
+
+    return Path(gridfilepath).joinpath(gridpath)
+
+
 def _add_options(ds, inputfilepath, gridfilepath):
     """
     Add BoutOptionsFile as ds.options, if input filepath available.
@@ -484,10 +507,30 @@ def _add_options(ds, inputfilepath, gridfilepath):
 
     if inputfilepath:
         if gridfilepath:
-            options = BoutOptionsFile(
-                inputfilepath,
-                gridfilename=gridfilepath,
-            )
+            if _is_dir(gridfilepath):
+                # If only a grid directory was provided, read the input file first to
+                # determine the grid filename without trying to construct x, y, z yet.
+                options = BoutOptionsFile(inputfilepath, recalculate_xyz=False)
+                resolved_gridfilepath = _resolve_gridfilepath_from_options(
+                    gridfilepath, options
+                )
+
+                if resolved_gridfilepath is not None:
+                    options = BoutOptionsFile(
+                        inputfilepath,
+                        gridfilename=resolved_gridfilepath,
+                    )
+                else:
+                    warn(
+                        "gridfilepath set to a directory, but no grid used "
+                        "in simulation. Continuing without grid."
+                    )
+
+            else:
+                options = BoutOptionsFile(
+                    inputfilepath,
+                    gridfilename=gridfilepath,
+                )
         else:
             options = BoutOptionsFile(
                 inputfilepath,
