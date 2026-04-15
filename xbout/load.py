@@ -10,6 +10,7 @@ import xarray as xr
 from natsort import natsorted
 
 from . import geometries
+from . import lazyload
 from .utils import (
     _set_attrs_on_all_vars,
     _separate_metadata,
@@ -17,6 +18,11 @@ from .utils import (
     _is_path,
     _is_dir,
 )
+
+# Override file reading engine.
+# Use: xbout.load.file_engine = "netcdf4" or "h5netcdf"
+file_engine = None
+
 
 _BOUT_GEOMETRY_VARS = [
     "ixseps1",
@@ -59,12 +65,13 @@ def open_boutdataset(
     gridfilepath=None,
     grid_mismatch="raise",
     chunks=None,
-    keep_xboundaries=True,
-    keep_yboundaries=False,
+    keep_xboundaries: bool = True,
+    keep_yboundaries: bool = False,
     run_name=None,
-    info=True,
-    is_restart=None,
-    is_mms_dump=False,
+    info: bool = True,
+    is_restart: bool = None,
+    is_mms_dump: bool = False,
+    lazy_load: bool = True,
     **kwargs,
 ):
     """Load a dataset from a set of BOUT output files, including the
@@ -151,6 +158,10 @@ def open_boutdataset(
         set); increases the size of the y dimension in the returned
         data-set. If false, trim these cells.
 
+    lazy_load : bool, optional
+        If true, lazy load the dataset when possible. In a multi-file
+        dataset this avoids opening more files than necessary.
+
     run_name : str, optional
         Name to give to the whole dataset,
         e.g. 'JET_ELM_high_resolution'.  Useful if you are going to
@@ -192,12 +203,15 @@ def open_boutdataset(
                 # xr.open_mfdataset only accepts glob patterns as
                 # strings, not Path objects
                 datapath = str(datapath)
+            _, filetype = _expand_filepaths(datapath)
+            reload_kwargs = dict(kwargs)
+            reload_kwargs.setdefault("engine", file_engine or filetype)
             ds = xr.open_mfdataset(
                 datapath,
                 chunks=chunks,
                 combine="by_coords",
                 data_vars="minimal",
-                **kwargs,
+                **reload_kwargs,
             )
         elif input_type == "reload_fake":
             ds = xr.combine_by_coords(datapath, data_vars="minimal").chunk(chunks)
@@ -275,15 +289,52 @@ def open_boutdataset(
     # Determine if file is a grid file or data dump files
     remove_yboundaries = False
     if "dump" in input_type or "restart" in input_type:
-        # Gather pointers to all numerical data from BOUT++ output files
-        ds, remove_yboundaries = _auto_open_mfboutdataset(
-            datapath=datapath,
-            chunks=chunks,
-            keep_xboundaries=keep_xboundaries,
-            keep_yboundaries=keep_yboundaries,
-            is_restart=is_restart,
-            **kwargs,
-        )
+
+        def is_netcdf_collection(datapath):
+            if not isinstance(datapath, str):
+                return None
+            # Expand globs into a list of files
+            p = Path(datapath)
+            filepaths = list(p.parent.glob(p.name))
+            if len(filepaths) == 0:
+                raise ValueError(f"File not found: {datapath}")
+            if all(
+                [
+                    filepath.parent == filepaths[0].parent and filepath.suffix == ".nc"
+                    for filepath in filepaths
+                ]
+            ):
+                return filepaths[0].parent
+            return None
+
+        # The directory containing the files or None if not a collection
+        dataset_dir = is_netcdf_collection(datapath)
+
+        if lazy_load and dataset_dir:
+            # All files are NetCDF and all in the same directory
+            # Lazyload only opens one file and infers file layout from that
+
+            ds = lazyload.lazy_open_boutdataset(
+                dataset_dir,
+                keep_xboundaries=keep_xboundaries,
+                keep_yboundaries=keep_yboundaries,
+                is_restart=is_restart,
+                info=info,
+                **kwargs,
+            )
+            remove_yboundaries = False
+        else:
+            # Gather pointers to all numerical data from BOUT++ output files
+            # This opens all files then concatenates
+            ds, remove_yboundaries = _auto_open_mfboutdataset(
+                datapath=datapath,
+                chunks=chunks,
+                keep_xboundaries=keep_xboundaries,
+                keep_yboundaries=keep_yboundaries,
+                is_restart=is_restart,
+                **kwargs,
+            )
+
     elif "grid" in input_type:
         # Its a grid file
         ds = _open_grid(
@@ -297,6 +348,7 @@ def open_boutdataset(
         raise ValueError(f"internal error: unexpected input_type={input_type}")
 
     ds, metadata = _separate_metadata(ds)
+
     # Store as ints because netCDF doesn't support bools, so we can't save
     # bool attributes
     metadata["keep_xboundaries"] = int(keep_xboundaries)
@@ -584,8 +636,30 @@ def _check_dataset_type(datapath):
 
     filepaths, filetype = _expand_filepaths(datapath)
 
-    ds = xr.open_dataset(filepaths[0], engine=filetype)
-    ds.close()
+    try:
+        ds = xr.open_dataset(filepaths[0], engine=file_engine or filetype)
+        ds.close()
+    except RuntimeError as e:
+        if "H5DSget_num_scales" in str(e):
+            msg = (
+                "\n\nFailed to open dataset due to an HDF5 compatibility error between\n"
+                "h5py and h5netcdf, likely because both were installed with pip.\n"
+                "See: https://github.com/boutproject/xBOUT/issues/329\n"
+                "Also see: https://github.com/HDFGroup/hdf5/issues/6268\n\n"
+                "There are three possible fixes:\n"
+                "  1. Install both from source against a single shared HDF5:\n"
+                "       sudo apt install libhdf5-dev libnetcdf-dev\n"
+                "       pip install --no-binary netCDF4,h5py netCDF4 h5py\n\n"
+                "  2. Install both from your distribution package manager,\n"
+                "     like apt or dnf or install with conda or Spack\n\n"
+                "  3. Switch to the netcdf4 engine:\n"
+                "       import xbout\n"
+                "       xbout.load.file_engine = 'netcdf4'\n"
+                "     netcdf4 may however cause segfaults on file closure\n\n"
+                f"Original error:\n\t{e}"
+            )
+            raise RuntimeError(msg) from e
+        raise
     if "metadata:keep_yboundaries" in ds.attrs:
         # (i)
         return "reload"
@@ -653,7 +727,7 @@ def _auto_open_mfboutdataset(
             concat_dim=concat_dims,
             combine="nested",
             preprocess=_preprocess,
-            engine=filetype,
+            engine=file_engine or filetype,
             chunks=chunks,
             # Only data variables in which the dimension already
             # appears are concatenated.
@@ -790,7 +864,7 @@ def _read_splitting(filepath, info, keep_yboundaries):
                 print(f"{key} not found, setting to {default}")
             if default < 0:
                 raise ValueError(
-                    f"Default for {key} is {val}," f" but negative values are not valid"
+                    f"Default for {key} is {val}, but negative values are not valid"
                 )
             return default
 
@@ -1117,7 +1191,9 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
     if _is_path(datapath):
         gridfilepath = Path(datapath)
         grid = xr.open_dataset(
-            gridfilepath, engine=_check_filetype(gridfilepath), **kwargs
+            gridfilepath,
+            engine=(file_engine or _check_filetype(gridfilepath)),
+            **kwargs,
         )
     else:
         grid = datapath

@@ -36,10 +36,10 @@ class TestOpenGrid:
     def test_open_grid(self, create_example_grid_file):
         example_grid = create_example_grid_file
         with pytest.warns(UserWarning):
-            result = open_boutdataset(datapath=example_grid)
-        result = result.drop_vars(["x", "y"])
-        assert_equal(result, open_dataset(example_grid))
-        result.close()
+            with open_boutdataset(datapath=example_grid) as result:
+                result = result.drop_vars(["x", "y"])
+        with open_dataset(example_grid) as tmp:
+            assert_equal(result, tmp)
 
     def test_open_grid_extra_dims(self, create_example_grid_file, tmp_path_factory):
         example_grid = open_dataset(create_example_grid_file)
@@ -57,10 +57,10 @@ class TestOpenGrid:
         with pytest.warns(
             UserWarning, match="drop all variables containing " "the dimensions 'w'"
         ):
-            result = open_boutdataset(datapath=dodgy_grid_path)
-        result = result.drop_vars(["x", "y"])
+            with open_boutdataset(datapath=dodgy_grid_path) as result:
+                result = result.drop_vars(["x", "y"])
         assert_equal(result, example_grid)
-        result.close()
+        example_grid.close()
 
     def test_open_grid_apply_geometry(self, create_example_grid_file):
         @register_geometry(name="Schwarzschild")
@@ -71,9 +71,7 @@ class TestOpenGrid:
 
         example_grid = create_example_grid_file
 
-        result = result = open_boutdataset(
-            datapath=example_grid, geometry="Schwarzschild"
-        )
+        result = open_boutdataset(datapath=example_grid, geometry="Schwarzschild")
         assert_equal(result["event_horizon"], DataArray(4.0))
 
         # clean up
@@ -83,17 +81,19 @@ class TestOpenGrid:
     def test_open_grid_chunks(self, create_example_grid_file):
         example_grid = create_example_grid_file
         with pytest.warns(UserWarning):
-            result = open_boutdataset(datapath=example_grid, chunks={"x": 4, "y": 5})
-        result = result.drop_vars(["x", "y"])
-        assert_equal(result, open_dataset(example_grid))
-        result.close()
+            with open_boutdataset(
+                datapath=example_grid, chunks={"x": 4, "y": 5}
+            ) as result:
+                result = result.drop_vars(["x", "y"])
+            with open_dataset(example_grid) as tmp:
+                assert_equal(result, tmp)
 
     def test_open_grid_chunks_not_in_grid(self, create_example_grid_file):
         example_grid = create_example_grid_file
         with pytest.warns(UserWarning):
-            result = open_boutdataset(
+            with open_boutdataset(
                 datapath=example_grid, chunks={"anonexistantdimension": 5}
-            )
-        result = result.drop_vars(["x", "y"])
-        assert_equal(result, open_dataset(example_grid))
-        result.close()
+            ) as result:
+                result = result.drop_vars(["x", "y"])
+        with open_dataset(example_grid) as tmp:
+            assert_equal(result, tmp)

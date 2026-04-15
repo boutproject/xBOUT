@@ -1,4 +1,5 @@
 from .load import open_boutdataset, collect
+from .lazyload import lazy_open_boutdataset
 
 from . import geometries
 from .geometries import register_geometry, REGISTERED_GEOMETRIES
@@ -22,6 +23,7 @@ except PackageNotFoundError:
 
 __all__ = [
     "open_boutdataset",
+    "lazy_open_boutdataset",
     "collect",
     "geometries",
     "register_geometry",

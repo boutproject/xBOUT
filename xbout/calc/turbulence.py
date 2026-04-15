@@ -1,7 +1,6 @@
 import numpy as np
 import xarray as xr
 
-
 # TODO write a decorator to add functions as accessors to dataarrays?
 
 
