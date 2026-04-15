@@ -19,6 +19,11 @@ from .utils import (
     _is_dir,
 )
 
+# Override file reading engine.
+# Use: xbout.load.file_engine = "netcdf4" or "h5netcdf"
+file_engine = None
+
+
 _BOUT_GEOMETRY_VARS = [
     "ixseps1",
     "ixseps2",
@@ -198,12 +203,15 @@ def open_boutdataset(
                 # xr.open_mfdataset only accepts glob patterns as
                 # strings, not Path objects
                 datapath = str(datapath)
+            _, filetype = _expand_filepaths(datapath)
+            reload_kwargs = dict(kwargs)
+            reload_kwargs.setdefault("engine", file_engine or filetype)
             ds = xr.open_mfdataset(
                 datapath,
                 chunks=chunks,
                 combine="by_coords",
                 data_vars="minimal",
-                **kwargs,
+                **reload_kwargs,
             )
         elif input_type == "reload_fake":
             ds = xr.combine_by_coords(datapath, data_vars="minimal").chunk(chunks)
@@ -306,7 +314,6 @@ def open_boutdataset(
             # All files are NetCDF and all in the same directory
             # Lazyload only opens one file and infers file layout from that
 
-            print(f"Lazily opening dataset at {dataset_dir}")
             ds = lazyload.lazy_open_boutdataset(
                 dataset_dir,
                 keep_xboundaries=keep_xboundaries,
@@ -665,8 +672,30 @@ def _check_dataset_type(datapath):
 
     filepaths, filetype = _expand_filepaths(datapath)
 
-    ds = xr.open_dataset(filepaths[0], engine=filetype)
-    ds.close()
+    try:
+        ds = xr.open_dataset(filepaths[0], engine=file_engine or filetype)
+        ds.close()
+    except RuntimeError as e:
+        if "H5DSget_num_scales" in str(e):
+            msg = (
+                "\n\nFailed to open dataset due to an HDF5 compatibility error between\n"
+                "h5py and h5netcdf, likely because both were installed with pip.\n"
+                "See: https://github.com/boutproject/xBOUT/issues/329\n"
+                "Also see: https://github.com/HDFGroup/hdf5/issues/6268\n\n"
+                "There are three possible fixes:\n"
+                "  1. Install both from source against a single shared HDF5:\n"
+                "       sudo apt install libhdf5-dev libnetcdf-dev\n"
+                "       pip install --no-binary netCDF4,h5py netCDF4 h5py\n\n"
+                "  2. Install both from your distribution package manager,\n"
+                "     like apt or dnf or install with conda or Spack\n\n"
+                "  3. Switch to the netcdf4 engine:\n"
+                "       import xbout\n"
+                "       xbout.load.file_engine = 'netcdf4'\n"
+                "     netcdf4 may however cause segfaults on file closure\n\n"
+                f"Original error:\n\t{e}"
+            )
+            raise RuntimeError(msg) from e
+        raise
     if "metadata:keep_yboundaries" in ds.attrs:
         # (i)
         return "reload"
@@ -734,7 +763,7 @@ def _auto_open_mfboutdataset(
             concat_dim=concat_dims,
             combine="nested",
             preprocess=_preprocess,
-            engine=filetype,
+            engine=file_engine or filetype,
             chunks=chunks,
             # Only data variables in which the dimension already
             # appears are concatenated.
@@ -871,7 +900,7 @@ def _read_splitting(filepath, info, keep_yboundaries):
                 print(f"{key} not found, setting to {default}")
             if default < 0:
                 raise ValueError(
-                    f"Default for {key} is {val}," f" but negative values are not valid"
+                    f"Default for {key} is {val}, but negative values are not valid"
                 )
             return default
 
@@ -1198,7 +1227,9 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
     if _is_path(datapath):
         gridfilepath = Path(datapath)
         grid = xr.open_dataset(
-            gridfilepath, engine=_check_filetype(gridfilepath), **kwargs
+            gridfilepath,
+            engine=(file_engine or _check_filetype(gridfilepath)),
+            **kwargs,
         )
     else:
         grid = datapath

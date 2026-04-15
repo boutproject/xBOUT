@@ -1712,9 +1712,6 @@ def _concat_upper_guards(da, da_global, mxg, myg):
 
 
 def _from_region(ds_or_da, name, with_guards):
-    # ensure we do not modify the input
-    ds_or_da = ds_or_da.copy(deep=True)
-
     region = ds_or_da.bout._regions[name]
     xcoord = ds_or_da.metadata["bout_xdim"]
     ycoord = ds_or_da.metadata["bout_ydim"]
@@ -1730,10 +1727,10 @@ def _from_region(ds_or_da, name, with_guards):
             mxg = with_guards
             myg = with_guards
 
-    result = ds_or_da.isel(region.get_slices()).copy()
+    result = ds_or_da.isel(region.get_slices()).copy(deep=False)
 
-    # The returned result has only one region
     single_region = deepcopy(region)
+    result.attrs = dict(ds_or_da.attrs)
     result.attrs["regions"] = {name: single_region}
 
     # get inner x-guard cells for result from the global array
