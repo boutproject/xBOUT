@@ -17,7 +17,7 @@ from xbout.tests.test_region import (
 )
 from xbout import open_boutdataset
 from xbout.geometries import apply_geometry
-from xbout.utils import _set_attrs_on_all_vars, _1d_coord_from_spacing
+from xbout.utils import _check_filetype, _set_attrs_on_all_vars, _1d_coord_from_spacing
 from xbout.tests.utils_for_tests import set_geometry_from_input_file
 
 EXAMPLE_OPTIONS_FILE_PATH = "./xbout/tests/data/options/BOUT.inp"
@@ -42,6 +42,8 @@ class TestBoutDatasetIsXarrayDataset:
             )
         result = concat([bd1, bd2], dim="run")
         assert result.sizes == {**bd1.sizes, "run": 2}
+        bd1.close()
+        bd2.close()
 
     def test_isel(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
@@ -52,6 +54,7 @@ class TestBoutDatasetIsXarrayDataset:
         actual = bd.isel(x=slice(None, None, 2))
         expected = bd.bout.data.isel(x=slice(None, None, 2))
         xrt.assert_equal(actual, expected)
+        bd.close()
 
 
 class TestBoutDatasetMethods:
@@ -83,6 +86,7 @@ class TestBoutDatasetMethods:
         ds["n_aligned"] = ds["T"]
         ds["n_aligned"].attrs["direction_y"] = "Aligned"
         xrt.assert_allclose(ds.bout.get_field_aligned("n"), ds["T"])
+        ds.close()
 
     @pytest.mark.parametrize("mxg", [0, pytest.param(2, marks=pytest.mark.long)])
     @pytest.mark.parametrize("myg", [pytest.param(0, marks=pytest.mark.long), 2])
@@ -144,6 +148,8 @@ class TestBoutDatasetMethods:
             # don't need to delete MYG again
 
         xrt.assert_equal(ds, ds_no_yboundaries)
+        ds.close()
+        ds_no_yboundaries.close()
 
     @pytest.mark.parametrize(
         "nz",
@@ -257,6 +263,7 @@ class TestBoutDatasetMethods:
                     rtol=1.0e-15,
                     atol=0.0,
                 )  # noqa: E501
+        ds.close()
 
     def test_to_field_aligned_dask(self, bout_xyt_example_files):
         nz = 6
@@ -370,6 +377,7 @@ class TestBoutDatasetMethods:
                     rtol=1.0e-15,
                     atol=0.0,
                 )  # noqa: E501
+        ds.close()
 
     @pytest.mark.parametrize(
         "nz",
@@ -484,6 +492,8 @@ class TestBoutDatasetMethods:
                     atol=0.0,
                 )  # noqa: E501
 
+        ds.close()
+
     @pytest.mark.parametrize("stag_location", ["CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"])
     def test_to_field_aligned_staggered(self, bout_xyt_example_files, stag_location):
         dataset_list = bout_xyt_example_files(
@@ -542,6 +552,7 @@ class TestBoutDatasetMethods:
         assert n_stag_al.direction_y == "Aligned"
 
         npt.assert_equal(n_stag_al.values, n_al.values)
+        ds.close()
 
     @pytest.mark.parametrize("stag_location", ["CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"])
     def test_from_field_aligned_staggered(self, bout_xyt_example_files, stag_location):
@@ -615,6 +626,7 @@ class TestBoutDatasetMethods:
 
         assert ds.metadata["fine_interpolation_factor"] == 42
         assert ds["a"].metadata["fine_interpolation_factor"] == 42
+        ds.close()
 
     @pytest.mark.parametrize(params_guards, params_guards_values)
     @pytest.mark.parametrize(params_boundaries, params_boundaries_values)
@@ -1090,6 +1102,7 @@ class TestBoutDatasetMethods:
                     ).values,
                     v_lower_outer_SOL.isel(theta=slice(myg)).values,
                 )
+        ds.close()
 
     def test_interpolate_parallel_all_variables_arg(self, bout_xyt_example_files):
         # Check that passing 'variables=...' to interpolate_parallel() does actually
@@ -1138,6 +1151,7 @@ class TestBoutDatasetMethods:
                 "psixy",
             )
         )
+        ds.close()
 
     def test_interpolate_parallel_limiter(
         self,
@@ -1184,6 +1198,7 @@ class TestBoutDatasetMethods:
             # Remove attributes that are expected to be different
             del v_sol.attrs["regions"]
             xrt.assert_identical(v_noregions.isel(x=slice(ixs1 - mxg, None)), v_sol)
+        ds.close()
 
     def test_integrate_midpoints_slab(self, bout_xyt_example_files):
         # Create data
@@ -1370,6 +1385,7 @@ class TestBoutDatasetMethods:
             (tintegral * xintegral * yintegral * zintegral),
             rtol=1.4e-4,
         )
+        ds.close()
 
     @pytest.mark.parametrize(
         "location", ["CELL_CENTRE", "CELL_XLOW", "CELL_YLOW", "CELL_ZLOW"]
@@ -1722,6 +1738,7 @@ class TestBoutDatasetMethods:
             rtol=1.0e-5,
             atol=0.0,
         )
+        ds.close()
 
     def test_interpolate_from_unstructured(self, bout_xyt_example_files):
         dataset_list, grid_ds = bout_xyt_example_files(
@@ -1771,6 +1788,7 @@ class TestBoutDatasetMethods:
 
         # Check there were non-nan values to compare in the previous assert_allclose
         assert int((~np.isnan(n_rect)).count()) == 851
+        ds.close()
 
     def test_interpolate_from_unstructured_unstructured_output(
         self, bout_xyt_example_files
@@ -1837,6 +1855,7 @@ class TestBoutDatasetMethods:
         n_check = R_unstruct + Z_unstruct
         n_unstruct = n_unstruct.isel(t=0, zeta=0)
         npt.assert_allclose(n_unstruct.values, n_check, atol=1.0e-7)
+        ds.close()
 
     def test_interpolate_to_cartesian(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(
@@ -1880,6 +1899,7 @@ class TestBoutDatasetMethods:
         assert np.isnan(ds_cartesian["n"].isel(t=0, X=0, Y=0, Z=0).item())
         # Check output is float32
         assert ds_cartesian["n"].dtype == np.float32
+        ds.close()
 
     def test_add_cartesian_coordinates(self, bout_xyt_example_files):
         dataset_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
@@ -1918,6 +1938,7 @@ class TestBoutDatasetMethods:
             ds["Z_cartesian"],
             Z[:, :, np.newaxis] * np.ones(ds.metadata["nz"])[np.newaxis, np.newaxis, :],
         )
+        ds.close()
 
 
 class TestLoadInputFile:
@@ -1938,6 +1959,7 @@ class TestLoadInputFile:
             datapath=dataset_list, inputfilepath=EXAMPLE_OPTIONS_FILE_PATH
         )
         assert isinstance(ds.options, BoutOptions)
+        ds.close()
 
 
 @pytest.mark.skip(reason="Not yet implemented")
@@ -1954,7 +1976,8 @@ class TestSave:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            original = open_boutdataset(datapath=path, inputfilepath=None)
+            with open_boutdataset(datapath=path, inputfilepath=None) as original_file:
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savedir = tmp_path_factory.mktemp("test_save_all")
@@ -1962,10 +1985,10 @@ class TestSave:
         original.bout.save(savepath=savepath)
 
         # Load it again using bare xarray
-        recovered = open_dataset(savepath)
-
-        # Compare equal (not identical because attributes are changed when saving)
-        xrt.assert_equal(original, recovered)
+        with open_dataset(savepath) as recovered:
+            # Compare equal (not identical because attributes are changed when saving)
+            xrt.assert_equal(original, recovered)
+        original.close()
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_all(self, tmp_path_factory, bout_xyt_example_files, geometry):
@@ -1979,19 +2002,21 @@ class TestSave:
         # Load it as a boutdataset
         if geometry is None:
             with pytest.warns(UserWarning):
-                original = open_boutdataset(
+                with open_boutdataset(
                     datapath=path,
                     inputfilepath=None,
                     geometry=geometry,
                     gridfilepath=None if geometry is None else gridpath,
-                )
+                ) as original_file:
+                    original = original_file.load().copy(deep=True)
         else:
-            original = open_boutdataset(
+            with open_boutdataset(
                 datapath=path,
                 inputfilepath=None,
                 geometry=geometry,
                 gridfilepath=None if geometry is None else gridpath,
-            )
+            ) as original_file:
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savedir = tmp_path_factory.mktemp("test_reload_all")
@@ -1999,28 +2024,29 @@ class TestSave:
         original.bout.save(savepath=savepath)
 
         # Load it again
-        recovered = open_boutdataset(savepath)
-
-        xrt.assert_identical(original.load(), recovered.load())
+        with open_boutdataset(savepath) as recovered:
+            xrt.assert_identical(original.load(), recovered.load())
 
         # Check if we can load with a different geometry argument
         for reload_geometry in [None, "toroidal"]:
             if reload_geometry is None or geometry == reload_geometry:
-                recovered = open_boutdataset(
+                with open_boutdataset(
                     savepath,
                     geometry=reload_geometry,
                     gridfilepath=None if reload_geometry is None else gridpath,
-                )
-                xrt.assert_identical(original.load(), recovered.load())
+                ) as recovered:
+                    xrt.assert_identical(original.load(), recovered.load())
             else:
                 # Expect a warning because we change the geometry
                 print("here", gridpath)
                 with pytest.warns(UserWarning):
-                    recovered = open_boutdataset(
+                    with open_boutdataset(
                         savepath, geometry=reload_geometry, gridfilepath=gridpath
-                    )
+                    ):
+                        pass
                 # Datasets won't be exactly the same because different geometry was
                 # applied
+        original.close()
 
     @pytest.mark.parametrize("save_dtype", [np.float64, np.float32])
     @pytest.mark.parametrize(
@@ -2036,7 +2062,8 @@ class TestSave:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            original = open_boutdataset(datapath=path, inputfilepath=None)
+            with open_boutdataset(datapath=path, inputfilepath=None) as original_file:
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savedir = tmp_path_factory.mktemp("test_save_dtype")
@@ -2049,13 +2076,13 @@ class TestSave:
         if separate_vars:
             for v in ["n", "T"]:
                 savepath = savedir.joinpath(f"temp_boutdata_{v}.nc")
-                recovered = open_dataset(savepath)
-                assert recovered[v].values.dtype == np.dtype(save_dtype)
+                with open_dataset(savepath) as recovered:
+                    assert recovered[v].values.dtype == np.dtype(save_dtype)
         else:
-            recovered = open_dataset(savepath)
-
-            for v in original:
-                assert recovered[v].values.dtype == np.dtype(save_dtype)
+            with open_dataset(savepath) as recovered:
+                for v in original:
+                    assert recovered[v].values.dtype == np.dtype(save_dtype)
+        original.close()
 
     def test_save_separate_variables(self, tmp_path_factory, bout_xyt_example_files):
         path = bout_xyt_example_files(
@@ -2064,7 +2091,8 @@ class TestSave:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            original = open_boutdataset(datapath=path, inputfilepath=None)
+            with open_boutdataset(datapath=path, inputfilepath=None) as original_file:
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savedir = tmp_path_factory.mktemp("test_save_separate_variables")
@@ -2074,15 +2102,15 @@ class TestSave:
         for var in ["n", "T"]:
             # Load it again using bare xarray
             savepath = savedir.joinpath(f"temp_boutdata_{var}.nc")
-            recovered = open_dataset(savepath)
-
-            # Compare equal (not identical because attributes are changed when saving)
-            xrt.assert_equal(recovered[var], original[var])
+            with open_dataset(savepath) as recovered:
+                # Compare equal (not identical because attributes are changed when saving)
+                xrt.assert_equal(recovered[var], original[var])
 
         # test open_boutdataset() on dataset saved with separate_vars=True
         savepath = savedir.joinpath("temp_boutdata_*.nc")
-        recovered = open_boutdataset(savepath)
-        xrt.assert_identical(original, recovered)
+        with open_boutdataset(savepath) as recovered:
+            xrt.assert_identical(original, recovered)
+        original.close()
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables(
@@ -2105,19 +2133,21 @@ class TestSave:
         # Load it as a boutdataset
         if geometry is None:
             with pytest.warns(UserWarning):
-                original = open_boutdataset(
+                with open_boutdataset(
                     datapath=path,
                     inputfilepath=None,
                     geometry=geometry,
                     gridfilepath=gridpath,
-                )
+                ) as original_file:
+                    original = original_file.load().copy(deep=True)
         else:
-            original = open_boutdataset(
+            with open_boutdataset(
                 datapath=path,
                 inputfilepath=None,
                 geometry=geometry,
                 gridfilepath=gridpath,
-            )
+            ) as original_file:
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savedir = tmp_path_factory.mktemp("test_reload_separate_variables")
@@ -2126,10 +2156,10 @@ class TestSave:
 
         # Load it again
         savepath = savedir.joinpath("temp_boutdata_*.nc")
-        recovered = open_boutdataset(savepath)
-
-        # Compare
-        xrt.assert_identical(recovered, original)
+        with open_boutdataset(savepath) as recovered:
+            # Compare
+            xrt.assert_identical(recovered, original)
+        original.close()
 
     @pytest.mark.parametrize("geometry", [None, "toroidal"])
     def test_reload_separate_variables_time_split(
@@ -2152,19 +2182,21 @@ class TestSave:
         # Load it as a boutdataset
         if geometry is None:
             with pytest.warns(UserWarning):
-                original = open_boutdataset(
+                with open_boutdataset(
                     datapath=path,
                     inputfilepath=None,
                     geometry=geometry,
                     gridfilepath=gridpath,
-                )
+                ) as original_file:
+                    original = original_file.load().copy(deep=True)
         else:
-            original = open_boutdataset(
+            with open_boutdataset(
                 datapath=path,
                 inputfilepath=None,
                 geometry=geometry,
                 gridfilepath=gridpath,
-            )
+            ) as original_file:
+                original = original_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         tcoord = original.metadata.get("bout_tdim", "t")
@@ -2180,10 +2212,10 @@ class TestSave:
 
         # Load it again
         savepath = savedir.joinpath("temp_boutdata_*.nc")
-        recovered = open_boutdataset(savepath)
-
-        # Compare
-        xrt.assert_identical(recovered, original)
+        with open_boutdataset(savepath) as recovered:
+            # Compare
+            xrt.assert_identical(recovered, original)
+        original.close()
 
 
 class TestSaveRestart:
@@ -2206,7 +2238,8 @@ class TestSaveRestart:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            ds = open_boutdataset(datapath=path)
+            with open_boutdataset(datapath=path) as ds_file:
+                ds = ds_file.load().copy(deep=True)
 
         nx = ds.metadata["nx"]
         ny = ds.metadata["ny"]
@@ -2224,16 +2257,10 @@ class TestSaveRestart:
             for proc_xind in range(nxpe):
                 num = nxpe * proc_yind + proc_xind
 
-                restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
-
                 if tind is None:
                     t = -1
                 else:
                     t = tind
-
-                # ignore guard cells - they are filled with NaN in the created restart
-                # files
-                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
 
                 check_ds = ds.isel(
                     t=t,
@@ -2249,6 +2276,17 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
+                restart_path = savepath.joinpath(f"BOUT.restart.{num}.nc")
+                with open_dataset(
+                    restart_path,
+                    engine=_check_filetype(restart_path),
+                ) as restart_file:
+                    restart_ds = restart_file.load()
+
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2262,6 +2300,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
+        ds.close()
 
     def test_to_restart_change_npe(self, tmp_path_factory, bout_xyt_example_files):
         nxpe_in = 3
@@ -2284,7 +2323,8 @@ class TestSaveRestart:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            ds = open_boutdataset(datapath=path)
+            with open_boutdataset(datapath=path) as ds_file:
+                ds = ds_file.load().copy(deep=True)
 
         nx = ds.metadata["nx"]
         ny = ds.metadata["ny"]
@@ -2298,12 +2338,6 @@ class TestSaveRestart:
         for proc_yind in range(nype):
             for proc_xind in range(nxpe):
                 num = nxpe * proc_yind + proc_xind
-
-                restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
-
-                # ignore guard cells - they are filled with NaN in the created restart
-                # files
-                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
 
                 check_ds = ds.isel(
                     t=-1,
@@ -2319,6 +2353,17 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
+                restart_path = savepath.joinpath(f"BOUT.restart.{num}.nc")
+                with open_dataset(
+                    restart_path,
+                    engine=_check_filetype(restart_path),
+                ) as restart_file:
+                    restart_ds = restart_file.load()
+
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2331,6 +2376,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
+        ds.close()
 
     @pytest.mark.long
     def test_to_restart_change_npe_doublenull(
@@ -2357,7 +2403,8 @@ class TestSaveRestart:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            ds = open_boutdataset(datapath=path)
+            with open_boutdataset(datapath=path) as ds_file:
+                ds = ds_file.load().copy(deep=True)
 
         nx = ds.metadata["nx"]
         ny = ds.metadata["ny"]
@@ -2371,12 +2418,6 @@ class TestSaveRestart:
         for proc_yind in range(nype):
             for proc_xind in range(nxpe):
                 num = nxpe * proc_yind + proc_xind
-
-                restart_ds = open_dataset(savepath.joinpath(f"BOUT.restart.{num}.nc"))
-
-                # ignore guard cells - they are filled with NaN in the created restart
-                # files
-                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
 
                 check_ds = ds.isel(
                     t=-1,
@@ -2392,6 +2433,17 @@ class TestSaveRestart:
                 # ignore variables that depend on the rank of the BOUT++ process - they
                 # cannot be consistent with check_ds
                 rank_dependent_vars = ["PE_XIND", "PE_YIND", "MYPE"]
+                restart_path = savepath.joinpath(f"BOUT.restart.{num}.nc")
+                with open_dataset(
+                    restart_path,
+                    engine=_check_filetype(restart_path),
+                ) as restart_file:
+                    restart_ds = restart_file.load()
+
+                # ignore guard cells - they are filled with NaN in the created restart
+                # files
+                restart_ds = restart_ds.isel(x=slice(2, -2), y=slice(2, -2))
+
                 for v in restart_ds:
                     if v in check_ds:
                         xrt.assert_equal(restart_ds[v], check_ds[v])
@@ -2404,6 +2456,7 @@ class TestSaveRestart:
                             assert restart_ds[v].values == t_array
                         elif v not in rank_dependent_vars:
                             assert restart_ds[v].values == check_ds.metadata[v]
+        ds.close()
 
     @pytest.mark.long
     @pytest.mark.parametrize("npes", [(2, 6), (3, 4)])
@@ -2428,7 +2481,8 @@ class TestSaveRestart:
 
         # Load it as a boutdataset
         with pytest.warns(UserWarning):
-            ds = open_boutdataset(datapath=path)
+            with open_boutdataset(datapath=path) as ds_file:
+                ds = ds_file.load().copy(deep=True)
 
         # Save it to a netCDF file
         savepath = tmp_path_factory.mktemp(
@@ -2436,11 +2490,16 @@ class TestSaveRestart:
         )
         with pytest.raises(ValueError):
             ds.bout.to_restart(savepath=savepath, nxpe=nxpe, nype=nype)
+        ds.close()
 
     def test_from_restart_to_restart(self, tmp_path):
         datapath = Path(__file__).parent.joinpath(
             "data", "restart", "BOUT.restart.*.nc"
         )
-        ds = open_boutdataset(datapath, keep_xboundaries=True, keep_yboundaries=True)
+        with open_boutdataset(
+            datapath, keep_xboundaries=True, keep_yboundaries=True
+        ) as ds_file:
+            ds = ds_file.load().copy(deep=True)
 
         ds.bout.to_restart(savepath=tmp_path, nxpe=1, nype=4)
+        ds.close()

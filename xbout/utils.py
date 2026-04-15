@@ -79,6 +79,9 @@ def _separate_metadata(ds):
     metadata_vals = [ds[var].values.item() for var in scalar_vars]
     metadata_vals = [x.decode() if isinstance(x, bytes) else x for x in metadata_vals]
     metadata = dict(zip(scalar_vars, metadata_vals))
+    if hasattr(ds, "metadata"):
+        # Combine with existing metadata
+        metadata = ds.metadata | metadata
 
     # Add default values for dimensions to metadata. These may be modified later by
     # apply_geometry()

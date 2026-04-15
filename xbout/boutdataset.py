@@ -29,6 +29,7 @@ from .plotting.animate import (
 from .region import _from_region
 from .utils import (
     _add_cartesian_coordinates,
+    _check_filetype,
     _get_bounding_surfaces,
     _split_into_restarts,
 )
@@ -719,8 +720,7 @@ class BoutDatasetAccessor:
                 new_metadata = variables[-1].metadata
             elif ycoord in self.data[v].dims:
                 raise ValueError(
-                    f"{v} only has a {ycoord}-dimension so cannot split "
-                    f"into regions."
+                    f"{v} only has a {ycoord}-dimension so cannot split into regions."
                 )
             else:
                 variable = self.data[v]
@@ -788,6 +788,9 @@ class BoutDatasetAccessor:
         ----------
         savepath : str, optional
         filetype : str, optional
+            netCDF format passed to xarray. NOT THE SAME as "engine", which
+            defaults to h5netcdf via ``_check_filetype()``.
+            See https://docs.xarray.dev/en/latest/generated/xarray.Dataset.to_netcdf.html
         variables : list of str, optional
             Variables from the dataset to save. Default is to save all of them.
         separate_vars: bool, optional
@@ -910,6 +913,7 @@ class BoutDatasetAccessor:
                     single_var_ds.to_netcdf(
                         path=str(var_savepath),
                         format=filetype,
+                        engine=_check_filetype(Path(var_savepath)),
                         compute=True,
                         encoding=var_encoding,
                     )
@@ -923,7 +927,11 @@ class BoutDatasetAccessor:
             print("Saving data...")
             with ProgressBar():
                 to_save.to_netcdf(
-                    path=savepath, format=filetype, compute=True, encoding=encoding
+                    path=savepath,
+                    engine=_check_filetype(Path(savepath)),
+                    format=filetype,
+                    compute=True,
+                    encoding=encoding,
                 )
 
         return
@@ -992,7 +1000,12 @@ class BoutDatasetAccessor:
         )
 
         with ProgressBar():
-            xr.save_mfdataset(restart_datasets, paths, compute=True)
+            xr.save_mfdataset(
+                restart_datasets,
+                paths,
+                compute=True,
+                engine=_check_filetype(paths[0]),
+            )
 
     def animate_list(
         self,
