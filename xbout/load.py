@@ -587,7 +587,6 @@ def collect(
         da = ds[varname]
         dims = list(ds.dims)
 
-    all_dims = list(ds.dims)
     inds = {"t": tind, "x": xind, "y": yind, "z": zind}
 
     selection = {}
