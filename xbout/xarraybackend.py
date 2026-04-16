@@ -13,7 +13,6 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ItemsView
 
 import numpy as np
-from adios2 import FileReader
 
 from xarray import Dataset, Variable
 from xarray.backends.common import (
@@ -25,8 +24,10 @@ from xarray.backends.common import (
 from xarray.core import indexing
 
 if TYPE_CHECKING:
+    from adios2 import FileReader
     from io import BufferedIOBase
     from xarray.backends.common import AbstractDataStore
+
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "time_dimension"
@@ -199,6 +200,8 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
         #        stacklevel=3,
         #        adios_version=None,
     ) -> Dataset:
+        from adios2 import FileReader
+
         filename_or_obj = _normalize_path(filename_or_obj)
         # print(f"BoutAdiosBackendEntrypoint: path = {filename_or_obj} type = {type(filename_or_obj)}")
 
