@@ -252,7 +252,7 @@ def open_boutdataset(
             if attrs_remove_section(da, "metadata"):
                 da.attrs["metadata"] = metadata
 
-        ds = _add_options(ds, inputfilepath)
+        ds = _add_options(ds, inputfilepath, gridfilepath)
 
         # If geometry was set, apply geometry again
         if geometry is not None:
@@ -361,7 +361,7 @@ def open_boutdataset(
         # grid file, as they will be removed from the full Dataset below
         keep_yboundaries = True
 
-    ds = _add_options(ds, inputfilepath)
+    ds = _add_options(ds, inputfilepath, gridfilepath)
 
     if geometry is None:
         if geometry in ds.attrs:
@@ -371,8 +371,11 @@ def open_boutdataset(
             print("Applying {} geometry conventions".format(geometry))
 
         if _is_dir(gridfilepath):
-            if "grid" in ds.options:
-                gridfilepath += "/" + ds.options["grid"]
+            resolved_gridfilepath = _resolve_gridfilepath_from_options(
+                gridfilepath, ds.options
+            )
+            if resolved_gridfilepath is not None:
+                gridfilepath = resolved_gridfilepath
             else:
                 warn(
                     "gridfilepath set to a directory, but no grid used "
@@ -475,15 +478,66 @@ but we did load {grididfile}."""
     return ds
 
 
-def _add_options(ds, inputfilepath):
+def _resolve_gridfilepath_from_options(gridfilepath, options):
+    if options is None:
+        return None
+
+    gridfilename = None
+    if "mesh" in options and "file" in options["mesh"]:
+        gridfilename = options["mesh"]["file"]
+    elif "grid" in options:
+        gridfilename = options["grid"]
+
+    if gridfilename is None:
+        return None
+
+    gridpath = Path(gridfilename)
+    if gridpath.is_absolute():
+        return gridpath
+
+    return Path(gridfilepath).joinpath(gridpath)
+
+
+def _add_options(ds, inputfilepath, gridfilepath):
+    """
+    Add BoutOptionsFile as ds.options, if input filepath available.
+    BoutOptionsFile needs grid dimensions to reconstruct coordinates.
+    Prefer using grid if provided. Otherwise, use dataset dimensions.
+    """
+
     if inputfilepath:
-        # Use Ben's options class to store all input file options
-        options = BoutOptionsFile(
-            inputfilepath,
-            nx=ds.metadata["nx"],
-            ny=ds.metadata["ny"],
-            nz=ds.metadata["nz"],
-        )
+        if gridfilepath:
+            if _is_dir(gridfilepath):
+                # If only a grid directory was provided, read the input file first to
+                # determine the grid filename without trying to construct x, y, z yet.
+                options = BoutOptionsFile(inputfilepath, recalculate_xyz=False)
+                resolved_gridfilepath = _resolve_gridfilepath_from_options(
+                    gridfilepath, options
+                )
+
+                if resolved_gridfilepath is not None:
+                    options = BoutOptionsFile(
+                        inputfilepath,
+                        gridfilename=resolved_gridfilepath,
+                    )
+                else:
+                    warn(
+                        "gridfilepath set to a directory, but no grid used "
+                        "in simulation. Continuing without grid."
+                    )
+
+            else:
+                options = BoutOptionsFile(
+                    inputfilepath,
+                    gridfilename=gridfilepath,
+                )
+        else:
+            options = BoutOptionsFile(
+                inputfilepath,
+                nx=ds.metadata["nx"],
+                ny=ds.metadata["ny"],
+                nz=ds.metadata["nz"],
+            )
     else:
         options = None
     ds = _set_attrs_on_all_vars(ds, "options", options)
