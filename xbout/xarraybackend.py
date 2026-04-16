@@ -29,18 +29,6 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
 
 
-def _get_file_reader_class():
-    try:
-        from adios2 import FileReader
-    except ImportError as exc:
-        raise ImportError(
-            "The 'bout_adios2' backend requires the optional 'adios2' package. "
-            "Install adios2 to open '.bp' files with xBOUT."
-        ) from exc
-
-    return FileReader
-
-
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "time_dimension"
 
@@ -212,7 +200,8 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
         #        stacklevel=3,
         #        adios_version=None,
     ) -> Dataset:
-        file_reader_class = _get_file_reader_class()
+        from adios2 import FileReader
+
         filename_or_obj = _normalize_path(filename_or_obj)
         # print(f"BoutAdiosBackendEntrypoint: path = {filename_or_obj} type = {type(filename_or_obj)}")
 
@@ -228,7 +217,7 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
         #        if isinstance(filename_or_obj, AbstractDataStore):
         #            raise ValueError("ADIOS2 does not support AbstractDataStore input")
 
-        self._fh = file_reader_class(filename_or_obj)
+        self._fh = FileReader(filename_or_obj)
         vars = self._fh.available_variables()
         attrs = self._fh.available_attributes()
         attr_items = attrs.items()
