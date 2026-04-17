@@ -291,7 +291,7 @@ def open_boutdataset(
     if "dump" in input_type or "restart" in input_type:
 
         def is_netcdf_collection(datapath):
-            if not isinstance(datapath, str):
+            if not _is_path(datapath):
                 return None
             # Expand globs into a list of files
             p = Path(datapath)
