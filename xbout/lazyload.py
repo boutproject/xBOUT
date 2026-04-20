@@ -338,6 +338,7 @@ def lazy_open_boutdataset(
     )
 
     # Process all data variables
+    coords = {}
     data_vars = {}
     for name, var in ds.data_vars.items():
         if "x" in var.dims and "y" in var.dims:
@@ -350,6 +351,8 @@ def lazy_open_boutdataset(
                 attrs=var.attrs,
             )
         elif len(var.dims) == 0:
+            if name == "dz":
+                data_vars[name] = var
             continue  # scalars already in metadata
         elif ("x" not in var.dims) and ("y" not in var.dims):
             # Take DataArray from first processor
@@ -360,7 +363,6 @@ def lazy_open_boutdataset(
                 f"Variable '{name}' has only one of x/y dimensions and will be skipped"
             )
 
-    coords = {}
     if "t_array" in ds:
         coords["t"] = ds["t_array"].values
 
