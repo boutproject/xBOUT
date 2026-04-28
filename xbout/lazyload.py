@@ -360,9 +360,5 @@ def lazy_open_boutdataset(
                 f"Variable '{name}' has only one of x/y dimensions and will be skipped"
             )
 
-    coords = {}
-    if "t_array" in ds:
-        coords["t"] = ds["t_array"].values
-
     # Create a global dataset
-    return xr.Dataset(data_vars, coords=coords, attrs={"metadata": metadata})
+    return xr.Dataset(data_vars, attrs={"metadata": metadata})
