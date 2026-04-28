@@ -61,6 +61,7 @@ class TestOpenGrid:
                 result = result.drop_vars(["x", "y"])
         assert_equal(result, example_grid)
         example_grid.close()
+        result.close()
 
     def test_open_grid_apply_geometry(self, create_example_grid_file):
         @register_geometry(name="Schwarzschild")
