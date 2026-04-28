@@ -340,7 +340,6 @@ def lazy_open_boutdataset(
     )
 
     # Process all data variables
-    coords = {}
     data_vars = {}
     for name, var in ds.data_vars.items():
         if "x" in var.dims and "y" in var.dims:
