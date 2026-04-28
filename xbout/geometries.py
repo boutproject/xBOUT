@@ -127,12 +127,15 @@ def apply_geometry(ds, geometry_name, *, coordinates=None, grid=None):
     ycoord = updated_ds.metadata["bout_ydim"]
     zcoord = updated_ds.metadata["bout_zdim"]
 
-    if (tcoord not in updated_ds.coords) and (tcoord in updated_ds.dims):
+    if "t_array" in updated_ds:
+        # Always use t_array as the ground truth for the time coordinate
+
         # Create the time coordinate from t_array
         # Slightly odd looking way to create coordinate ensures 'index variable' is
         # created, which using set_coords() does not (possible xarray bug?
         # https://github.com/pydata/xarray/issues/4417
-        updated_ds[tcoord] = updated_ds["t_array"]
+        if tcoord in updated_ds.dims:
+            updated_ds[tcoord] = updated_ds["t_array"]
         updated_ds = updated_ds.drop_vars("t_array")
 
     if xcoord not in updated_ds.coords:
