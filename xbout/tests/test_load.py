@@ -400,6 +400,7 @@ class TestOpen:
                 datapath=path,
                 keep_xboundaries=keep_xboundaries,
                 keep_yboundaries=keep_yboundaries,
+                lazy_load=False,
             )
 
         # bout_xyt_example_files when creating a 'squashed' file just makes it with
