@@ -226,7 +226,10 @@ def make_lazy_array(
 
     # Check x and y dimension sizes
     assert file_shape[xdim] == chunkinfo["nxsub"]
-    assert file_shape[ydim] == chunkinfo["nysub"]
+    assert (
+        file_shape[ydim] == chunkinfo["nysub"]
+    ), """Maybe you are trying to read a squashed datafile, which is
+not supported with lazyloading. Try loading with setting lazy_load=False"""
 
     # The name serves two purposes:
     # 1. Graph key prefix — it's the first element of every task key tuple
