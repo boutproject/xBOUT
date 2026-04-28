@@ -294,9 +294,9 @@ class TestOpen:
         with pytest.warns(UserWarning):
             actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds()
-        expected = expected.set_coords(["t_array", "dx", "dy", "dz"]).rename(
-            t_array="t"
-        )
+        expected = expected.set_coords(["t_array", "dx", "dy", "dz"])
+        with pytest.warns(UserWarning):
+            expected = expected.rename(t_array="t")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
@@ -317,9 +317,9 @@ class TestOpen:
         with pytest.warns(UserWarning):
             actual = open_boutdataset(datapath=path, keep_xboundaries=False)
         expected = create_bout_ds(lengths=(6, 8, 12, 7))
-        expected = expected.set_coords(["t_array", "dx", "dy", "dz"]).rename(
-            t_array="t"
-        )
+        expected = expected.set_coords(["t_array", "dx", "dy", "dz"])
+        with pytest.warns(UserWarning):
+            expected = expected.rename(t_array="t")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
@@ -429,9 +429,9 @@ class TestOpen:
             dim="x",
             data_vars="minimal",
         )
-        expected = expected.set_coords(["t_array", "dx", "dy", "dz"]).rename(
-            t_array="t"
-        )
+        expected = expected.set_coords(["t_array", "dx", "dy", "dz"])
+        with pytest.warns(UserWarning):
+            expected = expected.rename(t_array="t")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
@@ -463,9 +463,9 @@ class TestOpen:
         expected = concat(
             [bout_ds(0), bout_ds(1), bout_ds(2)], dim="y", data_vars="minimal"
         )
-        expected = expected.set_coords(["t_array", "dx", "dy", "dz"]).rename(
-            t_array="t"
-        )
+        expected = expected.set_coords(["t_array", "dx", "dy", "dz"])
+        with pytest.warns(UserWarning):
+            expected = expected.rename(t_array="t")
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
             expected.drop_vars(
@@ -526,9 +526,9 @@ class TestOpen:
             data_vars="minimal",
         )
         expected = concat([line1, line2, line3], dim="y", data_vars="minimal")
-        expected = expected.set_coords(["t_array", "dx", "dy", "dz"]).rename(
-            t_array="t"
-        )
+        expected = expected.set_coords(["t_array", "dx", "dy", "dz"])
+        with pytest.warns(UserWarning):
+            expected = expected.rename(t_array="t")
         vars_to_drop = METADATA_VARS + _BOUT_PER_PROC_VARIABLES
         xrt.assert_equal(
             actual.drop_vars(["x", "y", "z"]).load(),
@@ -861,7 +861,7 @@ class TestTrim:
     @pytest.mark.parametrize("is_restart", [False, True])
     def test_keep_xboundaries(self, is_restart):
         ds = create_test_data(0)
-        ds = ds.rename({"dim2": "x"})
+        ds = ds.swap_dims({"dim2": "x"})
 
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding["source"] = "folder0/BOUT.dmp.0.nc"
@@ -883,7 +883,7 @@ class TestTrim:
     @pytest.mark.parametrize("is_restart", [False, True])
     def test_keep_yboundaries(self, is_restart):
         ds = create_test_data(0)
-        ds = ds.rename({"dim2": "y"})
+        ds = ds.swap_dims({"dim2": "y"})
 
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding["source"] = "folder0/BOUT.dmp.0.nc"
@@ -911,7 +911,7 @@ class TestTrim:
         self, filenum, lower, upper, is_restart
     ):
         ds = create_test_data(0)
-        ds = ds.rename({"dim2": "y"})
+        ds = ds.swap_dims({"dim2": "y"})
 
         # Manually add filename - encoding normally added by xr.open_dataset
         ds.encoding["source"] = "folder0/BOUT.dmp." + str(filenum) + ".nc"
