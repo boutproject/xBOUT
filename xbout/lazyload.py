@@ -337,6 +337,8 @@ def lazy_open_boutdataset(
         if len(var.dims) == 0 and name != "dz"
     }
 
+    drop_vars = kwargs.get("drop_variables", [])
+
     # Identify processor layout and the array slices from each file
     chunkinfo = make_chunkinfo(
         metadata, keep_xboundaries=keep_xboundaries, keep_yboundaries=keep_yboundaries
@@ -345,6 +347,8 @@ def lazy_open_boutdataset(
     # Process all data variables
     data_vars = {}
     for name, var in ds.data_vars.items():
+        if name in drop_vars:
+            continue
         if "x" in var.dims and "y" in var.dims:
             # Array distributed over processors in x and y
             data_vars[name] = xr.DataArray(
