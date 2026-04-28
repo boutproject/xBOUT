@@ -329,7 +329,9 @@ def lazy_open_boutdataset(
 
     # Extract all scalars as metadata
     metadata = {
-        name: var.item() for name, var in ds.data_vars.items() if len(var.dims) == 0
+        name: var.item()
+        for name, var in ds.data_vars.items()
+        if len(var.dims) == 0 and name != "dz"
     }
 
     # Identify processor layout and the array slices from each file
