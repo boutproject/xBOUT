@@ -633,7 +633,10 @@ class TestOpen:
         datapath = Path(__file__).parent.joinpath(
             "data", "restart", "BOUT.restart.*.nc"
         )
-        ds = open_boutdataset(datapath, keep_xboundaries=True, keep_yboundaries=True)
+        with pytest.warns(UserWarning):
+            ds = open_boutdataset(
+                datapath, keep_xboundaries=True, keep_yboundaries=True
+            )
 
         assert "T" in ds
 
