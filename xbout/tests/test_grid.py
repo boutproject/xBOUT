@@ -55,12 +55,14 @@ class TestOpenGrid:
         merge([example_grid, new_var]).to_netcdf(dodgy_grid_path, engine="h5netcdf")
 
         with pytest.warns(
-            UserWarning, match="drop all variables containing " "the dimensions 'w'"
+            UserWarning, match="drop all variables containing the dimensions 'w'"
         ):
-            with open_boutdataset(datapath=dodgy_grid_path) as result:
-                result = result.drop_vars(["x", "y"])
+            with pytest.warns(UserWarning, match="o geometry type fou"):
+                with open_boutdataset(datapath=dodgy_grid_path) as result:
+                    result = result.drop_vars(["x", "y"])
         assert_equal(result, example_grid)
         example_grid.close()
+        result.close()
 
     def test_open_grid_apply_geometry(self, create_example_grid_file):
         @register_geometry(name="Schwarzschild")

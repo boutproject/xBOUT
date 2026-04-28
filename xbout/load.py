@@ -91,7 +91,7 @@ def open_boutdataset(
     source term was changed between some of the restarts, but the
     source term is saved as time-independent, without a
     t-dimension). In this case one workaround is to pass a list of
-    variable names to the keyword argument ``drop_vars`` to ignore the
+    variable names to the keyword argument ``drop_variables`` to ignore the
     variables with conflicts, e.g. if ``"S1"`` and ``"S2"`` have
     conflicts::
 
@@ -291,7 +291,7 @@ def open_boutdataset(
     if "dump" in input_type or "restart" in input_type:
 
         def is_netcdf_collection(datapath):
-            if not isinstance(datapath, str):
+            if not _is_path(datapath):
                 return None
             # Expand globs into a list of files
             p = Path(datapath)

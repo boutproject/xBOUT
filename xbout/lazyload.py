@@ -226,7 +226,10 @@ def make_lazy_array(
 
     # Check x and y dimension sizes
     assert file_shape[xdim] == chunkinfo["nxsub"]
-    assert file_shape[ydim] == chunkinfo["nysub"]
+    assert (
+        file_shape[ydim] == chunkinfo["nysub"]
+    ), """Maybe you are trying to read a squashed datafile, which is
+not supported with lazyloading. Try loading with setting lazy_load=False"""
 
     # The name serves two purposes:
     # 1. Graph key prefix — it's the first element of every task key tuple
@@ -329,8 +332,12 @@ def lazy_open_boutdataset(
 
     # Extract all scalars as metadata
     metadata = {
-        name: var.item() for name, var in ds.data_vars.items() if len(var.dims) == 0
+        name: var.item()
+        for name, var in ds.data_vars.items()
+        if len(var.dims) == 0 and name != "dz"
     }
+
+    drop_vars = kwargs.get("drop_variables", [])
 
     # Identify processor layout and the array slices from each file
     chunkinfo = make_chunkinfo(
@@ -340,6 +347,8 @@ def lazy_open_boutdataset(
     # Process all data variables
     data_vars = {}
     for name, var in ds.data_vars.items():
+        if name in drop_vars:
+            continue
         if "x" in var.dims and "y" in var.dims:
             # Array distributed over processors in x and y
             data_vars[name] = xr.DataArray(
@@ -350,6 +359,8 @@ def lazy_open_boutdataset(
                 attrs=var.attrs,
             )
         elif len(var.dims) == 0:
+            if name == "dz":
+                data_vars[name] = var
             continue  # scalars already in metadata
         elif ("x" not in var.dims) and ("y" not in var.dims):
             # Take DataArray from first processor
