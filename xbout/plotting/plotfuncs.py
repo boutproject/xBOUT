@@ -28,11 +28,65 @@ if (
     matplotlib.rcParams["pcolor.shading"] = "auto"
 
 
-def plot_regions(da, ax=None, **kwargs):
+def plot_regions(
+    da,
+    ax=None,
+    separatrix=True,
+    targets=True,
+    add_limiter_hatching=True,
+    gridlines=None,
+    region_labels=True,
+    title=True,
+    legend=True,
+    **kwargs,
+):
     """
     Plots each logical plotting region as a different color for debugging.
 
-    Uses matplotlib.pcolormesh
+    Uses matplotlib.pcolormesh with proper geometry scaling. Shows region boundaries
+    and can optionally show separatrices, targets, and gridlines.
+    
+    Parameters
+    ----------
+    da : xarray.DataArray
+        A 2D (x,y) DataArray of data to plot
+    ax : Axes, optional
+        A matplotlib axes instance to plot to. If None, create a new
+        figure and axes, and plot to that
+    separatrix : bool, optional
+        Add dashed lines showing separatrices (default True)
+    targets : bool, optional
+        Draw solid lines at the target surfaces (default True)
+    add_limiter_hatching : bool, optional
+        Draw hatched areas at the targets (default True)
+    gridlines : bool, int or slice or dict of bool, int or slice, optional
+        If True, draw grid lines on the plot. If an int is passed, it is used as the
+        stride when plotting grid lines (to reduce the number on the plot). If a slice is
+        passed it is used to select the grid lines to plot.
+        If a dict is passed, the 'x' entry (bool, int or slice) is used for the radial
+        grid-lines and the 'y' entry for the poloidal grid lines.
+    region_labels : bool, optional
+        Add text labels with region names (default True). Can be useful for identifying
+        regions but may clutter the plot for many regions.
+    title : bool or str, optional
+        If True, show the variable name as title (default True).
+        If False, no title is shown.
+        If a string is passed, use it as the title.
+    legend : bool, optional
+        If True, show a legend with region names and colors (default True).
+        If False, no legend is shown.
+    x : str, optional
+        Coordinate name for x-axis (default "R")
+    y : str, optional
+        Coordinate name for y-axis (default "Z")
+    **kwargs : optional
+        Additional keyword arguments are passed to xarray's pcolormesh
+        (e.g., add_colorbar, cmap, vmin, vmax)
+    
+    Returns
+    -------
+    result : list
+        List of artists from pcolormesh calls
     """
 
     x = kwargs.pop("x", "R")
@@ -43,14 +97,34 @@ def plot_regions(da, ax=None, **kwargs):
 
     if ax is None:
         fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+
+    # Set proper aspect ratio for geometry scaling
+    aspect = kwargs.pop("aspect", "equal")
+    ax.set_aspect(aspect)
 
     da_regions = _decompose_regions(da)
+    region_names = list(da_regions.keys())
+    n_regions = len(da_regions)
+
+    # Create distinct colors for each region
+    # Use a generated colormap that handles more than 20 colors
+    if n_regions <= 10:
+        cmap_name = "tab10"
+    elif n_regions <= 20:
+        cmap_name = "tab20"
+    else:
+        # For more regions, use hsv which wraps around
+        cmap_name = "hsv"
+    cmap = plt.get_cmap(cmap_name)
 
     colored_regions = [
-        xr.full_like(da_region, fill_value=num / len(da_regions))
+        xr.full_like(da_region, fill_value=num / max(n_regions - 1, 1))
         for num, da_region in enumerate(da_regions.values())
     ]
 
+    # Plot each region separately on the same axis
     with warnings.catch_warnings():
         # The coordinates we pass are a logically rectangular grid, so should be fine
         # even if this warning is triggered.
@@ -62,20 +136,134 @@ def plot_regions(da, ax=None, **kwargs):
             "cell edges to pcolormesh.",
             UserWarning,
         )
-        result = [
-            region.plot.pcolormesh(
+        result = []
+        for i, (region_name, region) in enumerate(zip(region_names, colored_regions)):
+            add_labels = (i == 0)
+            artists = region.plot.pcolormesh(
                 x=x,
                 y=y,
                 vmin=0,
                 vmax=1,
-                cmap="tab20",
+                cmap=cmap,
                 infer_intervals=False,
                 add_colorbar=False,
+                add_labels=add_labels,
                 ax=ax,
                 **kwargs,
             )
-            for region in colored_regions
-        ]
+            result.append(artists)
+
+    # Add region labels if requested
+    if region_labels and n_regions <= 20:  # Don't label if too many regions
+        for region_name, da_region in da_regions.items():
+            # Find the center of each region
+            try:
+                x_center = da_region[x].mean().values
+                y_center = da_region[y].mean().values
+                ax.text(
+                    x_center,
+                    y_center,
+                    region_name,
+                    ha="center",
+                    va="center",
+                    fontsize=8,
+                    color="white",
+                    weight="bold",
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="black", alpha=0.5),
+                )
+            except Exception:
+                # Skip if we can't compute center (e.g., for regions with gaps)
+                pass
+
+    # Set title based on the title parameter
+    if title is True:
+        ax.set_title(da.name)
+    elif title and isinstance(title, str):
+        ax.set_title(title)
+    # If title is False, don't set a title
+
+    # Add legend if requested
+    if legend:
+        import matplotlib.patches as mpatches
+        
+        # Create colored patches for each region
+        patches = []
+        for i, region_name in enumerate(region_names):
+            # Get the color for this region from the colormap
+            color_value = i / max(n_regions - 1, 1)
+            color = cmap(color_value)
+            patch = mpatches.Patch(color=color, label=region_name)
+            patches.append(patch)
+        
+        # Add legend to the plot (at the top)
+        ax.legend(
+            handles=patches,
+            loc="lower center",
+            bbox_to_anchor=(0.5, 1),
+            frameon=True,
+            fontsize="small",
+            ncol=min(4, n_regions),  # Use up to 4 columns, or fewer if fewer regions
+        )
+
+    # Add separatrices if requested
+    if separatrix and not _is_core_only(da):
+        plot_separatrices(da_regions, ax, x=x, y=y)
+
+    # Add targets if requested
+    if targets and not _is_core_only(da):
+        plot_targets(da_regions, ax, x=x, y=y, hatching=add_limiter_hatching)
+
+    # Add gridlines if requested
+    if gridlines is not None:
+        # convert gridlines to dict
+        if not isinstance(gridlines, dict):
+            gridlines = {"x": gridlines, "y": gridlines}
+
+        for key, value in gridlines.items():
+            if value is True:
+                gridlines[key] = slice(None)
+            elif value is not None:
+                if not isinstance(value, slice):
+                    raise ValueError(
+                        "Argument passed to gridlines must be bool, int or "
+                        "slice. Got a " + str(type(value)) + ", " + str(value)
+                    )
+
+        x_regions = [da_region[x] for da_region in da_regions.values()]
+        y_regions = [da_region[y] for da_region in da_regions.values()]
+
+        for x_coord, y_coord in zip(x_regions, y_regions):
+            if (
+                da.metadata["bout_xdim"] not in x_coord.dims
+                and da.metadata["bout_ydim"] not in x_coord.dims
+            ) or (
+                da.metadata["bout_xdim"] not in y_coord.dims
+                and da.metadata["bout_ydim"] not in y_coord.dims
+            ):
+                # Small regions around X-point do not have segments in x- or y-directions
+                continue
+            if gridlines.get("x") is not None:
+                # transpose in case Dataset or DataArray has been transposed away from the usual
+                # form
+                dim_order = (da.metadata["bout_xdim"], da.metadata["bout_ydim"])
+                yarg = {da.metadata["bout_ydim"]: gridlines["x"]}
+                plt.plot(
+                    x_coord.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                    y_coord.isel(**yarg).transpose(*dim_order, transpose_coords=True),
+                    color="k",
+                    lw=0.1,
+                )
+            if gridlines.get("y") is not None:
+                xarg = {da.metadata["bout_xdim"]: gridlines["y"]}
+                # Need to plot transposed arrays to make gridlines that go in the
+                # y-direction
+                dim_order = (da.metadata["bout_ydim"], da.metadata["bout_xdim"])
+                plt.plot(
+                    x_coord.isel(**xarg).transpose(*dim_order, transpose_coords=True),
+                    y_coord.isel(**xarg).transpose(*dim_order, transpose_coords=True),
+                    color="k",
+                    lw=0.1,
+                )
 
     return result
 
