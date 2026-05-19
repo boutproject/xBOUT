@@ -1153,8 +1153,6 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
 
     unrecognised_dims = list(set(grid.dims) - set(acceptable_dims))
     if len(unrecognised_dims) > 0:
-        # Weird string formatting is a workaround to deal with possible bug in
-        # pytest warnings capture - doesn't match strings containing brackets
         grid = grid.drop_dims(unrecognised_dims)
 
     if keep_xboundaries:
