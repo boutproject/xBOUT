@@ -31,6 +31,9 @@ if TYPE_CHECKING:
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "time_dimension"
+DATASET_ATTR_PREFIX = "__xarray_dataset_attrs__/"
+XARRAY_DIMS_ATTR = "__xarray_dimensions__"
+XARRAY_ORIGINAL_DTYPE_ATTR = "__xarray_original_dtype__"
 
 adios_to_numpy_type = {
     "char": np.char,
@@ -55,13 +58,21 @@ class BoutADIOSBackendArray(BackendArray):
     """ADIOS2 backend for lazily indexed arrays"""
 
     def __init__(
-        self, shape: list, dtype: np.dtype, lock, adiosfile: FileReader, varname: str
+        self,
+        shape: list,
+        dtype: np.dtype,
+        lock,
+        adiosfile: FileReader,
+        varname: str,
+        *,
+        cast_dtype: np.dtype | None = None,
     ):
         self.shape = shape
         self.dtype = dtype
         self.lock = lock
         self.fh = adiosfile
         self.varname = varname
+        self.cast_dtype = cast_dtype
         self.adiosvar = self.fh.inquire_variable(varname)
         self.steps = self.adiosvar.steps()
         # print(f"BoutADIOSBackendArray.__init__: {dtype} {varname} {shape} {dtype.itemsize}")
@@ -113,6 +124,8 @@ class BoutADIOSBackendArray(BackendArray):
             if self.steps > 1 and first_sl:  # key[0] is the step selection
                 # print(f"    data step selection start = {st}  count = {ct}")
                 self.adiosvar.set_step_selection([st, ct])
+                # Advance past the implicit steps dimension in self.shape
+                dimid += 1
             else:
                 start.append(st)
                 count.append(ct)
@@ -133,6 +146,8 @@ class BoutADIOSBackendArray(BackendArray):
                     f"shape={data.shape}, steps={self.steps}"
                 )
             data = data.reshape((self.steps, dim0) + data.shape[1:])
+        if self.cast_dtype is not None:
+            data = np.asarray(data).astype(self.cast_dtype, copy=False)
         return data
 
 
@@ -239,12 +254,18 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
             dims = None
             vlen = len(varname) + 1  # include /
             xattrs = {}
+            original_dtype: np.dtype | None = None
             for aname, ainfo in varattrs:
                 # print(f"\t{ainfo['Type']} {aname}\t = {ainfo['Value']}")
                 attr_value = self._fh.read_attribute(aname)
-                if aname == varname + "/__xarray_dimensions__":
+                if aname == varname + "/" + XARRAY_DIMS_ATTR:
                     dims = attr_value
                     # print(f"\t\tDIMENSIONS = {dims}")
+                elif aname == varname + "/" + XARRAY_ORIGINAL_DTYPE_ATTR:
+                    try:
+                        original_dtype = np.dtype(str(attr_value))
+                    except TypeError:
+                        original_dtype = None
                 else:
                     xattrs[aname[vlen:]] = attr_value
                 attrs.pop(aname)
@@ -261,23 +282,42 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
                     dims.insert(0, "t")
                     # print(f"\tAdd time to shape {shape_list}  {dims}")
                 nptype = np.dtype(adios_to_numpy_type[varinfo["Type"]])
+                cast_dtype = (
+                    original_dtype if original_dtype is not None and original_dtype != nptype else None
+                )
                 xdata = indexing.LazilyIndexedArray(
-                    BoutADIOSBackendArray(shape_list, nptype, None, self._fh, varname)
+                    BoutADIOSBackendArray(
+                        shape_list,
+                        nptype,
+                        None,
+                        self._fh,
+                        varname,
+                        cast_dtype=cast_dtype,
+                    )
                 )
                 # print(f"\tDefine VARIABLE {varname} with dims {dims}")
-                xvar = Variable(dims, xdata, attrs=xattrs, encoding={"dtype": nptype})
+                xvar = Variable(
+                    dims,
+                    xdata,
+                    attrs=xattrs,
+                    encoding={"dtype": (original_dtype or nptype)},
+                )
                 # print(f"{xvar.dtype} {xvar.attrs["name"]} {xvar.dims} {xvar.encoding}")
             else:
                 if steps > 1:
                     avar = self._fh.inquire_variable(varname)
                     avar.set_step_selection([0, avar.steps()])
                     data = self._fh.read(avar)
+                    if original_dtype is not None and data.dtype != original_dtype:
+                        data = np.asarray(data).astype(original_dtype, copy=False)
                     # print(f"\tCreate timed scalar variable {varname}")
                     xvar = Variable(
                         "t", data, attrs=xattrs, encoding={"dtype": data.dtype}
                     )
                 else:
                     data = self._fh.read(varname)
+                    if original_dtype is not None and np.asarray(data).dtype != original_dtype:
+                        data = np.asarray(data).astype(original_dtype, copy=False)
                     if varinfo["Type"] == "string":
                         # print(f"\tCreate string scalar variable {varname}")
                         xvar = Variable([], data, attrs=xattrs, encoding=None)
@@ -287,9 +327,14 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
             xvars[varname] = xvar
             # print(f"--- {xvar}")
 
-        for attname, attinfo in attrs.items():
-            print(f"{attinfo['Type']} {attname}\t = {attinfo['Value']}")
+        ds_attrs = {}
+        for attname in list(attrs.keys()):
+            attr_value = self._fh.read_attribute(attname)
+            if isinstance(attname, str) and attname.startswith(DATASET_ATTR_PREFIX):
+                ds_attrs[attname[len(DATASET_ATTR_PREFIX) :]] = attr_value
+            else:
+                ds_attrs[attname] = attr_value
 
-        ds = Dataset(xvars, None, None)
+        ds = Dataset(xvars, None, ds_attrs)
         ds.set_close(BoutAdiosBackendEntrypoint.close)
         return ds

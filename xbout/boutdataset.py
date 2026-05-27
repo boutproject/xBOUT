@@ -875,6 +875,10 @@ class BoutDatasetAccessor:
         else:
             encoding = None
 
+        savepath_path = Path(savepath)
+        is_adios_bp = savepath_path.suffix == ".bp"
+        time_dim = "t"
+
         if separate_vars:
             # Save each major variable to a different netCDF file
 
@@ -910,13 +914,23 @@ class BoutDatasetAccessor:
                     var_encoding = None
                 print("Saving " + major_var + " data...")
                 with ProgressBar():
-                    single_var_ds.to_netcdf(
-                        path=str(var_savepath),
-                        format=filetype,
-                        engine=_check_filetype(Path(var_savepath)),
-                        compute=True,
-                        encoding=var_encoding,
-                    )
+                    if Path(var_savepath).suffix == ".bp":
+                        from xbout.adioswriter import write_dataset_bp
+
+                        write_dataset_bp(
+                            single_var_ds,
+                            str(var_savepath),
+                            time_dim=time_dim,
+                            overwrite=True,
+                        )
+                    else:
+                        single_var_ds.to_netcdf(
+                            path=str(var_savepath),
+                            format=filetype,
+                            engine=_check_filetype(Path(var_savepath)),
+                            compute=True,
+                            encoding=var_encoding,
+                        )
 
                 # Force memory deallocation to limit RAM usage
                 single_var_ds.close()
@@ -926,13 +940,23 @@ class BoutDatasetAccessor:
             # Save data to a single file
             print("Saving data...")
             with ProgressBar():
-                to_save.to_netcdf(
-                    path=savepath,
-                    engine=_check_filetype(Path(savepath)),
-                    format=filetype,
-                    compute=True,
-                    encoding=encoding,
-                )
+                if is_adios_bp:
+                    from xbout.adioswriter import write_dataset_bp
+
+                    write_dataset_bp(
+                        to_save,
+                        str(savepath),
+                        time_dim=time_dim,
+                        overwrite=True,
+                    )
+                else:
+                    to_save.to_netcdf(
+                        path=savepath,
+                        engine=_check_filetype(Path(savepath)),
+                        format=filetype,
+                        compute=True,
+                        encoding=encoding,
+                    )
 
         return
 

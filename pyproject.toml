@@ -48,6 +48,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+adios2 = [
+    "adios2"
+]
 calc = [
     "numpy >= 1.18.0",
     "scipy >= 1.3.0",
