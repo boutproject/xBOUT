@@ -1,30 +1,28 @@
 import collections
+import gc
+import warnings
 from copy import copy
-from pprint import pformat as prettyformat
 from functools import partial
 from itertools import chain
 from pathlib import Path
-import warnings
-import gc
+from pprint import pformat as prettyformat
 
-import xarray as xr
 import animatplot as amp
+import numpy as np
+import xarray as xr
+from dask.diagnostics import ProgressBar
 from matplotlib import pyplot as plt
 from matplotlib.animation import PillowWriter
-
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-import numpy as np
-from dask.diagnostics import ProgressBar
 
 from .geometries import apply_geometry
 from .plotting.animate import (
-    animate_poloidal,
-    animate_pcolormesh,
-    animate_line,
     _add_controls,
     _normalise_time_coord,
     _parse_coord_option,
+    animate_line,
+    animate_pcolormesh,
+    animate_poloidal,
 )
 from .region import _from_region
 from .utils import (
@@ -939,17 +937,17 @@ class BoutDatasetAccessor:
         else:
             # Save data to a single file
             print("Saving data...")
-            with ProgressBar():
-                if is_adios_bp:
-                    from xbout.adioswriter import write_dataset_bp
+            if is_adios_bp:
+                from xbout.adioswriter import write_dataset_bp
 
-                    write_dataset_bp(
-                        to_save,
-                        str(savepath),
-                        time_dim=time_dim,
-                        overwrite=True,
-                    )
-                else:
+                write_dataset_bp(
+                    to_save,
+                    str(savepath),
+                    time_dim=time_dim,
+                    overwrite=True,
+                )
+            else:
+                with ProgressBar():
                     to_save.to_netcdf(
                         path=savepath,
                         engine=_check_filetype(Path(savepath)),
