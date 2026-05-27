@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 
-
 adios2 = pytest.importorskip("adios2")
 xr = pytest.importorskip("xarray")
 
@@ -44,4 +43,3 @@ def test_adios2_roundtrip_dataset_attrs_and_vars(tmp_path):
         assert int(ds2["scalar"].values) == 7
     finally:
         ds2.close()
-

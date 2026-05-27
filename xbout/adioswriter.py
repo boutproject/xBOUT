@@ -211,10 +211,14 @@ def write_dataset_bp(
                         # non-owned views.
                         data_arr = np.array(data_arr, copy=True, order="C")
                         # Ensure selection matches the provided buffer.
-                        adios_var.set_selection([[0] * data_arr.ndim, list(data_arr.shape)])
+                        adios_var.set_selection(
+                            [[0] * data_arr.ndim, list(data_arr.shape)]
+                        )
                     else:
                         # Ensure a stable 0-d buffer with the intended dtype.
-                        data_arr = np.asarray(data_arr.item(), dtype=data_arr.dtype).reshape(())
+                        data_arr = np.asarray(
+                            data_arr.item(), dtype=data_arr.dtype
+                        ).reshape(())
                     stream.write(adios_var, data_arr)
             finally:
                 stream.end_step()
