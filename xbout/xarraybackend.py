@@ -1,13 +1,19 @@
-"""License:
-Distributed under the OSI-approved Apache License, Version 2.0.  See
-accompanying file Copyright.txt for details.
+"""
+xarray backend for reading ADIOS2 ``.bp`` files.
+
+This backend provides an xarray ``BackendEntrypoint`` that can open ADIOS2
+datasets via the ``adios2`` Python package. Variables are represented as
+``LazilyIndexedArray`` objects backed by ADIOS2 selections.
+
+On-disk conventions used by this backend:
+- Per-variable dimension names are stored as attributes
+  ``{varname}/__xarray_dimensions__``.
+- Dataset-level attributes are stored under ``__xarray_dataset_attrs__/{key}``.
 """
 
 from __future__ import annotations
 
 import os
-
-# import warnings
 
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ItemsView
@@ -23,14 +29,12 @@ from xarray.backends.common import (
 
 from xarray.core import indexing
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from adios2 import FileReader
     from io import BufferedIOBase
     from xarray.backends.common import AbstractDataStore
 
 
-# need some special secret attributes to tell us the dimensions
-DIMENSION_KEY = "time_dimension"
 DATASET_ATTR_PREFIX = "__xarray_dataset_attrs__/"
 XARRAY_DIMS_ATTR = "__xarray_dimensions__"
 XARRAY_ORIGINAL_DTYPE_ATTR = "__xarray_original_dtype__"
@@ -55,7 +59,13 @@ adios_to_numpy_type = {
 
 
 class BoutADIOSBackendArray(BackendArray):
-    """ADIOS2 backend for lazily indexed arrays"""
+    """
+    Lazily indexed array backed by an ADIOS2 Variable.
+
+    xarray calls ``__getitem__`` with an ``ExplicitIndexer``; this class maps the
+    indexer into ADIOS2 ``set_step_selection`` (for time/steps) and
+    ``set_selection`` (for spatial dimensions), then reads the selection.
+    """
 
     def __init__(
         self,
@@ -67,6 +77,24 @@ class BoutADIOSBackendArray(BackendArray):
         *,
         cast_dtype: np.dtype | None = None,
     ):
+        """
+        Parameters
+        ----------
+        shape
+            Full xarray-visible shape. If the ADIOS2 variable has steps, the first
+            dimension is the synthetic xarray time dimension.
+        dtype
+            Numpy dtype used by ADIOS2 for the stored variable.
+        lock
+            Optional lock for thread-safety. ADIOS2 reads are not thread-safe.
+        adiosfile
+            Open ADIOS2 ``FileReader`` handle.
+        varname
+            Name of the ADIOS2 variable to read.
+        cast_dtype
+            Optional dtype to cast to after reading (used to round-trip types that
+            are stored differently on disk, e.g. ``bool`` stored as ``uint8``).
+        """
         self.shape = shape
         self.dtype = dtype
         self.lock = lock
@@ -75,11 +103,9 @@ class BoutADIOSBackendArray(BackendArray):
         self.cast_dtype = cast_dtype
         self.adiosvar = self.fh.inquire_variable(varname)
         self.steps = self.adiosvar.steps()
-        # print(f"BoutADIOSBackendArray.__init__: {dtype} {varname} {shape} {dtype.itemsize}")
 
     def __getitem__(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
-        # print(f"**** BoutADIOSBackendArray.__getitem__: {self.varname} key = {key}")
-
+        """Read a selection defined by an xarray ``ExplicitIndexer``."""
         return indexing.explicit_indexing_adapter(
             key,
             self.shape,
@@ -88,13 +114,16 @@ class BoutADIOSBackendArray(BackendArray):
         )
 
     def _raw_indexing_method(self, key: tuple) -> np.typing.ArrayLike:
-        # print(f"****BoutADIOSBackendArray._raw_indexing_method: {self.varname} "
-        #      f"key = {key} steps = {self.steps}")
-        # print(f"    data shape {data.shape}")
+        """
+        Convert xarray basic indexing into ADIOS2 selection calls and read.
 
-        # thread safe method that access to data on disk needed because
-        # adios is not thread safe even for reading
-        # with self.lock:
+        Notes
+        -----
+        - ADIOS2 does not support stepped slicing (``slice.step != 1``).
+        - ADIOS2 time is represented as "steps". If an ADIOS2 variable has steps,
+          xarray's first dimension is treated as time and mapped via
+          ``set_step_selection``.
+        """
         start = []
         count = []
         dimid = 0
@@ -131,7 +160,6 @@ class BoutADIOSBackendArray(BackendArray):
                 count.append(ct)
                 dimid += 1
             first_sl = False
-        # print(f"    data selection start = {start}  count = {count}")
         self.adiosvar.set_selection([start, count])
 
         data = self.fh.read(self.adiosvar)
@@ -152,7 +180,7 @@ class BoutADIOSBackendArray(BackendArray):
 
 
 def attrs_of_var(varname: str, items: ItemsView, separator: str = "/"):
-    """Return attributes whose name starts with a variable's name"""
+    """Return (name, info) pairs for attributes scoped to a variable."""
     return [(key, value) for key, value in items if key.startswith(varname + separator)]
 
 
@@ -161,7 +189,7 @@ def attrs_of_var(varname: str, items: ItemsView, separator: str = "/"):
 # pylint: disable=E1121   # too-many-function-args
 class BoutAdiosBackendEntrypoint(BackendEntrypoint):
     """
-    Backend for ".bp" folders based on the adios2 package.
+    xarray backend entrypoint for ADIOS2 ``.bp`` datasets.
 
     For more information about the underlying library, visit:
     https://adios2.readthedocs.io/en/stable
@@ -177,18 +205,17 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
     def __init__(self):
         self._fh = None
 
-    def close():
-        """Close the ADIOS file"""
-        # print("BoutAdiosBackendEntrypoint.close() called")
-        # Note that this is a strange method without 'self', so we cannot close the file because
-        # we don't have any handle to it
-        #        if self._fh is not None:
-        #            self._fh.close()
+    def close(self) -> None:
+        """Close the underlying ADIOS2 file handle, if one is open."""
+        if self._fh is not None:
+            self._fh.close()
+            self._fh = None
 
     def guess_can_open(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     ) -> bool:
+        """Return True if this backend can open the provided filename."""
         if isinstance(filename_or_obj, (str, os.PathLike)):
             _, ext = os.path.splitext(filename_or_obj)
             return ext in {".bp"}
@@ -199,44 +226,26 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
-        #        mask_and_scale=True,
-        #        decode_times=True,
-        #        concat_characters=True,
-        #        decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
-        #        use_cftime=None,
-        #        decode_timedelta=None,
-        #        group=None,
-        #        mode="r",
-        #        synchronizer=None,
-        #        consolidated=None,
-        #        chunk_store=None,
-        #        storage_options=None,
-        #        stacklevel=3,
-        #        adios_version=None,
     ) -> Dataset:
+        """
+        Open an ADIOS2 ``.bp`` file/folder as an xarray Dataset.
+
+        Parameters
+        ----------
+        filename_or_obj
+            Path to a ``.bp`` dataset (directory or file, depending on ADIOS2 engine).
+        drop_variables
+            Optional variable name or iterable of variable names to exclude.
+        """
         from adios2 import FileReader
 
         filename_or_obj = _normalize_path(filename_or_obj)
-        # print(f"BoutAdiosBackendEntrypoint: path = {filename_or_obj} type = {type(filename_or_obj)}")
-
-        # if isinstance(filename_or_obj, os.PathLike):
-        #    print(f"    os.PathLike: {os.fspath(filename_or_obj)}")
-        #
-        # if isinstance(filename_or_obj, str):
-        #    print(f"    str: {os.path.abspath(os.path.expanduser(filename_or_obj))}")
-
-        #        if isinstance(filename_or_obj, BufferedIOBase):
-        #            raise ValueError("ADIOS2 does not support BufferedIOBase input")
-        #
-        #        if isinstance(filename_or_obj, AbstractDataStore):
-        #            raise ValueError("ADIOS2 does not support AbstractDataStore input")
 
         self._fh = FileReader(filename_or_obj)
         vars = self._fh.available_variables()
         attrs = self._fh.available_attributes()
         attr_items = attrs.items()
-        # print(f"BoutAdiosBackendEntrypoint: {len(vars)} variables, {len(attrs)} attributes")
         xvars = {}
 
         for varname, varinfo in vars.items():
@@ -249,18 +258,15 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
                 shape_list = []
                 shape_str = []
             steps = int(varinfo["AvailableStepsCount"])
-            # print(f"{varinfo['Type']} {varname}\t {shape_list}")
             varattrs = attrs_of_var(varname, attr_items, "/")
             dims = None
             vlen = len(varname) + 1  # include /
             xattrs = {}
             original_dtype: np.dtype | None = None
             for aname, ainfo in varattrs:
-                # print(f"\t{ainfo['Type']} {aname}\t = {ainfo['Value']}")
                 attr_value = self._fh.read_attribute(aname)
                 if aname == varname + "/" + XARRAY_DIMS_ATTR:
                     dims = attr_value
-                    # print(f"\t\tDIMENSIONS = {dims}")
                 elif aname == varname + "/" + XARRAY_ORIGINAL_DTYPE_ATTR:
                     try:
                         original_dtype = np.dtype(str(attr_value))
@@ -269,21 +275,19 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
                 else:
                     xattrs[aname[vlen:]] = attr_value
                 attrs.pop(aname)
-            # print(f"\txattrs = {xattrs}")
 
             # Create the xarray variable
             if dims is None:
                 dims = shape_str
             if shape_list != []:
-                # for i in range(len(shape_str)):
-                #    shape_str[i] = "d" + shape_str[i]
                 if steps > 1:
                     shape_list.insert(0, steps)
                     dims.insert(0, "t")
-                    # print(f"\tAdd time to shape {shape_list}  {dims}")
                 nptype = np.dtype(adios_to_numpy_type[varinfo["Type"]])
                 cast_dtype = (
-                    original_dtype if original_dtype is not None and original_dtype != nptype else None
+                    original_dtype
+                    if original_dtype is not None and original_dtype != nptype
+                    else None
                 )
                 xdata = indexing.LazilyIndexedArray(
                     BoutADIOSBackendArray(
@@ -302,7 +306,6 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
                     attrs=xattrs,
                     encoding={"dtype": (original_dtype or nptype)},
                 )
-                # print(f"{xvar.dtype} {xvar.attrs["name"]} {xvar.dims} {xvar.encoding}")
             else:
                 if steps > 1:
                     avar = self._fh.inquire_variable(varname)
@@ -310,22 +313,21 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
                     data = self._fh.read(avar)
                     if original_dtype is not None and data.dtype != original_dtype:
                         data = np.asarray(data).astype(original_dtype, copy=False)
-                    # print(f"\tCreate timed scalar variable {varname}")
                     xvar = Variable(
                         "t", data, attrs=xattrs, encoding={"dtype": data.dtype}
                     )
                 else:
                     data = self._fh.read(varname)
-                    if original_dtype is not None and np.asarray(data).dtype != original_dtype:
+                    if (
+                        original_dtype is not None
+                        and np.asarray(data).dtype != original_dtype
+                    ):
                         data = np.asarray(data).astype(original_dtype, copy=False)
                     if varinfo["Type"] == "string":
-                        # print(f"\tCreate string scalar variable {varname}")
                         xvar = Variable([], data, attrs=xattrs, encoding=None)
                     else:
-                        # print(f"\tCreate scalar variable {varname}")
                         xvar = Variable([], data, attrs=xattrs, encoding=None)
             xvars[varname] = xvar
-            # print(f"--- {xvar}")
 
         ds_attrs = {}
         for attname in list(attrs.keys()):
@@ -336,5 +338,5 @@ class BoutAdiosBackendEntrypoint(BackendEntrypoint):
                 ds_attrs[attname] = attr_value
 
         ds = Dataset(xvars, None, ds_attrs)
-        ds.set_close(BoutAdiosBackendEntrypoint.close)
+        ds.set_close(self.close)
         return ds
