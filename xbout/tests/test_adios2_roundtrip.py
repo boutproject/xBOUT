@@ -43,3 +43,48 @@ def test_adios2_roundtrip_dataset_attrs_and_vars(tmp_path):
         assert int(ds2["scalar"].values) == 7
     finally:
         ds2.close()
+
+
+def test_adios2_write_ints_as_int32_on_disk(tmp_path):
+    from xbout.adioswriter import write_dataset_bp
+
+    ds = xr.Dataset(
+        data_vars={
+            "i64": (("t",), np.array([1, 2, 3], dtype=np.int64)),
+            "u64_small": (("t",), np.array([0, 7, 42], dtype=np.uint64)),
+            "f32": (("t",), np.array([1.0, 2.0, 3.0], dtype=np.float32)),
+        },
+        coords={"t": ("t", np.array([0, 1, 2], dtype=np.int32))},
+    )
+
+    path = tmp_path / "ints_as_int32.bp"
+    write_dataset_bp(
+        ds, str(path), time_dim="t", overwrite=True, write_ints_as_int32=True
+    )
+
+    fh = adios2.FileReader(str(path))
+    try:
+        vars = fh.available_variables()
+        assert vars["i64"]["Type"] == "int32_t"
+        assert vars["u64_small"]["Type"] == "int32_t"
+        assert vars["t"]["Type"] == "int32_t"
+        assert vars["f32"]["Type"] == "float"
+    finally:
+        fh.close()
+
+
+def test_adios2_write_ints_as_int32_overflow_raises(tmp_path):
+    from xbout.adioswriter import write_dataset_bp
+
+    ds = xr.Dataset(
+        data_vars={
+            "too_big": (("t",), np.array([np.iinfo(np.int32).max + 1], dtype=np.int64)),
+        },
+        coords={"t": ("t", np.array([0], dtype=np.int32))},
+    )
+
+    path = tmp_path / "overflow.bp"
+    with pytest.raises(ValueError, match=r"Cannot safely cast"):
+        write_dataset_bp(
+            ds, str(path), time_dim="t", overwrite=True, write_ints_as_int32=True
+        )

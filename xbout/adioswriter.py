@@ -15,6 +15,30 @@ class Adios2NotInstalledError(ImportError):
     pass
 
 
+def _safe_int32_cast(arr: np.ndarray) -> np.ndarray:
+    if arr.size == 0:
+        return arr.astype(np.int32, copy=False)
+
+    info = np.iinfo(np.int32)
+
+    if arr.dtype.kind == "u":
+        max_value = int(np.asarray(arr).max())
+        if max_value > info.max:
+            raise ValueError(
+                f"Cannot safely cast unsigned integer data to int32: max={max_value} > {info.max}"
+            )
+        return arr.astype(np.int32, copy=False)
+
+    min_value = int(np.asarray(arr).min())
+    max_value = int(np.asarray(arr).max())
+    if min_value < info.min or max_value > info.max:
+        raise ValueError(
+            "Cannot safely cast integer data to int32: "
+            f"min={min_value}, max={max_value}, int32=[{info.min}, {info.max}]"
+        )
+    return arr.astype(np.int32, copy=False)
+
+
 def _normalize_attr_value(value: Any) -> Any:
     if value is None:
         return "null"
@@ -31,11 +55,14 @@ def _normalize_attr_value(value: Any) -> Any:
     return json.dumps(value, default=str)
 
 
-def _numpy_for_write(data: Any) -> np.ndarray:
+def _numpy_for_write(data: Any, *, write_ints_as_int32: bool = False) -> np.ndarray:
     arr = np.asarray(data)
 
     if arr.dtype == np.dtype("bool"):
         return arr.astype(np.uint8)
+
+    if write_ints_as_int32 and arr.dtype.kind in {"i", "u"} and arr.dtype != np.int32:
+        arr = _safe_int32_cast(arr)
 
     if arr.dtype.kind in {"M", "m"}:
         raise TypeError(
@@ -74,6 +101,7 @@ def write_dataset_bp(
     parameters: Mapping[str, str] | None = None,
     overwrite: bool = True,
     variables: Iterable[str] | None = None,
+    write_ints_as_int32: bool = False,
 ) -> None:
     """
     Write an xarray Dataset to an ADIOS2 .bp output.
@@ -84,6 +112,9 @@ def write_dataset_bp(
     - Store per-variable dimension names as attribute ``{var}/__xarray_dimensions__``
       excluding ``time_dim`` when writing steps.
     - Store dataset attributes under ``__xarray_dataset_attrs__/{key}``.
+    - Optionally store all integer variables as int32 on disk (see
+      ``write_ints_as_int32``), while preserving the original dtype via the
+      ``__xarray_original_dtype__`` attribute for round-tripping.
     """
     try:
         import adios2  # type: ignore
@@ -135,7 +166,9 @@ def write_dataset_bp(
 
         for name in names_to_write:
             var = ds.variables[name]
-            write_dtype = _numpy_for_write(var.data).dtype
+            write_dtype = _numpy_for_write(
+                var.data, write_ints_as_int32=write_ints_as_int32
+            ).dtype
 
             if time_dim in var.dims:
                 shape = [int(var.sizes[d]) for d in var.dims if d != time_dim]
@@ -180,7 +213,9 @@ def write_dataset_bp(
                 )
 
             original_dtype = np.asarray(var.data).dtype
-            write_arr = _numpy_for_write(var.data)
+            write_arr = _numpy_for_write(
+                var.data, write_ints_as_int32=write_ints_as_int32
+            )
             if write_arr.dtype != original_dtype:
                 stream.write_attribute(
                     VAR_ATTR_PREFIX_ORIGINAL_DTYPE,
@@ -198,9 +233,13 @@ def write_dataset_bp(
                     if time_dim in var.dims:
                         if step >= int(var.sizes[time_dim]):
                             continue
-                        data = _numpy_for_write(var.data)[step]
+                        data = _numpy_for_write(
+                            var.data, write_ints_as_int32=write_ints_as_int32
+                        )[step]
                     elif step == 0:
-                        data = _numpy_for_write(var.data)
+                        data = _numpy_for_write(
+                            var.data, write_ints_as_int32=write_ints_as_int32
+                        )
                     else:
                         continue
 
