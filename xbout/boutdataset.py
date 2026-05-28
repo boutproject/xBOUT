@@ -778,6 +778,7 @@ class BoutDatasetAccessor:
         save_dtype=None,
         separate_vars=False,
         pre_load=False,
+        write_ints_as_int32: bool = False,
     ):
         """
         Save data variables to a netCDF file.
@@ -920,6 +921,7 @@ class BoutDatasetAccessor:
                             str(var_savepath),
                             time_dim=time_dim,
                             overwrite=True,
+                            write_ints_as_int32=write_ints_as_int32,
                         )
                     else:
                         single_var_ds.to_netcdf(
@@ -945,6 +947,7 @@ class BoutDatasetAccessor:
                     str(savepath),
                     time_dim=time_dim,
                     overwrite=True,
+                    write_ints_as_int32=write_ints_as_int32,
                 )
             else:
                 with ProgressBar():
