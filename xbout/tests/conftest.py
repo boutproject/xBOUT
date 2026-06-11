@@ -6,24 +6,13 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from xarray import DataArray
 
-try:  # optional test dependency
-    import xarray as xr
-    from xarray import DataArray
-except ModuleNotFoundError:  # pragma: no cover
-    xr = None
-    DataArray = None
-
-try:  # optional test dependency chain (boutdata, xarray, netCDF tooling, ...)
-    from xbout.tests.utils_for_tests import (
-        _get_kwargs,
-        create_bout_ds_list,
-        create_bout_grid_ds,
-    )
-except (ModuleNotFoundError, ImportError):  # pragma: no cover
-    _get_kwargs = None
-    create_bout_ds_list = None
-    create_bout_grid_ds = None
+from xbout.tests.utils_for_tests import (
+    _get_kwargs,
+    create_bout_ds_list,
+    create_bout_grid_ds,
+)
 
 
 @pytest.fixture(scope="session")
@@ -58,10 +47,6 @@ def _bout_xyt_example_files(
     containing them, deleting the temporary directory once that test is done (if
     write_to_disk=True).
     """
-    if xr is None:
-        pytest.skip("xarray is required for xbout tests")
-    if _get_kwargs is None or create_bout_ds_list is None:
-        pytest.skip("boutdata is required for xbout tests")
 
     call_args = _get_kwargs(ignore="tmp_path_factory")
 
