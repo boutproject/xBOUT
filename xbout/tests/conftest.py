@@ -47,6 +47,7 @@ def _bout_xyt_example_files(
     containing them, deleting the temporary directory once that test is done (if
     write_to_disk=True).
     """
+
     call_args = _get_kwargs(ignore="tmp_path_factory")
 
     try:

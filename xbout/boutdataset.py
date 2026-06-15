@@ -1,30 +1,28 @@
 import collections
+import gc
+import warnings
 from copy import copy
-from pprint import pformat as prettyformat
 from functools import partial
 from itertools import chain
 from pathlib import Path
-import warnings
-import gc
+from pprint import pformat as prettyformat
 
-import xarray as xr
 import animatplot as amp
+import numpy as np
+import xarray as xr
+from dask.diagnostics import ProgressBar
 from matplotlib import pyplot as plt
 from matplotlib.animation import PillowWriter
-
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-import numpy as np
-from dask.diagnostics import ProgressBar
 
 from .geometries import apply_geometry
 from .plotting.animate import (
-    animate_poloidal,
-    animate_pcolormesh,
-    animate_line,
     _add_controls,
     _normalise_time_coord,
     _parse_coord_option,
+    animate_line,
+    animate_pcolormesh,
+    animate_poloidal,
 )
 from .region import _from_region
 from .utils import (
@@ -780,6 +778,7 @@ class BoutDatasetAccessor:
         save_dtype=None,
         separate_vars=False,
         pre_load=False,
+        write_ints_as_int32: bool = False,
     ):
         """
         Save data variables to a netCDF file.
@@ -875,6 +874,10 @@ class BoutDatasetAccessor:
         else:
             encoding = None
 
+        savepath_path = Path(savepath)
+        is_adios_bp = savepath_path.suffix == ".bp"
+        time_dim = "t"
+
         if separate_vars:
             # Save each major variable to a different netCDF file
 
@@ -910,13 +913,24 @@ class BoutDatasetAccessor:
                     var_encoding = None
                 print("Saving " + major_var + " data...")
                 with ProgressBar():
-                    single_var_ds.to_netcdf(
-                        path=str(var_savepath),
-                        format=filetype,
-                        engine=_check_filetype(Path(var_savepath)),
-                        compute=True,
-                        encoding=var_encoding,
-                    )
+                    if Path(var_savepath).suffix == ".bp":
+                        from xbout.adioswriter import write_dataset_bp
+
+                        write_dataset_bp(
+                            single_var_ds,
+                            str(var_savepath),
+                            time_dim=time_dim,
+                            overwrite=True,
+                            write_ints_as_int32=write_ints_as_int32,
+                        )
+                    else:
+                        single_var_ds.to_netcdf(
+                            path=str(var_savepath),
+                            format=filetype,
+                            engine=_check_filetype(Path(var_savepath)),
+                            compute=True,
+                            encoding=var_encoding,
+                        )
 
                 # Force memory deallocation to limit RAM usage
                 single_var_ds.close()
@@ -925,14 +939,25 @@ class BoutDatasetAccessor:
         else:
             # Save data to a single file
             print("Saving data...")
-            with ProgressBar():
-                to_save.to_netcdf(
-                    path=savepath,
-                    engine=_check_filetype(Path(savepath)),
-                    format=filetype,
-                    compute=True,
-                    encoding=encoding,
+            if is_adios_bp:
+                from xbout.adioswriter import write_dataset_bp
+
+                write_dataset_bp(
+                    to_save,
+                    str(savepath),
+                    time_dim=time_dim,
+                    overwrite=True,
+                    write_ints_as_int32=write_ints_as_int32,
                 )
+            else:
+                with ProgressBar():
+                    to_save.to_netcdf(
+                        path=savepath,
+                        engine=_check_filetype(Path(savepath)),
+                        format=filetype,
+                        compute=True,
+                        encoding=encoding,
+                    )
 
         return
 
