@@ -68,12 +68,7 @@ def _separate_metadata(ds):
     # whether it is scalar or 2d/3d array.
     exclude = ["dz"]
 
-    scalar_vars = [
-        var
-        for var in variables
-        if not any(dim in ["t", "x", "y", "z"] for dim in ds[var].dims)
-        and var not in exclude
-    ]
+    scalar_vars = [var for var in variables if ds[var].ndim == 0 and var not in exclude]
 
     # Save metadata as a dictionary
     metadata_vals = [ds[var].values.item() for var in scalar_vars]

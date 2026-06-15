@@ -39,8 +39,8 @@ _BOUT_GEOMETRY_VARS = [
 
 def _update_legacy_closed_wall_dimension(grid):
     """Older Hypnotoad grids wrote closed_wall_Z/R with a "t" dim.
-       This function changes the dim to "closed_wall" which is 
-       the current Hypnotoad behaviour."""
+    This function changes the dim to "closed_wall" which is
+    the current Hypnotoad behaviour."""
 
     if "closed_wall" in grid.dims:
         return grid
