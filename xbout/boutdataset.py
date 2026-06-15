@@ -999,12 +999,24 @@ class BoutDatasetAccessor:
             self.data, variables, savepath, nxpe, nype, tind, prefix, overwrite
         )
 
+        # Xarray sets _FillValue=NaN by default for floating-point variables,
+        # but BOUT++ rewrites restart-file attributes after writing data, which
+        # NetCDF does not allow for _FillValue. Disable that default here.
+        restart_encoding = {}
+        if restart_datasets:
+            restart_encoding = {
+                name: {"_FillValue": None}
+                for name, variable in restart_datasets[0].variables.items()
+                if np.issubdtype(variable.dtype, np.floating)
+            }
+
         with ProgressBar():
             xr.save_mfdataset(
                 restart_datasets,
                 paths,
                 compute=True,
                 engine=_check_filetype(paths[0]),
+                encoding=restart_encoding,
             )
 
     def animate_list(
