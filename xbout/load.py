@@ -45,14 +45,9 @@ def _update_legacy_closed_wall_dimension(grid):
     if "closed_wall" in grid.dims:
         return grid
 
-    if "closed_wall_R" not in grid or "closed_wall_Z" not in grid:
-        return grid
-
-    if grid["closed_wall_R"].dims != ("t",):
-        return grid
-
-    if grid["closed_wall_Z"].dims != ("t",):
-        return grid
+    for name in ("closed_wall_R", "closed_wall_Z"):
+        if name not in grid or len(grid[name].dims) != 1:
+            return grid
 
     for name in ("closed_wall_R", "closed_wall_Z"):
         attrs = grid[name].attrs.copy()
