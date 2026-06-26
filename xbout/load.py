@@ -774,7 +774,7 @@ def _check_dataset_type(datapath):
         # (i)
         return "reload"
 
-    _update_legacy_closed_wall_dimension(ds)
+    ds = _update_legacy_closed_wall_dimension(ds)
 
     if "t" in ds.dims:
         # (iii)
