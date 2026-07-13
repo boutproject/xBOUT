@@ -50,7 +50,7 @@ def _update_legacy_closed_wall_dimension(grid):
             return grid
 
     for name in ("closed_wall_R", "closed_wall_Z"):
-        attrs = grid[name].attrs.copy()
+        attrs = grid[name].attrs
         data = grid[name].data
         grid[name] = (("closed_wall",), data)
         grid[name].attrs = attrs
