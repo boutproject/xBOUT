@@ -37,6 +37,27 @@ _BOUT_GEOMETRY_VARS = [
 ]
 
 
+def _update_legacy_closed_wall_dimension(grid):
+    """Older Hypnotoad grids wrote closed_wall_Z/R with a "t" dim.
+    This function changes the dim to "closed_wall" which is
+    the current Hypnotoad behaviour."""
+
+    if "closed_wall" in grid.dims:
+        return grid
+
+    for name in ("closed_wall_R", "closed_wall_Z"):
+        if name not in grid or len(grid[name].dims) != 1:
+            return grid
+
+    for name in ("closed_wall_R", "closed_wall_Z"):
+        attrs = grid[name].attrs
+        data = grid[name].data
+        grid[name] = (("closed_wall",), data)
+        grid[name].attrs = attrs
+
+    return grid
+
+
 # This code should run whenever any function from this module is imported
 # Set all attrs to survive all mathematical operations
 # (see https://github.com/pydata/xarray/pull/2482)
@@ -752,7 +773,10 @@ def _check_dataset_type(datapath):
     if "metadata:keep_yboundaries" in ds.attrs:
         # (i)
         return "reload"
-    elif "t" in ds.dims:
+
+    ds = _update_legacy_closed_wall_dimension(ds)
+
+    if "t" in ds.dims:
         # (iii)
         return "dump"
     elif all(["restart" in Path(p).name for p in filepaths]):
@@ -1266,7 +1290,7 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
     boundaries to deal with different conventions in a BOUT grid file.
     """
 
-    acceptable_dims = ["x", "y", "z"]
+    acceptable_dims = ["x", "y", "z", "closed_wall"]
 
     # Passing 'chunks' with dimensions that are not present in the
     # dataset causes an error. A gridfile will be missing 't' and may
@@ -1286,6 +1310,8 @@ def _open_grid(datapath, chunks, keep_xboundaries, keep_yboundaries, mxg=2, **kw
         )
     else:
         grid = datapath
+
+    grid = _update_legacy_closed_wall_dimension(grid)
 
     unrecognised_dims = list(set(grid.dims) - set(acceptable_dims))
     if len(unrecognised_dims) > 0:
