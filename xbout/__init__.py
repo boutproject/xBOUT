@@ -1,7 +1,7 @@
 from .load import open_boutdataset, collect
 from .lazyload import lazy_open_boutdataset
 
-from . import geometries
+from . import geometries, wall
 from .geometries import register_geometry, REGISTERED_GEOMETRIES
 
 from .boutdataset import BoutDatasetAccessor
