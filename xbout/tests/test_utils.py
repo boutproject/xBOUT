@@ -6,7 +6,7 @@ import xarray.testing as xrt
 
 from xbout.utils import (
     _set_attrs_on_all_vars,
-    _update_metadata_increased_resolution,
+    _update_metadata_increased_y_resolution,
     _1d_coord_from_spacing,
 )
 
@@ -54,7 +54,7 @@ class TestUtils:
             "MYSUB": 7,
         }
 
-        da = _update_metadata_increased_resolution(da, 3)
+        da = _update_metadata_increased_y_resolution(da, n=3)
 
         assert da.metadata["jyseps1_1"] == 5
         assert da.metadata["jyseps2_1"] == 8
