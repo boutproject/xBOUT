@@ -202,7 +202,7 @@ def plot_regions(
             bbox_to_anchor=(0.5, 1),
             frameon=True,
             fontsize="small",
-            ncol=min(4, n_regions),  # Use up to 4 columns, or fewer if fewer regions
+            ncol=min(3, n_regions),  # Use up to 4 columns, or fewer if fewer regions
         )
 
     # Add separatrices if requested
