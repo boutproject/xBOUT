@@ -138,6 +138,14 @@ def open_boutdataset(
         combined with xr.combine_nested() instead of loading data from
         disk (intended for unit testing).
 
+        A Zarr store can also be passed, either as a zarr store object
+        (e.g. a ``zarr.storage.LocalStore`` or an Icechunk session store)
+        or as a path/URL ending in ``.zarr`` or prefixed with ``zarr://``.
+        The store must contain a Dataset that was saved by xBOUT (e.g.
+        with ``BoutDataset.save()`` and then converted to Zarr); raw
+        BOUT++ dump files stored in Zarr are not supported. Use the
+        ``group`` keyword argument to select a group within the store.
+
     chunks : dict, optional
     inputfilepath : str, optional
     geometry : str, optional
@@ -236,6 +244,8 @@ def open_boutdataset(
             )
         elif input_type == "reload_fake":
             ds = xr.combine_by_coords(datapath, data_vars="minimal").chunk(chunks)
+        elif input_type == "reload_zarr":
+            ds = _open_zarr(datapath, chunks=chunks, **kwargs)
         else:
             raise ValueError(f"internal error: unexpected input_type={input_type}")
 
@@ -720,6 +730,11 @@ def _check_dataset_type(datapath):
         - one or several files, no time dimension, filenames include `restart`
     """
 
+    if _is_zarr_input(datapath):
+        # (i), stored in Zarr. Whether the store really holds an xBOUT-saved
+        # Dataset is checked when it is opened in _open_zarr().
+        return "reload_zarr"
+
     if not _is_path(datapath):
         # not a filepath glob, so presumably Dataset or list of Datasets used for
         # testing
@@ -912,6 +927,60 @@ def _auto_open_mfboutdataset(
         )
 
     return ds, remove_yboundaries
+
+
+def _is_zarr_input(datapath):
+    """
+    True if ``datapath`` is a Zarr store object, or a path/URL that names a Zarr
+    store (ends in ``.zarr`` or starts with ``zarr://``).
+    """
+    try:
+        import zarr
+    except ImportError:
+        return False
+
+    store_types = ()
+    abc = getattr(zarr, "abc", None)
+    if abc is not None and hasattr(abc, "store"):
+        # zarr-python >= 3
+        store_types += (abc.store.Store,)
+    storage = getattr(zarr, "storage", None)
+    if storage is not None and hasattr(storage, "BaseStore"):
+        # zarr-python 2
+        store_types += (storage.BaseStore,)
+    if store_types and isinstance(datapath, store_types):
+        return True
+
+    if isinstance(datapath, (str, Path)):
+        s = str(datapath).rstrip("/")
+        return s.endswith(".zarr") or s.startswith("zarr://")
+
+    return False
+
+
+def _open_zarr(datapath, chunks, **kwargs):
+    """
+    Open a Zarr store containing a Dataset that was saved by xBOUT. ``kwargs`` are
+    passed to `xarray.open_zarr`, so ``group=...`` selects a group within the store.
+    """
+    if isinstance(datapath, (str, Path)):
+        datapath = str(datapath)
+        if datapath.startswith("zarr://"):
+            datapath = datapath[len("zarr://") :]
+
+    # Not all stores support consolidated metadata (e.g. Icechunk); reading the
+    # unconsolidated metadata always works.
+    kwargs.setdefault("consolidated", False)
+    ds = xr.open_zarr(datapath, chunks=chunks, **kwargs)
+
+    if "metadata:keep_yboundaries" not in ds.attrs:
+        raise NotImplementedError(
+            "Only Zarr stores containing a Dataset saved by xBOUT (e.g. with "
+            "BoutDataset.save() and then converted to Zarr) can be opened. Raw "
+            "BOUT++ dump files stored in Zarr are not supported."
+        )
+
+    return ds
 
 
 def _expand_filepaths(datapath):
