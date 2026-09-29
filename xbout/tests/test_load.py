@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from xarray import concat
+from xarray import concat, open_dataset
 from xarray.tests.test_dataset import create_test_data
 import xarray.testing as xrt
 
@@ -938,3 +938,69 @@ class TestTrim:
         if not upper:
             expected = expected.isel(y=slice(None, -2, None))
         xrt.assert_equal(expected, actual)
+
+
+class TestOpenZarr:
+    @pytest.fixture
+    def saved_dataset(self, tmp_path_factory, bout_xyt_example_files):
+        """An xBOUT-saved boutdata.nc and its conversion to a Zarr store."""
+        pytest.importorskip("zarr")
+        path = bout_xyt_example_files(
+            tmp_path_factory,
+            nxpe=3,
+            nype=3,
+            nt=1,
+            syn_data_type="stepped",
+            grid="grid",
+            write_to_disk=True,
+        )
+        ds = open_boutdataset(
+            datapath=path,
+            geometry="toroidal",
+            gridfilepath=path.parent.joinpath("grid.nc"),
+        )
+        save_dir = tmp_path_factory.mktemp("data")
+        nc_path = save_dir.joinpath("boutdata.nc")
+        ds.bout.save(nc_path)
+        zarr_path = save_dir.joinpath("boutdata.zarr")
+        with open_dataset(nc_path) as saved:
+            # "T" and "t" would collide as directory names in a local Zarr store
+            # on case-insensitive filesystems (macOS, Windows), so drop "T".
+            saved.drop_vars("T").to_zarr(zarr_path)
+        return nc_path, zarr_path
+
+    def test_reload_from_zarr_path(self, saved_dataset):
+        nc_path, zarr_path = saved_dataset
+        expected = open_boutdataset(nc_path).drop_vars("T").load()
+
+        # str, Path and zarr:// URL forms
+        for datapath in (str(zarr_path), zarr_path, "zarr://" + str(zarr_path)):
+            actual = open_boutdataset(datapath).load()
+            xrt.assert_identical(expected, actual)
+
+    def test_reload_from_zarr_store(self, saved_dataset):
+        zarr = pytest.importorskip("zarr")
+        nc_path, zarr_path = saved_dataset
+        expected = open_boutdataset(nc_path).drop_vars("T").load()
+
+        if hasattr(zarr.storage, "LocalStore"):
+            store = zarr.storage.LocalStore(zarr_path)
+        else:
+            store = zarr.storage.DirectoryStore(zarr_path)
+        actual = open_boutdataset(store).load()
+        xrt.assert_identical(expected, actual)
+
+    def test_reload_from_zarr_geometry(self, saved_dataset):
+        nc_path, zarr_path = saved_dataset
+        expected = open_boutdataset(nc_path, geometry="toroidal").drop_vars("T").load()
+        actual = open_boutdataset(zarr_path, geometry="toroidal").load()
+        xrt.assert_identical(expected, actual)
+
+    def test_raw_dumps_in_zarr_not_supported(
+        self, tmp_path_factory, bout_xyt_example_files
+    ):
+        fake_ds_list = bout_xyt_example_files(None, nxpe=1, nype=1, nt=1)
+        zarr_path = tmp_path_factory.mktemp("data").joinpath("dump.zarr")
+        fake_ds_list[0].to_zarr(zarr_path)
+        with pytest.raises(NotImplementedError, match="Raw BOUT"):
+            open_boutdataset(zarr_path)
